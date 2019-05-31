@@ -1,0 +1,153 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+; 1A. EXPERIMENT NAME.
+EXPT = GFS_Forecast
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+DO_MAPS = True
+DO_STATS = False
+DO_SHIPS = False
+DO_POLAR = False
+
+; 1C. DATA SOURCE
+DSOURCE = GFS
+
+; 1D. BASIN-SCALE HWRF DATA?
+IS_HWRFB = False
+
+; 1E. ENSEMBLE MEMBER NUMBER
+ENSMEM = 0
+
+; 1E. SYSTEM ENVIRONMENT
+SYS_ENV = JET
+
+; 1FF. Operation or Research Mode?
+IS_REAL = True
+
+; 1F. FORECAST CYCLE
+IDATE = 
+
+; 1G. STORM ID
+SID = 
+
+; 1H. INPUT PATH
+IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/
+ITAG =
+EXT = .grb2
+
+; 1I. OUTPUT PATH
+ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
+
+; 1J. ATCF PATH
+ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF1_TAG = trak.hwrf.raw
+ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF2_TAG = atcfunix
+ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF3_TAG = trak.hwrf.raw
+
+; 1K. ADECK & BDECK PATHS
+ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
+BDECK1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
+BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
+
+; 1L. FORECAST HOUR INFORMATION
+INIT_HR = 0
+FNL_HR = 384
+FMT_HR = 3
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+DT = 3
+
+; 1N. MASK TOPOGRAPHY
+DO_TOPOMASK = False
+
+; 1O. REMOVE WHITE SPACE
+DO_RMWHITE = True
+
+; 1P. TOGGLE TITLE
+DO_SRCLBL = True
+
+; 1Q. AUTO-CHOOSE SETUP VARIABLES
+AUTO_VAR = False
+
+; 1R. AUTO-CHOOSE EXPERIMENT
+AUTO_DIR = False
+
+; 1S. FORCE
+FORCE = False
+
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+DOMAIN = basin
+
+; 2B. MAP GRAPHICS TIER
+TIER = Tier1
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = False
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES
+MORIG = HWRF
+MCODE = HB18
+MCODEI = HB8I
+
+; 3B. FORECAST GUIDANCE MODELS
+TRKM00 = HWRF AVNO HMON NVGM CTCX EGRR
+TRKM06 = HWRF AVNO HMON NVGM CTCX
+INTM = HWRF HMON DSHP LGEM CTCX
+PRSM = HWRF AVNO HMON NVGM CTCX
+TRKMI00 = HWFI AVNI HMNI EGRI CTCI TVCN OFCL
+TRKMI06 = HWFI AVNI HMNI NVGI CTCI TVCN OFCL
+INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT00 = HWRF HMON AVNO EGRR OFCL
+TRKMT06 = HWRF HMON AVNO EGRR OFCL
+INTMT = HWRF HMON DSHP OFCL
+
+; 3C. VERIFICATION MODELS
+ETM = HWFI GFSI HMNI NVGI CTCI TVCN OFCL
+EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = HWRF GFSO HMON NVGM CTCX
+LIM = HWRF HMON CTCX
+
+
+; 3D. VERIFICATION TIMES
+VER_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; SECTION 5: GPLOT_Polar variables
+;================================================================
+
+TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
+RESOLUTION = 1.5
+RMAX = 600
+MODELTAG = hwrfprs.storm.0p015
+LEVS = 46
+
