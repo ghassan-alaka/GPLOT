@@ -538,25 +538,36 @@ if [ "${DO_MAPS}" = "True" ]; then
                             if [ ! -e "$FILE" ]; then
                                 unset 'IFILES[$i]'
                                 unset 'IFHRS[$i]'
+                                BROKEN_LINK="YES"
                             fi
 
-                            # Remove files that have already been plotted (CASE_PLOTTED)
+                            # Remove files that have already been processed (CASE_PLOTTED)
                             # from the list in input files (IFILES).
                             # If production is being forced, then CASE_PLOTTED will be empty.
+                            # Only files that have not been modified in over 30 min are
+                            # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
                                 for CFILE in ${CASE_PLOTTED[@]}; do
-                                    if [ "$FILE" == "$CFILE" ] && find "${CFILE}" -mmin +30 >/dev/null ; then
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
+                                    if [ "$FILE" == "$CFILE" ] && [[ -n ${test} ]]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
+                                        break
                                     fi
                                 done
                             fi
                             ((i++))
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "MSG: Files are either all processed or links are broken."
-                            echo "MSG: Marking status as complete, but it should be double-checked."
-                            echo "complete" > ${STATUS_FILE}
+                            if [ "$BROKEN_LINK" == "YES" ]; then
+                                echo "WARNING: No files to process, but broken links were detected."
+                                echo "WARNING: Marking status as broken. It should be double-checked."
+                                echo "broken" > ${STATUS_FILE}
+                            else
+                                echo "MSG: All available input files have been processed."
+                                echo "MSG: Marking status as complete."
+                                echo "complete" > ${STATUS_FILE}
+                            fi
                             echo ""
                             continue
                         fi
