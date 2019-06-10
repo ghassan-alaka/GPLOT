@@ -1,0 +1,15 @@
+DOMAIN      NEST
+global      1
+basin       1
+atl         1
+eus         1
+elant       1
+wlant       1
+cpac        1
+epac        1
+gom         1
+d03         3
+bigd01      1
+bob         1
+hwrf        1
+ships       3

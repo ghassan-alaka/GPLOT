@@ -1,0 +1,12 @@
+DSOURCE       SUFFIX
+HWRF          .grb2
+HWRF15        .grb2
+HWRF16        .grb2
+HWRF17        .grb2
+HWRF18        .grb2
+HWRF19        .grb2
+NMMB          .grb2
+GFS           NONE
+HFVGFS        .nc
+fvGFS_ATL     .nc
+GEFS          NONE

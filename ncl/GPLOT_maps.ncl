@@ -662,6 +662,7 @@ print("MSG: Get the list of input files for graphical production.")
 ;    this script yourself, then you must mimic 'UnplottedFiles'
 ;    by listing all files to be processed in a text file.
 IFILES_LIST=ODIR+"UnplottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
+print(IFILES_LIST)
 IFILES_TEST=systemfunc("ls "+IFILES_LIST+" 2>/dev/null")
 if(ismissing(IFILES_TEST))then
 	print("ERROR: No files listed for graphical production.")
@@ -1218,7 +1219,32 @@ do fff = 0,nFiles-1
 		;MK note- might need to switch to this kine when using ncl V6.5.0 or later
 		;dNames	:= getfilevardimnames(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
 		nDims@dNames = dNames
-
+		
+		
+		if(DOMAIN.eq."hwrf")then
+			TEST := f->$findVarName(DSOURCE,"MSLP","")$
+			
+			do ddd = 0,nDims-1
+				; LATITUDE
+				if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
+					LATTEST := where(ismissing(TEST),fval3,conform(TEST,f->$dNames(ddd)$,0))
+					LATTEST@_FillValue = fval3
+					BOCO(0) = max(LATTEST)
+					BOCO(1) = min(LATTEST)
+				end if
+			
+				; LONGITUDE
+				if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
+					LONTEST := where(ismissing(TEST),fval3,conform(TEST,f->$dNames(ddd)$,1))
+					LONTEST@_FillValue = fval3
+					BOCO(2) = min(LONTEST)
+					if(BOCO(2).gt.180.)then   BOCO(2) = BOCO(2) - 360.   end if
+					BOCO(3) = max(LONTEST)
+					if(BOCO(3).gt.180.)then   BOCO(3) = BOCO(3) - 360.   end if
+				end if
+			end do
+		end if
+		
 		
 		; Get info based on domain.
 		; B is used to determine how to set the figure domain size.
@@ -1254,7 +1280,6 @@ do fff = 0,nFiles-1
 				lonF!0 = "lon"
 				lonF&lon = lonF
 				lonF@units = "degrees_east"
-				delete(lon@LONF)
 			end if
 			
 			; ISOBARIC LEVELS
@@ -1283,6 +1308,8 @@ do fff = 0,nFiles-1
 									mf		= 1.
 			end if
 		end do
+		
+		
 		; mf is the multiplicative factor for the vertical coordinate
 		; If not already defined, then get vertical level data from "U1000" data.
 		; This generic vertical coordiante might be important for overlay metadata.
@@ -1297,6 +1324,11 @@ do fff = 0,nFiles-1
 						BOCO(0) = tmp(1)
 						BOCO(1) = tmp(0)
 		end if
+		
+		
+		; Create BOCO2 that is based on lat/lon limits
+		; Most of the time, BOCO=BOCO2
+		BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
 		
 		
 		; Print some extra info if requested by 'verbose'
@@ -1361,7 +1393,7 @@ do fff = 0,nFiles-1
 							UV10dNames	:= getfilevardims(f,findVarName(DSOURCE,"UV","10"))
 							UV10dims@dNames	= UV10dNames
 							UV10max	= max(getVar2d(f,DSOURCE,(/"UV","10",tostring(ttt)/),UV10dims,\
-									       BOCO,1.,flipFlag,0))
+									       BOCO2,1.,flipFlag,0))
 				end if
 			end if
 			if(.not.isvar("MSLPmin"))then
@@ -1386,7 +1418,7 @@ do fff = 0,nFiles-1
 							MSLPdNames	:= getfilevardims(f,findVarName(DSOURCE,"MSLP",""))
 							MSLPdims@dNames	= MSLPdNames
 							MSLPmin	= min(getVar2d(f,DSOURCE,(/"MSLP","",tostring(ttt)/),MSLPdims,\
-									       BOCO,1.,flipFlag,0))
+									       BOCO2,1.,flipFlag,0))
 				end if
 				
 				
@@ -1422,7 +1454,7 @@ do fff = 0,nFiles-1
 				Vbase   := getVarXC(f,DSOURCE,G_BASE(:,ppp),nDims,BOCO,mf,flipFlag,lonF)
 				Vbase&lev = Vbase&lev/mf
 			else
-				Vbase	:= getVar2d(f,DSOURCE,(/G_BASE(0,ppp),G_BASE(1,ppp),tostring(ttt)/),nDims,BOCO,mf,myFlags,lonF)
+				Vbase	:= getVar2d(f,DSOURCE,(/G_BASE(0,ppp),G_BASE(1,ppp),tostring(ttt)/),nDims,BOCO2,mf,myFlags,lonF)
 			end if		
 
 
@@ -1453,7 +1485,7 @@ do fff = 0,nFiles-1
 							f2	= addfile(IFILEB,"r")
 							Vbase2	= getVar2d(f2,DSOURCE,\
 									   (/G_BASE(0,ppp),G_BASE(1,ppp),tostring(ttt)/),\
-									   nDims,BOCO,mf,flipFlag,lonF)
+									   nDims,BOCO2,mf,flipFlag,lonF)
 						end if
 					end if
 					Vbase	= (Vbase - Vbase2)/tofloat(hr_offset)
@@ -1757,8 +1789,8 @@ do fff = 0,nFiles-1
 					UOv1&lev = UOv1&lev/mfOv1
 					VOv1&lev = VOv1&lev/mfOv1
 				else
-					UOv1	:= getVar2d(f,DSOURCE,(/"U",G_OV1(1,ppp),tostring(ttt)/),nDims_Ov1,BOCO,mfOv1,myFlagsOv1,lonF)	
-					VOv1	:= getVar2d(f,DSOURCE,(/"V",G_OV1(1,ppp),tostring(ttt)/),nDims_Ov1,BOCO,mfOv1,myFlagsOv1,lonF)
+					UOv1	:= getVar2d(f,DSOURCE,(/"U",G_OV1(1,ppp),tostring(ttt)/),nDims_Ov1,BOCO2,mfOv1,myFlagsOv1,lonF)	
+					VOv1	:= getVar2d(f,DSOURCE,(/"V",G_OV1(1,ppp),tostring(ttt)/),nDims_Ov1,BOCO2,mfOv1,myFlagsOv1,lonF)
 				end if
 				end if
 			end if
@@ -1883,8 +1915,8 @@ do fff = 0,nFiles-1
 					UOv2&lev = UOv2&lev/mfOv2
 					VOv2&lev = VOv2&lev/mfOv2
 				else
-					UOv2	:= getVar2d(f,DSOURCE,(/"U",G_OV2(1,ppp),tostring(ttt)/),nDims_Ov2,BOCO,mfOv2,myFlagsOv2,lonF)
-					VOv2	:= getVar2d(f,DSOURCE,(/"V",G_OV2(1,ppp),tostring(ttt)/),nDims_Ov2,BOCO,mfOv2,myFlagsOv2,lonF)
+					UOv2	:= getVar2d(f,DSOURCE,(/"U",G_OV2(1,ppp),tostring(ttt)/),nDims_Ov2,BOCO2,mfOv2,myFlagsOv2,lonF)
+					VOv2	:= getVar2d(f,DSOURCE,(/"V",G_OV2(1,ppp),tostring(ttt)/),nDims_Ov2,BOCO2,mfOv2,myFlagsOv2,lonF)
 				end if
 				end if
 			end if
@@ -1897,7 +1929,7 @@ do fff = 0,nFiles-1
 			
 
 			; Change the streamline density here.
-			zs	= getStmThin(DOMAIN)
+			zs	= getStmThin(DSOURCE,DOMAIN)
 			if(DSOURCE.eq."fvGFS_ATL")then  zs = zs*4   end if
 
 
@@ -1994,8 +2026,8 @@ do fff = 0,nFiles-1
 					UOv25&lev = UOv25&lev/mfOv25
 					VOv25&lev = VOv25&lev/mfOv25
 				else
-					UOv25	:= getVar2d(f,DSOURCE,(/"U",G_OV25(1,ppp),tostring(ttt)/),nDims_Ov25,BOCO,mfOv25,myFlagsOv25,lonF)
-					VOv25	:= getVar2d(f,DSOURCE,(/"V",G_OV25(1,ppp),tostring(ttt)/),nDims_Ov25,BOCO,mfOv25,myFlagsOv25,lonF)
+					UOv25	:= getVar2d(f,DSOURCE,(/"U",G_OV25(1,ppp),tostring(ttt)/),nDims_Ov25,BOCO2,mfOv25,myFlagsOv25,lonF)
+					VOv25	:= getVar2d(f,DSOURCE,(/"V",G_OV25(1,ppp),tostring(ttt)/),nDims_Ov25,BOCO2,mfOv25,myFlagsOv25,lonF)
 				end if
 				end if
 			end if
@@ -2014,7 +2046,7 @@ do fff = 0,nFiles-1
 			
 
 			; Change the streamline density here.
-			zs	= getStmThin(DOMAIN)
+			zs	= getStmThin(DSOURCE,DOMAIN)
 			if(DSOURCE.eq."fvGFS_ATL")then  zs = zs*4   end if
 
 
@@ -2092,7 +2124,7 @@ do fff = 0,nFiles-1
 					VOv3   := getVarXC(f,DSOURCE,G_OV3(:,ppp),nDims_Ov3,BOCO,mfOv3,flipFlag,lonF)
 					VOv3&lev = VOv3&lev/mfOv3
 				else
-					VOv3	:= getVar2d(f,DSOURCE,(/G_OV3(0,ppp),G_OV3(1,ppp),tostring(ttt)/),nDims_Ov3,BOCO,mfOv3,flipFlag,lonF)
+					VOv3	:= getVar2d(f,DSOURCE,(/G_OV3(0,ppp),G_OV3(1,ppp),tostring(ttt)/),nDims_Ov3,BOCO2,mfOv3,flipFlag,lonF)
 				end if
 			end if
 
@@ -2200,7 +2232,7 @@ do fff = 0,nFiles-1
 					VOv4   := getVarXC(f,DSOURCE,G_OV4(:,ppp),nDims_Ov4,BOCO,mfOv4,flipFlag,lonF)
 					VOv4&lev = VOv4&lev/mfOv4
 				else
-					VOv4	:= getVar2d(f,DSOURCE,(/G_OV4(0,ppp),G_OV4(1,ppp),tostring(ttt)/),nDims_Ov4,BOCO,mfOv4,flipFlag,lonF)
+					VOv4	:= getVar2d(f,DSOURCE,(/G_OV4(0,ppp),G_OV4(1,ppp),tostring(ttt)/),nDims_Ov4,BOCO2,mfOv4,flipFlag,lonF)
 				end if
 			end if
 
@@ -2269,10 +2301,9 @@ do fff = 0,nFiles-1
 		;*****************************************
 		; OVERLAY #5 - Max/min MSLP Markers (H/L)
 		;*****************************************
-		if(G_OV5(0,ppp).ne."")then ;O5_1
+		if(G_OV5(0,ppp).ne."")then
 			if(verbose.ge.1)then   print("MSG: Working on H/L markers (G_OV5="+G_OV5(0,ppp)+")")   end if	
-			oldlon:=lon ;MKedit
-			if(ppp.gt.0)then   if(isvar("VOv5"))then delete(VOv5) end if   end if ;O5_11
+			if(ppp.gt.0)then   if(isvar("VOv5"))then delete(VOv5) end if   end if
 			if(verbose.ge.1)then   print("MSG: First time request H/L symbol. Calculating...")   end if
 			; If 'VOv5_max' and 'VOv5_min' are already defined for this file and map,
 			; then use existing variables.
@@ -2305,7 +2336,7 @@ do fff = 0,nFiles-1
 	
 
 				; Get the base variable!
-				VOv5	= getVar2d(f,DSOURCE,(/G_OV5(0,ppp),G_OV5(1,ppp),tostring(ttt)/),nDims_Ov5,BOCO,mf,flipFlag,lonF)
+				VOv5	= getVar2d(f,DSOURCE,(/G_OV5(0,ppp),G_OV5(1,ppp),tostring(ttt)/),nDims_Ov5,BOCO2,mf,flipFlag,lonF)
 
 
 				; For MSLP [hPa]
@@ -2329,7 +2360,7 @@ do fff = 0,nFiles-1
 					if(varStatus)then	nDims_PSFC	:= dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,"PSFC","")))
 								dNames_PSFC	:= getfilevardims(f,findVarName(DSOURCE,"PSFC",""))
 								nDims_PSFC@dNames= dNames_PSFC
-								PSFC	:= getVar2d(f,DSOURCE,(/"PSFC","",tostring(ttt)/),nDims_PSFC,BOCO,mf,flipFlag,lonF)
+								PSFC	:= getVar2d(f,DSOURCE,(/"PSFC","",tostring(ttt)/),nDims_PSFC,BOCO2,mf,flipFlag,lonF)
 								copy_VarMeta(VOv5B,PSFC)
 								; Do not mark H/L above .9 sigma surface
 								VOv5B	= where(PSFC/VOv5.le.0.90,fval3,VOv5B)
@@ -2337,23 +2368,7 @@ do fff = 0,nFiles-1
 					VOv5B!0 = "lat"
 					VOv5B!1 = "lon"
 					VOv5B&lat = lat
-
-;					print("MKDEBUG: MSLP Variable Summary - Vov5B")
-;					printVarSummary(VOv5B)
-
-				;	MK NOTE_
-				;	TEMP FIX OF MISS FLIPPED H/L LONGITUDE
-				;
-				;		VOv5B&lon: -160(0.25)0				
-				;		lon: 0 (-0.25) -160
-				;		{VOv5B&lon = lon} makes the longitude wrong. 
-				;		temperary make lon equal to VOv5B&lon. Will change back in the end of this session
-				;		
-				; 	MKedit:
-				;			;VOv5B&lon = lon
-				;			lon:=VOv5B&lon
-				;			VOv5lon:=VOv5B&lon ;Save for other figures
-				;	^MKedit end^				
+									
 
 					; llbox -  minimum distance that the closest High/Low can be
 					; maxH -  maximum number of Highs to be marked on the map
@@ -2563,59 +2578,54 @@ do fff = 0,nFiles-1
 				delete([/nDims_Ov5,dNames_Ov5/])
 			else
 				if(verbose.ge.1)then   print("MSG: VOv5_max exists. Skip calculating H/L maker position. Proceed to plot.")   end if
-				;lon:=VOv5lon
 			end if
 			
 					
 			; Get Text Resources
-			if(isvar("txres"))then   delete(txres)   end if ;O5_1213
-			txres			= True
+			txres			:= True
 			txres@txJust		= "CenterCenter"
 			txres@txPerimOn		= False
 			txres@txPerimColor	= "black"
 			
-			txres1			= txres
+			txres1			:= txres
 			txres1@txFontHeightF	= 0.012
 			txres1@txFontColor	= "blue"
 			txres1@txFont		= 30
 			
-			if(isvar("txres2"))then delete(txres2) end if ;O5_1214
-			txres2			= txres
+			txres2			:= txres
 			txres2@txFontHeightF	= 0.012
 			txres2@txFontColor	= "white"	;MKedit "black"
 			txres2@txFont		= 130
 			txres2@txFontThicknessF = 4.0		;MKedit 5.0
 			
-			if(isvar("txres3"))then delete(txres3) end if ;O5_1215
-			txres3			= txres
+			txres3			:= txres
 			txres3@txFontHeightF	= 0.008
 			txres3@txFontColor	= "blue"
 			txres3@txFont		= 26
 			
-			if(isvar("txres4"))then delete(txres4) end if ;O5_1216
-			txres4			= txres
+			txres4			:= txres
 			txres4@txFontHeightF	= 0.008
 			txres4@txFontColor	= "white"	;MKedit "black"
 			txres4@txFont		= 126
 			txres4@txFontThicknessF = 4.0		;MKedit 5.0
 				
-			txres5			= txres
+			txres5			:= txres
 			txres5@txFontHeightF	= 0.012
 			txres5@txFontColor	= "red"
 			txres5@txFont		= 30
 			
-			txres6			= txres
+			txres6			:= txres
 			txres6@txFontHeightF	= 0.012
 			txres6@txFontColor	= "white"	;MKedit "black"
 			txres6@txFont		= 130
 			txres6@txFontThicknessF = 4.0		;MKedit 5.0
 			
-			txres7			= txres
+			txres7			:= txres
 			txres7@txFontHeightF	= 0.008
 			txres7@txFontColor	= "red"
 			txres7@txFont		= 26
 			
-			txres8			= txres
+			txres8			:= txres
 			txres8@txFontHeightF	= 0.008
 			txres8@txFontColor	= "white"	;MKedit "black"
 			txres8@txFont		= 126
@@ -2628,8 +2638,7 @@ do fff = 0,nFiles-1
 			  .and. pctLon/pctLat.ge.0.5)then	HLpct = 3.0
 			else if(pctLon/pctLat.lt.0.5)then	HLpct = 2.0
 			end if  end if  end if
-
-			;print("MKMSG: VOv5_max xi  "+ lon(VOv5_max@xi(ind(VOv5_max@xi.ne.fval2))))	
+				
 
 			if(VOv5_max.gt.0)then
 				
@@ -2644,8 +2653,8 @@ do fff = 0,nFiles-1
 					TEXT04	:= gsn_add_text(wks,plot,toint(VOv5_max@maxval(ind(VOv5_max@maxval.ne.fval2))),\
 									 lon(VOv5_max@xi(ind(VOv5_max@xi.ne.fval2))),\
 									 lat(VOv5_max@yi(ind(VOv5_max@yi.ne.fval2)))+HLpct*pctLat,txres4)
-				end if ;O5_12171
-			end if ;O5_1217
+				end if
+			end if
 			if(VOv5_min.gt.0)then
 				if(any(VOv5_min@xi.ne.fval2) .and. any(VOv5_min@yi.ne.fval2))then
 					TEXT05	:= gsn_add_text(wks,plot,"L",lon(VOv5_min@xi(ind(VOv5_min@xi.ne.fval2))),\
@@ -2658,11 +2667,10 @@ do fff = 0,nFiles-1
 					TEXT08	:= gsn_add_text(wks,plot,toint(VOv5_min@minval(ind(VOv5_min@minval.ne.fval2))),\
 									lon(VOv5_min@xi(ind(VOv5_min@xi.ne.fval2))),\
 									lat(VOv5_min@yi(ind(VOv5_min@yi.ne.fval2)))+HLpct*pctLat,txres8)
-				end if ;O5_12181
-			end if ;O5_1218
+				end if
+			end if
 			
-		lon:=oldlon ;MKedit
-		end if ; O5_1
+		end if
 		
 		;*****************************************
 		; OVERLAY #6 - Storm Labels

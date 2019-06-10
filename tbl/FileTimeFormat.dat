@@ -1,0 +1,12 @@
+DSOURCE       HRSTR    HRFMT
+HWRF          f        3
+HWRF15        f        3
+HWRF16        f        3
+HWRF17        f        3
+HWRF18        f        3
+HWRF19        f        3
+NMMB          f        3
+GFS           f        3
+HFVGFS        f        3
+fvGFS_ATL     f        3
+GEFS          f        2

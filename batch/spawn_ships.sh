@@ -48,7 +48,6 @@ EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -84,10 +83,10 @@ if [ "$IS_HWRFB" == "True" ]; then
 fi
 echo "MSG: Found this top level input directory in the namelist --> $IDIR"
 if [ ! -z "$ITAG" ]; then
-    echo "MSG: Condering this input file prefix            --> $ITAG"
+    echo "MSG: Condering these input file tag --> $ITAG"
 fi
 if [ ! -z "$EXT" ]; then
-    echo "MSG: Considering this input file suffix          --> $EXT"
+    echo "MSG: Considering these input file extensions --> $EXT"
 fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
 
@@ -123,8 +122,8 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_maps.generic.sh"
-BATCHFILE2="batch_maps.${EXPT}.sh"
+BATCHFILE1="batch_ships.generic.sh"
+BATCHFILE2="batch_ships.${EXPT}.sh"
 CTIME=`date +"%Y%m%d%H_%M"`
 LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
@@ -135,9 +134,9 @@ cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -d ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
+    CYCLES=`ls -d ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "`
 else
-    CYCLES=( "${IDATE[@]}" )
+    CYCLES="${IDATE[@]}"
 fi
 echo "MSG: Found these cycles: ${CYCLES[*]}"
 echo ""
@@ -150,35 +149,29 @@ MAXCOUNT=25
 
 
 
-####################################################################
-# 1. CALL GPLOT_MAPS                                               #
-#    This script is responsible for creating 2D plan view graphics #
-#    for large-scale and storm-centered domains.                   #
-####################################################################
-if [ "${DO_MAPS}" = "True" ]; then
-    echo "MSG: Submitting jobs for MAPS."
-    NCLFILE="GPLOT_maps.ncl"
 
-
-    # Get the domains
-    DOMAIN=`sed -n -e 's/^.*DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-    echo "MSG: Found these MAPS domains in the namelist --> $DOMAIN"
-
-
-    # Get the graphics tiers for this MAPS domain
-    TIER=`sed -n -e 's/^.*TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-    echo "MSG: Found these graphic tiers in the namelist   --> $TIER"
+#############################################################
+# 2. CALL GPLOT SHIPS                                       #
+#    This script is responsible for creating graphics based #
+#    on SHIPS fields and other relevant predictors.         #
+#############################################################
+if [ "${DO_SHIPS}" = "True" ]; then
+    echo "MSG: Submitting jobs for SHIPS."
+    NCLFILE="GPLOT_ships.ncl"
+    DOMAIN="ships"
+    TIER="Tier1"
+    SC="True"
+    ATCF_REQD="True"
 
 
     # Define the batch submission counter.
     N=0
 
 
-
     ##################################
     # LOOP OVER ALL AVAILABLE CYCLES #
     ##################################
-    for CYCLE in ${CYCLES[@]}; do
+    for CYCLE in ${CYCLES}; do
 
         # Only retain the numbers for the cycle
         # Parse the prefix (e.g., gfs.) if it exists.
@@ -193,6 +186,7 @@ if [ "${DO_MAPS}" = "True" ]; then
             CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
         fi
         CYCLE_STR="${CPREFIX}${CYCLE}"
+
 
         # Find the ATCFs for the current CYCLE.
         # It will be blank if no ATCFs are found.
@@ -215,9 +209,7 @@ if [ "${DO_MAPS}" = "True" ]; then
         # Third, try to get STORMS from the HWRF file path.
         # This is hard-coded and might not work.
         if [ -z "$STORMS" ]; then
-            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ];then
-                STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
-            fi
+            STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
         fi
 
         # Fourth, if STORMS is still undefined, then set it to "NONE"
@@ -234,21 +226,12 @@ if [ "${DO_MAPS}" = "True" ]; then
             STORMS+=("00L")
         fi
 
-        # Set the storm counter. This is important because large-scale
-        # output files may be duplicated for different storms. For example,
-        # HWRF-B/GFS files for the outer domain are identical for all storms.
-        NSTORM=0
-
-
 
         ####################
         # LOOP OVER STORMS #
         ####################
         for STORM in ${STORMS}; do
             echo "MSG: Current storm --> $STORM"
-
-            # Increase the storm counter
-            ((NSTORM=NSTORM+1))
 
             # Find the forecast hours from the ATCF for thie particular storm
             STORM_ATCF=`printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}"`
@@ -269,6 +252,9 @@ if [ "${DO_MAPS}" = "True" ]; then
             ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
 
 
+            # Set the STORMTAG for file names
+            STORMTAG=".${STORM^^}"
+
 
             #########################
             # LOOP OVER MAP DOMAINS #
@@ -283,41 +269,12 @@ if [ "${DO_MAPS}" = "True" ]; then
                 mkdir -p ${ODIR_FULL}
 
 
-                # Get ATCF_REQD to check if it is required.
-                # This is optional for MAPS.
-                if [ "$DMN" == "d03" ]; then
-                    ATCF_REQD="True"
-                else
-                    ATCF_REQD=`sed -n -e 's/^.*ATCF_REQD =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-                    if [ -z "$ATCF_REQD" ]; then
-                        ATCF_REQD="True"
-                    fi
-                fi
-
-
-                # Determine if this domain is storm-centered (SC)
-                # For storm-centered domains, the Storm ID is appended
-                # to most file names.
-                if [ "$DMN" == "hwrf" ] || [ "$DMN" == "d03" ] || \
-                   [ "$DMN" == "d02" ] || [ "$DMN" == "tkfull" ]; then
-                    SC="True"
-                    STORMTAG=".${STORM^^}"
-                else
-                    SC="False"
-                    STORMTAG=""
-                fi
-
                 # Get nest information from GPLOT table
                 NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
                 if [ -z "$NEST" ]; then
                     echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
                     echo "MSG: Assuming NEST=1."
                     NEST=1
-                fi
-
-                # Skip subsequent storms if the outer domain has been plotted
-                if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ]; then
-                    continue
                 fi
 
                 # Get file prefix information from table or namelist
@@ -379,18 +336,16 @@ if [ "${DO_MAPS}" = "True" ]; then
                 # Run some tests on the ATCF for thie storm.
                 # If domain is storm-centerd and ATCF is required, then ATCF must
                 # be present and contain forecast hours
-                if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
-                    if [ -z ${STORM_ATCF} ]; then
-                        echo "ERROR: Domain is storm-centered and ATCF files are required."
-                        echo "ERROR: But, found no matching ATCF files. So, nothing to do."
-                        echo ""
-                        continue
-                    elif [ -z ${ATCF_FHRS} ]; then
-                        echo "ERROR: Domain is storm-centered and ATCF files are required."
-                        echo "ERROR: ATCF was found for this storm, but no forecase hours were found."
-                        echo ""
-                        continue
-                    fi
+                if [ -z ${STORM_ATCF} ]; then
+                    echo "ERROR: Domain is storm-centered and ATCF files are required."
+                    echo "ERROR: But, found no matching ATCF files. So, nothing to do."
+                    echo ""
+                    continue
+                elif [ -z "${ATCF_FHRS[*]}" ]; then
+                    echo "ERROR: Domain is storm-centered and ATCF files are required."
+                    echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
+                    echo ""
+                    continue
                 fi
 
                 # Create a text file with ATCFs for this cycle in the output directory
@@ -410,15 +365,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                 # LOOP OVER GRAPHIC TIERS #
                 ###########################
                 for TR in ${TIER}; do
-                    # Skip Tier3 for certain domains
-                    if [ "$TR" == "Tier3" ]; then
-                        if [ "$DMN" == "basin" ] || [ "$DMN" == "bigd01" ] || [ "$DMN" == "d03" ]; then
-                            continue
-                        fi
-                    fi
-
                     echo "MSG: Current tier --> $TR"
-
 
 
                     ##########################
@@ -431,21 +378,21 @@ if [ "${DO_MAPS}" = "True" ]; then
                         if [ "${IS_ENS}" == "False" ]; then
                             ENSID=""
                             ENSIDTAG=""
-                        else				    
+                        else
                             ENSID=$(printf "%02d\n" $ID)
                             ENSIDTAG=".E${ENSID}"
                             echo "MSG: Current ensemble member --> $ENSID"
                         fi
 
                         # Create a list of IDIR subdirectory options
-                        IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
-                                   "${EXPT}/" "${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/" "${STORM}/" "${EXPT}/${CYCLE_STR}/${STORM}/" \
-                                   "${EXPT}/${CYCLE_STR}/" "${EXPT}/com/${CYCLE_STR}/${STORM}/${ENSID}/" "${EXPT}/com/${CYCLE_STR}/${ENSID}/" \
-                                   "${EXPT}/com/${ENSID}/" "${EXPT}/${ENSID}/" "${CYCLE_STR}/${STORM}/${ENSID}/" \
-                                   "${ENSID}/${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/${ENSID}/${STORM}/" "${CYCLE_STR}/${ENSID}/" \
-                                   "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
-                                   "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
-                                   "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/")
+                        IDIR_OPTS=("" "${EXPT}/com/${CYCLE}/${STORM}/" "${EXPT}/com/${CYCLE}/" "${EXPT}/com/" \
+                                   "${EXPT}/" "${CYCLE}/${STORM}/" "${CYCLE}/" "${STORM}/" "${EXPT}/${CYCLE}/${STORM}/" \
+                                   "${EXPT}/${CYCLE}/" "${EXPT}/com/${CYCLE}/${STORM}/${ENSID}/" "${EXPT}/com/${CYCLE}/${ENSID}/" \
+                                   "${EXPT}/com/${ENSID}/" "${EXPT}/${ENSID}/" "${CYCLE}/${STORM}/${ENSID}/" \
+                                   "${ENSID}/${CYCLE}/${STORM}/" "${CYCLE}/${ENSID}/${STORM}/" "${CYCLE}/${ENSID}/" \
+                                   "${ENSID}/${CYCLE}/" "${STORM}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE}/" \
+                                   "${EXPT}/${ENSID}/com/${CYCLE}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE}/" "${EXPT}/${ENSID}/com/" \
+                                   "${ENSID}/com/${CYCLE}/${STORM}/" "com/${CYCLE}/${STORM}/" "${ENSID}/")
 
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
@@ -464,8 +411,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 ((F=F+1))
                                 continue
                             fi
-                            
-                            # Get the right list of lead times 
+
+                            # Get the right list of lead times
                             if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
                                 FILE_FHRS=${ATCF_FHRS[@]}
                             else
@@ -511,10 +458,10 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Get the list of plotted files for this case
                         CASE_PLOTTED=(`cat ${PLOTTED_FILE} 2>/dev/null`)
-
+                        
 
                         # Get the status for this case
-                        CASE_STATUS=`cat "${STATUS_FILE}" 2>/dev/null`
+                        CASE_STATUS=`cat ${STATUS_FILE} 2>/dev/null`
 
 
                         # Print some information
@@ -642,15 +589,16 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # If IFILES is empty, then all available files have been plotted
                         # Then, skip to the next and mark status=complete
                         if [ -z "${IFILES[*]}" ]; then
+                        #if [ -z "$(echo -e "${IFILES[*]}" | tr -d '[:space:]')" ]; then
                         #if [ -z $(echo "${IFILES[*]}" | sed -e 's/^[[:space:]]*//') ]; then
-                            if [ "$ATCF_REQD" == "True" ] && ! find "$STORM_ATCF" -mmin +60 >/dev/null ; then
+                            if ! find "$STORM_ATCF" -mmin +60 >/dev/null ; then
                                 echo "MSG: All available files have already been processed."
                                 echo "MSG: However, ATCF is not old enough to complete."
                                 echo "MSG: More files might become available."
                                 echo "MSG: Moving on to next case."
                                 echo "incomplete" > ${STATUS_FILE}
                                 echo ""
-                            else    
+                            else
                                 echo "MSG: All available files have already been processed."
                                 echo "MSG: Marking the status as complete."
                                 echo "MSG: Moving on to next case."
@@ -705,12 +653,13 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # Call the batch job
                         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
                         LOG_DIR="$ODIR_FULL"
-                        LOGFILE="GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                        LOGFILE="GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                         perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
+                        perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
+                        perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
+                        perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=32G/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -723,10 +672,10 @@ if [ "${DO_MAPS}" = "True" ]; then
                         perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
                         perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+        
 
-                        echo "MSG: Executing GPLOT batch job submission."			
+                        echo "Executing GPLOT batch job submission."
                         sbatch ${BATCH_DIR}${BATCHFILE2}
-                        echo ""
 
 
                         # Increase the batch job counter and check if we're over the limit.
@@ -734,19 +683,18 @@ if [ "${DO_MAPS}" = "True" ]; then
                         if [ "$N" -ge "$MAXCOUNT" ]; then
                             echo "MSG: Maximum number of batch submissions has been reached."
                             echo "MSG: Further jobs will be submitted later."
-                            echo "MSG: spawn_maps.sh completed at `date`"
+                            echo "MSG: spawn_ships.sh completed at `date`"
                             exit
                         fi
-
 
                     done #end of ID loop
                 done #end of TR loop
             done #end of DMN loop
         done #end of STORM loop
     done #end of CYCLE loop
-fi #end of DO_MAPS
+fi #end of DO_SHIPS
 
 wait
 
-#echo "$?"
-echo "MSG: spawn_maps.sh completed at `date`"
+echo "$?"
+echo "COMPLETE!"
