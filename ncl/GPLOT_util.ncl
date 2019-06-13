@@ -848,7 +848,7 @@ begin
 		end if
 		
 		; For Precipitation
-		if(var.eq."PRCP")then
+		if(any((/"PRCP","PRATE"/).eq.var))then
 			levels			= (/ 0.1,  0.25, 0.5,  1.0,  1.5,\
 						     2.0,  3.0,  4.0,  5.0,  7.5,\
 						    10.0, 15.0, 20.0, 25.0, 30.0,\
@@ -867,10 +867,10 @@ begin
 			;			      1.00,  1.25,  1.50,  1.75,  2.00, \
 			;			      3.00,  4.00,  6.00,  8.00, 10.00, \
 			;			     15.00, 20.00/)
-            levels          = (/ 0.01,  0.10,  0.25,  0.50,  0.75,  1.00, \
-                                 1.25,  1.50,  1.75,  2.00,  2.50,  3.00, \
-                                 4.00,  5.00,  7.00, 10.00, 15.00, 20.00, \
-                                25.00, 30.00, 25.00, 40.00, 50.00, 60.00/)
+			levels          = (/ 0.01,  0.10,  0.25,  0.50,  0.75,  1.00, \
+					     1.25,  1.50,  1.75,  2.00,  2.50,  3.00, \
+					     4.00,  5.00,  7.00, 10.00, 15.00, 20.00, \
+					    25.00, 30.00, 25.00, 40.00, 50.00, 60.00/)
 			levels@stride		= 1
 		end if
 		
@@ -1072,29 +1072,29 @@ begin
 			    (/"VVEL_P0_L100_GLL0",	"109"/),\	; 109.  3D Vertical Velocity
 			    (/"ABSV_P0_L100_GLL0",	"110"/),\	; 110.  3D Vorticity (absolute)
 			    (/"ABSV_P0_L100_GLL0",	"111"/),\	; 111.  3D Vorticity (relative)
+			    (/"DPT_P0_L100_GLL0",	"112"/),\	; 112.  3D Dewpoint Temperature
+			    (/"UGRD_P0_L103_GLL0",	"201"/),\	; 201.  10-m Zonal Wind
+			    (/"VGRD_P0_L103_GLL0",	"202"/),\	; 202.  10-m Meridional Wind
+			    (/"UGRD_P0_L103_GLL0",	"203"/),\	; 203.  10-m Total Wind
+			    (/"TMP_P0_L103_GLL0",	"301"/),\	; 301.  2-m Air Temperature
+			    (/"DPT_P0_L103_GLL0",	"302"/),\	; 302.  2-m Dew Point Temperature
+			    (/"SPFH_P0_L103_GLL0",	"303"/),\	; 303.  2-m Specific Humidity
+			    (/"RH_P0_L103_GLL0",	"304"/),\	; 304.  2-m Relative Humidity
 			    (/"MSLET_P0_L101_GLL0",	"401"/),\	; 401.  Mean Sea Level Pressure
 			    (/"LHTFL_P0_L1_GLL0",	"402"/),\	; 402.  Surface Latent Heat Flux
+			    (/"SHTFL_P0_L1_GLL0",	"403"/),\	; 403.  Surface Sensible Heat Flux
+			    (/"TMP_P0_L1_GLL0",		"404"/),\	; 404.  Surface Temperature
+			    (/"WTMP_P0_L1_GLL0",	"405"/),\	; 405.  Sea Surface Temperature
 			    (/"PRES_P0_L1_GLL0",	"406"/),\	; 406.  Surface Pressure
+			    (/"TMP_P0_L7_GLL0",		"501"/),\	; 501.  Tropopause Temperature
 			    (/"APCP_P8_L1_GLL0_acc",	"601"/),\	; 601.  Bulk Precipitation Rate
+			    (/"PRATE_P0_L1_GLL0",	"602"/),\	; 602.  Instantaneous Precipitation Rate
 			    (/"APCP_P8_L1_GLL0_acc",	"603"/),\	; 603.  Total Precipitation
 			    (/"PWAT_P0_L200_GLL0",	"604"/),\	; 604.  Total Precipitable Water
 			    (/"REFC_P0_L200_GLL0",	"605"/),\	; 605.  Composite Reflectivity
 			    (/"HLCY_P0_2L103_GLL0",	"606"/),\	; 606.  Storm-Relative Helicity
 			    (/"CAPE_P0_L1_GLL0",	"607"/),\	; 607.  Convective Available Potential Energy
-			    (/"UGRD_P0_L103_GLL0",	"201"/),\	; 201.  10-m Zonal Wind
-			    (/"VGRD_P0_L103_GLL0",	"202"/),\	; 202.  10-m Meridional Wind
-			    (/"UGRD_P0_L103_GLL0",	"203"/),\	; 203.  10-m Total Wind
-			    (/"LAND_P0_L1_GLL0",       "1001"/),\	; 1001. Land-Sea Mask
-			    (/"TMP_P0_L103_GLL0",	"301"/),\	; 301.  2-m Air Temperature
-			    (/"TMP_P0_L1_GLL0",		"404"/),\	; 404.  Surface Temperature
-			    (/"TMP_P0_L7_GLL0",		"501"/),\	; 501.  Tropopause Temperature
-			    (/"DPT_P0_L103_GLL0",	"302"/),\	; 302.  2-m Dew Point Temperature
-			    (/"DPT_P0_L100_GLL0",	"112"/),\	; 112.  3D Dewpoint Temperature
-			    (/"SHTFL_P0_L1_GLL0",	"403"/),\	; 403.  Surface Sensible Heat Flux
-			    (/"SPFH_P0_L103_GLL0",	"303"/),\	; 303.  2-m Specific Humidity
-			    (/"RH_P0_L103_GLL0",	"304"/),\	; 304.  2-m Relative Humidity
-			    (/"PRATE_P0_L1_GLL0",	"602"/),\	; 602.  Instantaneous Precipitation Rate
-			    (/"WTMP_P0_L1_GLL0",	"405"/)\	; 405.  Sea Surface Temperature
+			    (/"LAND_P0_L1_GLL0",       "1001"/)\	; 1001. Land-Sea Mask
 			    /)
 	
 	else if(isStrSubset(dSource,"HWRF"))then
@@ -1241,7 +1241,7 @@ begin
 	
 	; This is a temp. fix for Precipitation variables that were updated to have time interval information.
 	; This should be integrated into the actual variable name, as with UV10, T2, etc.
-	if(isStrSubset(var,"PRCP") .and. any((/"3h","6h","12h"/).eq.lev))then	newVar = newVar+lev   end if
+	if(isStrSubset(var,"PRCP") .and. isStrSubset(lev,"h"))then	newVar = newVar+lev   end if
 	
 	
 	return(newVar)

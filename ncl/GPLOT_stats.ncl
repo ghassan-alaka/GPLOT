@@ -2448,6 +2448,10 @@ do mmm = 0,dimsizes(TRKmodelsT)-1
 	minLon	:= min((/min(aTRK2(mmm,:,1,:)),min(bTRK(1,:))/))
 	rngLon	:= abs(maxLon-minLon)
 	llratio	:= rngLat/rngLon
+	if(ismissing(llratio))then
+		print("WARNING: "+thisModel+" track trend can't be produced.")
+		continue
+	end if
 	if(llratio.lt.0.5)then
 		maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
 		minLat	= minLat - 0.5*abs(0.5*rngLon - rngLat)
@@ -2740,7 +2744,7 @@ do mmm = 0,dimsizes(TRKmodelsT)-1
 		else								plres4b@gsLineDashPattern = 11
 		end if
 		if(ttt.lt.dimsizes(allDates)-1 .and. ttt.lt.dimsizes(bTRK3(0,:))-1)then
-			if(.not.ismissing(bTRK3(0,ttt)) .and. .not.ismissing(bTRK(0,ttt+1)))then
+			if(.not.ismissing(bTRK3(0,ttt)) .and. .not.ismissing(bTRK3(0,ttt+1)))then
 				dum1(ttt) = gsn_add_polyline(wks,plot,bTRK3(1,ttt:ttt+1),bTRK3(0,ttt:ttt+1),plres4b)
 			end if
 		end if
@@ -2862,18 +2866,35 @@ txbres5b = txbres
 
 do mmm = 0,dimsizes(INTmodelsT)-1
 
+	; Define the current intensity trend model as 'thisModel'
 	thisModel = INTmodelsT(mmm)
 	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	; PART ONE --> INTENSITY TREND GRAPHICS ;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	
+	; Print some information to the terminal
+	print("MSG: Producing graphic for "+thisModel+" intensity trend.")
 	if(all(ismissing(aINT3(mmm,:,0,:))))then	print("WARNING: "+thisModel+" intensity is unavailable through "+IDATE+".")
 							continue
 	end if
 
-	print("MSG: Producing graphic for "+thisModel+" intensity trend.")
-
-	; Find map boundaries. Resize if necessary
+	; Find intensity graphic Y limits.
 	maxInt	:= max((/max(aINT2(mmm,:,0,:)),max(bINT(0,:))/))
 	minInt	:= min((/min(aINT2(mmm,:,0,:)),min(bINT(0,:))/))
-	rngInt	:= abs(maxInt-minInt)
+	if(maxInt.eq.minInt)then
+		rngInt := 50
+	else if(ismissing(maxInt) .or. ismissing(minInt))
+		rngInt := fval3
+		rngInt@_FillValue = fval3
+	else
+		rngInt := abs(maxInt-minInt)
+	end if  end if
+	if(ismissing(rngInt))then	print("WARNING: Unable to retrieve intensity range for "+thisModel+".")
+					continue
+	end if
+
+	; Setup an array of intensity values
 	if(1.2*rngInt.ge.100.)then
 		IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 					 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,\
@@ -2887,9 +2908,7 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 					 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,\
 					 5)
 	end if  end if  end if
-	
-	
-
+		
 	; Set up the output file
 	oFile	= ODIR+"IntensityTrend."+thisModel+"."+LONGSID+"."+IDATE
 	if(fileexists(oFile))then   system("rm -f "+oFile)   end if
@@ -2897,7 +2916,6 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	
 	;Create a hurricane symbol marker
 	tc_marker := NhlNewMarker(wks,"p",137,0.0,0.0,1.0,1.0,0.0)
-
 
 	; Update resources
 	xyres5a@xyMarkers	= tc_marker
@@ -2908,11 +2926,9 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	xyres5a@trYMaxF		= maxInt+(0.10*rngInt)
 	xyres5a@trYMinF		= max((/0.,minInt-(0.10*rngInt)/))
 
-
 	; Plot the best track
 	plot	:= gsn_csm_xy(wks,bHrs(:),bINT(0,:),xyres5a)
 	;plot	:= gsn_csm_blank_plot(wks,res)
-	
 	
 	; Info about plot size
 	getvalues plot
@@ -2923,7 +2939,6 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	end getvalues
 	vpRGT = vpLFT+vpWID
 	vpBOT = vpTOP-vpHGT
-
 
 	; Plot best track legend
 	mkres5a@gsMarkerColor	:= "red"
@@ -2939,17 +2954,19 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	gsn_polyline_ndc(wks,(/vpLFT+(0.75*vpWID),vpLFT+(0.75*vpWID)+0.04/),(/vpTOP+0.0325,vpTOP+0.0325/),plres5a)
 	gsn_text_ndc(wks,"BEST: Best Track",vpLFT+(0.75*vpWID)+0.045,vpTOP+0.0325,txares5a)
 
-
-	; Plot a vertical black line at 0 h
+	; Draw grid lines on the graphic.
 	dum1	:= new(dimsizes(XYHrs2),"graphic")
 	dum2	:= new(dimsizes(IntMjrGrd),"graphic")
 
+	; Draw a thick vertical black line at 0 h
 	plres5a@gsLineThicknessF	= 5.0
 	plres5a@gsLineColor	:= "black"
 	plres5a@gsLineDashPattern	= 0
 	plres5a@tfPolyDrawOrder	= "PreDraw"
 	dum1(ind(XYHrs2.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres5a@trYMinF,xyres5a@trYMaxF/),plres5a)
 
+	; Draw thinner vertical grey lines for major forecast hours (dum1)
+	; Draw thinner horizontal grey lines for major intensity levels (dum2)
 	plres5a@gsLineThicknessF	= 1.5
 	plres5a@gsLineDashPattern	= 11
 	plres5a@gsLineColor	:= "grey70"
@@ -2960,7 +2977,6 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	do fff = 0,dimsizes(IntMjrGrd)-1
 		dum2(fff)	= gsn_add_polyline(wks,plot,(/xyres5a@trXMinF,xyres5a@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres5a)
 	end do
-
 
 	; Add model tracks
 	do ttt = 0,nTrend-1
@@ -2984,11 +3000,9 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 		xyres5a@xyLineColor	:= TRDcolors(ttt,:)
 		xyres5a@tiXAxisString	= ""
 		xyres5a@tiYAxisString	= ""
-
 	
 		; Overlay the new intensity line
 		overlay(plot,gsn_csm_xy(wks,aINT2(mmm,ttt,1,vals),aINT2(mmm,ttt,0,vals),xyres5a))
-	
 	
 		; Add legend info for each model
 		plres5a@gsLineColor	:= TRDcolors(ttt,:)
@@ -3034,34 +3048,46 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	
 
 
-	; Produce lifetime "spaghetti" intensity for 'MCODE'
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	; PART TWO --> INTENSITY LIFETIME GRAPHICS ;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	; Produce lifetime "spaghetti" intensity graphic for the current intensity trend model.
 	print("MSG: Producing graphic for "+thisModel+" lifetime intensity.")
+	if(all(ismissing(aINT3(mmm,:,0,:))))then	print("WARNING: "+thisModel+" intensity is unavailable for any cycles.")
+							continue
+	end if
 	
 	; Find plot Max/Min and major tick marks. Resize if necessary
 	maxInt	:= max((/max(aINT3(mmm,:,0,:)),max(bINT3(0,:))/))
 	minInt	:= min((/min(aINT3(mmm,:,0,:)),min(bINT3(0,:))/))
-	if(all(ismissing(aINT3(mmm,:,0,:))))then	print("WARNING: "+INTmodelsT(mmm)+" intensity is unavailable for any cycles.")
-							continue
-	end if
-	rngInt	:= abs(maxInt-minInt)
-	if(.not.ismissing(rngInt))then
-		if(1.2*rngInt.ge.100.)then
-			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
-						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,\
-						 20)
-		else if(1.2*rngInt.ge.50. .and. 1.2*rngInt.lt.100.)then
-			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%10 + 10,\
-						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%10,\
-						 10)
-		else if(1.2*rngInt.lt.50.)then
-			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%5 + 5,\
-						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,\
-						 5)
-		end if  end if  end if
+	if(maxInt.eq.minInt)then
+		rngInt := 50
+	else if(ismissing(maxInt) .or. ismissing(minInt))
+		rngInt := fval3
+		rngInt@_FillValue = fval3
 	else
-		continue
+		rngInt := abs(maxInt-minInt)
+	end if  end if
+	if(ismissing(rngInt))then	print("WARNING: Unable to retrieve intensity range for "+thisModel+".")
+					continue
 	end if
 	
+	; Setup an array of intensity values
+	if(1.2*rngInt.ge.100.)then
+		IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
+					 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,\
+					 20)
+	else if(1.2*rngInt.ge.50. .and. 1.2*rngInt.lt.100.)then
+		IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%10 + 10,\
+					 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%10,\
+					 10)
+	else if(1.2*rngInt.lt.50.)then
+		IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%5 + 5,\
+					 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,\
+					 5)
+	end if  end if  end if
+
 	; Set up the output file
 	oFile	= ODIR+"AllIntensity."+INTmodelsT(mmm)+"."+LONGSID+"."+IDATE
 	if(fileexists(oFile))then   system("rm -f "+oFile)   end if
@@ -3071,22 +3097,19 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	tc_marker := NhlNewMarker(wks,"p",137,0.0,0.0,1.0,1.0,0.0)
 	
 	; Update resources
-	xyres5b@tmYLMode		= "Explicit"
-	xyres5b@tmYLValues		:= IntMjrGrd
-	xyres5b@tmYLLabels		:= "" + xyres5b@tmYLValues
+	xyres5b@tmYLMode	= "Explicit"
+	xyres5b@tmYLValues	:= IntMjrGrd
+	xyres5b@tmYLLabels	:= "" + xyres5b@tmYLValues
 	xyres5b@tmYROn		= False
-	xyres5b@tmYLValues		:= IntMjrGrd
-	xyres5b@tmYLLabels		:= "" + xyres5b@tmYLValues
+	xyres5b@tmYLValues	:= IntMjrGrd
+	xyres5b@tmYLLabels	:= "" + xyres5b@tmYLValues
 	xyres5b@trYMaxF		= maxInt+(0.10*rngInt)
 	xyres5b@trYMinF		= max((/0.,minInt-(0.10*rngInt)/))
 	xyres5b@trYMaxF		= maxInt+(0.10*rngInt)
 	xyres5b@trYMinF		= max((/0.,minInt-(0.10*rngInt)/))
 	;xyres5b@tiMainString	= thisModel+" Late Intensity Trend"
 
-	
 	; Plot a blank map
-	; Plot the best track
-	;res@xyMarkers		= tc_marker
 	;plot	:= gsn_csm_xy(wks,bHrs3(:),bINT3(0,:),res)
 	plot	:= gsn_csm_blank_plot(wks,xyres5b)
 	dum1	:= new(dimsizes(allDates),"graphic")
@@ -3102,11 +3125,12 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	vpRGT = vpLFT+vpWID
 	vpBOT = vpTOP-vpHGT
 	
-	; Plot a vertical black line at 0 h
+	; Draw grid lines on the graphic.
 	dumA	:= new(dimsizes(bHrs3),"graphic")
 	dumB	:= new(dimsizes(IntMjrGrd),"graphic")
 	
-	
+	; Draw vertical grey lines at major forecast hours
+	; Draw horizontal grey lines at major intensity levels
 	plres5b@tfPolyDrawOrder	= "PreDraw"
 	plres5b@gsLineThicknessF= 1.5
 	plres5b@gsLineDashPattern= 11
@@ -3117,7 +3141,6 @@ do mmm = 0,dimsizes(INTmodelsT)-1
 	do fff = 0,dimsizes(IntMjrGrd)-1
 		dumB(fff)	= gsn_add_polyline(wks,plot,(/xyres5b@trXMinF,xyres5b@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres5b)
 	end do
-	
 	
 	; Add best track legend
 	plres5b@gsLineThicknessF	= 2.5
@@ -3461,6 +3484,7 @@ end if ; doPlot6
 if(doVer)then
 ;if(fnlATCF)then
 
+print("")
 print("MSG: *************STEP FOUR************")
 print("MSG: Produce verification and associated graphics using MET-TC.")
 print("MSG: Using NHC verification rules, which state that a storm")
@@ -4527,19 +4551,11 @@ else if(doVer)then
 	else if(doLIVer)then
 		chk	:= systemfunc("ls "+ODIR+"Verification*WIND_ERR*late*png 2>/dev/null")
 		if(ismissing(chk(0)))then
-			print("ERROR: Late IntensityModel Verification did not plot.")
+			print("ERROR: Late Intensity Model Verification did not plot.")
 			exit
 		end if
-	end if
-	end if
-	end if
-	end if
-end if
-end if
-end if
-end if
-end if
-end if
+	end if  end if  end if  end if
+end if  end if  end if  end if  end if  end if
 
 
 

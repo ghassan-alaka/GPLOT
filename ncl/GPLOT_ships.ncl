@@ -34,9 +34,9 @@ load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
 load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
 load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
 
-;external FILTER121 "$GPLOT_DIR/wrapit/filter121.so"
-external SPH2CART "$GPLOT_DIR/wrapit/sph2cart.so"
-;external HBFILTER "$GPLOT_DIR/wrapit/hbfilter.so"
+;external FILTER121 "$GPLOT_DIR/ncl/wrapit/filter121.so"
+external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
+;external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
 
 
 
@@ -714,12 +714,12 @@ if(isStrSubset(str_lower(DSOURCE),"hwrf") .or.\
 	
 	; Find the ATCF that corresponds to this case.
 	; ATCF is required, so script will fail if it is missing.
-	val		:= ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)))
+	val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)))
 	if(ismissing(val(0)))then
 		print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
 		exit
 	end if
-	ATCF_FILES	:= ATCF_FILES(val)
+	ATCF_FILES := ATCF_FILES(val)
 	print("MSG: Working on this ATCF file: "+ATCF_FILES)
 	
 	

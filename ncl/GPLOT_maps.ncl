@@ -42,9 +42,9 @@ load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
 load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
 load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
 
-;external FILTER121 "$GPLOT_DIR/wrapit/filter121.so"
-external SPH2CART "$GPLOT_DIR/wrapit/sph2cart.so"
-;external HBFILTER "$GPLOT_DIR/wrapit/hbfilter.so"
+;external FILTER121 "$GPLOT_DIR/ncl/wrapit/filter121.so"
+external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
+;external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
 
 
 
@@ -662,7 +662,6 @@ print("MSG: Get the list of input files for graphical production.")
 ;    this script yourself, then you must mimic 'UnplottedFiles'
 ;    by listing all files to be processed in a text file.
 IFILES_LIST=ODIR+"UnplottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
-print(IFILES_LIST)
 IFILES_TEST=systemfunc("ls "+IFILES_LIST+" 2>/dev/null")
 if(ismissing(IFILES_TEST))then
 	print("ERROR: No files listed for graphical production.")
@@ -1173,19 +1172,8 @@ do fff = 0,nFiles-1
 		;================================================================
 		
 		; The precipitation variable name depends on time of accumulation
-		if(isStrSubset(FNAME(ppp),"PRCP"))then
-			hr_offset := G_BASE(1,ppp)
-			if(DSOURCE.eq."GFS")then
-				if(FHR3(ttt).ge.12 .and. FHR3(ttt).le.240 .and. FHR3(ttt)%6.eq.0)then
-					G_BASE(1,ppp) = "6h"
-				else if(FHR3(ttt).ge.9 .and. FHR3(ttt).le.240 .and. FHR3(ttt)%3.eq.0)then
-					G_BASE(1,ppp) = "3h"
-				else if(FHR3(ttt).gt.240 .and. FHR3(ttt)%12.eq.0)then
-					G_BASE(1,ppp) = "12h"
-				end if
-				end if
-				end if
-			end if
+		if(G_BASE(0,ppp).eq."TPRCP" .and. DSOURCE.eq."GFS")then
+			G_BASE(1,ppp) = tostring(FHR3(ttt))+"h"
 		end if
 		
 		
@@ -1203,7 +1191,7 @@ do fff = 0,nFiles-1
 				break
 			end if
 		end do
-		
+
 		
 		; If the variable is not found in any input files, then we can't continue
 		if(.not.varStatus)then	print("WARNING: Variable "+G_BASE(0,ppp)+" not found.")
@@ -1458,108 +1446,116 @@ do fff = 0,nFiles-1
 			end if		
 
 
-			; If base variable is Precip Rate, then previous file is necessary
+			; If base variable is Bulk Precip Rate (PRCP), then previous file is necessary
 			if(G_BASE(0,ppp).eq."PRCP" .and. isStrSubset(DSOURCE,"HWRF"))then
-				if(FHR3(ttt).eq.0)then	print("MSG: No precipitation data at 0-h. Skipping...")
+				
+				; Check if we should process bulk precipitation rate
+				if(ONE_FILE)then
+					print("WARNING: Bulk precip rate not yet supported for ONE_FILE. Skipping...")
+					continue
+				end if
+				if(FHR3(ttt).eq.0)then	print("WARNING: Can't compute bulk precip rate at 0-h. Skipping...")
 							continue
 				end if
-				if(FHR3(ttt).gt.0)then
-					if(hr_offset.eq."")then	hr_offset := 3
-					else			hr_offset := toint(hr_offset)
-					end if
-					if(FHR3(ttt)-hr_offset.lt.0)then print("MSG: hr_offset is less than 0. Skipping...")
-									continue
-					end if
+				
+				; Get the hour offset from the previous precipitation file
+				hr_offset := G_BASE(1,ppp)
+				if(hr_offset.eq."")then	hr_offset := 3
+				else			hr_offset := toint(hr_offset)
+				end if
+				
+				; If hr_offset is larger than the current forecast lead time, then not enough data is available.
+				if(FHR3(ttt).lt.hr_offset)then
+					print("WARNING: Can't compute bulk precip rate at "+FHR3(ttt)+"-h because hr_offset. Skipping...")
+					continue
+				end if
 
-					; Get the correct previous file based
-					if(ONE_FILE)then
-						print("WARNING: Precipitation rate not yet supported for ONE_FILE.")
-						continue
-					else
-						FHRB	= "f"+sprinti(FMT_HR,FHR3(ttt)-hr_offset)+"."
-						IFILEB	= systemfunc("ls "+str_sub_str(iFiles(fff),"f"+sprinti(FMT_HR,FHR3(ttt))+".",FHRB)+" 2</dev/null")
-						if(ismissing(IFILEB(0)))then
-							print("WARNING: No precipitation data at "+FHRB+"-h. Skipping...")
-							continue
-						else
-							f2	= addfile(IFILEB,"r")
-							Vbase2	= getVar2d(f2,DSOURCE,\
-									   (/G_BASE(0,ppp),G_BASE(1,ppp),tostring(ttt)/),\
-									   nDims,BOCO2,mf,flipFlag,lonF)
-						end if
-					end if
-					Vbase	= (Vbase - Vbase2)/tofloat(hr_offset)
-					Vbase!0 = "lat"
-					Vbase!1 = "lon"
-					Vbase&lat = lat
-					Vbase&lon = lon
-					Vbase@units = "mm h-1"
-			
-					delete([/Vbase2,FHRB,f2/])
+				; Get the correct previous file based on hr_offset
+				FHRB	= "f"+sprinti(FMT_HR,FHR3(ttt)-hr_offset)+"."
+				IFILEB	= systemfunc("ls "+str_sub_str(iFiles(fff),"f"+sprinti(FMT_HR,FHR3(ttt))+".",FHRB)+" 2</dev/null")
+				if(ismissing(IFILEB(0)))then
+					print("WARNING: File containing previous precipitation data at "+FHRB+"-h not found. Skipping...")
+					continue
 				end if
+				
+				; Read the previous precipitation data
+				f2	= addfile(IFILEB,"r")
+				Vbase2	= getVar2d(f2,DSOURCE,\
+						   (/G_BASE(0,ppp),G_BASE(1,ppp),tostring(ttt)/),\
+						   nDims,BOCO2,mf,flipFlag,lonF)
+				
+				; Compute the bulk precipitation rate
+				Vbase	= (Vbase - Vbase2)/tofloat(hr_offset)
+				Vbase!0 = "lat"
+				Vbase!1 = "lon"
+				Vbase&lat = lat
+				Vbase&lon = lon
+				Vbase@units = "mm h-1"
+			
+				delete([/Vbase2,FHRB,f2/])
 			end if
 			
 			; For DSOURCE=GFS, the total precipitation variable (TPRCP) only reflects the precipitation
 			; that accumulated since the previous output file. To get the total precip over the entire
 			; forecast, the total precip from all previous forecast lead times must be added to the
 			; total precip from the current lead time.
-			if(G_BASE(0,ppp).eq."TPRCP" .and. any((/"GFS"/).eq.DSOURCE))then
-				if(FHR3(ttt).eq.0)then	print("MSG: No precipitation data at 0-h. Skipping...")
-							continue
-				end if
-				system("mkdir -p "+ODIR+"PRCPDATA")
-				if(FHR3(ttt).ge.12 .and. FHR3(ttt).le.240 .and. FHR3(ttt)%6.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-6)+".nc"))then
-						continue
-					end if
-					f2 := addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-6)+".nc","r")
-					Vbase	= Vbase + (/f2->TPRCP/)
-					Vbase!0 = "lat"
-					Vbase!1 = "lon"
-					Vbase&lat = lat
-					Vbase&lon = lon
-					Vbase@units = "mm h-1"
-				else if(FHR3(ttt).ge.9 .and. FHR3(ttt).le.240 .and. FHR3(ttt)%3.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc"))then
-						continue
-					end if
-					f2 := addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc","r")
-					Vbase	= Vbase + (/f2->TPRCP/)
-					Vbase!0 = "lat"
-					Vbase!1 = "lon"
-					Vbase&lat = lat
-					Vbase&lon = lon
-					Vbase@units = "mm h-1"
-				else if(FHR3(ttt).gt.240 .and. FHR3(ttt)%12.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-12)+".nc"))then
-						print("Skipping TPRCP")
-						continue
-					end if
-					f2 := addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-12)+".nc","r")
-					Vbase	= Vbase + (/f2->TPRCP/)
-					Vbase!0 = "lat"
-					Vbase!1 = "lon"
-					Vbase&lat = lat
-					Vbase&lon = lon
-					Vbase@units = "mm h-1"
-				end if  end if  end if
+			;if(G_BASE(0,ppp).eq."TPRCP" .and. any((/"GFS"/).eq.DSOURCE))then
+			;	if(FHR3(ttt).eq.0)then	print("MSG: No precipitation data at 0-h. Skipping...")
+			;				continue
+			;	end if
+			;	system("mkdir -p "+ODIR+"PRCPDATA")
+			;	if(FHR3(ttt).ge.12 .and. FHR3(ttt).le.240 .and. FHR3(ttt)%6.eq.0)then
+			;		if(.not.fileexists(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-6)+".nc"))then
+			;			continue
+			;		end if
+			;		f2 := addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-6)+".nc","r")
+			;		Vbase	= Vbase + (/f2->TPRCP/)
+			;		Vbase!0 = "lat"
+			;		Vbase!1 = "lon"
+			;		Vbase&lat = lat
+			;		Vbase&lon = lon
+			;		Vbase@units = "mm h-1"
+			;	else if(FHR3(ttt).ge.9 .and. FHR3(ttt).le.240 .and. FHR3(ttt)%3.eq.0)then
+			;		if(.not.fileexists(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc"))then
+			;			continue
+			;		end if
+			;		f2 := addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc","r")
+			;		Vbase	= Vbase + (/f2->TPRCP/)
+			;		Vbase!0 = "lat"
+			;		Vbase!1 = "lon"
+			;		Vbase&lat = lat
+			;		Vbase&lon = lon
+			;		Vbase@units = "mm h-1"
+			;	else if(FHR3(ttt).gt.240 .and. FHR3(ttt)%12.eq.0)then
+			;		if(.not.fileexists(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-12)+".nc"))then
+			;			print("Skipping TPRCP")
+			;			continue
+			;		end if
+			;		f2 := addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-12)+".nc","r")
+			;		Vbase	= Vbase + (/f2->TPRCP/)
+			;		Vbase!0 = "lat"
+			;		Vbase!1 = "lon"
+			;		Vbase&lat = lat
+			;		Vbase&lon = lon
+			;		Vbase@units = "mm h-1"
+			;	end if  end if  end if
 				
-				; Write TPRCP data to simple NC file for easy access. Only for GFS.	
-				system("/bin/rm -f "+ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
-				FOUT = addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
-				fAtt	= True
-				fAtt@title	= "GFS Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
-				fAtt@source_file = iFiles(myInd)
-				fAtt@creation_date = systemfunc("date")
-				fileattdef(FOUT,fAtt)
-				FOUT->TPRCP = Vbase
-				FOUT->lat = lat
-				FOUT->lon = lon
-			end if
+			;	; Write TPRCP data to simple NC file for easy access. Only for GFS.	
+			;	system("/bin/rm -f "+ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
+			;	FOUT = addfile(ODIR+"PRCPDATA/GFS.TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
+			;	fAtt	= True
+			;	fAtt@title	= "GFS Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
+			;	fAtt@source_file = iFiles(myInd)
+			;	fAtt@creation_date = systemfunc("date")
+			;	fileattdef(FOUT,fAtt)
+			;	FOUT->TPRCP = Vbase
+			;	FOUT->lat = lat
+			;	FOUT->lon = lon
+			;end if
 				
 				
 			; If base variable is TPRCP or REFL, skip forecast hour 0.
-			if(any((/"TPRCP","REFL"/).eq.G_BASE(0,ppp)) .and. FHR3(ttt).eq.0)then   continue   end if
+			;if(any((/"TPRCP","REFL"/).eq.G_BASE(0,ppp)) .and. FHR3(ttt).eq.0)then   continue   end if
 		end if
 		
 		

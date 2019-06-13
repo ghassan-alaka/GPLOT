@@ -17,8 +17,8 @@
 
 ;load "/home/Ghassan.Alaka/GPLOT/ncl/GPLOT_func.v3.ncl"
 
-external FILTER121    "$GPLOT_DIR/wrapit/filter121.so"
-external CENTROID "$GPLOT_DIR/wrapit/centroid.so"
+external FILTER121    "$GPLOT_DIR/ncl/wrapit/filter121.so"
+external CENTROID "$GPLOT_DIR/ncl/wrapit/centroid.so"
 
 
 ;

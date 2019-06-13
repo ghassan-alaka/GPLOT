@@ -35,8 +35,8 @@
 
 load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
 
-external MWAVG    "$GPLOT_DIR/wrapit/mwavg.so"
-external HBFILTER "$GPLOT_DIR/wrapit/hbfilter.so"
+external MWAVG    "$GPLOT_DIR/ncl/wrapit/mwavg.so"
+external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
 
 g		= 9.80665
 pi		= 3.14159265359
@@ -1420,7 +1420,7 @@ begin
 	else if(varInfo(0).eq."HGT" .and. any((/"m","gpm"/).eq.V@units))then
 		V	= 0.1*V
 		V@units	= "dam"
-	else if(varInfo(0).eq."PRCP" .and. V@units.eq."kg m-2 s-1")then
+	else if(any((/"PRCP","PRATE"/).eq.varInfo(0)) .and. V@units.eq."kg m-2 s-1")then
 		V	= V*3600.
 		V@units	= "mm h-1"
 	else if(varInfo(0).eq."TPRCP" .and. V@units.eq."kg m-2")then
