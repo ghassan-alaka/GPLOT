@@ -1,0 +1,4 @@
+PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
+False     UV             02500850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          02500850m     SFDL
+False     UV             05000850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          05000850m     SFML
+False     UV             07000850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          07000850m     SFSL

@@ -12,16 +12,16 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = GFS_Forecast
+EXPT = HWRF_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
 DO_STATS = True
 DO_SHIPS = True
-DO_POLAR = False
+DO_POLAR = True
 
 ; 1C. DATA SOURCE
-DSOURCE = GFS
+DSOURCE = HWRF19
 
 ; 1D. BASIN-SCALE HWRF DATA?
 IS_HWRFB = False
@@ -42,19 +42,19 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/
+IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/
 ITAG =
-EXT = .grb2
+EXT =
 
 ; 1I. OUTPUT PATH
 ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/
 ATCF1_TAG = trak.hwrf.raw
-ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HWRF_Forecast/
 ATCF2_TAG = atcfunix
-ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HWRF_Forecast/
 ATCF3_TAG = trak.hwrf.raw
 
 ; 1K. ADECK & BDECK PATHS
@@ -64,7 +64,7 @@ BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
-FNL_HR = 384
+FNL_HR = 126
 FMT_HR = 3
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
@@ -95,13 +95,13 @@ FORCE = False
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac d03
+DOMAIN = hwrf d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1 Tier2 Tier3
+TIER = Tier1 Tier2
 
 ; 2C. MAP ATCF REQUIREMENT
-ATCF_REQD = False
+ATCF_REQD = True
 
 
 
@@ -110,27 +110,27 @@ ATCF_REQD = False
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = AVNO
-MCODE = AVNO
-MCODEI = AVNI
+MORIG = HWRF
+MCODE = HWRF
+MCODEI = HWFI
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM00 = HWRF HMON NVGM CTCX EGRR
-TRKM06 = HWRFO HMON NVGM CTCX
-INTM = HWRF HMON DSHP LGEM CTCX
-PRSM = HWRF HMON NVGM CTCX
-TRKMI00 = HWFI HMNI EGRI CTCI TVCN OFCL
-TRKMI06 = HWFI HMNI NVGI CTCI TVCN OFCL
-INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-TRKMT00 = HWRF HMON EGRR OFCL
-TRKMT06 = HWRF HMON EGRR OFCL
-INTMT = HWRF HMON DSHP OFCL
+TRKM00 = AVNO HMON NVGM CTCX EGRR
+TRKM06 = AVNO HMON NVGM CTCX
+INTM = HMON DSHP LGEM CTCX
+PRSM = AVNO HMON NVGM CTCX
+TRKMI00 = AVNI HMNI EGRI CTCI TVCN OFCL
+TRKMI06 = AVNI HMNI NVGI CTCI TVCN OFCL
+INTMI = HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT00 = HMON AVNO EGRR OFCL
+TRKMT06 = HMON AVNO EGRR OFCL
+INTMT = HMON DSHP OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HWFI HMNI NVGI CTCI TVCN OFCL
-EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-LTM = HWRF HMON NVGM CTCX
-LIM = HWRF HMON CTCX
+ETM = GFSI HMNI NVGI CTCI TVCN OFCL
+EIM = HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = GFSO HMON NVGM CTCX
+LIM = HMON CTCX
 
 
 ; 3D. VERIFICATION TIMES
@@ -145,7 +145,7 @@ VER_TIMES = 00 12 24 36 48 60 72 84 96 108 120
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
+TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HWRF_Forecast/tempdir
 RESOLUTION = 1.5
 RMAX = 600
 MODELTAG = hwrfprs.storm.0p015

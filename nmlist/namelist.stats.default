@@ -1,0 +1,12 @@
+NAME                  CHOICE		
+Track_Guidance        True
+Intensity_Guidance    True
+Pressure_Guidance     True
+Track_Trends          True
+Intensity_Trends      True
+Pressure_Trends       True
+Verification          True
+Early_Track_Ver       True
+Early_Intensity_Ver   True
+Late_Track_Ver        True
+Late_Intensity_Ver    True

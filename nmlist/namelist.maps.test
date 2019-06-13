@@ -1,0 +1,4 @@
+PLOT_ON   BASE_CN_FILL   PLEV1         OV_CN_LINE   PLEV2   OV_CN_LINE2  PLEV3       OV_VC_WIND   PLEV4       OV_MAX_MIN   PLEV5   OV_STLINE   PLEV6         FILE_NAME
+True      UV             10            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           UV10_MSLP
+True      RVO            850           HGT          850     N/A          N/A         UV           850         N/A          N/A     N/A         N/A           RVO850_Z850_UV850
+
