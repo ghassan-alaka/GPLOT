@@ -676,7 +676,7 @@ begin
 			cmap	= "MPL_BrBG"
 		
 		; For Precipitation Rate
-		else if(var.eq."PRCP")then
+		else if(any((/"PRCP","PRATE"/).eq.var))then
 			cmap	= "precip3_16lev"
 		
 		; For Total Precipitation

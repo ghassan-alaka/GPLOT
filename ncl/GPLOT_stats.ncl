@@ -57,7 +57,8 @@ print("MSG: All queries should be sent to Ghassan.Alaka@noaa.gov")
 print("MSG: Last recorded update:  2018-03-01")
 print("MSG: Start Time:  "+systemfunc("date"))
 
-;system("export LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:$LD_LIBRARY_PATH")
+
+system("export LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:$LD_LIBRARY_PATH")
 
 
 ;================================================================
@@ -364,6 +365,13 @@ MCODEI		= NML_DATA(ind(isStrSubset2(NML_DATA,"MCODEI =")))
 MCODEI		:= str_squeeze(str_split(MCODEI," = "))
 MCODEI		:= MCODEI(1)
 
+if(MCODE.eq."AVNO")then    MCODEV = "GFSO"
+else			   MCODEV = MCODE
+end if
+if(MCODEI.eq."AVNI")then   MCODEVI = "GFSI"
+else			   MCODEVI = MCODEI
+end if
+
 TRKmodels00	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKM00 =")))
 TRKmodels00	:= str_squeeze(str_split(TRKmodels00," = "))
 TRKmodels00	:= array_append_record(MCODE,TRKmodels00(1:),0)
@@ -406,19 +414,19 @@ INTmodelsT	:= array_append_record(MCODE,INTmodelsT(1:),0)
 
 etModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"ETM =")))
 etModels	:= str_squeeze(str_split(etModels," = "))
-etModels	:= array_append_record(MCODEI,etModels(1:),0)
+etModels	:= array_append_record(MCODEVI,etModels(1:),0)
 
 eiModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"EIM =")))
 eiModels	:= str_squeeze(str_split(eiModels," = "))
-eiModels	:= array_append_record(MCODEI,eiModels(1:),0)
+eiModels	:= array_append_record(MCODEVI,eiModels(1:),0)
 
 ltModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"LTM =")))
 ltModels	:= str_squeeze(str_split(ltModels," = "))
-ltModels	:= array_append_record(MCODE,ltModels(1:),0)
+ltModels	:= array_append_record(MCODEV,ltModels(1:),0)
 
 liModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"LIM =")))
 liModels	:= str_squeeze(str_split(liModels," = "))
-liModels	:= array_append_record(MCODE,liModels(1:),0)
+liModels	:= array_append_record(MCODEV,liModels(1:),0)
 
 
 
@@ -1507,6 +1515,7 @@ txbres@txFontHeightF	= 0.009
 if(doPlot1)then
 
 print("MSG: Producing graphics for late model track guidance.")
+DO_THIS = True
 
 ; Find optimal map boundaries by automatically resizing (if necessary)
 maxLat	= max((/max(aTRK(:,0,:)),max(bTRK(0,:))/))
@@ -1516,6 +1525,15 @@ maxLon	= max((/max(aTRK(:,1,:)),max(bTRK(1,:))/))
 minLon	= min((/min(aTRK(:,1,:)),min(bTRK(1,:))/))
 rngLon	= abs(maxLon-minLon)
 llratio	= rngLat/rngLon
+if(ismissing(llratio))then
+	print("WARNING: Late model track guidance can't be produced.")
+	DO_THIS = False
+end if
+
+
+
+if(DO_THIS)then
+
 if(llratio.lt.0.5)then
 	maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
 	minLat	= minLat - 0.5*abs(0.5*rngLon - rngLat)
@@ -1684,9 +1702,12 @@ frame(wks)
 if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
 
 
+end if ;DO_THIS
+
 
 
 print("MSG: Producing graphics for early model track guidance.")
+DO_THIS = True
 
 ; Find map boundaries. Resize if necessary
 maxLat	= max((/max(aTRKI(:,0,:)),max(bTRK(0,:))/))
@@ -1696,6 +1717,14 @@ maxLon	= max((/max(aTRKI(:,1,:)),max(bTRK(1,:))/))
 minLon	= min((/min(aTRKI(:,1,:)),min(bTRK(1,:))/))
 rngLon	= abs(maxLon-minLon)
 llratio	= rngLat/rngLon
+if(ismissing(llratio))then
+	print("WARNING: Early model track guidance can't be produced.")
+	DO_THIS = False
+end if
+
+
+if(DO_THIS)then
+
 if(llratio.lt.0.5)then
 	maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
 	minLat	= minLat - 0.5*abs(0.5*rngLon - rngLat)
@@ -1865,6 +1894,9 @@ frame(wks)
 ; Remove white space on plot
 if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
 
+
+end if ;DO_THIS
+
 end if ;doPlot1
 
 
@@ -1876,11 +1908,21 @@ end if ;doPlot1
 if(doPlot2)then
 
 print("MSG: Producing graphics for late model intensity guidance.")
+DO_THIS = True
 
 ; Find the XY plot boundaries
 maxInt	:= max((/max(aINT(:,0,:)),max(bINT(0,:))/))
 minInt	:= min((/min(aINT(:,0,:)),min(bINT(0,:))/))
 rngInt	:= abs(maxInt-minInt)
+if(ismissing(rngInt))then
+	print("WARNING: Late model intensity guidance can't be produced.")
+	DO_THIS = False
+end if
+
+
+
+if(DO_THIS)then
+
 if(1.2*rngInt.ge.100.)then
 	IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 				 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,\
@@ -2048,6 +2090,8 @@ frame(wks)
 if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
 
 
+end if ;DO_THIS
+
 
 
 print("MSG: Producing graphics for early model intensity guidance.")
@@ -2056,6 +2100,15 @@ print("MSG: Producing graphics for early model intensity guidance.")
 maxInt	:= max((/max(aINTI(:,0,:)),max(bINT(0,:))/))
 minInt	:= min((/min(aINTI(:,0,:)),min(bINT(0,:))/))
 rngInt	:= abs(maxInt-minInt)
+if(ismissing(rngInt))then
+	print("WARNING: Early model intensity guidance can't be produced.")
+	DO_THIS = False
+end if
+
+
+
+if(DO_THIS)then
+
 if(1.2*rngInt.ge.100.)then
 	IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 				 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,\
@@ -2221,6 +2274,8 @@ frame(wks)
 ; Remove white space on plot
 if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
 
+end if ;DO_THIS
+
 end if ;doPlot2
 
 
@@ -2232,11 +2287,21 @@ end if ;doPlot2
 if(doPlot3)then
 
 print("MSG: Producing graphics for late model pressure guidance.")
+DO_THIS = True
 
 ; Find the XY plot boundaries
 maxPrs	:= max((/max(aPRS(:,0,:)),max(bINT(1,:))/))
 minPrs	:= min((/min(aPRS(:,0,:)),min(bINT(1,:))/))
 rngPrs	:= abs(maxPrs-minPrs)
+if(ismissing(rngPrs))then
+	print("WARNING: Late model pressure guidance can't be produced.")
+	DO_THIS = False
+end if
+
+
+
+if(DO_THIS)then
+
 if(1.2*rngPrs.ge.50.)then
 	PrsMjrGrd	:= ispan(toint(minPrs-(0.10*rngPrs)) - toint(minPrs-(0.10*rngPrs))%10 + 10,\
 				 toint(maxPrs+(0.10*rngPrs)) - toint(maxPrs+(0.10*rngPrs))%10,\
@@ -2402,6 +2467,8 @@ frame(wks)
 
 ; Remove white space on plot
 if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+
+end if ;DO_THIS
 
 end if ;doPlot3
 
@@ -3281,6 +3348,15 @@ print("WARNING: Under construction.")
 maxInt	:= max((/max(aPRS2(:,0,:)),max(bINT(1,:))/))
 minInt	:= min((/min(aPRS2(:,0,:)),min(bINT(1,:))/))
 rngInt	:= abs(maxInt-minInt)
+if(ismissing(rngInt))then
+	print("WARNING: Early model intensity guidance can't be produced.")
+	DO_THIS = False
+end if
+
+
+
+if(DO_THIS)then
+
 if(1.2*rngInt.ge.100.)then
 	IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 				 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,\
@@ -3471,6 +3547,8 @@ frame(wks)
 ; Remove white space on plot
 if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
 
+end if ;DO_THIS
+
 end if ; doPlot6
 
 
@@ -3646,11 +3724,13 @@ system("perl -pi -e 's/model = .*/model = "+ltM_exp+"/g' "+TCPconf)
 system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 ; Create shell script to run TC_PAIRS with shell options (better)
-system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-system("echo "+str_get_dq()+"PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/met-6.0/bin:\${PATH}"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
+system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
+system("echo "+str_get_dq()+"PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/met-6.0/bin:\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 ;system("echo "+str_get_dq()+"LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:/lfs2/projects/dtc-hurr/MET/MET_releases/external_libs/lib:\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+O+"mettc/tc_pairs_wrapper.sh")
 system("echo "+str_get_dq()+"LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 ;system("echo "+str_get_dq()+"echo \$LD_LIBRARY_PATH"+str_get_dq()+" >> "+tmpDir+"mettc/tc_pairs_wrapper.sh")
+system("echo "+str_get_dq()+"which tc_pairs"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+system("echo "+str_get_dq()+"echo \${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
@@ -3667,8 +3747,8 @@ system("perl -pi -e 's/init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCS
 system("perl -pi -e 's/init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 ; Create shell script to run TC_STAT with shell options (better)
-system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-system("echo "+str_get_dq()+"PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/met-6.0/bin:\${PATH}"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
+system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
+system("echo "+str_get_dq()+"PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/met-6.0/bin:\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 system("echo "+str_get_dq()+"LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout3+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
@@ -3691,8 +3771,8 @@ do fff = 0,dimsizes(verTimes)-1
 	system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+verTimes(fff)+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 	; Create shell script to run TC_STAT with shell options (better)
-	system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-	system("echo "+str_get_dq()+"PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/met-6.0/bin:\${PATH}"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
+	system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
+	system("echo "+str_get_dq()+"PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/met-6.0/bin:\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 	system("echo "+str_get_dq()+"LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 	system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout3+".tcst -config "+TCSconf_s+" -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 	system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
@@ -3732,7 +3812,7 @@ end do
 
 
 ; 	d) Plot!
-print("MSG: Plotting late track model verifications.")
+print("MSG: Producing graphics for late track model verifications.")
 
 ;		i) TK_ERR
 if(.not.all(ismissing(TK_ERR(0,:))) .and.\
@@ -3965,7 +4045,7 @@ end do
 
 
 ; 	d) Plot!
-print("MSG: Plotting late intensity model verifications.")
+print("MSG: Producing graphics for late intensity model verifications.")
 ;		i) ABS_WIND_ERR
 if(.not.all(ismissing(ABS_WIND_ERR(0,:))) .and.\
    dimsizes(ind(.not.ismissing(ABS_WIND_ERR(0,:)))).gt.1)then
@@ -4158,6 +4238,7 @@ end do
 
 
 ; 	d) Plot!
+print("MSG: Producing graphics for early track model verifications.")
 ;		i) TK_ERR
 if(.not.all(ismissing(TK_ERR(0,:))) .and.\
    dimsizes(ind(.not.ismissing(TK_ERR(0,:))).gt.1))then
@@ -4388,7 +4469,7 @@ end do
 
 
 ; 	d) Plot!
-print("MSG: Plotting early intensity model verifications.")
+print("MSG: Producing graphics for early intensity model verifications.")
 ;		i) ABS_WIND_ERR
 if(.not.all(ismissing(ABS_WIND_ERR(0,:))) .and.\
    dimsizes(ind(.not.ismissing(ABS_WIND_ERR(0,:)))).gt.1)then
