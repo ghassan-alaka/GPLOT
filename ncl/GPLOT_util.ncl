@@ -97,6 +97,7 @@ begin
 	constant@fval2	= toint(-2147483647)			; Missing Value for Integer [n/a]
 	constant@fval3	= tofloat(1.0e+20)			; Missing Value for Float #2 [n/a]
 	constant@fval4	= tostring("missing")			; Missing value for String [n/a]
+	constant@tunits = "hours since 1970-01-01 00:00:00"	; Solid baseline date used to convert/compare dates.
 	
 	return(constant)
 end

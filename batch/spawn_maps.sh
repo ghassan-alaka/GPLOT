@@ -8,6 +8,7 @@
 # Define critical environmental variables (based on NOAA's Jet)
 LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
+echo "MSG: Submitting jobs for GPLOT_MAPS."
 
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
@@ -74,11 +75,11 @@ if [ -z "$SID" ]; then
 else
     echo "MSG: Found these Storm IDs in the namelist       --> $SID"
 fi
-if [ "$IS_REAL" == "True" ]; then
-    echo "MSG: This is a real-time case."
-else
-    echo "MSG: This is not a real-time case."
-fi
+#if [ "$IS_REAL" == "True" ]; then
+#    echo "MSG: This is a real-time case."
+#else
+#    echo "MSG: This is not a real-time case."
+#fi
 if [ "$IS_HWRFB" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."
 fi
@@ -139,8 +140,7 @@ if [ -z "$IDATE" ]; then
 else
     CYCLES=( "${IDATE[@]}" )
 fi
-echo "MSG: Found these cycles: ${CYCLES[*]}"
-echo ""
+echo "MSG: Found these cycles -->${CYCLES[*]}"
 
 
 # Define the maximum number of batch submissions.
@@ -156,13 +156,12 @@ MAXCOUNT=25
 #    for large-scale and storm-centered domains.                   #
 ####################################################################
 if [ "${DO_MAPS}" = "True" ]; then
-    echo "MSG: Submitting jobs for MAPS."
     NCLFILE="GPLOT_maps.ncl"
 
 
     # Get the domains
     DOMAIN=`sed -n -e 's/^.*DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-    echo "MSG: Found these MAPS domains in the namelist --> $DOMAIN"
+    echo "MSG: Found these graphic domains in the namelist --> $DOMAIN"
 
 
     # Get the graphics tiers for this MAPS domain
@@ -185,7 +184,6 @@ if [ "${DO_MAPS}" = "True" ]; then
         CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
         CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
 
-        echo "MSG: Current cycle --> $CYCLE"
 
         # Get the cycle prefix from a table and define CYCLE_STR
         # CYCLE_STR should be used in file paths.
@@ -196,7 +194,7 @@ if [ "${DO_MAPS}" = "True" ]; then
 
         # Find the ATCFs for the current CYCLE.
         # It will be blank if no ATCFs are found.
-        CYCLE_ATCF=`printf '%s\n' ${ATCF_ALL[@]} | grep "${CYCLE}"`
+        CYCLE_ATCF=( `printf '%s\n' ${ATCF_ALL[@]} | grep "${CYCLE}"` )
 
 
         # First, try to get STORMS from the namelist (SID)
@@ -207,7 +205,7 @@ if [ "${DO_MAPS}" = "True" ]; then
 
         # Second, try to get STORMS from the ATCF files
         if [ -z "$STORMS" ]; then
-            for ATCF in ${CYCLE_ATCF}; do
+            for ATCF in ${CYCLE_ATCF[@]}; do
                 STORMS+=(`basename $ATCF | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
             done
         fi
@@ -215,7 +213,7 @@ if [ "${DO_MAPS}" = "True" ]; then
         # Third, try to get STORMS from the HWRF file path.
         # This is hard-coded and might not work.
         if [ -z "$STORMS" ]; then
-            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ];then
+            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
                 STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
             fi
         fi
@@ -245,18 +243,19 @@ if [ "${DO_MAPS}" = "True" ]; then
         # LOOP OVER STORMS #
         ####################
         for STORM in ${STORMS}; do
-            echo "MSG: Current storm --> $STORM"
 
             # Increase the storm counter
             ((NSTORM=NSTORM+1))
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=`printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}"`
-            echo "MSG: The ATCF for this storm --> $STORM_ATCF"
-            if [ -z $STORM_ATCF ]; then
-                echo "WARNING: No ATCF found for this storm. This might be OK."
+            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}"` )
+            if [ -z "${STORM_ATCF[*]}" ]; then
+                echo ""
+                echo "WARNING: No ATCF found for ${STORM}. This might be OK."
             else
-                ATCF_FHRS=( `awk -F',' '{print $6}' $STORM_ATCF | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                echo ""
+                echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
             fi
 
             #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -274,12 +273,10 @@ if [ "${DO_MAPS}" = "True" ]; then
             # LOOP OVER MAP DOMAINS #
             #########################
             for DMN in ${DOMAIN}; do
-                echo "MSG: Current domain --> $DMN"
 
                 # Create full output path
                 # Make the directory in case it doesn't already exist
                 ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
-                echo "MSG: Output directory --> $ODIR_FULL"
                 mkdir -p ${ODIR_FULL}
 
 
@@ -327,6 +324,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                     FPREFIX="$ITAG"
                 fi
                 if [ -z "$FPREFIX" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File prefix not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
                     echo "ERROR: Or define ITAG in the namelist."
@@ -340,6 +340,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                     FHRSTR="$FHRSTR"
                 fi
                 if [ -z "$FHRSTR" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File hour string not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
                     echo "ERROR: Or define FHRSTR in the namelist."
@@ -354,6 +357,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                     FHRFMT="%0${FHRFMT}d"
                 fi
                 if [ -z "$FHRFMT" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File hour format not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
                     echo "ERROR: Or define FHRFMT in the namelist."
@@ -367,6 +373,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                     FSUFFIX="$EXT"
                 fi
                 if [ -z "$FSUFFIX" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File suffix not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
                     echo "ERROR: Or define EXT in the namelist."
@@ -380,27 +389,56 @@ if [ "${DO_MAPS}" = "True" ]; then
                 # If domain is storm-centerd and ATCF is required, then ATCF must
                 # be present and contain forecast hours
                 if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
-                    if [ -z ${STORM_ATCF} ]; then
-                        echo "ERROR: Domain is storm-centered and ATCF files are required."
+                    if [ -z "${STORM_ATCF[*]}" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "ERROR: DOMAIN=${DMN} is storm-centered and ATCF files are required."
                         echo "ERROR: But, found no matching ATCF files. So, nothing to do."
-                        echo ""
                         continue
-                    elif [ -z ${ATCF_FHRS} ]; then
-                        echo "ERROR: Domain is storm-centered and ATCF files are required."
-                        echo "ERROR: ATCF was found for this storm, but no forecase hours were found."
+                    elif [ -z "${ATCF_FHRS[*]}" ]; then
                         echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "ERROR: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                        echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
                         continue
                     fi
                 fi
 
+
+                # If ATCF_FILES.dat already exists, check that no additional ATCFs
+                # were found. Also, check if the any of the ATCFs were modified
+                # in the last hour. If so, then force re-production of all graphics.
+                # This is important for non-storm-centered domains. ATCFs will be
+                # used to place markers of active TC locations in larger domains.
+                if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                    PREV_ATCF=()
+                    PREV_ATCF=( `cat ${ODIR_FULL}ATCF_FILES.dat` )
+                    if [ "${PREV_ATCF[*]}" == "NONE" ] && [ "${#CYCLE_ATCF[@]}" -gt "0" ]; then
+                        FORCE="True"
+                    elif [ "${#PREV_ATCF[@]}" -lt "${#CYCLE_ATCF[@]}" ]; then
+                        FORCE="True"
+                    else
+                        for ATCF in ${PREV_ATCF[@]}; do
+                            test=$(find ${ATCF} -mmin -60 2>/dev/null)
+                            if [[ -n $test ]]; then
+                                FORCE="True"
+                                break
+                            fi
+                        done
+                    fi
+                fi
+
+
                 # Create a text file with ATCFs for this cycle in the output directory
-                if [ -z "${CYCLE_ATCF}" ]; then
+                if [ -z "${CYCLE_ATCF[*]}" ]; then
                     echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
                 else
                     if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
                         rm -f ${ODIR_FULL}ATCF_FILES.dat
                     fi
-                    for ATCF in ${CYCLE_ATCF}; do
+                    for ATCF in ${CYCLE_ATCF[@]}; do
                         echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
                     done
                 fi
@@ -417,8 +455,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                         fi
                     fi
 
-                    echo "MSG: Current tier --> $TR"
-
 
 
                     ##########################
@@ -427,6 +463,15 @@ if [ "${DO_MAPS}" = "True" ]; then
                     # Could be 1 iteration if no ensemble
                     for ID in $ENSIDS; do
 
+                        # Print some information to the terminal
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "MSG: Current domain      --> $DMN"
+                        echo "MSG: Current tier        --> $TR"
+                        echo "MSG: Output directory    --> $ODIR_FULL"
+                        echo "MSG: Current ATCF        --> ${STORM_ATCF[0]}"
+
                         # Set 2-digit variable ENSID
                         if [ "${IS_ENS}" == "False" ]; then
                             ENSID=""
@@ -434,8 +479,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                         else				    
                             ENSID=$(printf "%02d\n" $ID)
                             ENSIDTAG=".E${ENSID}"
-                            echo "MSG: Current ensemble member --> $ENSID"
+                            echo "MSG: Current Ensemble ID --> $ENSID"
                         fi
+
 
                         # Create a list of IDIR subdirectory options
                         IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
@@ -497,10 +543,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                         done
                         if [ -z "${IFILES[*]}" ]; then
                             echo "WARNING: Nothing to do here. Moving on to the next case."
-                            echo ""
                             continue
                         fi
-                        echo "MSG: Full input directory --> ${IDIR_FULL}"
+                        echo "MSG: Input directory     --> ${IDIR_FULL}"
 
 
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)
@@ -519,18 +564,18 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Print some information
                         if [ "$FORCE" == "False" ]; then
-                            echo "MSG: Using this file of processed files --> ${PLOTTED_FILE}"
+                            echo "MSG: Processed files     --> ${PLOTTED_FILE}"
                             echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
                             echo "MSG: To manually force reprocessing of all files, delete this file."
                         else
                             echo "MSG: Graphic production will be forced."
-                            echo "MSG: Deleting this file of processed files --> ${PLOTTED_FILE}"
+                            echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
                             rm -f ${PLOTTED_FILE}
                             CASE_PLOTTED=()
                             CASE_STATUS="force"
                         fi
-                        echo "MSG: Using this status file --> ${STATUS_FILE}"
-                        echo "MSG: Found this status --> ${CASE_STATUS}"
+                        echo "MSG: Status file         --> ${STATUS_FILE}"
+                        echo "MSG: Found this status   --> ${CASE_STATUS}"
 
 
                         # Loop through IFILES and retain only valid entries
@@ -572,7 +617,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 echo "MSG: Marking status as complete."
                                 echo "complete" > ${STATUS_FILE}
                             fi
-                            echo ""
                             continue
                         fi
 
@@ -598,7 +642,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                             if [ -z "${IFILES[*]}" ]; then
                                 echo "MSG: Status suggests this case has been completed."
                                 echo "MSG: Nothing to do here. Moving on to next case."
-                                echo ""
                                 continue
                             else
                                 echo "MSG: Status says complete, but unprocessed files were found."
@@ -608,13 +651,11 @@ if [ "${DO_MAPS}" = "True" ]; then
                         elif [ "$CASE_STATUS" == "working" ]; then
                             echo "MSG: Status suggests this case is being worked on."
                             echo "MSG: Changing the status to 'update request 1'."
-                            echo ""
                             echo "update request 1" > ${STATUS_FILE}
                             continue
                         elif [ "$CASE_STATUS" == "update request 1" ]; then
                             echo "MSG: Status suggests this case needs to be updated."
                             echo "MSG: Changing the status to 'update request 2'."
-                            echo ""
                             echo "update request 2" > ${STATUS_FILE}
                             continue
                         elif [ "$CASE_STATUS" == "update request 2" ] || [ "$CASE_STATUS" == "failed" ]; then
@@ -628,7 +669,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                         elif [ "$CASE_STATUS" == "broken" ]; then
                             echo "MSG: Status suggests that this case is broken."
                             echo "MSG: It will require manual resubmission."
-                            echo ""
                             continue
                         elif [ -z "$CASE_STATUS" ]; then
                             echo "MSG: Status not found. Treating this as a new case."
@@ -649,12 +689,10 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 echo "MSG: More files might become available."
                                 echo "MSG: Moving on to next case."
                                 echo "incomplete" > ${STATUS_FILE}
-                                echo ""
                             else    
                                 echo "MSG: All available files have already been processed."
                                 echo "MSG: Marking the status as complete."
                                 echo "MSG: Moving on to next case."
-                                echo ""
                                 echo "complete" > ${STATUS_FILE}
                             fi
                             continue
@@ -697,6 +735,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                             RUNTIME="01:44:59"
                         elif [ "${#IFILES[@]}" -le "120" ]; then
                             RUNTIME="01:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="02:14:59"
                         else
                             RUNTIME="02:59:59"
                         fi
@@ -726,7 +766,6 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         echo "MSG: Executing GPLOT batch job submission."			
                         sbatch ${BATCH_DIR}${BATCHFILE2}
-                        echo ""
 
 
                         # Increase the batch job counter and check if we're over the limit.

@@ -54,11 +54,17 @@ external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
 
 begin
 
-print("MSG: GPLOT Graphics Package - Maps V5")
-print("MSG: Written by Ghassan Alaka [AOML/HRD & UMiami/CIMAS]")
-print("MSG: Maintained by Mu-Chieh Ko [AOML/HRD & Umiami/CIMAS]")
-print("MSG: All queries should be sent to Ghassan.Alaka@noaa.gov and Mu-Chieh.Ko@noaa.gov")
-print("MSG: Start Time:  "+systemfunc("date"))
+print("MSG: GPLOT_maps.ncl started at "+systemfunc("date"))
+print("")
+print("MSG: Welcome to GPLOT, Maps Module.")
+print("MSG: GPLOT is the Graphical Post-processed Locus for Output for Tropical cyclones.")
+print("MSG: The Maps Module produces graphical products for particular domains. These")
+print("MSG: products are organized into tiers so that the most important graphics are")
+print("MSG: produced first.")
+print("MSG: Written by Ghassan Alaka [NOAA/OAR/AOML/HRD].")
+print("MSG: Edited significantly by Mu-Chieh Ko [AOML/HRD & UMiami/CIMAS]")
+print("MSG: All queries should be sent to Ghassan.Alaka@noaa.gov")
+print("MSG: This module was last updated on 2019-06-15.")
 print("")
 
 
@@ -72,16 +78,17 @@ print("")
 ;================================================================
 ;================================================================
 
-g               = 9.80665               ; gravitational acceleration [m s-2]
-pi              = 3.14159265359         ; mathematical parameter Pi [rad]
-d2r             = pi/180.               ; conversion of degrees to radians [rad deg-1]
-r               = 6371000.              ; radius of the Earth [m]
-omega           = 0.0000727             ; rotation rate of the Earth [rad s-1]
-ms2kts          = 1.94384449            ; conversion of meters per second to knots [kt s m-1]
-fval            = 9.96921e+36           ; NCL missing value for float types - Option #1
-fval2           = -2147483647           ; NCL missing value for integer types
-fval3           = 1.0e+20               ; NCL missing value for float types - Option #2
-C               = load_constants()      ; Load a set of pre-defined constants
+C	= load_constants()
+g	= C@g
+pi	= C@pi
+d2r	= C@d2r
+r	= C@r
+omega	= C@omega
+ms2kts	= C@ms2kts
+fval	= C@fval
+fval2	= C@fval2
+fval3	= C@fval3
+tunits	= C@tunits
 
 
 
@@ -103,8 +110,9 @@ else                    print("MSG: Found this GPLOT location: "+GPLOT_DIR)
 end if
 
 
-; 2. Get the user from the environment
+; 2. Get the user & home from the environment
 USER = systemfunc("echo $USER")
+HOME = systemfunc("echo $HOME")
 
 
 ; 3. Check for ensemble member from command line
@@ -1120,16 +1128,16 @@ do fff = 0,nFiles-1
                 end if
 
                 ;================================================================
-                ; e. Get the valid time
+                ; e. Define and delete some variables
                 ;================================================================
                 validDate = changeTimeFmt(str_sub_str(IDATE,"gfs.",""),"YYYYMMDDHH","HHz DOW, Month DD YYYY",tofloat(str_sub_str(sprinti(FMT_HR,FHR0),"f","")))
+		MSLP_MARKERS = False
+		if(isvar("UV10max"))then   delete(UV10max)   end if
+		if(isvar("MSLPmin"))then   delete(MSLPmin)   end if
         
                 ;================================================================
                 ; f. LOOP OVER ALL GRAPHIC REQUESTS AND PRODUCE THEM!
                 ;================================================================
-		MSLP_MARKERS = False
-		if(isvar("UV10max"))then   delete(UV10max)   end if
-		if(isvar("MSLPmin"))then   delete(MSLPmin)   end if
                 do ppp = 0,nPlots-1
                         if(.not.What2Plot(ppp))then   continue   end if
         
@@ -1399,6 +1407,8 @@ do fff = 0,nFiles-1
                 
                         ;================================================================
                         ; xvii. These flags are important to read in the data correctly.
+			;       'flipFlag' deals with the orientation of the LON array.
+			;       'rmvortex' deals with the removal of the TC vortex.
                         ;================================================================
                         myFlags := (/flipFlag,rmVortex/)
                         copy_VarAtts(rmVortex,myFlags)
@@ -2501,14 +2511,13 @@ do fff = 0,nFiles-1
                         ;       If G_OV5 is blank, then this will be skipped.
                         ;================================================================
                         if(G_OV5(0,ppp).eq."")then      DO_OV5 = False
-                        else if(MSLP_MARKERS)then       DO_OV5 = False
                         else                            DO_OV5 = True
-                        end if  end if
+                        end if
                         
                         ;================================================================
                         ; lxi. Enter Overlay #5 part one.
                         ;================================================================
-                        if(DO_OV5)then
+                        if(DO_OV5 .and. .not.MSLP_MARKERS)then
 
                                 ; 1. Check that the variable is MSLP.
 				if(G_OV5(0,ppp).ne."MSLP")then
@@ -2547,7 +2556,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ; lxi. Enter Overlay #5 part two.
                         ;================================================================
-                        if(DO_OV5)then
+                        if(DO_OV5 .and. .not.MSLP_MARKERS)then
                                 
                                 ; 1. Dimension Info
                                 nDims_Ov5       := dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,G_OV5(0,ppp),G_OV5(1,ppp))))
@@ -2613,7 +2622,7 @@ do fff = 0,nFiles-1
 			;================================================================
                         ; lxiii. Enter Overlay #5 part four.
                         ;================================================================
-                        if(DO_OV5)then
+                        if(DO_OV5 .and. .not.MSLP_MARKERS)then
 
 				; 1. Find the local High Pressure locations.
 				;    These aren't necessary for 'd03' graphics.

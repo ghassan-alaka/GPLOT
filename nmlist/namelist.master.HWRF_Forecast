@@ -95,7 +95,7 @@ FORCE = False
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = hwrf d03
+DOMAIN = atl hwrf d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1 Tier2

@@ -1,4 +1,4 @@
-#!/bin/bash --login
+#!/bin/sh --login
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -12,13 +12,15 @@
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=16G
 
-module load slurm
 set -x
+
+# Source the .profile to optimize the environment
+source ~/.profile
 
 # Define critical environmental variables (based on NOAA's Jet)
 LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
-export NCARG_COLORMAPS=$GPLOT_DIR/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
-export OMP_NUM_THREADS=1
+export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+#export OMP_NUM_THREADS=1
 
 # 1. Get command line variables
 NCLDIR=
@@ -58,7 +60,7 @@ if [ ! -z "$NMLIST" ]; then
 fi
 
 # 2. Submit the NCL job
-echo "${NCL_ARGS[@]}"
+echo "${NCL_ARGS[*]}"
 ncl "${NCL_ARGS[@]}" ${NCLDIR}${NCLFILE}  > ${LOGDIR}${LOGFILE} &
 
 wait

@@ -9,6 +9,9 @@
 LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 
+echo "MSG: Submitting jobs for STATS."
+
+
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
 BATCH_DIR="${GPLOT_DIR}/batch/"
@@ -102,8 +105,8 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}"`)
-ATCF2_ALL+=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}"`)
+ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | sort -t. -k2`)
+ATCF2_ALL+=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | sort -t. -k2`)
 for ATCF in ${ATCF2_ALL[@]}; do
     ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
     ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
@@ -124,11 +127,11 @@ fi
 # Define other important variables
 BATCHFILE1="batch_stats.generic.sh"
 BATCHFILE2="batch_stats.${EXPT}.sh"
-CTIME=`date +"%Y%m%d%H_%M"`
-LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
+#CTIME=`date +"%Y%m%d%H_%M"`
+#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
-mkdir -p ${LOG_DIR}
+#mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 
 
@@ -148,20 +151,17 @@ echo ""
 #    & intensity guidance/verification.            #
 ####################################################
 if [ "${DO_STATS}" = "True" ]; then
-    echo "MSG: Submitting jobs for STATS."
     NCLFILE="GPLOT_stats.ncl"
 
 
     # Set the counter to limit submission to 50 jobs
     N=0
 
+
     ######################################
     # LOOP OVER ALL AVAILABLE ATCF FILES #
     ######################################
     for ATCF in "${ATCF_ALL[@]}"; do
-        echo "MSG: Working on this ATCF:"
-        echo "MSG: $ATCF"
-        
 
         # Split up the ATCF file name to find the cycle and storm.
         # Skip to the next ATCF if cycle or storm is not found.
@@ -184,13 +184,13 @@ if [ "${DO_STATS}" = "True" ]; then
             fi
         done
         if [ -z "$CYCLE" ]; then
-            echo "WARNING: Could not find the cycle from the ATCF file name."
+            echo "WARNING: Could not find the cycle from the ATCF file name --> ${ATCF}"
             echo "WARNING: To process it, please add the cycle to the ATCF file name."
             echo "WARNING: Skipping this ATCF because cycle not found."
             continue
         fi
         if [ -z "$STORM" ]; then
-            echo "WARNING: Could not find the storm ID from the ATCF file name."
+            echo "WARNING: Could not find the storm ID from the ATCF file name --> ${ATCF}"
             echo "WARNING: To process it, please add the storm ID to the ATCF file name."
             echo "WARNING: Skipping this ATCF because storm ID not found."
             continue
@@ -203,6 +203,7 @@ if [ "${DO_STATS}" = "True" ]; then
             for D in "${CYCLES[@]}"; do
                 if [ "$D" == "$CYCLE" ]; then
                     CYCLE_FOUND="True"
+                    break
                 fi
             done
         else
@@ -211,7 +212,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the cycle is not found in IDATE, then skip to next ATCF
         if [ "$CYCLE_FOUND" == "False" ]; then
-            echo "WARNING: Skipping this ATCF because namelist cycle (IDATE) not found."
+            #echo "WARNING: Skipping this ATCF because namelist cycle (IDATE) not found."
             continue
         fi
 
@@ -222,6 +223,7 @@ if [ "${DO_STATS}" = "True" ]; then
             for S in "${SID[@]}"; do
                 if [ "$S" == "$STORM" ]; then
                     STORM_FOUND="True"
+                    break
                 fi
             done
         else
@@ -230,11 +232,19 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the storm is not found in SID, then skip to next ATCF
         if [ "$STORM_FOUND" == "False" ]; then
-            echo "WARNING: Skipping this ATCF because namelist storm ID (SID) not found."
+            #echo "WARNING: Skipping this ATCF because namelist storm ID (SID) not found."
             continue
         fi
 
-        echo "$CYCLE   $STORM"
+        # OK, checks have been passed so let's process this file.
+        echo "MSG: Working on this ATCF --> $ATCF"
+
+
+        # Create full output path.
+        # Make the directory in case it doesn't already exist.
+        ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/multi_model/"
+        echo "MSG: Output directory --> $ODIR_FULL"
+        mkdir -p ${ODIR_FULL}
 
 
         # Get the status for this case
@@ -297,6 +307,8 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
 	# Call the batch job
+        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
+        LOG_DIR="$ODIR_FULL"
         LOGFILE="GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.log"
         perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
         perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.out\"/g" ${BATCH_DIR}${BATCHFILE2}

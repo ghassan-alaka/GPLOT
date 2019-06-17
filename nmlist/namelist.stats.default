@@ -1,12 +1,19 @@
 NAME                  CHOICE		
-Track_Guidance        True
-Intensity_Guidance    True
-Pressure_Guidance     True
-Track_Trends          True
-Intensity_Trends      True
-Pressure_Trends       True
-Verification          True
-Early_Track_Ver       True
-Early_Intensity_Ver   True
-Late_Track_Ver        True
-Late_Intensity_Ver    True
+GUIDANCE              True
+TRENDS                True
+VERIFICATION          True
+
+LATE_TK_GUIDE         True
+EARLY_TK_GUIDE        True
+LATE_INT_GUIDE        True
+EARLY_INT_GUIDE       True
+LATE_PRS_GUIDE        True
+
+LATE_TK_TREND         True
+LATE_INT_TREND        True
+LATE_PRS_TREND        True
+
+LATE_TK_VER           True
+EARLY_TK_VER          True
+LATE_INT_VER          True
+EARLY_INT_VER         True

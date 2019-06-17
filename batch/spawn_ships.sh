@@ -209,7 +209,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
         # Third, try to get STORMS from the HWRF file path.
         # This is hard-coded and might not work.
         if [ -z "$STORMS" ]; then
-            STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
+                STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+            fi
         fi
 
         # Fourth, if STORMS is still undefined, then set it to "NONE"

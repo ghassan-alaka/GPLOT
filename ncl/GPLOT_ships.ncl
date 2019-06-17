@@ -46,29 +46,37 @@ external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
 
 begin
 
-print("MSG: GPLOT Graphics Package - Ships V1")
-print("MSG: Written by Ghassan Alaka [AOML/HRD & UMiami/CIMAS]")
+print("MSG: GPLOT_ships.ncl started at "+systemfunc("date"))
+print("")
+print("MSG: Welcome to GPLOT, Ships Module.")
+print("MSG: GPLOT is the Graphical Post-processed Locus for Output for Tropical cyclones.")
+print("MSG: The Ships Module produces graphical products based on the Statistical")
+print("MSG: Hurricane Intensity Prediction Scheme (SHIPS) and similar vortex-centric")
+print("MSG: evaluations.")
+print("MSG: Written by Ghassan Alaka [NOAA/OAR/AOML/HRD].")
 print("MSG: All queries should be sent to Ghassan.Alaka@noaa.gov")
-print("MSG: Start Time:  "+systemfunc("date"))
+print("MSG: This module was last updated on 2019-06-15.")
 print("")
 
 
 
 ;================================================================
-; Set constants. DO NOT CHANGE.
+; PART I. Set constants. DO NOT CHANGE.
 ;================================================================
 
-g		= 9.80665
-pi		= 3.14159265359
-d2r		= pi/180.
-r		= 6371000.
-omega		= 0.0000727
-ms2kts		= 1.94384449
-fval		= 9.96921e+36
-fval2		= -2147483647
-fval3		= 1.0e+20
-tunits		= "hours since 1970-01-01 00:00;00"
-C		= load_constants()
+C	= load_constants()
+g	= C@g
+pi	= C@pi
+d2r	= C@d2r
+r	= C@r
+omega	= C@omega
+ms2kts	= C@ms2kts
+fval	= C@fval
+fval2	= C@fval2
+fval3	= C@fval3
+tunits	= C@tunits
+
+
 
 
 ;================================================================
@@ -84,8 +92,9 @@ else			print("MSG: Found this GPLOT location: "+GPLOT_DIR)
 end if
 
 
-; 2. Get the user from the environment
+; 2. Get the user & home from the environment
 USER = systemfunc("echo $USER")
+HOME = systemfunc("echo $HOME")
 
 
 ; 3. Check for ensemble member from command line
@@ -2973,7 +2982,7 @@ print("********************")
 ;================================================================
 
 print("")
-print("MSG: GPLOT finished running at "+systemfunc("date")+".")
+print("MSG: GPLOT_ships.ncl succeeded at "+systemfunc("date"))
 
 exit
 
