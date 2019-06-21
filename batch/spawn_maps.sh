@@ -41,7 +41,7 @@ DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'
 EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IS_REAL=`sed -n -e 's/^.*IS_REAL =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_HWRFB=`sed -n -e 's/^.*IS_HWRFB =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -80,7 +80,7 @@ fi
 #else
 #    echo "MSG: This is not a real-time case."
 #fi
-if [ "$IS_HWRFB" == "True" ]; then
+if [ "$IS_MSTORM" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."
 fi
 echo "MSG: Found this top level input directory in the namelist --> $IDIR"
@@ -226,9 +226,9 @@ if [ "${DO_MAPS}" = "True" ]; then
         fi
 
 
-        # Fifth, append Fake Storm (00L) is IS_HWRFB=True and if other storms
+        # Fifth, append Fake Storm (00L) is IS_MSTORM=True and if other storms
         # were found, i.e., STORMS != NONE
-        if [ "$IS_HWRFB" == "True" ] && [ "$STORMS" != "NONE" ]; then
+        if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
             STORMS+=("00L")
         fi
 
@@ -237,13 +237,17 @@ if [ "${DO_MAPS}" = "True" ]; then
         # HWRF-B/GFS files for the outer domain are identical for all storms.
         NSTORM=0
 
+        # Set a flag to determine whether or not files were found.
+        # By default, it is False. If it is set to 
+        FOUND_FILES="False"
 
 
+echo "${STORMS[@]}"
         ####################
         # LOOP OVER STORMS #
         ####################
-        for STORM in ${STORMS}; do
-
+        for STORM in ${STORMS[@]}; do
+echo "MSG: Current storm --> $STORM"
             # Increase the storm counter
             ((NSTORM=NSTORM+1))
 
@@ -261,7 +265,7 @@ if [ "${DO_MAPS}" = "True" ]; then
             #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
             NEW_ATCF_FHRS=()
             for FHR in ${ATCF_FHRS[@]}; do
-                if [ $FHR -ge $INIT_HR ] && [ $FHR -le $FNL_HR ] && [ $(($FHR % $DT)) -eq 0 ]; then
+                if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
                     NEW_ATCF_FHRS+=( $FHR )
                 fi
             done
@@ -313,7 +317,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                 fi
 
                 # Skip subsequent storms if the outer domain has been plotted
-                if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ]; then
+                #if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ]; then
+                if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
                     continue
                 fi
 
@@ -406,7 +411,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                     fi
                 fi
 
-
                 # If ATCF_FILES.dat already exists, check that no additional ATCFs
                 # were found. Also, check if the any of the ATCFs were modified
                 # in the last hour. If so, then force re-production of all graphics.
@@ -491,7 +495,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/${ENSID}/${STORM}/" "${CYCLE_STR}/${ENSID}/" \
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
-                                   "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/")
+                                   "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L")
 
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
@@ -499,9 +504,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                         IFILES=()
                         F=0
                         IFHRS=()
-                        if [ -f "${FHR_FILE}" ]; then
-                            rm -f ${FHR_FILE}
-                        fi
                         while [ -z "$IFILES" ]; do
                             IDIR_FULL="${IDIR}${IDIR_OPTS[$F]}"
 
@@ -521,9 +523,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
                                 if [ -z "$FSUFFIX" ]; then
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" ${FHR})"
+                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 else
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" ${FHR})*${FSUFFIX}"
+                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
                                 fi
                                 if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
                                     IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
@@ -546,6 +548,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                             continue
                         fi
                         echo "MSG: Input directory     --> ${IDIR_FULL}"
+
+                        # Mark that files have been found
+                        FOUND_FILES="True"
 
 
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)

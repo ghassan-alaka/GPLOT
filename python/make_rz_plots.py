@@ -71,6 +71,17 @@ EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).st
 ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
 print(ODIR)
 
+# Create the temporary directory for GrADs files
+TMPDIR = ODIR.strip()+'grads/'
+if not os.path.exists(TMPDIR):
+	os.mkdir(TMPDIR)
+
+# Define some important file names
+UNPLOTTED_FILE = ODIR.strip()+'UnplottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+PLOTTED_FILE = ODIR.strip()+'PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+STATUS_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
 
 #Define information needed for case
 #GJA - Don't do this anymore. Read the list of unplotted files
@@ -91,15 +102,17 @@ rmax = np.float(RMAX)
 zsize = np.int(LEVS)
 
 # Get the ATCF file.
-ATCF_FILES = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-#print(str(ATCF_FILES))
-if ATCF_FILES.size > 1:
-	ATCF_FILE = ATCF_FILES[[i for i, s in enumerate(ATCF_FILES) if str(SID) in s][:]]
+ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
+print(str(ATCF_LIST))
+print(SID)
+if ATCF_LIST.size > 1:
+	print('Found multiple ATCFs')
+	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
 else:
-	ATCF_FILE = ATCF_FILES
-print(ATCF_FILE)
+	ATCF = ATCF_LIST
+print(ATCF)
 #LONGSID = subprocess.run(['echo',str(ATCF_FILE),'|','rev','|','cut','-d"/"','-f1','|','rev','|','cut','-d"."','-f1'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-LONGSID = str(ATCF_FILE).split('/')[-1].split('.')[0]
+LONGSID = str(ATCF).split('/')[-1].split('.')[0]
 print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
 TCNAME = LONGSID[::-1]
 TCNAME = TCNAME[3:]
@@ -112,21 +125,21 @@ SNUM = SNUM[::-1]
 BASINID = LONGSID[::-1]
 BASINID = BASINID[0]
 #print(BASINID)
-ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF_FILE),delimiter=',',dtype='str',autostrip='true'))
+ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
 ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
 #print(str(ATCF_DATA))
 
 
-# Get the list of Unplotted Files
-UNPLOTTED_FILES = np.genfromtxt(ODIR.strip()+'UnplottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log',dtype='str')
-STATUS_FILE = ODIR+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+# Get the list of unplotted files
+UNPLOTTED_LIST = np.genfromtxt(UNPLOTTED_FILE,dtype='str')
+
 #if len(UNPLOTTED_FILES) > 1:
 	
 #print(UNPLOTTED_FILES)
 
 
 # Get the list of forecast hours 
-FHRS = [ int(x) for x in np.genfromtxt(ODIR.strip()+'AllForecastHours.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log',dtype='str') ]
+FHR_LIST = [ int(x) for x in np.genfromtxt(ALLFHR_FILE,dtype='str') ]
 #print(FHRS)
 
 
@@ -134,12 +147,16 @@ FHRS = [ int(x) for x in np.genfromtxt(ODIR.strip()+'AllForecastHours.'+DOMAIN.s
 #trackdata = np.genfromtxt(trackfile,delimiter=',',dtype='str',autostrip='true')
 #num_lines = sum(1 for line in open(trackfile))
 
-for (FILE,fff) in zip(UNPLOTTED_FILES,range(UNPLOTTED_FILES.size)):
+for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 	os.system('echo "working" > '+STATUS_FILE)
 
+	# Get some useful information about the file name
+	FILE_BASE = os.path.basename(FILE)
+	FILE_DIR = os.path.dirname(FILE)
+
 	# Find the index of the forecast lead time in the ATCF file.
-	FHR = int(FHRS[fff])
+	FHR = int(FHR_LIST[fff])
 	#print(FHR)
 	#FHRIND = [i for i, s in enumerate(trackdata) if str(SID) in s][0]
 	#print(ATCF_DATA[:,5])
@@ -180,15 +197,15 @@ for (FILE,fff) in zip(UNPLOTTED_FILES,range(UNPLOTTED_FILES.size)):
 
 		if (gribfiletest < 1):
 			#command = '/home/rthr-aoml/GPLOT/grads/g2ctl.pl'+' '+gribfile+' '+gribfile+'.2.idx'+' > '+gribfile+'.ctl'
-			command = '/home/rthr-aoml/GPLOT/grads/g2ctl.pl'+' '+FILE+' '+FILE+'.2.idx'+' > '+FILE+'.ctl'
+			command = GPLOT_DIR+'/grads/g2ctl.pl'+' '+FILE+' '+TMPDIR+FILE_BASE+'.2.idx'+' > '+TMPDIR+FILE_BASE+'.ctl'
 			os.system(command)
 			#command2 = 'gribmap -i '+gribfile+'.ctl'
-			command2 = 'gribmap -i '+FILE+'.ctl'
+			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl'
 			os.system(command2)
 			
 			#Open data file
 			#datafile = gribfile+'.ctl'
-			datafile = FILE+'.ctl'
+			datafile = TMPDIR+FILE_BASE+'.ctl'
 
 			#Open data file
 			ga('open '+datafile)

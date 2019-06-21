@@ -1098,7 +1098,7 @@ begin
 			    (/"LAND_P0_L1_GLL0",       "1001"/)\	; 1001. Land-Sea Mask
 			    /)
 	
-	else if(isStrSubset(dSource,"HWRF"))then
+	else if(isStrSubset(dSource,"HWRF") .or. isStrSubset(dSource,"HAFS"))then
 		varList	= (/	(/"TMP_P0_L100_GLL0",	"101"/),\	; 101.  3D Air Temperature
 				(/"HGT_P0_L100_GLL0",	"102"/),\	; 102.  3D Geopotential Height
 				(/"UGRD_P0_L100_GLL0",	"103"/),\	; 103.  3D Zonal Wind
@@ -2007,8 +2007,8 @@ begin
 	end if
 	
 	; Not currently used
-	if(isatt(infoType,"IS_HWRFB"))then	IS_HWRFB = infoType@IS_HWRFB
-	else					IS_HWRFB = True
+	if(isatt(infoType,"IS_MSTORM"))then	IS_MSTORM = infoType@IS_MSTORM
+	else					IS_MSTORM = True
 	end if
 	
 	; All possible values of "MODELS"
@@ -2782,8 +2782,8 @@ begin
 		typeind =str_match_ind(masterType,infoType)+1 ;str_get_field starts at 1
 	end if
 
-	if(isatt(infoType,"IS_HWRFB"))then      IS_HWRFB = infoType@IS_HWRFB
-	else                                    IS_HWRFB = True
+	if(isatt(infoType,"IS_MSTORM"))then      IS_MSTORM = infoType@IS_MSTORM
+	else                                    IS_MSTORM = True
 	end if
 
 	N = dimsizes(MODELS)
@@ -2792,9 +2792,9 @@ begin
 	do aaa = 0,N-1
 	
                 ; Auto-correct a few non-4-letter model identifiers
-                if(IS_HWRFB .and. isStrSubset(MODELS(aaa),"HWRF17"))then
+                if(IS_MSTORM .and. isStrSubset(MODELS(aaa),"HWRF17"))then
                         MODEL = "HB17"
-                else if(IS_HWRFB .and. isStrSubset(MODELS(aaa),"HWRF16"))then
+                else if(IS_MSTORM .and. isStrSubset(MODELS(aaa),"HWRF16"))then
                         MODEL = "HB16"
                 else if(isStrSubset(MODELS(aaa),"fvGFS"))then
                         MODEL = "FGFS"
@@ -2838,8 +2838,8 @@ begin
 		exit
 	end if
 	
-	if(isatt(infoType,"IS_HWRFB"))then	IS_HWRFB = infoType@IS_HWRFB
-	else					IS_HWRFB = True
+	if(isatt(infoType,"IS_MSTORM"))then	IS_MSTORM = infoType@IS_MSTORM
+	else					IS_MSTORM = True
 	end if
 	
 	; All possible values of "MODELS"
@@ -2863,9 +2863,9 @@ begin
 	; Loop over all models (Could be 1)
 	do aaa = 0,N-1
 		; Auto-correct a few non-4-letter model identifiers
-		if(IS_HWRFB .and. isStrSubset(MODELS(aaa),"HWRF17"))then
+		if(IS_MSTORM .and. isStrSubset(MODELS(aaa),"HWRF17"))then
 			MODEL = "HB17"
-		else if(IS_HWRFB .and. isStrSubset(MODELS(aaa),"HWRF16"))then
+		else if(IS_MSTORM .and. isStrSubset(MODELS(aaa),"HWRF16"))then
 			MODEL = "HB16"
 		else if(isStrSubset(MODELS(aaa),"fvGFS"))then
 			MODEL = "FGFS"

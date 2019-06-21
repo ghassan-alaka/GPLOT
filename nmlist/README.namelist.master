@@ -1,0 +1,345 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+
+; 1A. EXPERIMENT NAME.
+;    Description:  The name of the experiment.
+;    HWRF:         'EXPT' is the bottom-level directory in which the
+;                    model output is located. This is whatever is
+;                    above the "com" directory.
+;    MKNote: This namelist name has to be "namelist.input.$EXPT"
+
+EXPT = HB18_v3_history
+
+
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+;	 Description:	Set what type of graphical output you are looking for
+;	 DO_MAPS:		Produces 2D maps at preset levels.
+;	 DO_STATS:		Produces multi-model guidance and verification
+;	 DO_SHIPS:		Produces SHIPS-equivalent prodictors and other predictors
+
+DO_MAPS = False
+DO_STATS = True
+DO_SHIPS = False
+DO_POLAR = False
+
+
+; 1C. DATA SOURCE
+;    Description:  This string represents the data source.
+;                    Recommended to input via command line.
+;    Options:      "HWRF", "HWRF18", "GFS","fvGFS_ATL"
+
+DSOURCE = HWRF18
+
+
+
+; 1D. BASIN-SCALE HWRF DATA?
+;    Description:  This script is set up to work with Basin-Scale HWRF data.
+;    Option 1:     True
+;                    --> if Basin-Scale HWRF data
+;    Option 2:     False
+;                    --> if not Basin-Scale HWRF data
+
+IS_MSTORM = True
+
+; 1E. ENSEMBLE MEMBER NUMBER
+;    Description:  How many ensemble members? Do not include the control member.
+;                  For example: If you ran 20 members, simply put 20. The system
+;                               will look for member from 0 to 20 (total:21).
+;                  Set 0 if deterministic run.
+;
+
+ENSMEM = 0
+
+; 1E. SYSTEM ENVIRONMENT
+;    Description:  Use hard-coded assumptions based on the
+;                    system environment. Recommended to input via
+;                    command line.
+;    Options:      "JET", "MAC"
+
+SYS_ENV = JET
+
+
+; 1FF. Operation or Research Mode?
+;    Description:  Determine whether GPLOT needs to check running status
+;    Options:
+;		1. True
+;		     --> if the model is currently operating 
+;			 e.g. during real-time
+;		2. False   
+;		     --> if you are in a research mode. 
+;			 For example, when your data is retrieved 
+;			 from HPSS, it is research mode.
+
+IS_REAL = True
+
+; 1F. FORECAST DATE
+;    Description:  Forecast date in the format YYYYMMDDHH. Recommended
+;                    to input via command line.
+;    Real-Time:    Leave blank.
+
+IDATE = 
+
+
+
+; 1G. STORM ID
+;    Description: The Storm ID in '00L' format. Recommended to input via
+;                   command line.
+;    Real-Time:   Leave blank
+;    HWRF:        May leave blank to define SID from directory structure
+
+SID = 
+
+
+
+; 1H. INPUT PATH
+;    Description:  Path of the model output, which is input here.
+;                    It is recommended that you organize your data
+;                    by Date and Storm ID (if applicable). 'ITAG'
+;                    allows for file specification. 'EXT' is the
+;                    input file extension. ITAG & EXT may be left
+;                    blank if file naming is built into this system
+;    FOR HWRF:     Do not include "YYYYMMDDHH/SID/".
+;                  This will be automatically searched in the script
+
+IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/com/
+ITAG =
+EXT =
+
+
+
+; 1I. OUTPUT PATH
+;    Description:  Location for output graphics.
+
+ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
+
+
+
+; 1J. ATCF PATH
+;    Description:  Location of the ATCF file(s). 'ATCF_TAG' allows for
+;                    file specification, but may be left blank.
+;    HWRF:         This might be the same as 'IDIR'.
+;    ATCF1:        This is the temporary ATCF. If this doesn't exist, set to final ATCF location (same as ATCF2)
+;    ATCF2:        This is the final ATCF.
+
+ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/com/
+ATCF1_TAG = trak.hwrf.raw
+ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HB18_v3_history/
+ATCF2_TAG = atcfunix
+ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HB18_v3_raw/
+ATCF3_TAG = trak.hwrf.raw
+
+
+
+; 1K. ADECK & BDECK PATHS
+;	  Description:	Location of A-Deck and B-Deck ATCF files
+;					BDECK1 and BDECK2 may be set equal to one another
+
+ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
+BDECK1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
+BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
+
+
+
+; 1L. FORECAST HOUR INFORMATION
+; Description:  Change this to choose the starting forecase hour and
+;                 ending forecast hour. Except in rare circumstances:
+;                 INIT_HR=0
+;                 FNL_HR=126
+;                 Format of the forecast hour in the input file name is given by 'FMT_HR'
+
+INIT_HR = 0
+FNL_HR = 126
+FMT_HR = %0.3i
+
+
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+;    Description:  This is the minimum time step [hrs] of the input data.
+;    Typically set to 3.
+
+DT = 3
+
+
+
+; 1N. MASK TOPOGRAPHY
+;    Description:  Removes any data over topography. Old option.
+
+DO_TOPOMASK = False
+
+
+
+; 1O. REMOVE WHITE SPACE
+;    Description:  Remove graphical white space with Image Magick
+
+DO_RMWHITE = True
+
+
+
+; 1P. TOGGLE TITLE
+;    Description:  Turn off the Top Title (Ex: "Operational HWRF")
+
+DO_SRCLBL = True
+
+
+
+; 1Q. AUTO-CHOOSE SETUP VARIABLES
+;    Description:  Set critical NCL variables
+;                    --> 'DOMAIN', 'TIER', 'DSOURCE', 'SYS_ENV',
+;                        'IDATE', 'SID'
+;    Option 1:     True
+;                    --> use hard-coded definitions
+;    Option 2:     False
+;                    --> use definitions in this namelist
+
+AUTO_VAR = False
+
+
+
+; 1R. AUTO-CHOOSE EXPERIMENT
+;    Description:  Set 'EXPT' and 'IDIR' based on 'DSOURCE'.
+;    Option 1:     True
+;                    --> use hard-coded definitions
+;    Option 2:     False
+;                    --> use definitions in this namelist
+
+AUTO_DIR = False
+
+
+
+; 1S. FORCE
+;     Description: Force graphic based on input file list even
+;                  if graphic already exists.
+FORCE = True
+
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+;     Description:  Zoom in on a region of interest. Must be hard-
+;                    coded in 'GPLOT_func.ncl'. Recommended to
+;                    be input via command line. If loading directly
+;					 into the NCL script, then only the first
+;					 option will be used. To access all options,
+;					 please consider using the "spawn" batch
+;					 scripts.
+;    Options:		"basin", "atl", "wlant", "epac", "gom", "BoB",
+;					"d03", "elant", "eus"
+
+DOMAIN = basin
+
+
+; 2B. MAP GRAPHICS TIER
+;    Description:  Used to prioritized graphics, especially in real.
+;                    See other graphics namelists for more details.
+;                    Recommended to input via command line. If
+;					 loading directly into the NCL script, then
+;					 only the first option will be used. To access
+;					 all options, please consider using the "spawn"
+;					 batch scripts.
+;    Options:      "Tier1", "Tier2", "Tier3"
+
+TIER = Tier1
+
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = True
+
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES.
+;	 Description: The name of the model
+;	 MCODE:   Raw model name
+;	 MCODEI:  Interpolated model name
+
+MCODE = HB18
+MCODEI = HB8I
+
+
+
+; 3B. FORECAST GUIDANCE MODELS
+;	  Description:  Model codes with which your model will be
+;					compared with. Note that results may be
+;					unstable if the model codes are not found
+;					in the available A-Decks.
+;        TRKM00:  Late Track Models at 00z/12z
+;        TRKM06:  Late Track Models at 06z/18z
+;        INTM:    Late Intensity Models
+;        PRSM:    Late Pressure Models
+;        TRKMI00: Early Track Models at 00z/12z
+;        TRKMI06: Early Track Models at 06z/18z
+;        INTMI:   Early Intensity Models
+;        TRKMT00: Trend Track Models at 00z/12z
+;        TRKMT06: Trend Track Models at 06z/18z
+;        INTMT:   Trend Intensity Models
+
+
+TRKM00 = HWRF AVNO HMON NVGM CTCX EGRR
+TRKM06 = HWRF AVNO HMON NVGM CTCX
+INTM = HWRF HMON DSHP LGEM CTCX
+PRSM = HWRF AVNO HMON NVGM CTCX
+TRKMI00 = HWFI AVNI HMNI EGRI CTCI TVCN OFCL
+TRKMI06 = HWFI AVNI HMNI NVGI CTCI TVCN OFCL
+INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT00 = HWRF HMON AVNO EGRR OFCL
+TRKMT06 = HWRF HMON AVNO EGRR OFCL
+INTMT = HWRF HMON DSHP OFCL
+
+
+
+; 3C. VERIFICATION MODELS
+;     Description:  Model codes with which your model will be
+;                   verified with. Note that results may be
+;                   unstable if the model codes are not found
+;                   in the available A-Decks.
+;        ETM:     Early Track Models to verify
+;        EIM:     Early Intensity Models to verify
+;        LTM:     Late Track Models to verify
+;        LIM:     Late Intensity models to verify
+
+ETM = HWFI GFSI HMNI NVGI CTCI TVCN OFCL
+EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = HWRF GFSO HMON NVGM CTCX
+LIM = HWRF HMON CTCX
+
+
+
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; TEMPDIR defines the temporary directory
+; SECTION 5: Polar Coordinates and Associated Plots
+; RESOLUTION defines the radial resolution to be used.
+; RMAX is the maximum radius
+; LEVS is the number of model levels
+;
+;================================================================
+TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
+RESOLUTION = 1.5
+RMAX = 600
+MODELTAG = hwrfprs.storm.0p015
+LEVS = 46
+

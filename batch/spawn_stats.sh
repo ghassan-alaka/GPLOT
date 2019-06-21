@@ -43,7 +43,7 @@ DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'
 EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IS_REAL=`sed -n -e 's/^.*IS_REAL =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_HWRFB=`sed -n -e 's/^.*IS_HWRFB =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -81,7 +81,7 @@ if [ "$IS_REAL" == "True" ]; then
 else
     echo "MSG: This is not a real-time case."
 fi
-if [ "$IS_HWRFB" == "True" ]; then
+if [ "$IS_MSTORM" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."
 fi
 echo "MSG: Found this top level input directory in the namelist --> $IDIR"

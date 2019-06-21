@@ -195,12 +195,14 @@ begin
 			A	= dim_min_n(Vs,(/1,2/)) + 0.20*abs(dim_max_n(Vs,(/1,2/))-dim_min_n(Vs,(/1,2/)))
 			CENTROID::centroid(V2,ICTR,A,toint(b),nx2,ny2,NZ)
 			CNTR@value = dim_min_n(dim_min_n(Vs,2),1)
+		end if  end if
+		vals := ind(ICTR(1,:).ge.0 .and. .not.ismissing(ICTR(1,:)))
+		if(.not.ismissing(vals(0)))then
+			CNTR(0,vals) = (/V2&lat(ICTR(1,vals))/)
+			CNTR(1,vals) = (/V2&lon(ICTR(0,vals))/)
 		end if
-		end if
-		CNTR(0,:) = (/V2&lat(ICTR(1,:))/)
-		CNTR(1,:) = (/V2&lon(ICTR(0,:))/)
-	end if
-	end if
+			
+	end if  end if
 	
 	
 	; 9) Determine if CNTR at this level is within 1 km per 1 hPa of CNTR of two levels below

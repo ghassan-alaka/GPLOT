@@ -17,7 +17,7 @@ True      UV             02000850d     N/A          N/A     N/A          N/A    
 False     UV             05000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          05000850d    N/A          N/A       SHML
 False     UV             07000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          07000850d    N/A          N/A       SHSL
 True      REFL           N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A          N/A          N/A       REFL_MSLP
-True      REFD           750           N/A          N/A     N/A          N/A         UV           750         N/A          N/A     N/A         N/A          N/A          N/A       REFD_UV750
+True      REFL           750           N/A          N/A     N/A          N/A         UV           750         N/A          N/A     N/A         N/A          N/A          N/A       REFL_UV750
 False     CAPE           N/A           HLCY         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A          N/A          N/A       CAPE_HLCY_MSLP
 True      TPRCP          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A          N/A          N/A       TPRCP_MSLP
 True      MSLP           N/A           MSLP         N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A          N/A          N/A       MSLP

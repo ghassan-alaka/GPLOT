@@ -1,0 +1,148 @@
+
+The following provides detailed information about the namelist file for GPLOT_maps.ncl.
+There are predefined namelist files for predefined domains. However, if you would like to
+create a custom suite of graphics for a new domain or would just like to change the graphics
+for a predefined domain, this document should help you out. Please note
+
+
+##########################
+# DESCRIPTION OF COLUMNS #
+##########################
+
+PLOT_ON:      True/False to turn the graphic On/Off
+BASE_CN_FILL: The base variable with shaded contours
+LEV1:         The level for the base variable, if applicable
+OV_CN_LINE:   The overlay variable with bottom contour lines
+LEV2:         The level for the overlay variable, if applicable
+OV_CN_LINE2:  The overlay variable with top contour lines
+LEV3;         The level for the overlay variable, if applicable
+OV_VC_WIND:   The overlay variable with vectors
+LEV4:         The level for the overlay variable, if applicable
+OV_MAX_MIN:   The overlay variable with H/L MSLP markers
+LEV5:         The level for the overlay variable, if applicable
+OV_STLINE:    The overlay variable with streamlines
+LEV6:         The level for the overlay variable, if applicable
+FILE_NAME:    The file name prefix
+
+
+
+#############################
+# VARIABLE NAME DEFINITIONS #
+#############################
+
+AVO:   Absolute VOrticity
+CAPE:  Convective Available Potential Energy
+DPT:   DewPoint Temperature
+DPT2:  2-m DewPoint Temperature
+HGT:   peopotential HeiGhT
+LAND:  LAND-sea mask
+LHFLX: Latent Heat FLuX
+MSLP:  Mean Sean-Level Pressure
+PRATE: Precipitation RATE
+PRCP:  bulk PReCiPitation rate
+PSFC:  Pressure SurFaCe
+REFL:  simulated composite REFLectivity
+REFD:  simulated 200-100000 Pa REFlectivity Deep
+RH:    Relative Humidity
+RH2:   2-m Relative Humidity
+RVO:   Relative VOrticity
+SHFLX: Sensible Heat FLuX
+SPH:   SPecific Humidity
+SPH2:  2-m SPecific Humidity
+SST:   Sea-Surface Temperature
+T:     air Temperature
+T2:    2-m air Temperature
+TH:    potential temperature (THeta)
+TPRCP: Total PReCiPitation
+TPW:   Total Precipitable Water
+TSFC:  Temperature SurFaCe
+TTROP: Temperature TROPopause
+U:     zonal U wind
+U10:   zonal 10-m U wind
+UV:    combined U/V vector wind
+UV10:  10-m combined U/V vector wind
+V:     meridional V wind
+V10:   meridional 10-m V wind
+W:     vertical velocity 
+
+
+
+
+########################
+# HOW TO DEFINE LEVELS #
+########################
+
+N/A:  Use this if your data does not have a vertical dimension, i.e., MSLP (surface only)
+####: Type the level in hPa, m, or h.
+      For 50000 Pa, type 500. For 2-m data, type 2. For 24-h bulk precipitation rates, type 24
+11112222N: Take differences between pressure levels.
+           1111 = 4-digit pressure level start, i.e., for 850 hPa type 0850
+           2222 = 4-digit pressure level end, i.e., for 200 hpa type 0200
+           N    = Choose any of the following options [a,m,d,x,y]
+                  a --> take average between two levels
+                  m --> take layer-mean average between two levels
+                  d --> take difference of first level minus second level
+                  x --> take cross-section between two levels in x-direction
+                  y --> take cross section between two levels in y-direction
+
+
+
+###################
+# COMMON GRAPHICS #
+###################
+
+PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
+True      CAPE           N/A           HLCY         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           CAPE_HLCY_MSLP
+True      HGT            500           MSLP         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           HGT500_MSLP
+True      HGT            200           N/A          N/A     N/A          N/A         UV           200         MSLP         N/A     N/A         N/A           HGT200_UV200_MSLP
+True      MSLP           N/A           MSLP         N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           MSLP
+True      PRATE          N/A           MSLP         N/A     HGT          05001000d   N/A          N/A         MSLP         N/A     N/A         N/A           PRCP_MSLP_Z1000500
+True      PRATE          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           PRCP_MSLP
+True      PRCP           24            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           PRCP24_MSLP
+True      REFL           N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           REFL_MSLP
+True      RH             700           MSLP         N/A     N/A          N/A         UV           700         MSLP         N/A     N/A         N/A           RH700_UV700_MSLP
+True      RH             07000400a     MSLP         N/A     N/A          N/A         UV           07000400a   MSLP         N/A     N/A         N/A           RH700400_UV700400_MSLP
+True      RVO            850           HGT          850     N/A          N/A         UV           850         N/A          N/A     N/A         N/A           RVO850_Z850_UV850
+True      RVO            850           N/A          N/A     N/A          N/A         UV           200         N/A          N/A     N/A         N/A           RVO850_UV200
+True      RVO            700           HGT          700     N/A          N/A         UV           700         N/A          N/A     N/A         N/A           RVO700_Z700_UV700
+True      RVO            500           HGT          500     N/A          N/A         UV           500         N/A          N/A     N/A         N/A           RVO500_Z500_UV500
+True      RVO            200           HGT          200     N/A          N/A         UV           200         N/A          N/A     N/A         N/A           RVO200_Z200_UV200
+True      T              2             N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           T2
+True      TPRCP          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPRCP_MSLP
+True      TPW            N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPW_MSLP
+True      UV             10            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            UV10_MSLP
+True      UV             850           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          850           UV850_MSLP
+
+
+
+################################
+# VERTICAL WIND SHEAR GRAPHICS #
+################################
+
+PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
+True      UV             02000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          02000850d     SHDL
+True      UV             05000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          05000850d     SHML
+True      UV             07000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          07000850d     SHSL
+
+
+
+##########################
+# STEERING FLOW GRAPHICS #
+##########################
+
+PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
+True      UV             02500850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          02500850m     SFDL
+True      UV             05000850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          05000850m     SFML
+True      UV             07000850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          07000850m     SFSL
+
+
+
+#################################
+# CROSS-SECTIONS (experimental) #
+#################################
+
+PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
+True      UV             02001000y     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           UV_NS
+True      UV             02001000x     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           UV_EW
+
+

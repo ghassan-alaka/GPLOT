@@ -443,7 +443,7 @@ begin
 	windRad		:= toint(str_squeeze(str_get_field(DATA,windInt,",")))
 	vals		= ind(windRad.eq.34)
 	N		= dimsizes(vals)
-	BLOCK		= new((/4,50/),"float")
+	BLOCK		= new((/4,100/),"float")
 	if(ismissing(vals(0)))then	print("ERROR: atcfRead: No valid entries found.")
 					exit
 	end if

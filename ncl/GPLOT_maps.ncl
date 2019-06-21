@@ -392,9 +392,9 @@ IS_REAL    := where(IS_REAL(1).eq."True",True,False)
 ;    could exist. Domains that are not storm-centered should be not
 ;    be linked to a specific storm. The Operational HWRF is storm-
 ;    centered, so it is always linked to a specific storm.
-if(.not.isvar("IS_HWRFB"))then  IS_HWRFB = data(ind(isStrSubset2(data,"IS_HWRFB =")))
-                                IS_HWRFB := str_squeeze(str_split(IS_HWRFB," = "))
-                                IS_HWRFB := where(IS_HWRFB(1).eq."True",True,False)
+if(.not.isvar("IS_MSTORM"))then  IS_MSTORM = data(ind(isStrSubset2(data,"IS_MSTORM =")))
+                                IS_MSTORM := str_squeeze(str_split(IS_MSTORM," = "))
+                                IS_MSTORM := where(IS_MSTORM(1).eq."True",True,False)
 end if
 
 ; g. If True, trim the white space from graphics.
@@ -428,7 +428,7 @@ print("MSG: Running GPLOT with these settings:")
 if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
 else                    print("MSG:   Real-Time Forecast: OFF")
 end if
-if(IS_HWRFB)then        print("MSG:   Basin-Scale HWRF:   ON")
+if(IS_MSTORM)then        print("MSG:   Basin-Scale HWRF:   ON")
 else                    print("MSG:   Basin-Scale HWRF:   OFF")
 end if
 print("MSG:   Experiment Name:    "+EXPT)
@@ -509,7 +509,7 @@ SC_DOMAIN   = False
 SC_DSOURCE  = False
 SC_GRAPHICS = False
 if(any((/"d02","d03","tkfull","hwrf"/).eq.DOMAIN))then    SC_DOMAIN  = True     end if
-;if(.not.IS_HWRFB .and. isStrSubset(DSOURCE,"HWRF"))then   SC_DSOURCE = True     end if
+;if(.not.IS_MSTORM .and. isStrSubset(DSOURCE,"HWRF"))then   SC_DSOURCE = True     end if
 if(SC_DOMAIN .or. SC_DSOURCE)then
         print("MSG: Determined that these graphics are storm-centered.")
         SC_GRAPHICS = True
@@ -860,7 +860,7 @@ do sss = 0,nAll-1
         ALL_SNUM(sss)   = toint(systemfunc("echo "+ALL_SID(sss)+" | rev | cut -c1-2 | rev"))
                         
         ; c. Read the ATCF data
-        data    := atcfRead(ATCF_FILES(sss))
+        data := atcfRead(ATCF_FILES(sss))
         
         ; d. Loop over all forecast hours (from input files)
         do fff = 0,nFHR-1               
@@ -1220,6 +1220,11 @@ do fff = 0,nFiles-1
                         ;================================================================
                         if(any((/"TPRCP","PRCP"/).eq.G_BASE(0,ppp)) .and. DSOURCE.eq."GFS")then
                                 if(FHR0.gt.6)then       G_BASE(1,ppp) = tostring(FHR0)+"h"
+                                else                    G_BASE(1,ppp) = ""
+                                end if
+                        end if
+			if(any((/"TPRCP","PRCP"/).eq.G_BASE(0,ppp)) .and. isStrSubset(DSOURCE,"HAFS"))then
+                                if(FHR0.ge.6)then       G_BASE(1,ppp) = tostring(FHR0)+"h"
                                 else                    G_BASE(1,ppp) = ""
                                 end if
                         end if
@@ -3168,7 +3173,7 @@ print("********************")
 if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
 else                    print("MSG:   Real-Time Forecast: OFF")
 end if
-if(IS_HWRFB)then        print("MSG:   Basin-Scale HWRF:   ON")
+if(IS_MSTORM)then        print("MSG:   Basin-Scale HWRF:   ON")
 else                    print("MSG:   Basin-Scale HWRF:   OFF")
 end if
 print("MSG:   Experiment Name:    "+EXPT)

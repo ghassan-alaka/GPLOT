@@ -382,9 +382,9 @@ IS_REAL    := where(IS_REAL(1).eq."True",True,False)
 ;    could exist. Domains that are not storm-centered should be not
 ;    be linked to a specific storm. The Operational HWRF is storm-
 ;    centered, so it is always linked to a specific storm.
-if(.not.isvar("IS_HWRFB"))then	IS_HWRFB = data(ind(isStrSubset2(data,"IS_HWRFB =")))
-				IS_HWRFB := str_squeeze(str_split(IS_HWRFB," = "))
-				IS_HWRFB := where(IS_HWRFB(1).eq."True",True,False)
+if(.not.isvar("IS_MSTORM"))then	IS_MSTORM = data(ind(isStrSubset2(data,"IS_MSTORM =")))
+				IS_MSTORM := str_squeeze(str_split(IS_MSTORM," = "))
+				IS_MSTORM := where(IS_MSTORM(1).eq."True",True,False)
 end if
 
 ; g. If True, trim the white space from graphics.
@@ -408,7 +408,7 @@ print("MSG: Running GPLOT with these settings:")
 if(IS_REAL)then		print("MSG:   Real-Time Forecast: ON")
 else			print("MSG:   Real-Time Forecast: OFF")
 end if
-if(IS_HWRFB)then	print("MSG:   Basin-Scale HWRF:   ON")
+if(IS_MSTORM)then	print("MSG:   Basin-Scale HWRF:   ON")
 else			print("MSG:   Basin-Scale HWRF:   OFF")
 end if
 print("MSG:   Experiment Name:    "+EXPT)
@@ -700,121 +700,117 @@ print("MSG: GPLOT Status file is "+STATUS_FILE)
 ;    this is the first pass.
 ;    ATCF is only supported for HWRF, GFS & FVGFS.
 ;================================================================
-if(isStrSubset(str_lower(DSOURCE),"hwrf") .or.\
-   str_lower(DSOURCE).eq."gfs" .or.\
-   isStrSubset(str_lower(DSOURCE),"fvgfs"))then
-	
-	print("")
-	print("MSG: Searching for matching ATCFs.")
-		
-	; Get the list of ATCF files from a pre-existing text file
-	; If the text file does not exist, then set ATCF_FILES=NONE
-	if(fileexists(ODIR+"ATCF_FILES.dat"))then
-		ATCF_FILES = asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
-	else
-		ATCF_FILES = "NONE"
-	end if
-		
-	; Check if there are no ATCF files
-	if(ATCF_FILES(0).eq."NONE")then
-		print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
-		exit
-	end if
-	
-	; Find the ATCF that corresponds to this case.
-	; ATCF is required, so script will fail if it is missing.
-	val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)))
-	if(ismissing(val(0)))then
-		print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
-		exit
-	end if
-	ATCF_FILES := ATCF_FILES(val)
-	print("MSG: Working on this ATCF file: "+ATCF_FILES)
-	
-	
-	; Setup variables
-	tcLats	:= new((/nFHR/),float)
-	tcLons	:= new((/nFHR/),float)
-	tcFHR	:= new((/nFHR/),integer)
-	tcINT	:= new((/nFHR/),integer)
-	tcM6h	:= new((/nFHR/),float)
-	tcM6hB	:= new((/nFHR/),float)
-	;FNL_ATCF:= new(nAll,logical)
-	;tcMAXHR	:= new(nAll,integer)
-	;ALL_LONGSID := new(nAll,string)
-	;ALL_SID	:= new(nAll,string)
-	;ALL_SNUM:= new(nAll,integer)
-		
 
-	; Storm ID (SID) should already be defined.
-	; Get the long Storm ID, e.g., HARVEY09L
-	; Get the storm number, e.g., 9
-	LONGSID = str_upper(systemfunc("echo "+ATCF_FILES+" | rev | cut -d'/' -f1 | rev | cut -d'.' -f1"))
-	;ALL_SID		= str_upper(systemfunc("echo "+ALL_LONGSID+" | rev | cut -c1-3 | rev"))
-	SNUM	= toint(systemfunc("echo "+SID+" | rev | cut -c1-2 | rev"))
-	TCNAME	= str_upper(systemfunc("echo "+LONGSID+" | rev | cut -c4- | rev"))
-	SID_OLD = getInvestSID(YYYY,SID)
-			
-
-	; Read the ATCF data
-	data	:= atcfRead(ATCF_FILES)
-	do fff = 0,nFHR-1		
-		val	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
-		if(fff.eq.nFHR-1)then	val1	= default_fillvalue("integer")
-		else			val1	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.(FHR(fff)+DT))
-		end if
-		if(fff.eq.0)then	val2	= default_fillvalue("integer")
-		else			val2	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.(FHR(fff)-DT))
-		end if
-				 
-		if(ismissing(val(0)))then
-			; If the bounding forecast hours exist, then interpolate
-			if(.not.ismissing(val1(0)) .and. .not.ismissing(val2(0)))then
-				dHr1 = abs(FHR(fff) - toint(data(2,val1(0))))
-				dHr2 = abs(FHR(fff) - toint(data(2,val2(0))))
-				pctHr1	= tofloat(dHr1)/(tofloat(dHr1)+tofloat(dHr2))
-				pctHr2	= tofloat(dHr2)/(tofloat(dHr1)+tofloat(dHr2))
-				
-				tcLats(fff) = pctHr1*data(0,val1(0)) + pctHr2*data(0,val2(0))
-				tcLons(fff) = pctHr1*data(1,val1(0)) + pctHr2*data(1,val2(0))
-				tcFHR(fff)  = FHR(fff)
-				tcINT(fff)  = toint(pctHr1*data(3,val1(0)) + pctHr2*data(3,val2(0)))
-			else
-				continue
-			end if
-		else
-			tcLats(fff) = data(0,val)
-			tcLons(fff) = data(1,val)
-			tcFHR(fff)  = toint(data(2,val))
-			tcINT(fff)  = toint(data(3,val))
-		end if
+print("")
+print("MSG: Searching for matching ATCFs.")
 		
-		vals	:= ind(.not.ismissing(tcFHR(:)))
-		do aaa = 0,dimsizes(vals)-1
-			if(ismissing(tcFHR(vals(aaa))))then   continue   end if
-			valM := ind(tcFHR(:).eq.(tcFHR(vals(aaa)))-6.)
-			if(ismissing(valM))then   continue   end if
-			tcM6h(vals(aaa)) = C@ms2kts*gc_latlon(tcLats(vals(aaa)),tcLons(vals(aaa)),tcLats(valM),tcLons(valM),2,3)/21000.
-			tcM6hB(vals(aaa))= C@r2d*atan2((tcLons(vals(aaa))-tcLons(valM)),(tcLats(vals(aaa))-tcLats(valM)))
-		end do
-	end do ;fff
-			
-			
-	; Determine if the ATCF file has been updated within 2 hours
-	; If so, consider the ATCF final. This is used for non
-	; storm-centered graphics because they are not necessarily 
-	; tied to a particular storm. So, graphics may still be
-	; produced even if there is no ATCF entry.
-	ATCF_MOD := systemfunc("find "+ATCF_FILES+" -mmin +120")
-	if(ismissing(ATCF_MOD(0)))then	FNL_ATCF = False
-	else				FNL_ATCF = True
-	end if
-
-		
-	; Update the final forecast hour to match the final ATCF hour
-	FNL_HR = max(tcFHR)
-	
+; Get the list of ATCF files from a pre-existing text file
+; If the text file does not exist, then set ATCF_FILES=NONE
+if(fileexists(ODIR+"ATCF_FILES.dat"))then
+	ATCF_FILES = asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
+else
+	ATCF_FILES = "NONE"
 end if
+		
+; Check if there are no ATCF files
+if(ATCF_FILES(0).eq."NONE")then
+	print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
+	exit
+end if
+	
+; Find the ATCF that corresponds to this case.
+; ATCF is required, so script will fail if it is missing.
+val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)))
+if(ismissing(val(0)))then
+	print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
+	exit
+end if
+ATCF_FILES := ATCF_FILES(val)
+print("MSG: Working on this ATCF file: "+ATCF_FILES)
+	
+	
+; Setup variables
+tcLats	:= new((/nFHR/),float)
+tcLons	:= new((/nFHR/),float)
+tcFHR	:= new((/nFHR/),integer)
+tcINT	:= new((/nFHR/),integer)
+tcM6h	:= new((/nFHR/),float)
+tcM6hB	:= new((/nFHR/),float)
+;FNL_ATCF:= new(nAll,logical)
+;tcMAXHR	:= new(nAll,integer)
+;ALL_LONGSID := new(nAll,string)
+;ALL_SID	:= new(nAll,string)
+;ALL_SNUM:= new(nAll,integer)
+		
+
+; Storm ID (SID) should already be defined.
+; Get the long Storm ID, e.g., HARVEY09L
+; Get the storm number, e.g., 9
+LONGSID = str_upper(systemfunc("echo "+ATCF_FILES+" | rev | cut -d'/' -f1 | rev | cut -d'.' -f1"))
+;ALL_SID		= str_upper(systemfunc("echo "+ALL_LONGSID+" | rev | cut -c1-3 | rev"))
+SNUM	= toint(systemfunc("echo "+SID+" | rev | cut -c1-2 | rev"))
+TCNAME	= str_upper(systemfunc("echo "+LONGSID+" | rev | cut -c4- | rev"))
+SID_OLD = getInvestSID(YYYY,SID)
+			
+
+; Read the ATCF data
+data	:= atcfRead(ATCF_FILES)
+do fff = 0,nFHR-1		
+	val	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
+	if(fff.eq.nFHR-1)then	val1	= default_fillvalue("integer")
+	else			val1	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.(FHR(fff)+DT))
+	end if
+	if(fff.eq.0)then	val2	= default_fillvalue("integer")
+	else			val2	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.(FHR(fff)-DT))
+	end if
+				 
+	if(ismissing(val(0)))then
+		; If the bounding forecast hours exist, then interpolate
+		if(.not.ismissing(val1(0)) .and. .not.ismissing(val2(0)))then
+			dHr1 = abs(FHR(fff) - toint(data(2,val1(0))))
+			dHr2 = abs(FHR(fff) - toint(data(2,val2(0))))
+			pctHr1	= tofloat(dHr1)/(tofloat(dHr1)+tofloat(dHr2))
+			pctHr2	= tofloat(dHr2)/(tofloat(dHr1)+tofloat(dHr2))
+			
+			tcLats(fff) = pctHr1*data(0,val1(0)) + pctHr2*data(0,val2(0))
+			tcLons(fff) = pctHr1*data(1,val1(0)) + pctHr2*data(1,val2(0))
+			tcFHR(fff)  = FHR(fff)
+			tcINT(fff)  = toint(pctHr1*data(3,val1(0)) + pctHr2*data(3,val2(0)))
+		else
+			continue
+		end if
+	else
+		tcLats(fff) = data(0,val)
+		tcLons(fff) = data(1,val)
+		tcFHR(fff)  = toint(data(2,val))
+		tcINT(fff)  = toint(data(3,val))
+	end if
+		
+	vals	:= ind(.not.ismissing(tcFHR(:)))
+	do aaa = 0,dimsizes(vals)-1
+		if(ismissing(tcFHR(vals(aaa))))then   continue   end if
+		valM := ind(tcFHR(:).eq.(tcFHR(vals(aaa)))-6.)
+		if(ismissing(valM))then   continue   end if
+		tcM6h(vals(aaa)) = C@ms2kts*gc_latlon(tcLats(vals(aaa)),tcLons(vals(aaa)),tcLats(valM),tcLons(valM),2,3)/21000.
+		tcM6hB(vals(aaa))= C@r2d*atan2((tcLons(vals(aaa))-tcLons(valM)),(tcLats(vals(aaa))-tcLats(valM)))
+	end do
+end do ;fff
+			
+			
+; Determine if the ATCF file has been updated within 2 hours
+; If so, consider the ATCF final. This is used for non
+; storm-centered graphics because they are not necessarily 
+; tied to a particular storm. So, graphics may still be
+; produced even if there is no ATCF entry.
+ATCF_MOD := systemfunc("find "+ATCF_FILES+" -mmin +120")
+if(ismissing(ATCF_MOD(0)))then	FNL_ATCF = False
+else				FNL_ATCF = True
+end if
+
+		
+; Update the final forecast hour to match the final ATCF hour
+FNL_HR = max(tcFHR)
+	
 	
 
 
@@ -1005,6 +1001,11 @@ do fff = 0,nFiles-1
 		
 		end if
 		
+		; BOCO2 is critical to read in the data exactly as planned.
+		; BOCO is used to set the graphical bounds.
+		; Is BOCO2 necessary for the 'findCenter' function?
+		BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
+		
 		
 		;================================================================
 		; SET RESOURCES & OTHER PLOTTING OPTIONS
@@ -1176,10 +1177,10 @@ do fff = 0,nFiles-1
 			
 			; 3) Get U & V data (uncombined)
 			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			U(0,:,:)= getVar2d(f,DSOURCE,(/"U",levCode/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"U",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			U@_FillValue = -999.
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V",levCode/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"V",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V@_FillValue = -999.
 				
 			; 4) Convert both U & V to cartesian (X,Y) coordinates
@@ -1244,10 +1245,10 @@ do fff = 0,nFiles-1
 				
 			; 2) Get U & V data (uncombined)
 			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO,mf,(/flipFlag,True/),lonF)
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,True/),lonF)
 			U@_FillValue = -999.
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO,mf,(/flipFlag,True/),lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,True/),lonF)
 			V@_FillValue = -999.
 
 			; 3) Get 850 hPa TC center
@@ -1323,7 +1324,7 @@ do fff = 0,nFiles-1
 			MSLPdNames	:= getfilevardims(f,findVarName(DSOURCE,"MSLP",""))
 			MSLPdims@dNames	= MSLPdNames
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"MSLP",""/),MSLPdims,BOCO,1.,flipFlag,lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"MSLP",""/),MSLPdims,BOCO2,1.,flipFlag,lonF)
 			V@long_name = "MSLP"
 			V@_FillValue = -999.
 			
@@ -1378,7 +1379,7 @@ do fff = 0,nFiles-1
 			UV10dNames	:= getfilevardims(f,findVarName(DSOURCE,"UV","10"))
 			UV10dims@dNames	= UV10dNames
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"UV","10"/),UV10dims,BOCO,1.,flipFlag,lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"UV","10"/),UV10dims,BOCO2,1.,flipFlag,lonF)
 			V@long_name = "10-m Wind"
 			V@_FillValue = -999.
 			
@@ -1440,7 +1441,7 @@ do fff = 0,nFiles-1
 		else if(any((/"U200","U20C"/).eq.FNAME(ppp)))then
 			; 1) Get U
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V@long_name = "Zonal Wind"
 			V@_FillValue = -999.
 			
@@ -1499,7 +1500,7 @@ do fff = 0,nFiles-1
 		else if(any((/"V20C"/).eq.FNAME(ppp)))then
 			; 1) Get V data
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V@long_name = "Meridional Wind"
 			V@_FillValue = -999.
 			TITLE	= "200 hPa Meridional Wind (0-500km)"
@@ -1541,13 +1542,13 @@ do fff = 0,nFiles-1
 		else if(any((/"RHLO","RHMD","RHHI"/).eq.FNAME(ppp)))then				
 			; 1) Retrieve RH data
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			if(FNAME(ppp).eq."RHLO")then		V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","07000850m"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			if(FNAME(ppp).eq."RHLO")then		V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","07000850m"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 								V@long_name = "RH"
 								TITLE	= "850-700 hPa Relative Humidity (200-800km)"
-			else if(FNAME(ppp).eq."RHMD")then	V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","05000700m"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			else if(FNAME(ppp).eq."RHMD")then	V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","05000700m"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 								V@long_name = "RH"
 								TITLE	= "700-500 hPa Relative Humidity (200-800km)"
-			else if(FNAME(ppp).eq."RHHI")then	V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","03000500m"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			else if(FNAME(ppp).eq."RHHI")then	V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","03000500m"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 								V@long_name = "RH"
 								TITLE	= "500-300 hPa Relative Humidity (200-800km)"
 			end if  end if  end if
@@ -1586,12 +1587,12 @@ do fff = 0,nFiles-1
 			; 1) Retrieve RH data
 			if(isvar("V") .and. V@long_name.ne."1000 hPa Relative Humidity")then
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V@long_name = "Relative Humidity"
 				TITLE	= "1000 hPa Relative Humidity (200-800km)"
 			else if(.not.isvar("V"))then
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V@long_name = "Relative Humidity"
 				TITLE	= "1000 hPa Relative Humidity (200-800km)"
 			end if  end if
@@ -1634,12 +1635,12 @@ do fff = 0,nFiles-1
 			; 1) Retrieve Vorticity data
 			if(isvar("V") .and. V@long_name.ne."850 hPa Relative Vorticity")then
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V@long_name = "Relative Vorticity"
 				TITLE = "850 hPa Relative Vorticity (0-1000km)"
 			else if(.not.isvar("V"))then
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V@long_name = "Relative Vorticity"
 				TITLE = "850 hPa Relative Vorticity (0-1000km)"
 			end if  end if
@@ -1682,17 +1683,17 @@ do fff = 0,nFiles-1
 			; 1)  Retrieve wind data
 			if(isvar("V") .and. V@long_name.ne."200 hPa Meridional Wind")then
 				U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V	:= uv2dv_cfd(U,V,lat,lon,2)
 				V@long_name = "Divergence"
 				V@units = "s-1"
 			else if(.not.isvar("V") .and. .not.isvar("U"))then
 				U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+				V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V	:= uv2dv_cfd(U,V,lat,lon,2)
 				V@long_name = "Divergence"
 				V@units = "s-1"
@@ -1754,7 +1755,7 @@ do fff = 0,nFiles-1
 		else if(any((/"T000"/).eq.FNAME(ppp)))then
 			; 1) Retrieve Temperature data
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"T","1000"/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"T","1000"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V	= V - 273.15
 			V@_FillValue = -999.
 			TITLE	= "1000 hPa Temperature (200-800km)"
@@ -1795,7 +1796,7 @@ do fff = 0,nFiles-1
 		; Get the TC centers based on the geopotential height centroid
 		else if(FNAME(ppp).eq."TCCEN")then
 			; 1) Use NCL & Fortran functions to find the TC centers
-			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,BOCO,1)
+			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,BOCO2,1)
 			;print(CTR@value)
 			;exit				
 			
@@ -2261,10 +2262,10 @@ do fff = 0,nFiles-1
 
 			; 4A) Get U & V data (uncombined)
 			;U1	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			U1 := getVar3d(f,DSOURCE,(/"U",sprinti("%0.4i",toint(min(LEVC)))+sprinti("%0.4i",toint(max(LEVC)))/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			U1 := getVar3d(f,DSOURCE,(/"U",sprinti("%0.4i",toint(min(LEVC)))+sprinti("%0.4i",toint(max(LEVC)))/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			U1@_FillValue = -999.
 			;V1	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V1 := getVar3d(f,DSOURCE,(/"V",sprinti("%0.4i",toint(min(LEVC)))+sprinti("%0.4i",toint(max(LEVC)))/),nDims,BOCO,mf,(/flipFlag,False/),lonF)
+			V1 := getVar3d(f,DSOURCE,(/"V",sprinti("%0.4i",toint(min(LEVC)))+sprinti("%0.4i",toint(max(LEVC)))/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V1@_FillValue = -999.
 			
 				
@@ -2936,7 +2937,7 @@ print("********************")
 if(IS_REAL)then		print("MSG:   Real-Time Forecast: ON")
 else			print("MSG:   Real-Time Forecast: OFF")
 end if
-if(IS_HWRFB)then	print("MSG:   Basin-Scale HWRF:   ON")
+if(IS_MSTORM)then	print("MSG:   Basin-Scale HWRF:   ON")
 else			print("MSG:   Basin-Scale HWRF:   OFF")
 end if
 print("MSG:   Experiment Name:    "+EXPT)

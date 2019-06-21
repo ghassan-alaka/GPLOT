@@ -1,35 +1,39 @@
-HC18,    HC18: 2018 Ens. HWRFB,  7,               coral,          2018 Ensemble Basin-Scale HWRF
-HC8I,       HC8I: Interp. HC18,  7,               brown,      2018 Ens. Basin-Scale HWRF (Early)
-HB18,    HB18: 2018 HWRF-Basin,  7,               brown,                   2018 Basin-Scale HWRF
-HB8I,       HB8I: Interp. HB18,  7,               brown,           2018 Basin-Scale HWRF (Early)
-H218,    H218: 2018 Oper. HWRF,  9,              purple,                         2018 Oper. HWRF
-H18I,       H18I: Interp. H218,  9,              purple,                 2018 Oper. HWRF (Early)
-HFV3,       HFV3: 2018 hfvGFS3,  7,          aquamarine,                             2018 hfvGFS
-HF3I,       H18I: Interp. HFV3,  7,          aquamarine,                     2018 hfvGFS (Early)
-HB17,    HB17: 2017 HWRF-Basin,  7,               brown,                   2017 Basin-Scale HWRF
-HB7I,       HB7I: Interp. HB17,  7,               brown,           2017 Basin-Scale HWRF (Early)
-HB16,    HB16: 2016 HWRF-Basin,  7,               coral,                   2016 Basin-Scale HWRF
-HB15,    HB15: 2015 HWRF-Basin,  7,         deepskyblue,                   2015 Basin-Scale HWRF
-HWRF,         HWRF: Oper. HWRF,  9,              purple,                        Operational HWRF
-HWFI,       HWFI: Interp. HWRF,  9,              purple,                Operational HWRF (Early)
-AVNO,          AVNO: Oper. GFS,  6,                blue,                  Global Forecast System
-AVNI,        AVNI: Interp. GFS,  6,                blue,          Global Forecast System (Early)
-GFSO,          GFSO: Oper. GFS,  6,                blue,                  Global Forecast System
-GFSI,        GFSI: Interp. GFS,  6,                blue,          Global Forecast System (Early)
-HMON,         HMON: Oper. HMON,  4,               green,                        Operational HMON
-HMNI,       HMNI: Interp. HMON,  4,               green,                Operational HMON (Early)
-NVGM,       NVGM: Oper. NAVGEM, 11,                cyan,                      Operational NAVGEM
-NVGI,       NVGI: Interp. NVGM, 11,                cyan,              Operational NAVGEM (Early)
-CTCX,          CTCX: COAMPS-TC,  8,          darkorange,                        COAMPS-TC w/ GFS
-CTCI,       CTCI: Interp. CTCX,  8,          darkorange,                         Early COAMPS-TC
-OFCL,       OFCL: NHC Official, 12,                 red,                   NHC Official Forecast
-OFCI,       OFCI: Interp. OFCL, 12,                 red,           NHC Official Forecast (Early)
-DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                             Decay SHIPS
-LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,   Logistic Growth Equation Model (LGEM)
-IVCN,      IVCN: NHC Consensus, 10,              tomato,                 NHC Intensity Consensus
-TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                     NHC Track Consensus
-FGFS,          GFSO: Oper. GFS,  6,                blue,                  Global Forecast System
-EGRR,              EGRR: UKMet,  3,           violetred,                           UK Met Office
-EGRI,      EGRI: Interp. UKMet,  3,           violetred,                     Early UK Met Office
-F218,    F218: 2018 HWRF-Gopal,  7,               brown,                         2018 HWRF-Gopal
-F18I,       F18I: Interp. F218,  7,               brown,                 2018 HWRF-Gopal (Early)
+HC18,    HC18: 2018 Ens. HWRFB,  7,               coral,                2018 Ensemble Basin-Scale HWRF
+HC8I,       HC8I: Interp. HC18,  7,               brown,            2018 Ens. Basin-Scale HWRF (Early)
+HB18,    HB18: 2018 HWRF-Basin,  7,               brown,                         2018 Basin-Scale HWRF
+HB8I,       HB8I: Interp. HB18,  7,               brown,                 2018 Basin-Scale HWRF (Early)
+H218,    H218: 2018 Oper. HWRF,  9,              purple,                               2018 Oper. HWRF
+H18I,       H18I: Interp. H218,  9,              purple,                       2018 Oper. HWRF (Early)
+HFV3,       HFV3: 2018 hfvGFS3,  7,          aquamarine,                                   2018 hfvGFS
+HF3I,       H18I: Interp. HFV3,  7,          aquamarine,                           2018 hfvGFS (Early)
+HB17,    HB17: 2017 HWRF-Basin,  7,               brown,                         2017 Basin-Scale HWRF
+HB7I,       HB7I: Interp. HB17,  7,               brown,                 2017 Basin-Scale HWRF (Early)
+HB16,    HB16: 2016 HWRF-Basin,  7,               coral,                         2016 Basin-Scale HWRF
+HB15,    HB15: 2015 HWRF-Basin,  7,         deepskyblue,                         2015 Basin-Scale HWRF
+HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
+HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
+AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
+AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
+GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
+GFSI,        GFSI: Interp. GFS,  6,                blue.                Global Forecast System (Early)
+HMON,         HMON: Oper. HMON,  4,               green,                              Operational HMON
+HMNI,       HMNI: Interp. HMON,  4,               green,                      Operational HMON (Early)
+NVGM,       NVGM: Oper. NAVGEM, 11,                cyan,                            Operational NAVGEM
+NVGI,       NVGI: Interp. NVGM, 11,                cyan,                    Operational NAVGEM (Early)
+CTCX,          CTCX: COAMPS-TC,  8,          darkorange,                              COAMPS-TC w/ GFS
+CTCI,       CTCI: Interp. CTCX,  8,          darkorange,                               Early COAMPS-TC
+OFCL,       OFCL: NHC Official, 12,                 red,                         NHC Official Forecast
+OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
+DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
+LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,         Logistic Growth Equation Model (LGEM)
+IVCN,      IVCN: NHC Consensus, 10,              tomato,                       NHC Intensity Consensus
+TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                           NHC Track Consensus
+FGFS,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
+EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
+EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
+F218,    F218: 2018 HWRF-Gopal,  7,               brown,                               2018 HWRF-Gopal
+F18I,       F18I: Interp. F218,  7,               brown,                       2018 HWRF-Gopal (Early)
+HAFS,          HAFS: HAFS V0.B,  7,          aquamarine,   Hurricane Analysis and Forecast System V0.B
+HAFI,     HAFI: Interp. HAFS-B,  7,          aquamarine,                             HAFS V0.B (Early)
+HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                         2019 Basin-Scale HWRF
+HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)

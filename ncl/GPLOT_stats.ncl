@@ -1182,6 +1182,7 @@ tcInit	= str_squeeze(str_get_field(data(vals),3,","))
 vals	:= ind(tcModel.eq.MCODE .and. tcFHR%6.eq.0 .and. toint(tcInit).le.toint(IDATE))
 if(ismissing(vals(0)))then
 	print("ERROR: No cycles in the A-Deck match "+MCODE+". Can't continue.")
+	system("echo  'failed' > "+ODIR+"status."+LONGSID+".log")
 	exit
 end if
 allDates := remove_duplicates(toint(tcInit(vals)))
@@ -1209,8 +1210,8 @@ if(DO_LT_GUIDE)then
 	
 	; Only retain values within 126 h (to match HWRF forecasts)
 	; Do we really want to do this?
-	aTRK(:,0,:)	= where(aTRK(:,2,:).gt.126.,fval3,aTRK(:,0,:))
-	aTRK(:,1,:)	= where(aTRK(:,2,:).gt.126.,fval3,aTRK(:,1,:))
+	;aTRK(:,0,:)	= where(aTRK(:,2,:).gt.126.,fval3,aTRK(:,0,:))
+	;aTRK(:,1,:)	= where(aTRK(:,2,:).gt.126.,fval3,aTRK(:,1,:))
 end if
 
 
@@ -1685,11 +1686,11 @@ if(DO_LT_GUIDE)then
 	maxLon	= max((/max(aTRK(:,1,:)),max(bTRK(1,:))/))
 	minLon	= min((/min(aTRK(:,1,:)),min(bTRK(1,:))/))
 	rngLon	= abs(maxLon-minLon)
-	llratio	= rngLat/rngLon
-	if(ismissing(llratio))then
+	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
 	end if
+	llratio	= rngLat/rngLon
 
 
 	; Enter here if everything looks good for graphical production.
@@ -1882,11 +1883,11 @@ if(DO_ET_GUIDE)then
 	maxLon	= max((/max(aTRKI(:,1,:)),max(bTRK(1,:))/))
 	minLon	= min((/min(aTRKI(:,1,:)),min(bTRK(1,:))/))
 	rngLon	= abs(maxLon-minLon)
-	llratio	= rngLat/rngLon
-	if(ismissing(llratio))then
-		print("WARNING: Early model track guidance can't be produced.")
+		if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
+		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
 	end if
+	llratio	= rngLat/rngLon
 
 
 	if(DO_THIS)then
@@ -2860,6 +2861,10 @@ if(DO_LT_TREND)then
 		maxLon	:= max((/max(aTRK3(mmm,:,1,:)),max(bTRK(1,:))/))
 		minLon	:= min((/min(aTRK3(mmm,:,1,:)),min(bTRK(1,:))/))
 		rngLon	:= abs(maxLon-minLon)
+		if(ismissing(rngLat) .or. ismissing(rngLon) .or. rngLon.eq.0)then
+			print("WARNING: "+thisModel+" track trend can't be produced.")
+			continue
+		end if
 		llratio	:= rngLat/rngLon
 		if(llratio.lt.0.5)then		maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
 						minLat	= minLat - 0.5*abs(0.5*rngLon - rngLat)
