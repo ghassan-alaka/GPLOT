@@ -1369,14 +1369,14 @@ begin
 			delete([/tmpU,tmpV/])
 		else
 			if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
-				V	= f->$findVarName(dSource,varInfo(0),varInfo(1))$({iBds(0):iBds(1)},:)
+				V = f->$findVarName(dSource,varInfo(0),varInfo(1))$({iBds(0):iBds(1)},:)
 			else if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
-				V	= f->$findVarName(dSource,varInfo(0),varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				V = f->$findVarName(dSource,varInfo(0),varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
 			else if(latDim .and. lonDim .and. .not.levDim .and. timeDim)then
-				V	= f->$findVarName(dSource,varInfo(0),varInfo(1))$(tIND,{iBds(0):iBds(1)},:)	
+				V = f->$findVarName(dSource,varInfo(0),varInfo(1))$(tIND,{iBds(0):iBds(1)},:)	
 			end if  end if  end if
-			ISZ	= dimsizes(V(0,:))
-			JSZ	= dimsizes(V(:,0))
+			ISZ = dimsizes(V(0,:))
+			JSZ = dimsizes(V(:,0))
 			
 			if(flipFlag)then	V	= lonFlip(V)
 						xAdd	= -360.

@@ -92,6 +92,13 @@ if [ ! -z "$EXT" ]; then
 fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
 
+# Get the domains
+DOMAIN=( `sed -n -e 's/^.*DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+echo "MSG: Found these graphic domains in the namelist --> ${DOMAIN[*]}"
+
+# Get the graphics tiers for this MAPS domain
+TIER=( `sed -n -e 's/^.*TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+echo "MSG: Found these graphic tiers in the namelist   --> ${TIER[*]}"
 
 # If FORCE is undefined, set it to False.
 if [ -z "$FORCE" ]; then
@@ -126,11 +133,11 @@ fi
 # Define other important variables
 BATCHFILE1="batch_maps.generic.sh"
 BATCHFILE2="batch_maps.${EXPT}.sh"
-CTIME=`date +"%Y%m%d%H_%M"`
-LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
+#CTIME=`date +"%Y%m%d%H_%M"`
+#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
-mkdir -p ${LOG_DIR}
+#mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 
 
@@ -147,6 +154,9 @@ echo "MSG: Found these cycles -->${CYCLES[*]}"
 # This is a safeguard to avoid overloading the batch scheduler.
 MAXCOUNT=25
 
+# Define the batch submission counter.
+N=0
+
 
 
 
@@ -157,21 +167,6 @@ MAXCOUNT=25
 ####################################################################
 if [ "${DO_MAPS}" = "True" ]; then
     NCLFILE="GPLOT_maps.ncl"
-
-
-    # Get the domains
-    DOMAIN=`sed -n -e 's/^.*DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-    echo "MSG: Found these graphic domains in the namelist --> $DOMAIN"
-
-
-    # Get the graphics tiers for this MAPS domain
-    TIER=`sed -n -e 's/^.*TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-    echo "MSG: Found these graphic tiers in the namelist   --> $TIER"
-
-
-    # Define the batch submission counter.
-    N=0
-
 
 
     ##################################
@@ -242,12 +237,11 @@ if [ "${DO_MAPS}" = "True" ]; then
         FOUND_FILES="False"
 
 
-echo "${STORMS[@]}"
         ####################
         # LOOP OVER STORMS #
         ####################
         for STORM in ${STORMS[@]}; do
-echo "MSG: Current storm --> $STORM"
+
             # Increase the storm counter
             ((NSTORM=NSTORM+1))
 
@@ -276,7 +270,7 @@ echo "MSG: Current storm --> $STORM"
             #########################
             # LOOP OVER MAP DOMAINS #
             #########################
-            for DMN in ${DOMAIN}; do
+            for DMN in ${DOMAIN[@]}; do
 
                 # Create full output path
                 # Make the directory in case it doesn't already exist
@@ -317,8 +311,8 @@ echo "MSG: Current storm --> $STORM"
                 fi
 
                 # Skip subsequent storms if the outer domain has been plotted
-                #if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ]; then
-                if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
+                if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
+                #if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
                     continue
                 fi
 
@@ -451,7 +445,7 @@ echo "MSG: Current storm --> $STORM"
                 ###########################
                 # LOOP OVER GRAPHIC TIERS #
                 ###########################
-                for TR in ${TIER}; do
+                for TR in ${TIER[@]}; do
                     # Skip Tier3 for certain domains
                     if [ "$TR" == "Tier3" ]; then
                         if [ "$DMN" == "basin" ] || [ "$DMN" == "bigd01" ] || [ "$DMN" == "d03" ]; then

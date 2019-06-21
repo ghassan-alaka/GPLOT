@@ -1879,7 +1879,7 @@ begin
 		else if(DOMAIN.eq."nio")then	OUT = 0
 		else if(DOMAIN.eq."bigd01")then	OUT = 0
 		else if(DOMAIN.eq."hwrf")then	OUT = 0
-		else if(DOMAIN.eq."d01")then	OUT = 1
+		else if(DOMAIN.eq."d01")then	OUT = 0
 		else if(DOMAIN.eq."d02")then	OUT = 2
 		else if(DOMAIN.eq."d03")then	OUT = 3
 		else if(DOMAIN.eq."tkfull")then	OUT = 4

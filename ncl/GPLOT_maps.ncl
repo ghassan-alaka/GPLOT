@@ -1269,7 +1269,7 @@ do fff = 0,nFiles-1
                         ; ix. For DOMAIN=hwrf, the boundaries must be updated to include
                         ;     the entire outer nest.
                         ;================================================================
-                        if(DOMAIN.eq."hwrf")then
+                        if(any((/"d01","hwrf"/).eq.DOMAIN))then
                                 TEST := f->$findVarName(DSOURCE,"MSLP","")$
                                 do ddd = 0,nDims-1
                                         ; LATITUDE
