@@ -440,6 +440,25 @@ liModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"LIM =")))
 liModels	:= str_squeeze(str_split(liModels," = "))
 liModels	:= array_append_record(MCODEV,liModels(1:),0)
 
+val := ind(isStrSubset2(NML_DATA,"LEAD_TIMES ="))
+if(ismissing(val(0)))then
+	LEAD_TIMES = ispan(0,120,12)
+else
+	LEAD_TIMES	= NML_DATA(val(0))
+	LEAD_TIMES	:= str_squeeze(str_split(LEAD_TIMES,"="))
+	LEAD_TIMES	:= LEAD_TIMES(1)
+	LEAD_TIMES	:= toint(str_split(LEAD_TIMES," "))
+end if
+
+val := ind(isStrSubset2(NML_DATA,"NTREND ="))
+if(ismissing(val(0)))then
+	nTrend = 6
+else
+	nTrend	= NML_DATA(val(0))
+	nTrend	:= str_squeeze(str_split(nTrend,"="))
+	nTrend	:= toint(nTrend(1))
+end if
+
 
 
 
@@ -504,6 +523,9 @@ print("MSG:   liModels:           "+stringOut(liModels))
 ; 2. Make the Output Directory (ODIR)
 ;    It should already exist, so this is a safety check.
 system("mkdir -p "+ODIR)
+
+
+MAX_FHR = 180
 
 
 
@@ -781,12 +803,13 @@ title = getModelInfo(MCODE,"title")
 
 
 ; Choose number of forecasts for model trend plots
-nTrend		= 6
+;nTrend		= 6
 
 
 ; Choose forecast hours to verify
 ; Eventually move this into the namelist
-verTimes	= (/"00","12","24","36","48","60","72","84","96","108","120"/)
+; deprecated
+;verTimes	= (/"00","12","24","36","48","60","72","84","96","108","120"/)
 
 
 ; If SID was predefined, then we need to make sure the forecast
@@ -819,8 +842,8 @@ system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
 
 
 ; Hours for XY Graphics (e.g., intensity, pressure)
-XYHrs	:= ispan(0,120,12)	; regular guidance
-XYHrs2	:= ispan(-24,120,12)	; trends
+XYHrs	:= LEAD_TIMES						; regular guidance/verification
+XYHrs2	:= array_append_record((/-24,-12/),LEAD_TIMES,0)	; trends
 
 
 ; Define some executables
@@ -1493,7 +1516,7 @@ end if
 
 ; Add best track (1 "future" location, 1 current location, 5 prior locations)
 ; Note: bHrs should be a dynamic variable
-bHrs	= tofloat(ispan(-30,126,6))
+bHrs	= tofloat(ispan(-30,MAX_FHR,6))
 	bHrs!0 = "bHrs"
 	bHrs&bHrs = bHrs
 bHrsI	= bHrs-6
@@ -1506,7 +1529,7 @@ bINT	= new((/2,dimsizes(bHrs)/),"float",fval3)
 
 
 iii	= 0
-do ddd = -30,126,6
+do ddd = -30,MAX_FHR,6
 	
 	; Update 'bDate' to be Valid Time instead of Initial Time
 	utc	:= utc_base+tofloat(ddd)
@@ -1517,10 +1540,10 @@ do ddd = -30,126,6
 	
 	vals := ind(tcValidB.eq.IDATESB(iii))
 	if(.not.ismissing(vals(0)))then
-		bTRK(0,iii) = tcLatsB(vals)
-		bTRK(1,iii) = tcLonsB(vals)
-		bINT(0,iii) = tcINTB(vals)
-		bINT(1,iii) = tcPRESB(vals)
+		bTRK(0,iii) = tcLatsB(vals(0))
+		bTRK(1,iii) = tcLonsB(vals(0))
+		bINT(0,iii) = tcINTB(vals(0))
+		bINT(1,iii) = tcPRESB(vals(0))
 	end if
 	iii = iii+1
 end do
@@ -1680,30 +1703,29 @@ if(DO_LT_GUIDE)then
 	DO_THIS = True
 
 	; Find optimal map boundaries by automatically resizing (if necessary)
-	maxLat	= max((/max(aTRK(:,0,:)),max(bTRK(0,:))/))
-	minLat	= min((/min(aTRK(:,0,:)),min(bTRK(0,:))/))
-	rngLat	= abs(maxLat-minLat)
-	maxLon	= max((/max(aTRK(:,1,:)),max(bTRK(1,:))/))
-	minLon	= min((/min(aTRK(:,1,:)),min(bTRK(1,:))/))
-	rngLon	= abs(maxLon-minLon)
+	maxLat = max((/max(aTRK(:,0,:)),max(bTRK(0,:))/))
+	minLat = min((/min(aTRK(:,0,:)),min(bTRK(0,:))/))
+	rngLat = abs(maxLat-minLat)
+	maxLon = max((/max(aTRK(:,1,:)),max(bTRK(1,:))/))
+	minLon = min((/min(aTRK(:,1,:)),min(bTRK(1,:))/))
+	rngLon = abs(maxLon-minLon)
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
 	end if
-	llratio	= rngLat/rngLon
-
+	
 
 	; Enter here if everything looks good for graphical production.
 	if(DO_THIS)then
-
-		if(llratio.lt.0.5)then
-			maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
-			minLat	= minLat - 0.5*abs(0.5*rngLon - rngLat)
-			rngLat	= abs(maxLat-minLat)
-		else if(llratio.gt.0.5)then
-			maxLon	= maxLon + 0.5*abs(2.*rngLat - rngLon)
-			minLon	= minLon - 0.5*abs(2.*rngLat - rngLon)
-			rngLon	= abs(maxLon-minLon)
+		
+		; Calculate the lat/lon ratio and correct it to make a nice graphic.
+		llratio	= rngLat/rngLon
+		if(llratio.lt.0.5)then		maxLat = maxLat + 0.5*abs(0.5*rngLon - rngLat)
+						minLat = minLat - 0.5*abs(0.5*rngLon - rngLat)
+						rngLat = abs(maxLat-minLat)
+		else if(llratio.gt.0.5)then	maxLon = maxLon + 0.5*abs(2.*rngLat - rngLon)
+						minLon = minLon - 0.5*abs(2.*rngLat - rngLon)
+						rngLon = abs(maxLon-minLon)
 		end if  end if
 		;print("MSG: Correcting map lat/lon ratio from "+llratio+" to "+(rngLat/rngLon))
 	
@@ -1720,19 +1742,15 @@ if(DO_LT_GUIDE)then
 
 		; Add additional resources for this part "1a"
 		mpres1a = mpres
-		if(1.1*rngLat.lt.20.)then
-			mpres1a@gsnMajorLatSpacing	= 2.
-			mpres1a@gsnMinorLatSpacing	= 1.
-		else
-			mpres1a@gsnMajorLatSpacing	= 5.
-			mpres1a@gsnMinorLatSpacing	= 1.
+		if(1.1*rngLat.lt.20.)then	mpres1a@gsnMajorLatSpacing = 2.
+						mpres1a@gsnMinorLatSpacing = 1.
+		else				mpres1a@gsnMajorLatSpacing = 5.
+						mpres1a@gsnMinorLatSpacing = 1.
 		end if
-		if(1.1*rngLon.lt.20.)then
-			mpres1a@gsnMajorLonSpacing	= 2.
-			mpres1a@gsnMinorLonSpacing	= 1.
-		else
-			mpres1a@gsnMajorLonSpacing	= 5.
-			mpres1a@gsnMinorLonSpacing	= 1.
+		if(1.1*rngLon.lt.20.)then	mpres1a@gsnMajorLonSpacing = 2.
+						mpres1a@gsnMinorLonSpacing = 1.
+		else				mpres1a@gsnMajorLonSpacing = 5.
+						mpres1a@gsnMinorLonSpacing = 1.
 		end if
 		mpres1a@mpMaxLonF	= maxLon+(0.05*rngLon)
 		mpres1a@mpMinLonF	= minLon-(0.05*rngLon)
@@ -1740,8 +1758,8 @@ if(DO_LT_GUIDE)then
 		mpres1a@mpMinLatF	= minLat-(0.05*rngLat)
 		mpres1a@tiMainString	= "Late Track Guidance"
 		if(gridOn)then
-			mpres1a@mpGridLatSpacingF	= mpres1a@gsnMajorLatSpacing
-			mpres1a@mpGridLonSpacingF	= mpres1a@gsnMajorLonSpacing
+			mpres1a@mpGridLatSpacingF = mpres1a@gsnMajorLatSpacing
+			mpres1a@mpGridLonSpacingF = mpres1a@gsnMajorLonSpacing
 		end if
 
 
@@ -1753,9 +1771,7 @@ if(DO_LT_GUIDE)then
 
 		; Plot a blank map
 		plot	:= gsn_csm_map_ce(wks,mpres1a)
-		;dum1	:= new((/dimsizes(TRKmodels)+1,50/),"graphic")
 		dum1	:= new(dimsizes(TRKmodels)+1,"graphic")
-		;dum2	:= new((/dimsizes(TRKmodels)+1,50/),"graphic")
 		dum2	:= new(dimsizes(TRKmodels)+1,"graphic")
 		dum3	:= new((/dimsizes(TRKmodels)+1,50/),"graphic")
 
@@ -1773,15 +1789,15 @@ if(DO_LT_GUIDE)then
 
 		; Add best track
 		plres1a@gsLineThicknessF	= 15.0
-		plres1a@gsLineColor	= "black"
-		mkres1a@gsMarkerSizeF	= 12.0
-		mkres1a@gsMarkerColor	= "black"
-		mkres1a@gsMarkerIndex	= tc_marker
-		mkres1a@gsMarkerThicknessF= 5.0
-		txares1a@txFontColor	= "black"
-		txares1a@txFontHeightF	= 0.005
-		vals	:= ind(bHrs.ge.-12. .and. bHrs.le.126.)
-		vals2	:= ind(toint(bHrs)%12.eq.0 .and. bHrs.ge.-12. .and. bHrs.le.126.)
+		plres1a@gsLineColor		= "black"
+		mkres1a@gsMarkerSizeF		= 12.0
+		mkres1a@gsMarkerColor		= "black"
+		mkres1a@gsMarkerIndex		= tc_marker
+		mkres1a@gsMarkerThicknessF	= 5.0
+		txares1a@txFontColor		= "black"
+		txares1a@txFontHeightF		= 0.005
+		vals  := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
+		vals2 := ind(toint(bHrs)%12.eq.0 .and. bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
 		if(.not.all(ismissing(bTRK(:,vals))))then
 			dum1(dimsizes(TRKmodels))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1a)
 			dum2(dimsizes(TRKmodels))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1a)
@@ -1794,10 +1810,10 @@ if(DO_LT_GUIDE)then
 
 		; Add best track legend
 		plres1a@gsLineThicknessF	= 5.0
-		mkres1a@gsMarkerSizeF = 8.0
-		mkres1a@gsMarkerThicknessF = 3.0
-		txares1a@txFontColor	= "black"
-		txares1a@txFontHeightF	= 0.009
+		mkres1a@gsMarkerSizeF		= 8.0
+		mkres1a@gsMarkerThicknessF	= 3.0
+		txares1a@txFontColor		= "black"
+		txares1a@txFontHeightF		= 0.009
 		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+0.0525,mkres1a)
 		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+0.0525,vpTOP+0.0525/),plres1a)
 		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+0.0525,txares1a)
@@ -1813,17 +1829,17 @@ if(DO_LT_GUIDE)then
 			tmp	:= toint(where(ismissing(aTRK(ppp2,2,:)), fval2, aTRK(ppp2,2,:)))
 			vals2	:= ind(tmp%12.eq.0)
 		
-			plres1a@gsLineColor   = TRKcolors(ppp2)
+			plres1a@gsLineColor   		= TRKcolors(ppp2)
 			plres1a@gsLineThicknessF	= 8.0
-			mkres1a@gsMarkerSizeF = 8.0
-			mkres1a@gsMarkerColor = TRKcolors(ppp2)
-			mkres1a@gsMarkerIndex = TRKmarkers(ppp2)
-			mkres1a@gsMarkerThicknessF = 3.0
-			txares1a@txFontColor   = TRKcolors(ppp2)
-			txares1a@txFontHeightF	= 0.005
+			mkres1a@gsMarkerSizeF 		= 8.0
+			mkres1a@gsMarkerColor 		= TRKcolors(ppp2)
+			mkres1a@gsMarkerIndex 		= TRKmarkers(ppp2)
+			mkres1a@gsMarkerThicknessF 	= 3.0
+			txares1a@txFontColor   		= TRKcolors(ppp2)
+			txares1a@txFontHeightF		= 0.005
 
-			dum1(ppp)	= gsn_add_polyline(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),plres1a)
-			dum2(ppp)	= gsn_add_polymarker(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),mkres1a)		
+			dum1(ppp) = gsn_add_polyline(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),plres1a)
+			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),mkres1a)		
 	
 			if(.not.ismissing(vals2(0)))then
 				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
@@ -1832,9 +1848,9 @@ if(DO_LT_GUIDE)then
 	
 			; Add legend info for each model
 			plres1a@gsLineThicknessF	= 5.0
-			mkres1a@gsMarkerSizeF = 8.0
-			mkres1a@gsMarkerThicknessF = 3.0
-			txares1a@txFontHeightF	= 0.009
+			mkres1a@gsMarkerSizeF 		= 8.0
+			mkres1a@gsMarkerThicknessF 	= 3.0
+			txares1a@txFontHeightF		= 0.009
 			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres1a)
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres1a)
@@ -1883,23 +1899,22 @@ if(DO_ET_GUIDE)then
 	maxLon	= max((/max(aTRKI(:,1,:)),max(bTRK(1,:))/))
 	minLon	= min((/min(aTRKI(:,1,:)),min(bTRK(1,:))/))
 	rngLon	= abs(maxLon-minLon)
-		if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
+	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
 	end if
-	llratio	= rngLat/rngLon
-
+	
 
 	if(DO_THIS)then
 
-		if(llratio.lt.0.5)then
-			maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
-			minLat	= minLat - 0.5*abs(0.5*rngLon - rngLat)
-			rngLat	= abs(maxLat-minLat)
-		else if(llratio.gt.0.5)then
-			maxLon	= maxLon + 0.5*abs(2.*rngLat - rngLon)
-			minLon	= minLon - 0.5*abs(2.*rngLat - rngLon)
-			rngLon	= abs(maxLon-minLon)
+		; Calculate the lat/lon ratio and correct it to make a nice graphic.
+		llratio	= rngLat/rngLon
+		if(llratio.lt.0.5)then		maxLat = maxLat + 0.5*abs(0.5*rngLon - rngLat)
+						minLat = minLat - 0.5*abs(0.5*rngLon - rngLat)
+						rngLat = abs(maxLat-minLat)
+		else if(llratio.gt.0.5)then	maxLon = maxLon + 0.5*abs(2.*rngLat - rngLon)
+						minLon = minLon - 0.5*abs(2.*rngLat - rngLon)
+						rngLon = abs(maxLon-minLon)
 		end if  end if
 		;print("MSG: Correcting map lat/lon ratio from "+llratio+" to "+(rngLat/rngLon))
 	
@@ -1916,29 +1931,25 @@ if(DO_ET_GUIDE)then
 
 		; Set resources for plots and additional features
 		mpres1b	= mpres
-		if(1.1*rngLat.lt.20.)then
-			mpres1b@gsnMajorLatSpacing	= 2.
-			mpres1b@gsnMinorLatSpacing	= 1.
-		else
-			mpres1b@gsnMajorLatSpacing	= 5.
-			mpres1b@gsnMinorLatSpacing	= 1.
+		if(1.1*rngLat.lt.20.)then	mpres1b@gsnMajorLatSpacing = 2.
+						mpres1b@gsnMinorLatSpacing = 1.
+		else				mpres1b@gsnMajorLatSpacing = 5.
+						mpres1b@gsnMinorLatSpacing = 1.
 		end if
-		if(1.1*rngLon.lt.20.)then
-			mpres1b@gsnMajorLonSpacing	= 2.
-			mpres1b@gsnMinorLonSpacing	= 1.
-		else
-			mpres1b@gsnMajorLonSpacing	= 5.
-			mpres1b@gsnMinorLonSpacing	= 1.
+		if(1.1*rngLon.lt.20.)then	mpres1b@gsnMajorLonSpacing = 2.
+						mpres1b@gsnMinorLonSpacing = 1.
+		else				mpres1b@gsnMajorLonSpacing = 5.
+						mpres1b@gsnMinorLonSpacing = 1.
 		end if
-		mpres1b@mpMaxLonF			= maxLon+(0.05*rngLon)
-		mpres1b@mpMinLonF			= minLon-(0.05*rngLon)
-		mpres1b@mpMaxLatF			= maxLat+(0.05*rngLat)
-		mpres1b@mpMinLatF			= minLat-(0.05*rngLat)
+		mpres1b@mpMaxLonF = maxLon+(0.05*rngLon)
+		mpres1b@mpMinLonF = minLon-(0.05*rngLon)
+		mpres1b@mpMaxLatF = maxLat+(0.05*rngLat)
+		mpres1b@mpMinLatF = minLat-(0.05*rngLat)
 		if(gridOn)then
-			mpres1b@mpGridLatSpacingF	= mpres1b@gsnMajorLatSpacing
-			mpres1b@mpGridLonSpacingF	= mpres1b@gsnMajorLonSpacing
+			mpres1b@mpGridLatSpacingF = mpres1b@gsnMajorLatSpacing
+			mpres1b@mpGridLonSpacingF = mpres1b@gsnMajorLonSpacing
 		end if
-		mpres1b@tiMainString		= "Early Track Guidance"
+		mpres1b@tiMainString = "Early Track Guidance"
 
 
 		plres1b = plres
@@ -1949,9 +1960,7 @@ if(DO_ET_GUIDE)then
 
 		; Plot a blank map
 		plot	:= gsn_csm_map_ce(wks,mpres1a)
-		;dum1	:= new((/dimsizes(TRKmodels)+1,50/),"graphic")
 		dum1	:= new(dimsizes(TRKmodelsI)+1,"graphic")
-		;dum2	:= new((/dimsizes(TRKmodels)+1,50/),"graphic")
 		dum2	:= new(dimsizes(TRKmodelsI)+1,"graphic")
 		dum3	:= new((/dimsizes(TRKmodelsI)+1,50/),"graphic")
 
@@ -1976,8 +1985,8 @@ if(DO_ET_GUIDE)then
 		mkres1b@gsMarkerThicknessF= 5.0
 		txares1b@txFontColor	= "black"
 		txares1b@txFontHeightF	= 0.005
-		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.126.)
-		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.126.)
+		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
+		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
 		if(.not.all(ismissing(bTRK(:,vals))))then
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1b)
 			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1b)
@@ -2016,8 +2025,8 @@ if(DO_ET_GUIDE)then
 			txares1b@txFontColor   = TRKcolorsI(ppp2)
 			txares1b@txFontHeightF	= 0.005
 	
-			dum1(ppp)	= gsn_add_polyline(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),plres1b)
-			dum2(ppp)	= gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),mkres1b)	
+			dum1(ppp) = gsn_add_polyline(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),plres1b)
+			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),mkres1b)	
 		
 			if(.not.ismissing(vals2(0)))then
 				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRKI(ppp2,2,vals2))),\
@@ -2075,8 +2084,7 @@ if(DO_LI_GUIDE)then
 	; Find the XY plot boundaries
 	maxInt	:= max((/max(aINT(:,0,:)),max(bINT(0,:))/))
 	minInt	:= min((/min(aINT(:,0,:)),min(bINT(0,:))/))
-	rngInt	:= abs(maxInt-minInt)
-	if(ismissing(rngInt))then
+	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
 		print("WARNING: Late model intensity guidance can't be produced.")
 		DO_THIS = False
 	end if
@@ -2084,6 +2092,7 @@ if(DO_LI_GUIDE)then
 
 	if(DO_THIS)then
 
+		rngInt	:= abs(maxInt-minInt)
 		if(1.2*rngInt.ge.100.)then
 			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,20)
@@ -2263,8 +2272,7 @@ if(DO_EI_GUIDE)then
 	; Find the XY plot boundaries
 	maxInt	:= max((/max(aINTI(:,0,:)),max(bINT(0,:))/))
 	minInt	:= min((/min(aINTI(:,0,:)),min(bINT(0,:))/))
-	rngInt	:= abs(maxInt-minInt)
-	if(ismissing(rngInt))then
+	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
 		print("WARNING: Early model intensity guidance can't be produced.")
 		DO_THIS = False
 	end if
@@ -2272,6 +2280,7 @@ if(DO_EI_GUIDE)then
 
 	if(DO_THIS)then
 
+		rngInt	:= abs(maxInt-minInt)
 		if(1.2*rngInt.ge.100.)then
 			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,20)
@@ -2450,8 +2459,7 @@ if(DO_LP_GUIDE)then
 	; Find the XY plot boundaries
 	maxPrs	:= max((/max(aPRS(:,0,:)),max(bINT(1,:))/))
 	minPrs	:= min((/min(aPRS(:,0,:)),min(bINT(1,:))/))
-	rngPrs	:= abs(maxPrs-minPrs)
-	if(ismissing(rngPrs))then
+	if(ismissing(maxPrs) .or. ismissing(minPrs) .or. maxPrs.eq.minPrs)then
 		print("WARNING: Late model pressure guidance can't be produced.")
 		DO_THIS = False
 	end if
@@ -2459,6 +2467,7 @@ if(DO_LP_GUIDE)then
 
 	if(DO_THIS)then
 
+		rngPrs	:= abs(maxPrs-minPrs)
 		if(1.2*rngPrs.ge.50.)then
 			PrsMjrGrd	:= ispan(toint(minPrs-(0.10*rngPrs)) - toint(minPrs-(0.10*rngPrs))%10 + 10,\
 						 toint(maxPrs+(0.10*rngPrs)) - toint(maxPrs+(0.10*rngPrs))%10,10)
@@ -2676,7 +2685,7 @@ if(DO_LT_TREND)then
 
 		print("MSG: Producing graphic for "+thisModel+" track trend.")
 
-		; Find map boundaries. Resize if necessary
+		; Find map boundaries.
 		maxLat	:= max((/max(aTRK2(mmm,:,0,:)),max(bTRK(0,:))/))
 		minLat	:= min((/min(aTRK2(mmm,:,0,:)),min(bTRK(0,:))/))
 		rngLat	:= abs(maxLat-minLat)
@@ -2687,6 +2696,8 @@ if(DO_LT_TREND)then
 			print("WARNING: "+thisModel+" track trend can't be produced.")
 			continue
 		end if
+		
+		; Resize the boundaries to create a nice graphic.
 		llratio	:= rngLat/rngLon
 		if(llratio.lt.0.5)then
 			maxLat	= maxLat + 0.5*abs(0.5*rngLon - rngLat)
@@ -3121,6 +3132,10 @@ if(DO_LI_TREND)then
 		; Find intensity graphic Y limits.
 		maxInt	:= max((/max(aINT2(mmm,:,0,:)),max(bINT(0,:))/))
 		minInt	:= min((/min(aINT2(mmm,:,0,:)),min(bINT(0,:))/))
+		if(ismissing(maxInt) .or. ismissing(minInt))then
+			print("WARNING: Unable to retrieve intensity range for "+thisModel+".")
+			continue
+		end if
 		if(maxInt.eq.minInt)then
 			rngInt := 50
 		else if(ismissing(maxInt) .or. ismissing(minInt))
@@ -3129,9 +3144,6 @@ if(DO_LI_TREND)then
 		else
 			rngInt := abs(maxInt-minInt)
 		end if  end if
-		if(ismissing(rngInt))then	print("WARNING: Unable to retrieve intensity range for "+thisModel+".")
-						continue
-		end if
 
 		; Setup an array of intensity values
 		if(1.2*rngInt.ge.100.)then
@@ -3297,6 +3309,10 @@ if(DO_LI_TREND)then
 		; Find plot Max/Min and major tick marks. Resize if necessary
 		maxInt	:= max((/max(aINT3(mmm,:,0,:)),max(bINT3(0,:))/))
 		minInt	:= min((/min(aINT3(mmm,:,0,:)),min(bINT3(0,:))/))
+		if(ismissing(maxInt) .or. ismissing(minInt))then
+			print("WARNING: Unable to retrieve intensity range for "+thisModel+".")
+			continue
+		end if
 		if(maxInt.eq.minInt)then
 			rngInt := 50
 		else if(ismissing(maxInt) .or. ismissing(minInt))
@@ -3305,9 +3321,6 @@ if(DO_LI_TREND)then
 		else
 			rngInt := abs(maxInt-minInt)
 		end if  end if
-		if(ismissing(rngInt))then	print("WARNING: Unable to retrieve intensity range for "+thisModel+".")
-						continue
-		end if
 	
 		; Setup an array of intensity values
 		if(1.2*rngInt.ge.100.)then
@@ -3510,15 +3523,15 @@ if(DO_LP_TREND)then
 	; Find map boundaries. Resize if necessary
 	maxInt	:= max((/max(aPRS2(:,0,:)),max(bINT(1,:))/))
 	minInt	:= min((/min(aPRS2(:,0,:)),min(bINT(1,:))/))
-	rngInt	:= abs(maxInt-minInt)
-	if(ismissing(rngInt))then
+	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
 		print("WARNING: Early model intensity guidance can't be produced.")
 		DO_THIS = False
 	end if
-
+	
 
 	if(DO_THIS)then
 
+		rngInt	:= abs(maxInt-minInt)
 		if(1.2*rngInt.ge.100.)then
 			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
 						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,20)
@@ -3851,8 +3864,8 @@ if(DO_VERIFICATION)then
 	res@lgPerimFillColor	= "white"
 	res@lgPerimFill		= 0
 	res@tmXBMode		= "Explicit"
-	res@tmXBValues		:= tofloat(verTimes)
-	res@tmXBLabels		= ""+verTimes
+	res@tmXBValues		:= XYHrs
+	res@tmXBLabels		= ""+sprinti("%0.2i",XYHrs)
 	res@tmXBLabelFontHeightF = 0.02
 	res@tmXBLabelDeltaF	= -0.25
 	res@tmYLLabelDeltaF	= 0.05
@@ -3933,17 +3946,17 @@ if(DO_VERIFICATION)then
 		print("MSG: Running TC_STAT in summary mode for late track models. Will loop over all lead times.")
 		system("perl -pi -e 's/amodel = .*/amodel = "+ltM_exp+"/g' "+TCSconf_s)
 		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
-		TK_ERR		:= new((/dimsizes(ltModels),dimsizes(verTimes)/),"float",fval3)
+		TK_ERR		:= new((/dimsizes(ltModels),dimsizes(XYHrs)/),"float",fval3)
 		ALTK_ERR	:= TK_ERR
 		CRTK_ERR	:= TK_ERR
 		N_ERR		:= TK_ERR
-		do fff = 0,dimsizes(verTimes)-1
+		do fff = 0,dimsizes(XYHrs)-1
 			;print("MSG: Running TC_STAT in summary mode for hr = "+verTimes(fff)+".")
 			
 			; Set critical parameters for the MET-TC configuration
-			tmp	:= TCSsout3+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".tcst"
-			tmp2	:= TCSsout3+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+verTimes(fff)+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			tmp	:= TCSsout3+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
+			tmp2	:= TCSsout3+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
+			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create shell script to run TC_STAT with shell options (better)
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
@@ -3994,14 +4007,19 @@ if(DO_VERIFICATION)then
 
 		; f. Produce the graphic for late track models.
 		;    Need to check if the track errors are missing.
-		if(.not.all(ismissing(TK_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(TK_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(TK_ERR(0,:)))
+		vals2 := ind(ltModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","TK_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@xyLineColors	:= LTcolors
 			res@xyMarkers		:= LTmarkers
 			res@xyMarkerColors	:= LTcolors
@@ -4016,23 +4034,21 @@ if(DO_VERIFICATION)then
 			end if
 			
 			; Draw the main line plot on the graphic.
-			plot = gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:))))),\
-					  TK_ERR(ind(ltModels.ne.""),ind(.not.ismissing(TK_ERR(0,:)))),res)
+			plot = gsn_csm_xy(wks,tofloat(XYHrs(vals)),TK_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-					       res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4045,14 +4061,19 @@ if(DO_VERIFICATION)then
 
 		; g. Produce the graphic for late along-track models.
 		;    Need to check if the along-track errors are missing.
-		if(.not.all(ismissing(ALTK_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(ALTK_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(ALTK_ERR(0,:)))
+		vals2 := ind(ltModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.ALTK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","ALTK_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@tiMainString	= "LATE ALONG TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(ALTK_ERR).lt.0.)then	res@trYMinF = floor(min(ALTK_ERR) - 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
@@ -4062,23 +4083,21 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot	= gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:))))),\
-					     ALTK_ERR(ind(ltModels.ne.""),ind(.not.ismissing(ALTK_ERR(0,:)))),res)
+			plot	= gsn_csm_xy(wks,tofloat(XYHrs(vals)),ALTK_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-					       res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4091,14 +4110,19 @@ if(DO_VERIFICATION)then
 
 		; h. Produce graphic for late cross-track models.
 		;    Need to check if the cross-track errors are missing.
-		if(.not.all(ismissing(CRTK_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(CRTK_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(CRTK_ERR(0,:)))
+		vals2 := ind(ltModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.CRTK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","CRTK_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@tiMainString	= "LATE CROSS TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(CRTK_ERR).lt.0.)then	res@trYMinF = floor(min(CRTK_ERR) - 0.1*(max(CRTK_ERR)-min(CRTK_ERR)))
@@ -4108,21 +4132,21 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot = gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:))))),CRTK_ERR(ind(ltModels.ne.""),ind(.not.ismissing(CRTK_ERR(0,:)))),res) ; create plot
+			plot = gsn_csm_xy(wks,tofloat(XYHrs(vals)),CRTK_ERR(vals2,vals),res) ; create plot
 
 			; Add the number of cases to the graphic.
-			dum1 := new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1 := new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",\
-							min(tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:)))))) + 0.02*(max(tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:))))))),\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4177,16 +4201,16 @@ if(DO_VERIFICATION)then
 		print("MSG: Running TC_STAT in summary mode for late intensity models.")
 		system("perl -pi -e 's/amodel = .*/amodel = "+liM_exp+"/g' "+TCSconf_s)
 		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
-		WIND_ERR	:= new((/dimsizes(liModels),dimsizes(verTimes)/),"float",fval3)
+		WIND_ERR	:= new((/dimsizes(liModels),dimsizes(XYHrs)/),"float",fval3)
 		ABS_WIND_ERR	:= WIND_ERR
 		N_ERR		:= WIND_ERR
-		do fff = 0,dimsizes(verTimes)-1
+		do fff = 0,dimsizes(XYHrs)-1
 			;print("MSG: Running TC_STAT in summary mode for hr = "+verTimes(fff)+".")
 			
 			; Set critical parameters for the MET-TC configuration.
-			tmp	:= TCSsout4+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".tcst"
-			tmp2	:= TCSsout4+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+verTimes(fff)+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			tmp	:= TCSsout4+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
+			tmp2	:= TCSsout4+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
+			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
 			
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
@@ -4226,14 +4250,19 @@ if(DO_VERIFICATION)then
 		print("MSG: Producing graphics for late intensity model verifications.")
 		
 		; f. Produce graphic for late absolute intensity error
-		if(.not.all(ismissing(ABS_WIND_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(ABS_WIND_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(ABS_WIND_ERR(0,:)))
+		vals2 := ind(liModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","ABS_WIND_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@xyLineColors	:= LIcolors
 			res@xyMarkers		:= LImarkers
 			res@xyMarkerColors	:= LIcolors
@@ -4251,21 +4280,21 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot = gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:))))),ABS_WIND_ERR(ind(liModels.ne.""),ind(.not.ismissing(ABS_WIND_ERR(0,:)))),res) ; create plot
+			plot = gsn_csm_xy(wks,tofloat(XYHrs(vals)),ABS_WIND_ERR(vals2,vals),res) ; create plot
 
 			; Add the number of cases to the graphic.
-			dum1 := new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1 := new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",\
-							min(tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:)))))) + 0.02*(max(tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:))))))),\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4278,14 +4307,19 @@ if(DO_VERIFICATION)then
 
 
 		; g. Produce graphic for late intensity bias.
-		if(.not.all(ismissing(WIND_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(WIND_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(WIND_ERR(0,:)))
+		vals2 := ind(liModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.WIND_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","WIND_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@tiMainString	= "LATE INTENSITY ERROR (bias)"
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			if(min(WIND_ERR).lt.0.)then	res@trYMinF = floor(min(WIND_ERR) - 0.1*(max(WIND_ERR)-min(WIND_ERR)))
@@ -4295,22 +4329,21 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot	= gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:))))),WIND_ERR(ind(liModels.ne.""),ind(.not.ismissing(WIND_ERR(0,:)))),res) ; create plot
+			plot	= gsn_csm_xy(wks,tofloat(XYHrs(vals)),WIND_ERR(vals2,vals),res) ; create plot
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 			
 			; Add disclaimer to the graphic.
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4365,17 +4398,17 @@ if(DO_VERIFICATION)then
 		print("MSG: Running TC_STAT in summary mode for early track models.")
 		system("perl -pi -e 's/amodel = .*/amodel = "+etM_exp+"/g' "+TCSconf_s)
 		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
-		TK_ERR		:= new((/dimsizes(etModels),dimsizes(verTimes)/),"float",fval3)
+		TK_ERR		:= new((/dimsizes(etModels),dimsizes(XYHrs)/),"float",fval3)
 		ALTK_ERR	:= TK_ERR
 		CRTK_ERR	:= TK_ERR
 		N_ERR		:= TK_ERR
-		do fff = 0,dimsizes(verTimes)-1
+		do fff = 0,dimsizes(XYHrs)-1
 			;print("MSG: Running TC_STAT in summary mode for hr = "+verTimes(fff)+".")
 			
 			; Set critical parameters for the MET-TC configuration.
-			tmp	:= TCSsout1+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".tcst"
-			tmp2	:= TCSsout1+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+verTimes(fff)+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			tmp	:= TCSsout1+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
+			tmp2	:= TCSsout1+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
+			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.3i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
@@ -4420,14 +4453,18 @@ if(DO_VERIFICATION)then
 		print("MSG: Producing graphics for early track model verifications.")
 		
 		; f. Produce graphic for early track errors.
-		if(.not.all(ismissing(TK_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(TK_ERR(0,:))).gt.1))then
-
+		DO_THIS = True
+		vals := ind(.not.ismissing(TK_ERR(0,:)))
+		vals2 := ind(etModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then	
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","TK_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@xyLineColors	:= ETcolors
 			res@xyMarkers		:= ETmarkers
 			res@xyMarkerColors	:= ETcolors
@@ -4442,23 +4479,23 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot = gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:))))),\
-					  TK_ERR(ind(etModels.ne.""),ind(.not.ismissing(TK_ERR(0,:)))),res)
+			;print(verTimes(vals))
+			;print(TK_ERR(vals2,vals))
+			plot = gsn_csm_xy(wks,tofloat(XYHrs(vals)),TK_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(TK_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4470,14 +4507,19 @@ if(DO_VERIFICATION)then
 		end if ;TK_ERR
 
 		; g. Produce graphic for early along-track errors.
-		if(.not.all(ismissing(ALTK_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(ALTK_ERR(0,:))).gt.1))then
+		DO_THIS = True
+		vals := ind(.not.ismissing(ALTK_ERR(0,:)))
+		vals2 := ind(etModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.ALTK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","ALTK_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@tiMainString	= "EARLY ALONG TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(ALTK_ERR).lt.0.)then	res@trYMinF = floor(min(ALTK_ERR) - 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
@@ -4487,22 +4529,21 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot = gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:))))),\
-					  ALTK_ERR(ind(etModels.ne.""),ind(.not.ismissing(ALTK_ERR(0,:)))),res)
+			plot = gsn_csm_xy(wks,tofloat(XYHrs(vals)),ALTK_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",\
-							min(tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:)))))) + 0.02*(max(tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(ALTK_ERR(0,:))))))),\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4514,14 +4555,19 @@ if(DO_VERIFICATION)then
 		end if ;ALTK_ERR
 
 		; h. Produce graphic for early cross-track errors.
-		if(.not.all(ismissing(CRTK_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(CRTK_ERR(0,:))).gt.1))then
+		DO_THIS = True
+		vals := ind(.not.ismissing(CRTK_ERR(0,:)))
+		vals2 := ind(etModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.CRTK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","CRTK_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@tiMainString	= "EARLY CROSS TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(CRTK_ERR).lt.0.)then
@@ -4533,24 +4579,22 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot	= gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:))))),\
-					     CRTK_ERR(ind(etModels.ne.""),ind(.not.ismissing(CRTK_ERR(0,:)))),res)
+			plot	= gsn_csm_xy(wks,tofloat(XYHrs(vals)),CRTK_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(CRTK_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
-
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
 			frame(wks)
@@ -4604,16 +4648,16 @@ if(DO_VERIFICATION)then
 		print("MSG: Running TC_STAT in summary mode for early intensity models.")
 		system("perl -pi -e 's/amodel = .*/amodel = "+eiM_exp+"/g' "+TCSconf_s)
 		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
-		WIND_ERR	:= new((/dimsizes(eiModels),dimsizes(verTimes)/),"float",fval3)
+		WIND_ERR	:= new((/dimsizes(eiModels),dimsizes(XYHrs)/),"float",fval3)
 		ABS_WIND_ERR	:= WIND_ERR
 		N_ERR		:= WIND_ERR
-		do fff = 0,dimsizes(verTimes)-1
+		do fff = 0,dimsizes(XYHrs)-1
 			;print("MSG: Running TC_STAT in summary mode for hr = "+verTimes(fff)+".")
 			
 			; Set critical parameters for the MET-TC configuration.
-			tmp	:= TCSsout2+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".tcst"
-			tmp2	:= TCSsout2+".f"+sprinti("%0.3i",toint(verTimes(fff)))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+verTimes(fff)+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			tmp	:= TCSsout2+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
+			tmp2	:= TCSsout2+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
+			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
@@ -4657,14 +4701,19 @@ if(DO_VERIFICATION)then
 		print("MSG: Producing graphics for early intensity model verifications.")
 		
 		; f. Produce graphic for early absolute intensity errors.
-		if(.not.all(ismissing(ABS_WIND_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(ABS_WIND_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(ABS_WIND_ERR(0,:)))
+		vals2 := ind(eiModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","ABS_WIND_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@xyLineColors	:= EIcolors
 			res@xyMarkers		:= EImarkers
 			res@xyMarkerColors	:= EIcolors
@@ -4679,23 +4728,21 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot	= gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:))))),\
-					     ABS_WIND_ERR(ind(eiModels.ne.""),ind(.not.ismissing(ABS_WIND_ERR(0,:)))),res)
+			plot = gsn_csm_xy(wks,tofloat(XYHrs(vals)),ABS_WIND_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1 := new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(ABS_WIND_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
 			
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4708,14 +4755,19 @@ if(DO_VERIFICATION)then
 
 
 		; g. Produce graphic for early intensity bias.
-		if(.not.all(ismissing(WIND_ERR(0,:))) .and.\
-		   dimsizes(ind(.not.ismissing(WIND_ERR(0,:)))).gt.1)then
+		DO_THIS = True
+		vals := ind(.not.ismissing(WIND_ERR(0,:)))
+		vals2 := ind(eiModels.ne."")
+		if(ismissing(vals(0)))then		DO_THIS = False
+		else if(dimsizes(vals).le.1)then	DO_THIS = False
+		else if(ismissing(vals2(0)))then	DO_THIS = False
+		end if  end if  end if
+		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.WIND_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-			;wks = gsn_open_wks("x11","WIND_ERR")
-			wks = gsn_open_wks("png",oFile)
+			wks = gsn_open_wks(wtype,oFile)
 			res@tiMainString	= "EARLY INTENSITY ERROR (bias)"
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			res@tiXAxisString	= "Lead Time [h]"
@@ -4726,24 +4778,22 @@ if(DO_VERIFICATION)then
 			end if
 
 			; Draw the main line plot on the graphic.
-			plot	= gsn_csm_xy(wks,tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:))))),\
-					     WIND_ERR(ind(eiModels.ne.""),ind(.not.ismissing(WIND_ERR(0,:)))),res)
+			plot	= gsn_csm_xy(wks,tofloat(XYHrs(vals)),WIND_ERR(vals2,vals),res)
 
 			; Add the number of cases to the graphic.
-			dum1	:= new(dimsizes(verTimes),"graphic")
-			do fff = 0,dimsizes(verTimes)-1
+			dum1	:= new(dimsizes(XYHrs),"graphic")
+			do fff = 0,dimsizes(XYHrs)-1
 				if(.not.ismissing(N_ERR(0,fff)))then
-					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(verTimes(fff)),\
+					dum1(fff) = gsn_add_text(wks,plot,""+N_ERR(0,fff),tofloat(XYHrs(fff)),\
 							         res@trYMaxF - 0.03*(res@trYMaxF-res@trYMinF),txres)
 				end if
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC	= min(tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:))))))+\
-				      0.02*(max(tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:))))))-min(tofloat(verTimes(ind(.not.ismissing(WIND_ERR(0,:)))))))
-			TEXT14	= gsn_add_text(wks,plot,"*Experimental Product of NOAA/AOML/HRD*",XLOC,\
-							res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF),txres2)
-
+			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
 			frame(wks)

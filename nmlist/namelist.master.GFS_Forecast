@@ -134,7 +134,11 @@ LIM = HWRF HMON CTCX
 
 
 ; 3D. VERIFICATION TIMES
-VER_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
 
 
 ;================================================================

@@ -200,7 +200,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			command = GPLOT_DIR+'/grads/g2ctl.pl'+' '+FILE+' '+TMPDIR+FILE_BASE+'.2.idx'+' > '+TMPDIR+FILE_BASE+'.ctl'
 			os.system(command)
 			#command2 = 'gribmap -i '+gribfile+'.ctl'
-			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl'
+			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl -big'
 			os.system(command2)
 			
 			#Open data file

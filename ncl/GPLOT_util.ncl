@@ -1256,7 +1256,7 @@ end
 ; GenPlotRes
 ;
 undef("GenPlotRes")
-function GenPlotRes (type:integer,ovlay:logical)
+function GenPlotRes (type:integer,OVLAY:logical)
 local res, type2
 begin
 	
@@ -1264,6 +1264,7 @@ begin
 	type2		:= toint(tostring(type2(dimsizes(type2)-1)))
 
 
+	; These resources are common to every option.
 	res		= True
 	res@gsnDraw	= False
 	res@gsnFrame	= False
@@ -1272,24 +1273,24 @@ begin
 	
 	; If not an overlay, add these resources for basic map funcitonality
 	; These options strongly depend on map type (e.g., cylindrical equidistant, polar cylindrical)
-	if(.not.ovlay)then
+	if(.not.OVLAY)then
 	
 		; CYLINDRICAL EQUIDISTANT PLOTTING RESOURCES
 		if(type.lt.10)then	res@mpFillOn			= False
 					;res@mpOutlineBoundarySets	= "AllBoundaries"
 					res@mpGeophysicalLineColor	= "gray10"	;MKedit - was gray20
-					res@mpGeophysicalLineThicknessF	= 2.0		;MKedit - was 5.0
+					res@mpGeophysicalLineThicknessF	= 2.5		;MKedit - was 5.0
 					res@mpNationalLineColor		= "gray10"	;MKedit - was gray20
-					res@mpNationalLineThicknessF	= 2.0		;MKedit - was 5.0
+					res@mpNationalLineThicknessF	= 2.5		;MKedit - was 5.0
 					res@mpUSStateLineColor		= "gray10"	;MKedit - was gray20
-					res@mpUSStateLineThicknessF	= 1.0		;MKedit - was 2.5
+					res@mpUSStateLineThicknessF	= 1.5		;MKedit - was 2.5
 					res@mpProvincialLineColor	= "gray10"	;MKedit - was gray20
-					res@mpProvincialLineThicknessF	= 1.0		;MKedit - was 2.5
+					res@mpProvincialLineThicknessF	= 1.5		;MKedit - was 2.5
 					res@mpGridAndLimbOn		= True
 					res@mpGridLatSpacingF		= 10.
 					res@mpGridLonSpacingF		= 10.
 					res@mpGridLineDashPattern	= 2
-					res@mpGridLineThicknessF	= 0.5
+					res@mpGridLineThicknessF	= 1.5
 					res@mpDataBaseVersion		= "MediumRes"
 					res@mpDataSetName		= "Earth..4"
 					res@mpDataResolution		= "Coarsest"
@@ -1304,8 +1305,7 @@ begin
 					else if(any((/3,4,5/).eq.type))then
 						res@mpOutlineDrawOrder	= "PreDraw"
 						res@vcVectorDrawOrder	= "Draw"        ; draw vectors last
-					end if
-					end if
+					end if  end if
 					;res@tmXBMajorOutwardLengthF	= 0.0
 					;res@tmXBMinorOutwardLengthF	= 0.0
 					;res@tmYLMajorOutwardLengthF	= 0.0
