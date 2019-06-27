@@ -1,5 +1,5 @@
 # GPLOT
-# Graphic Post-processed Locus for Output of Tropical cyclones
+# Graphical Post-processed Locus for Output of Tropical cyclones
 
 Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 
