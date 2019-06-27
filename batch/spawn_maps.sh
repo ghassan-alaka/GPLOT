@@ -34,32 +34,32 @@ fi
 
 
 # Pull important variables from the namelist
-DO_MAPS=`sed -n -e 's/^.*DO_MAPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DO_STATS=`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_REAL=`sed -n -e 's/^.*IS_REAL =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DSOURCE=`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+EXPT=`sed -n -e 's/^EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+MCODE=`sed -n -e 's/^MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+IS_REAL=`sed -n -e 's/^IS_REAL =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+IS_MSTORM=`sed -n -e 's/^IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ENSMEM=`sed -n -e 's/^ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+IDIR=`sed -n -e 's/^IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ITAG=`sed -n -e 's/^ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+EXT=`sed -n -e 's/^EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ODIR=`sed -n -e 's/^ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+INIT_HR=`sed -n -e 's/^INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+FNL_HR=`sed -n -e 's/^FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+FHRFMT=`sed -n -e 's/^FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DT=`sed -n -e 's/^DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+IDATE=`sed -n -e 's/^IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+SID=`sed -n -e 's/^SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ATCF1_DIR=`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ATCF1_TAG=`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ATCF2_DIR=`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+ATCF2_TAG=`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 
 
 # Print information
@@ -93,11 +93,11 @@ fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
 
 # Get the domains
-DOMAIN=( `sed -n -e 's/^.*DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+DOMAIN=( `sed -n -e 's/^DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
 echo "MSG: Found these graphic domains in the namelist --> ${DOMAIN[*]}"
 
 # Get the graphics tiers for this MAPS domain
-TIER=( `sed -n -e 's/^.*TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+TIER=( `sed -n -e 's/^TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
 echo "MSG: Found these graphic tiers in the namelist   --> ${TIER[*]}"
 
 # If FORCE is undefined, set it to False.
@@ -169,288 +169,290 @@ if [ "${DO_MAPS}" = "True" ]; then
     NCLFILE="GPLOT_maps.ncl"
 
 
-    ##################################
-    # LOOP OVER ALL AVAILABLE CYCLES #
-    ##################################
-    for CYCLE in ${CYCLES[@]}; do
-
-        # Only retain the numbers for the cycle
-        # Parse the prefix (e.g., gfs.) if it exists.
-        CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
-        CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
+    ###########################
+    # LOOP OVER GRAPHIC TIERS #
+    ###########################
+    for TR in ${TIER[@]}; do
 
 
-        # Get the cycle prefix from a table and define CYCLE_STR
-        # CYCLE_STR should be used in file paths.
-        if [ -z "$CPREFIX" ]; then
-            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
-        fi
-        CYCLE_STR="${CPREFIX}${CYCLE}"
+        ##################################
+        # LOOP OVER ALL AVAILABLE CYCLES #
+        ##################################
+        for CYCLE in ${CYCLES[@]}; do
 
-        # Find the ATCFs for the current CYCLE.
-        # It will be blank if no ATCFs are found.
-        CYCLE_ATCF=( `printf '%s\n' ${ATCF_ALL[@]} | grep "${CYCLE}"` )
+            # Only retain the numbers for the cycle
+            # Parse the prefix (e.g., gfs.) if it exists.
+            CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
+            CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
 
 
-        # First, try to get STORMS from the namelist (SID)
-        STORMS=()
-        if [ ! -z "$SID" ]; then
-            STORMS+=("${SID[@]}")
-        fi
-
-        # Second, try to get STORMS from the ATCF files
-        if [ -z "$STORMS" ]; then
-            for ATCF in ${CYCLE_ATCF[@]}; do
-                STORMS+=(`basename $ATCF | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-            done
-        fi
-
-        # Third, try to get STORMS from the HWRF file path.
-        # This is hard-coded and might not work.
-        if [ -z "$STORMS" ]; then
-            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
-                STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+            # Get the cycle prefix from a table and define CYCLE_STR
+            # CYCLE_STR should be used in file paths.
+            if [ -z "$CPREFIX" ]; then
+                CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
             fi
-        fi
+            CYCLE_STR="${CPREFIX}${CYCLE}"
 
-        # Fourth, if STORMS is still undefined, then set it to "NONE"
-        # Large-scale graphics may still proceed.
-        # Storm-centered graphics will be skipped.
-        if [ -z "$STORMS" ]; then
-            STORMS+=("NONE")
-        fi
+            # Find the ATCFs for the current CYCLE.
+            # It will be blank if no ATCFs are found.
+            CYCLE_ATCF=( `printf '%s\n' ${ATCF_ALL[@]} | grep "${CYCLE}"` )
 
-
-        # Fifth, append Fake Storm (00L) is IS_MSTORM=True and if other storms
-        # were found, i.e., STORMS != NONE
-        if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
-            STORMS+=("00L")
-        fi
-
-        # Set the storm counter. This is important because large-scale
-        # output files may be duplicated for different storms. For example,
-        # HWRF-B/GFS files for the outer domain are identical for all storms.
-        NSTORM=0
-
-        # Set a flag to determine whether or not files were found.
-        # By default, it is False. If it is set to 
-        FOUND_FILES="False"
-
-
-        ####################
-        # LOOP OVER STORMS #
-        ####################
-        for STORM in ${STORMS[@]}; do
-
-            # Increase the storm counter
-            ((NSTORM=NSTORM+1))
-
-            # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}"` )
-            if [ -z "${STORM_ATCF[*]}" ]; then
-                echo ""
-                echo "WARNING: No ATCF found for ${STORM}. This might be OK."
-            else
-                echo ""
-                echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+            # First, try to get STORMS from the namelist (SID)
+            STORMS=()
+            if [ ! -z "$SID" ]; then
+                STORMS+=("${SID[@]}")
             fi
 
-            #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
-            NEW_ATCF_FHRS=()
-            for FHR in ${ATCF_FHRS[@]}; do
-                if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
-                    NEW_ATCF_FHRS+=( $FHR )
+            # Second, try to get STORMS from the ATCF files
+            if [ -z "$STORMS" ]; then
+                for ATCF in ${CYCLE_ATCF[@]}; do
+                    STORMS+=(`basename $ATCF | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                done
+            fi
+
+            # Third, try to get STORMS from the HWRF file path.
+            # This is hard-coded and might not work.
+            if [ -z "$STORMS" ]; then
+                if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
+                    STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
                 fi
-            done
-            ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
+            fi
+
+            # Fourth, if STORMS is still undefined, then set it to "NONE"
+            # Large-scale graphics may still proceed.
+            # Storm-centered graphics will be skipped.
+            if [ -z "$STORMS" ]; then
+                STORMS+=("NONE")
+            fi
 
 
+            # Fifth, append Fake Storm (00L) if IS_MSTORM=True and if other storms
+            # were found, i.e., STORMS != NONE
+            if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
+                STORMS+=("00L")
+            fi
 
-            #########################
-            # LOOP OVER MAP DOMAINS #
-            #########################
-            for DMN in ${DOMAIN[@]}; do
+            # Set the storm counter. This is important because large-scale
+            # output files may be duplicated for different storms. For example,
+            # HWRF-B/GFS files for the outer domain are identical for all storms.
+            NSTORM=0
 
-                # Create full output path
-                # Make the directory in case it doesn't already exist
-                ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
-                mkdir -p ${ODIR_FULL}
-
-
-                # Get ATCF_REQD to check if it is required.
-                # This is optional for MAPS.
-                if [ "$DMN" == "d03" ]; then
-                    ATCF_REQD="True"
-                else
-                    ATCF_REQD=`sed -n -e 's/^.*ATCF_REQD =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-                    if [ -z "$ATCF_REQD" ]; then
-                        ATCF_REQD="True"
-                    fi
-                fi
+            # Set a flag to determine whether or not files were found.
+            # By default, it is False. If it is set to 
+            FOUND_FILES="False"
 
 
-                # Determine if this domain is storm-centered (SC)
-                # For storm-centered domains, the Storm ID is appended
-                # to most file names.
-                if [ "$DMN" == "hwrf" ] || [ "$DMN" == "d03" ] || \
-                   [ "$DMN" == "d02" ] || [ "$DMN" == "tkfull" ]; then
-                    SC="True"
-                    STORMTAG=".${STORM^^}"
-                else
-                    SC="False"
-                    STORMTAG=""
-                fi
+            ####################
+            # LOOP OVER STORMS #
+            ####################
+            for STORM in ${STORMS[@]}; do
 
-                # Get nest information from GPLOT table
-                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
-                if [ -z "$NEST" ]; then
-                    echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
-                    echo "MSG: Assuming NEST=1."
-                    NEST=1
-                fi
-
-                # Skip subsequent storms if the outer domain has been plotted
-                if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
-                #if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
-                    continue
-                fi
-
-                # Get file prefix information from table or namelist
-                if [ -z "$ITAG" ]; then
-                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}FilePrefix.dat`
-                else
-                    FPREFIX="$ITAG"
-                fi
-                if [ -z "$FPREFIX" ]; then
+                # Increase the storm counter
+                ((NSTORM=NSTORM+1))
+    
+                # Find the forecast hours from the ATCF for thie particular storm
+                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}"` )
+                if [ -z "${STORM_ATCF[*]}" ]; then
                     echo ""
-                    echo "MSG: Current cycle       --> $CYCLE"
-                    echo "MSG: Current storm       --> $STORM"
-                    echo "ERROR: File prefix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
-                    echo "ERROR: Or define ITAG in the namelist."
-                    exit
-                fi
-
-                # Get file hour string information from table or namelist
-                if [ -z "$FHRSTR" ]; then
-                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileTimeFormat.dat`
+                    echo "WARNING: No ATCF found for ${STORM}. This might be OK."
                 else
-                    FHRSTR="$FHRSTR"
-                fi
-                if [ -z "$FHRSTR" ]; then
                     echo ""
-                    echo "MSG: Current cycle       --> $CYCLE"
-                    echo "MSG: Current storm       --> $STORM"
-                    echo "ERROR: File hour string not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
-                    echo "ERROR: Or define FHRSTR in the namelist."
-                    exit
+                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
                 fi
 
-                # Get file hour format information from table or namelist
-                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-                if [ -z "$FHRFMT" ]; then
-                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
-                else
-                    FHRFMT="%0${FHRFMT}d"
-                fi
-                if [ -z "$FHRFMT" ]; then
-                    echo ""
-                    echo "MSG: Current cycle       --> $CYCLE"
-                    echo "MSG: Current storm       --> $STORM"
-                    echo "ERROR: File hour format not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
-                    echo "ERROR: Or define FHRFMT in the namelist."
-                    exit
-                fi
-
-                # Get file extension information from table or namelist
-                if [ -z "$EXT" ]; then
-                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileSuffix.dat`
-                else
-                    FSUFFIX="$EXT"
-                fi
-                if [ -z "$FSUFFIX" ]; then
-                    echo ""
-                    echo "MSG: Current cycle       --> $CYCLE"
-                    echo "MSG: Current storm       --> $STORM"
-                    echo "ERROR: File suffix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
-                    echo "ERROR: Or define EXT in the namelist."
-                    exit
-                fi
-                if [ "$FSUFFIX" == "NONE" ]; then
-                    FSUFFIX=""
-                fi
-
-                # Run some tests on the ATCF for thie storm.
-                # If domain is storm-centerd and ATCF is required, then ATCF must
-                # be present and contain forecast hours
-                if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
-                    if [ -z "${STORM_ATCF[*]}" ]; then
-                        echo ""
-                        echo "MSG: Current cycle       --> $CYCLE"
-                        echo "MSG: Current storm       --> $STORM"
-                        echo "ERROR: DOMAIN=${DMN} is storm-centered and ATCF files are required."
-                        echo "ERROR: But, found no matching ATCF files. So, nothing to do."
-                        continue
-                    elif [ -z "${ATCF_FHRS[*]}" ]; then
-                        echo ""
-                        echo "MSG: Current cycle       --> $CYCLE"
-                        echo "MSG: Current storm       --> $STORM"
-                        echo "ERROR: DOMAIN=${DMN} is storm-centered and ATCF files are required."
-                        echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
-                        continue
+                #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
+                NEW_ATCF_FHRS=()
+                for FHR in ${ATCF_FHRS[@]}; do
+                    if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
+                        NEW_ATCF_FHRS+=( $FHR )
                     fi
-                fi
-
-                # If ATCF_FILES.dat already exists, check that no additional ATCFs
-                # were found. Also, check if the any of the ATCFs were modified
-                # in the last hour. If so, then force re-production of all graphics.
-                # This is important for non-storm-centered domains. ATCFs will be
-                # used to place markers of active TC locations in larger domains.
-                if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
-                    PREV_ATCF=()
-                    PREV_ATCF=( `cat ${ODIR_FULL}ATCF_FILES.dat` )
-                    if [ "${PREV_ATCF[*]}" == "NONE" ] && [ "${#CYCLE_ATCF[@]}" -gt "0" ]; then
-                        FORCE="True"
-                    elif [ "${#PREV_ATCF[@]}" -lt "${#CYCLE_ATCF[@]}" ]; then
-                        FORCE="True"
-                    else
-                        for ATCF in ${PREV_ATCF[@]}; do
-                            test=$(find ${ATCF} -mmin -60 2>/dev/null)
-                            if [[ -n $test ]]; then
-                                FORCE="True"
-                                break
-                            fi
-                        done
-                    fi
-                fi
+                done
+                ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
 
 
-                # Create a text file with ATCFs for this cycle in the output directory
-                if [ -z "${CYCLE_ATCF[*]}" ]; then
-                    echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
-                else
-                    if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
-                        rm -f ${ODIR_FULL}ATCF_FILES.dat
-                    fi
-                    for ATCF in ${CYCLE_ATCF[@]}; do
-                        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
-                    done
-                fi
 
+                #########################
+                # LOOP OVER MAP DOMAINS #
+                #########################
+                for DMN in ${DOMAIN[@]}; do
 
-                ###########################
-                # LOOP OVER GRAPHIC TIERS #
-                ###########################
-                for TR in ${TIER[@]}; do
-                    # Skip Tier3 for certain domains
+                    # Skip some domains for Tier3. VERY SUBJECTIVE.
                     if [ "$TR" == "Tier3" ]; then
                         if [ "$DMN" == "basin" ] || [ "$DMN" == "bigd01" ] || [ "$DMN" == "d03" ]; then
                             continue
                         fi
+                    fi
+
+                    # Create full output path
+                    # Make the directory in case it doesn't already exist
+                    ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
+                    mkdir -p ${ODIR_FULL}
+
+
+                    # Get ATCF_REQD to check if it is required.
+                    # This is optional for MAPS.
+                    if [ "$DMN" == "d03" ]; then
+                        ATCF_REQD="True"
+                    else
+                        ATCF_REQD=`sed -n -e 's/^.*ATCF_REQD =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                        if [ -z "$ATCF_REQD" ]; then
+                            ATCF_REQD="False"
+                        fi
+                    fi
+
+
+                    # Determine if this domain is storm-centered (SC)
+                    # For storm-centered domains, the Storm ID is appended
+                    # to most file names.
+                    if [ "$DMN" == "hwrf" ] || [ "$DMN" == "d03" ] || \
+                       [ "$DMN" == "d02" ] || [ "$DMN" == "tkfull" ]; then
+                        SC="True"
+                        STORMTAG=".${STORM^^}"
+                    else
+                        SC="False"
+                        STORMTAG=""
+                    fi
+
+                    # Get nest information from GPLOT table
+                    NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
+                    if [ -z "$NEST" ]; then
+                        echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
+                        echo "MSG: Assuming NEST=1."
+                        NEST=1
+                    fi
+
+                    # Skip subsequent storms if the outer domain has been plotted
+                    if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
+                    #if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
+                        continue
+                    fi
+    
+                    # Get file prefix information from table or namelist
+                    if [ -z "$ITAG" ]; then
+                        FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}FilePrefix.dat`
+                    else
+                        FPREFIX="$ITAG"
+                    fi
+                    if [ -z "$FPREFIX" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "ERROR: File prefix not found for $DSOURCE."
+                        echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
+                        echo "ERROR: Or define ITAG in the namelist."
+                        exit
+                    fi
+
+                    # Get file hour string information from table or namelist
+                    if [ -z "$FHRSTR" ]; then
+                        FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileTimeFormat.dat`
+                    else
+                        FHRSTR="$FHRSTR"
+                    fi
+                    if [ -z "$FHRSTR" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "ERROR: File hour string not found for $DSOURCE."
+                        echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                        echo "ERROR: Or define FHRSTR in the namelist."
+                        exit
+                    fi
+
+                    # Get file hour format information from table or namelist
+                    FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                    if [ -z "$FHRFMT" ]; then
+                        FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
+                    else
+                        FHRFMT="%0${FHRFMT}d"
+                    fi
+                    if [ -z "$FHRFMT" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "ERROR: File hour format not found for $DSOURCE."
+                        echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                        echo "ERROR: Or define FHRFMT in the namelist."
+                        exit
+                    fi
+
+                    # Get file extension information from table or namelist
+                    if [ -z "$EXT" ]; then
+                        FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileSuffix.dat`
+                    else
+                        FSUFFIX="$EXT"
+                    fi
+                    if [ -z "$FSUFFIX" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
+                        echo "ERROR: File suffix not found for $DSOURCE."
+                        echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
+                        echo "ERROR: Or define EXT in the namelist."
+                        exit
+                    fi
+                    if [ "$FSUFFIX" == "NONE" ]; then
+                        FSUFFIX=""
+                    fi
+
+                    # Run some tests on the ATCF for thie storm.
+                    # If domain is storm-centerd and ATCF is required, then ATCF must
+                    # be present and contain forecast hours
+                    if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
+                        if [ -z "${STORM_ATCF[*]}" ]; then
+                            echo ""
+                            echo "MSG: Current cycle       --> $CYCLE"
+                            echo "MSG: Current storm       --> $STORM"
+                            echo "ERROR: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                            echo "ERROR: But, found no matching ATCF files. So, nothing to do."
+                            continue
+                        elif [ -z "${ATCF_FHRS[*]}" ]; then
+                            echo ""
+                            echo "MSG: Current cycle       --> $CYCLE"
+                            echo "MSG: Current storm       --> $STORM"
+                            echo "ERROR: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                            echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
+                            continue
+                        fi
+                    fi
+
+                    # If ATCF_FILES.dat already exists, check that no additional ATCFs
+                    # were found. Also, check if the any of the ATCFs were modified
+                    # in the last hour. If so, then force re-production of all graphics.
+                    # This is important for non-storm-centered domains. ATCFs will be
+                    # used to place markers of active TC locations in larger domains.
+                    if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                        PREV_ATCF=()
+                        PREV_ATCF=( `cat ${ODIR_FULL}ATCF_FILES.dat` )
+                        if [ "${PREV_ATCF[*]}" == "NONE" ] && [ "${#CYCLE_ATCF[@]}" -gt "0" ]; then
+                            echo "MSG: Found ATCFs this time around. No ATCF found previously. Forcing production."
+                            FORCE="True"
+                        elif [ "${#PREV_ATCF[@]}" -lt "${#CYCLE_ATCF[@]}" ]; then
+                            echo "MSG: Found more ATCFs this time around. Forcing production."
+                            FORCE="True"
+                        elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
+                            for ATCF in ${PREV_ATCF[@]}; do
+                                test=$(find ${ATCF} -mmin -60 2>/dev/null)
+                                if [[ -n $test ]]; then
+                                    echo "MSG: This ATCF is not old enough (${ATCF}). Forcing production."
+                                    FORCE="True"
+                                    break
+                                fi
+                            done
+                        fi
+                    fi
+
+                    # Create a text file with ATCFs for this cycle in the output directory
+                    if [ -z "${CYCLE_ATCF[*]}" ]; then
+                        echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
+                    else
+                        if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                            rm -f ${ODIR_FULL}ATCF_FILES.dat
+                        fi
+                        for ATCF in ${CYCLE_ATCF[@]}; do
+                            echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
+                        done
                     fi
 
 
@@ -562,16 +564,20 @@ if [ "${DO_MAPS}" = "True" ]; then
 
 
                         # Print some information
+                        # This depends on whether or not forcing is turned on.
                         if [ "$FORCE" == "False" ]; then
                             echo "MSG: Processed files     --> ${PLOTTED_FILE}"
                             echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
                             echo "MSG: To manually force reprocessing of all files, delete this file."
                         else
-                            echo "MSG: Graphic production will be forced."
-                            echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
-                            rm -f ${PLOTTED_FILE}
-                            CASE_PLOTTED=()
-                            CASE_STATUS="force"
+                            # Don't do this if the status is working.
+                            if [ "$CASE_STATUS" != "working" ]; then
+                                echo "MSG: Graphic production will be forced."
+                                echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
+                                rm -f ${PLOTTED_FILE}
+                                CASE_PLOTTED=()
+                                CASE_STATUS="force"
+                            fi
                         fi
                         echo "MSG: Status file         --> ${STATUS_FILE}"
                         echo "MSG: Found this status   --> ${CASE_STATUS}"
@@ -607,7 +613,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             ((i++))
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            if [ "$BROKEN_LINK" == "YES" ]; then
+                            if [ "$BROKEN_LINK" == "YES" ] && [ "$CASE_STATUS" != "complete" ]; then
                                 echo "WARNING: No files to process, but broken links were detected."
                                 echo "WARNING: Marking status as broken. It should be double-checked."
                                 echo "broken" > ${STATUS_FILE}

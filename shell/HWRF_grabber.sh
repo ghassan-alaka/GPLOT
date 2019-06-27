@@ -8,18 +8,18 @@
 
 echo "HWRF_grabber.sh started `date`"
 DSOURCE="$1"
+ODIR="$2"
 
 
 # Define certain variables based on DSOURCE.
 if [ "$DSOURCE" == "PUB" ]; then
     HWRFDIR="/public/data/grids/hwrf/"
-    ODIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/"
+    #ODIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/"
 fi
 
 
 # Get an array of all files
-ALLFILES=( `ls "$HWRFDIR*grb2" | xargs -n 1 basename` )
-
+ALLFILES=( `find $HWRFDIR -type f -name "*grb2" | xargs -n 1 basename` )
 
 # Loop over all files
 for FILE in ${ALLFILES[@]}; do
@@ -51,7 +51,7 @@ done
 if [ "$DSOURCE" == "PUB" ]; then
     echo "MSG: Checking available HWRF files."
 
-    ALL_HWRF=( `find ${ODIR} -type f | xargs -n 1 basename` )
+    ALL_HWRF=( `find ${ODIR} -type f` ) # | xargs -n 1 basename` )
 
     for FILE in "${ALL_HWRF[@]}"; do
         echo "MSG: Working on --> $FILE"

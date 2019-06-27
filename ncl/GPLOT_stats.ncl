@@ -1567,11 +1567,11 @@ do ddd = 0,dimsizes(allDates)-1
 	vals		:= ind(tcValidB.eq.allDates(ddd))
 	bHrs3(ddd)	= tofloat(offset)
 	if(ismissing(vals(0)))then	continue
-	else				bTRK3(0,ddd)	= tcLatsB(vals)
-					bTRK3(1,ddd)	= tcLonsB(vals)
-					bINT3(0,ddd)	= tcINTB(vals)
-					bINT3(1,ddd)	= tcPRESB(vals)
-					bCLAS3(ddd)	= tcCLASB(vals)
+	else				bTRK3(0,ddd)	= tcLatsB(vals(0))
+					bTRK3(1,ddd)	= tcLonsB(vals(0))
+					bINT3(0,ddd)	= tcINTB(vals(0))
+					bINT3(1,ddd)	= tcPRESB(vals(0))
+					bCLAS3(ddd)	= tcCLASB(vals(0))
 	end if
 	
 	
@@ -1959,7 +1959,7 @@ if(DO_ET_GUIDE)then
 
 
 		; Plot a blank map
-		plot	:= gsn_csm_map_ce(wks,mpres1a)
+		plot	:= gsn_csm_map_ce(wks,mpres1b)
 		dum1	:= new(dimsizes(TRKmodelsI)+1,"graphic")
 		dum2	:= new(dimsizes(TRKmodelsI)+1,"graphic")
 		dum3	:= new((/dimsizes(TRKmodelsI)+1,50/),"graphic")

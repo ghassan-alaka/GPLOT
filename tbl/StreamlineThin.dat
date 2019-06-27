@@ -14,6 +14,14 @@ HWRF      bob      4
 HWRF      nio      8
 HWRF      tkfull   4
 GFS       d03      4
+ECMWF     basin    8
+ECMWF     atl      6
+ECMWF     wlant    2
+ECMWF     elant    2
+ECMWF     gom      2
+ECMWF     eus      2
+ECMWF     epac     2
+ECMWF     cpac     2
 DEFAULT   basin    12
 DEFAULT   hwrf     12
 DEFAULT   bigd01   12

@@ -1,6 +1,6 @@
 #!/bin/sh --login
 #
-# Invocation:  ./find_allnew_sid.sh /lfs3/projects/hwrf-data/hwrf-input/SYNDAT-PLUS/syndat_tcvitals.2019 /home/Ghassan.ALaka/GPLOT/tbl/SID_Test.dat
+# Invocation:  ./find_allnew_sid.sh /lfs3/projects/hwrf-data/hwrf-input/SYNDAT-PLUS/syndat_tcvitals.2019 /home/Ghassan.Alaka/GPLOT/tbl/SID_TEST.dat
 #
 
 #set -aeu
@@ -40,7 +40,7 @@ TMPDIR="${ODIR}TMP.$(date +%N)/"
 if [ -d ${TMPDIR} ]; then
     rm -rf ${TMPDIR}
 fi
-mkdir ${TMPDIR}
+mkdir -p ${TMPDIR}
 NEW_TCV="${TMPDIR}${TCVFILE}"
 cp ${TCV} ${NEW_TCV}
 if [ "$NEW_OPATH" == "False" ]; then
@@ -115,6 +115,11 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
         # Get the storm number
         SNUM1="`echo "$SID1" | cut -c1-2`"
+        if [[ ${SNUM} -gt 50 ]]; then
+            echo "MSG: Skipping because Storm Number > 50."
+            continue
+        fi
+
 
         # Get the latitude
         LAT1=( `awk -v YMD="${ALL_YMD[i]}" -v Hm="${ALL_Hm[i]}" -v SID="${SID1}" '$4==YMD && $5==Hm && $2==SID { print $6 }' ${NEW_TCV}` )

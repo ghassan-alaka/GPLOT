@@ -11,3 +11,4 @@ HFVGFS        .nc
 fvGFS_ATL     .nc
 GEFS          NONE
 HAFS          .grb2
+ECMWF         .nc

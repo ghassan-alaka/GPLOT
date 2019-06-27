@@ -19,6 +19,7 @@ TYPE="$6"
 #ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
 #BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
 MMIN="-43200"
+SID_FILE="${GPLOT_DIR}/tbl/SIDs_Old_New.dat"
 
 mkdir -p ${ODIR}
 cd ${ODIR}
@@ -87,6 +88,9 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Define the Storm ID (SID)
             SID="${SNUM}${BASIN2^^}"
 
+            # If applicable, get the old SID
+            SID_OLD=`grep "${BASIN^^}${SNUM}${YEAR}" ${SID_FILE} | awk '{ print $4 }'`
+
             # Get the TC name. This is for the Parsed ATCF file name
             TCNAME=""
 
@@ -130,6 +134,12 @@ for ADECK in ${ALL_ADECKS[@]}; do
 
             # Copy this entry to the new parsed ATCF
             OFILE="${ODIR}${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            OFILE2="${ODIR}${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            if [ -f ${OFILE2} ]; then
+                echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
+                rm -f ${OFILE}
+                continue
+            fi
             if [ -f ${OFILE} ]; then
                 awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${ODIR}TMP.atcfunix
                 #grep "${MODEL}" ${ADECK} | awk -F ', ' '$2=="${SNUM}"' | awk -F ', ' '$3=="${CYCLE}"' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${ODIR}TMP.atcfunix

@@ -873,6 +873,8 @@ do sss = 0,nAll-1
                 if(fff.eq.0)then        val2    = default_fillvalue("integer")
                 else                    val2    := ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.(FHR(fff)-DT))
                 end if
+		val1@_FillValue = fval2
+		val2@_FillValue = fval2
                 
                 ; ii. Extract information (lat, lon, forecast hour, intensity) from the ATCF
                 ;     If the forecast hours can't be matched, the interpolate from nearby points.
@@ -883,7 +885,7 @@ do sss = 0,nAll-1
                 if(ismissing(val(0)))then
                         ; If the bounding forecast hours exist, then interpolate
                         if(.not.ismissing(val1(0)) .and. .not.ismissing(val2(0)))then
-                                dHr1 = abs(FHR(fff) - toint(data(2,val1(0))))
+				dHr1 = abs(FHR(fff) - toint(data(2,val1(0))))
                                 dHr2 = abs(FHR(fff) - toint(data(2,val2(0))))
                                 pctHr1  = tofloat(dHr1)/(tofloat(dHr1)+tofloat(dHr2))
                                 pctHr2  = tofloat(dHr2)/(tofloat(dHr1)+tofloat(dHr2))
@@ -1457,7 +1459,7 @@ do fff = 0,nFiles-1
                                                         UV10dNames := getfilevardims(f,findVarName(DSOURCE,"UV","10"))
                                                         UV10dims@dNames = UV10dNames
                                                         UV10max := max(getVar2d(f,DSOURCE,(/"UV","10",tostring(ttt)/),UV10dims,\
-                                                                                BOCO2,1.,flipFlag,0))
+                                                                                BOCO2,1.,flipFlag,lonF))
                                 end if
 			end if
                         
@@ -1484,7 +1486,7 @@ do fff = 0,nFiles-1
                                                         MSLPdNames := getfilevardims(f,findVarName(DSOURCE,"MSLP",""))
                                                         MSLPdims@dNames = MSLPdNames
                                                         MSLPmin := min(getVar2d(f,DSOURCE,(/"MSLP","",tostring(ttt)/),MSLPdims,\
-                                                                                BOCO2,1.,flipFlag,0))
+                                                                                BOCO2,1.,flipFlag,lonF))
                                 end if
                         
                                 
@@ -1869,7 +1871,8 @@ do fff = 0,nFiles-1
                                 ; 1. Extra resources for Wind Barbs
                                 if(any((/"RVO850_Z850_UV850", "RVO850_UV200"     , "RVO700_Z700_UV700"     ,\
                                          "RH700_UV700_MSLP" , "RVO500_Z500_UV500", "RH700400_UV700400_MSLP",\
-                                         "RVO200_Z200_UV200", "HGT200_UV200_MSLP", "REFD_UV750"             /).eq.FNAME(ppp)))then   ; MKedit - add REFD_UV750
+                                         "RVO200_Z200_UV200", "HGT200_UV200_MSLP", "REFD_UV750",\
+					 "T850_UV850_MSLP"/).eq.FNAME(ppp)))then
                                         resOv1 := GenPlotRes(5,True)
                                         resOv1@vcLevelSelectionMode     = "ExplicitLevels"
                                         resOv1@vcLevels                 = ispan(5,150,5)

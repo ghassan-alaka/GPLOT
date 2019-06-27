@@ -18,7 +18,7 @@ EXPT = GFS_Forecast
 DO_MAPS = True
 DO_STATS = True
 DO_SHIPS = True
-DO_POLAR = False
+DO_POLAR = True
 
 ; 1C. DATA SOURCE
 DSOURCE = GFS

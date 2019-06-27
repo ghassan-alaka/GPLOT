@@ -708,9 +708,9 @@ begin
 		
 		; For Air Temperature
 		else if(var.eq."T")then
-			if(lev.eq."2")then
+			;if(lev.eq."2")then
 				cmap = "ncl_default"
-			end if			
+			;end if			
 		
 		; For Steering Flow
 		else if(var.eq."SFLO")then
@@ -931,7 +931,10 @@ begin
                         if(lev.eq."2")then
 				levels  = fspan(280.,320.,21)
                         	levels@stride   = 1
-			end if
+			else if(lev.eq."850")then
+				levels  = fspan(270.,310.,21)
+                        	levels@stride   = 1
+			end if  end if
                 end if
 		
 		; For Steering Flow
@@ -1230,7 +1233,16 @@ begin
 			    (/"LAND_P0_L1_GLL0",       "1001"/)\	; 1001. Land-Sea Mask	    
 			    /)
 
-	end if  end if  end if  end if  end if  end if
+	else if(any((/"ECMWF"/).eq.dSource))then
+		varList = (/(/"TMP_P0_L100_GLL0",	"101"/),\	; 101.  3D Air Temperature
+			    (/"HGT_P0_L100_GLL0",	"102"/),\	; 102.  3D Geopotential Height
+			    (/"UGRD_P0_L100_GLL0",	"103"/),\	; 103.  3D Zonal Wind
+		 	    (/"VGRD_P0_L100_GLL0",	"104"/),\	; 104.  3D Meridional Wind
+			    (/"UGRD_P0_L100_GLL0",	"105"/),\	; 105.  3D Total Wind
+			    (/"PRES_P0_L101_GLL0",	"401"/)\	; 401.  Mean Sea Level Pressure
+			    /)
+	
+	end if  end if  end if  end if  end if  end if  end if
 	
 	match	= ind(varList(:,1).eq.catNum)
 	if(ismissing(match(0)))then	print("WARNING: findVarName: Variable '"+oldVar+"' not found in table for "+dSource+".")
@@ -3221,13 +3233,15 @@ begin
 			List_Title	= "Near-Storm Hodograph [kts]"
 		else if(short_name.eq."TCHODO_zoom")then
 			List_Title	= "Near-Storm Hodograph [kts] (zoom)"
+		else if(short_name.eq."T850_UV850_MSLP")then
+			List_Title	= "850mb Temperature (K; shaded), 850mb Wind (kt; barbs), and MSLP (mb; centers)"
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if  end if  end if
+		end if  end if  end if  end if  end if
 
 
 		; If nothing from this above matches, then return a default title

@@ -30,6 +30,9 @@ module load wgrib2/0.2.0.1
 # Load GrADs for interfacing in Python
 module load grads
 
+# Load intel module (needed for wgrib)
+module load intel
+
 # Use the Python 3 install
 alias python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
