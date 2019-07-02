@@ -1215,7 +1215,7 @@ allDates := remove_duplicates(toint(tcInit(vals)))
 ; LATE TRACK GUIDANCE
 if(DO_LT_GUIDE)then
 	print("MSG: Retrieving these late track models at "+IDATE+" --> "+stringOut(TRKmodels))
-	aTRK	= new((/dimsizes(TRKmodels),3,50/),"float",fval3)
+	aTRK	= new((/dimsizes(TRKmodels),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(TRKmodels)-1
 		vals	:= ind(tcModel.eq.TRKmodels(aaa) .and. tcInit.eq.IDATE .and. tcFHR%6.eq.0)
 		if(ismissing(vals(0)))then
@@ -1241,7 +1241,7 @@ end if
 ; EARLY TRACK GUIDANCE	
 if(DO_ET_GUIDE)then
 	print("MSG: Retrieving these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI))
-	aTRKI	= new((/dimsizes(TRKmodelsI),3,50/),"float",fval3)
+	aTRKI	= new((/dimsizes(TRKmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(TRKmodelsI)-1
 		vals	:= ind(tcModel.eq.TRKmodelsI(aaa) .and. tcInit.eq.IDATE06 .and. tcFHR%6.eq.0)
 		if(ismissing(vals(0)))then
@@ -1262,9 +1262,9 @@ end if
 ; LATE TRACK TRENDS
 if(DO_LT_TREND)then
 	print("MSG: Searching for forecasts trends from these track models --> "+stringOut(TRKmodelsT))
-	aTRK2	= new((/dimsizes(TRKmodelsT),nTrend,3,50/),"float",fval3)
+	aTRK2	= new((/dimsizes(TRKmodelsT),nTrend,3,100/),"float",fval3)
 	IDATES	= new(nTrend,"string")
-	aTRK3	= new((/dimsizes(TRKmodelsT),dimsizes(allDates),3,50/),"float",fval3)
+	aTRK3	= new((/dimsizes(TRKmodelsT),dimsizes(allDates),3,100/),"float",fval3)
 	
 	; Loop over all models in 'TRKmodelsT'
 	do mmm = 0,dimsizes(TRKmodelsT)-1
@@ -1321,7 +1321,7 @@ end if
 ; LATE INTENSITY GUIDANCE
 if(DO_LI_GUIDE)then
 	print("MSG: Retrieving these late intensity models at "+IDATE+" --> "+stringOut(INTmodels))
-	aINT	= new((/dimsizes(INTmodels),3,50/),"float",fval3)
+	aINT	= new((/dimsizes(INTmodels),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(INTmodels)-1
 		vals	:= ind(tcModel.eq.INTmodels(aaa) .and. tcInit.eq.IDATE .and. tcFHR%6.eq.0)
 		if(ismissing(vals(0)))then
@@ -1341,7 +1341,7 @@ end if
 ; EARLY INTENSITY GUIDANCE
 if(DO_EI_GUIDE)then
 	print("MSG: Retrieving these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI))
-	aINTI	= new((/dimsizes(INTmodelsI),3,50/),"float",fval3)
+	aINTI	= new((/dimsizes(INTmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(INTmodelsI)-1
 		vals	:= ind(tcModel.eq.INTmodelsI(aaa) .and. tcInit.eq.IDATE06 .and. tcFHR%6.eq.0)
 		if(ismissing(vals(0)))then   continue   end if
@@ -1358,9 +1358,9 @@ end if
 ; LATE INTENSITY TRENDS
 if(DO_LI_TREND)then
 	print("MSG: Searching for forecasts trends from these intensity models --> "+stringOut(INTmodelsT))
-	aINT2	= new((/dimsizes(INTmodelsT),nTrend,3,50/),"float",fval3)
+	aINT2	= new((/dimsizes(INTmodelsT),nTrend,3,100/),"float",fval3)
 	IDATES2 = new(nTrend,"string")
-	aINT3	= new((/dimsizes(INTmodelsT),dimsizes(allDates),2,50/),"float",fval3)
+	aINT3	= new((/dimsizes(INTmodelsT),dimsizes(allDates),2,100/),"float",fval3)
 	
 	; Loop over all models in 'INTmodelsT'
 	do mmm = 0,dimsizes(INTmodelsT)-1
@@ -1400,8 +1400,8 @@ if(DO_LI_TREND)then
 		
 			vals	:= ind(tcModel.eq.INTmodelsT(mmm) .and. tcInit.eq.allDates(ddd) .and. tcFHR%6.eq.0)
 			if(.not.ismissing(vals(0)))then
-				aINT3(mmm,ddd,0,:dimsizes(tcINT(vals))-1)	= tcINT(vals)
-				aINT3(mmm,ddd,1,:dimsizes(tcFHR(vals))-1)	= tofloat(tcFHR(vals))+tofloat(offset)
+				aINT3(mmm,ddd,0,:dimsizes(tcINT(vals))-1) = tcINT(vals)
+				aINT3(mmm,ddd,1,:dimsizes(tcFHR(vals))-1) = tofloat(tcFHR(vals))+tofloat(offset)
 			end if
 		end do
 		vals := ind(.not.ismissing(aINT3(mmm,:,0,0)))
@@ -1415,7 +1415,7 @@ end if
 ; LATE PRESSURE GUIDANCE
 if(DO_LP_GUIDE)then
 	print("MSG: Retrieving these late pressure models at "+IDATE+" --> "+stringOut(PRSmodels))
-	aPRS	= new((/dimsizes(PRSmodels),2,50/),"float",fval3)
+	aPRS	= new((/dimsizes(PRSmodels),2,100/),"float",fval3)
 	do aaa = 0,dimsizes(PRSmodels)-1
 		vals	:= ind(tcModel.eq.PRSmodels(aaa) .and. tcInit.eq.IDATE .and. tcFHR%6.eq.0)
 		if(ismissing(vals(0)))then
@@ -1436,7 +1436,7 @@ end if
 ; LATE PRESSURE TRENDS
 if(DO_LP_TREND)then
 	print("MSG: Retrieving last 6 cycles for "+MCODE)
-	aPRS2	= new((/nTrend,2,50/),"float",fval3)
+	aPRS2	= new((/nTrend,2,100/),"float",fval3)
 	IDATES3 = new(nTrend,"string")
 	
 	iii	= 0
@@ -2282,14 +2282,14 @@ if(DO_EI_GUIDE)then
 
 		rngInt	:= abs(maxInt-minInt)
 		if(1.2*rngInt.ge.100.)then
-			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
-						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,20)
+			IntMjrGrd := ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
+					   toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%20,20)
 		else if(1.2*rngInt.ge.50. .and. 1.2*rngInt.lt.100.)then
-			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%10 + 10,\
-						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%10,10)
+			IntMjrGrd := ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%10 + 10,\
+					   toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%10,10)
 		else if(1.2*rngInt.lt.50.)then
-			IntMjrGrd	:= ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%5 + 5,\
-						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,5)
+			IntMjrGrd := ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%5 + 5,\
+					   toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,5)
 		end if  end if  end if
 
 

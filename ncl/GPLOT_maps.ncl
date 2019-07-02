@@ -286,6 +286,7 @@ if(isStrSubset(DSOURCE,"d03"))then   DOMAIN = "d03"   end if
 ; 7. Get path variables from the master namelist:
 ;    EXPT, IDIR, ATCF1_DIR, ATCF1_TAG, ATCF2_DIR, ATCF2_TAG, ITAG, IDIR
 ;    First, check if paths should be automatically defined (AUTO_DIR)
+;    'AUTO_DIR' may be deprecated. Users should know supply this info.
 AUTO_DIR        = data(ind(isStrSubset2(data,"AUTO_DIR =")))
 AUTO_DIR        := str_squeeze(str_split(AUTO_DIR," = "))
 AUTO_DIR        := where(AUTO_DIR(1).eq."True",True,False)
@@ -927,7 +928,7 @@ end do ;sss
         
         
 ; 6. Create a string of the long storm IDs.
-LONGSID_LIST    = str_sub_str(LONGSID_LIST," ",", ")
+LONGSID_LIST = str_sub_str(LONGSID_LIST," ",", ")
         
         
 ; 7. Update the final forecast hour string for storm-centered domains
@@ -2999,8 +3000,7 @@ do fff = 0,nFiles-1
 	                ;================================================================
                         ; lxix. Storm Title
 			;================================================================
-	                if(isStrSubset(DSOURCE,"HWRF") .or. DSOURCE.eq."GFS" .or.\
-	                   isStrSubset(DSOURCE,"fvGFS_ATL"))then
+	                if(LONGSID_LIST.ne."")then
 	                        if(DOMAIN.eq."d03")then         add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.010,"right")
 	                        else                            add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.008,"right")
 	                        end if

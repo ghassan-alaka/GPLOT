@@ -22,6 +22,12 @@ ECMWF     gom      2
 ECMWF     eus      2
 ECMWF     epac     2
 ECMWF     cpac     2
+HAFS      atl      16
+HAFS      wlant    8
+HAFS      elant    8
+HAFS      gom      8
+HAFS      eus      8
+HAFS      d01      16
 DEFAULT   basin    12
 DEFAULT   hwrf     12
 DEFAULT   bigd01   12

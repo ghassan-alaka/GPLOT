@@ -79,6 +79,9 @@ while [ "${YMDHms}" -gt "${YMDHms_OLD}" ]; do
             ncl 'CYCLE="'"${YMDH}"'"' $GPLOT_DIR/ncl/ECMWF_combine.ncl
         fi
 
+        # Clean up any TMP directories that still exist.
+        rm -rf TMP.*
+
     fi
 
     ((N++))

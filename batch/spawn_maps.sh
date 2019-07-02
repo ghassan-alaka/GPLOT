@@ -59,7 +59,7 @@ ATCF2_DIR=`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*/
 ATCF2_TAG=`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+#FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 
 
 # Print information
@@ -101,9 +101,9 @@ TIER=( `sed -n -e 's/^TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
 echo "MSG: Found these graphic tiers in the namelist   --> ${TIER[*]}"
 
 # If FORCE is undefined, set it to False.
-if [ -z "$FORCE" ]; then
-    FORCE="False"
-fi
+#if [ -z "$FORCE" ]; then
+#    FORCE="False"
+#fi
 
 # Get a list of forecast lead times
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
@@ -185,6 +185,11 @@ if [ "${DO_MAPS}" = "True" ]; then
             CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
             CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
 
+            # If the CYCLE is empty, skip it
+            if [ -z "$CYCLE" ]; then
+                echo "WARNING: The cycle is undefined. Skipping to next."
+                continue
+            fi
 
             # Get the cycle prefix from a table and define CYCLE_STR
             # CYCLE_STR should be used in file paths.
@@ -282,6 +287,15 @@ if [ "${DO_MAPS}" = "True" ]; then
                         if [ "$DMN" == "basin" ] || [ "$DMN" == "bigd01" ] || [ "$DMN" == "d03" ]; then
                             continue
                         fi
+                    fi
+
+                    # Read 'FORCE' from the namelist.
+                    # If FORCE is undefined, set it to False.
+                    # FORCE may be automatically changed to 'True' later on,
+                    # so it is critical to redefine it here.
+                    FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                    if [ -z "$FORCE" ]; then
+                        FORCE="False"
                     fi
 
                     # Create full output path
@@ -435,7 +449,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             for ATCF in ${PREV_ATCF[@]}; do
                                 test=$(find ${ATCF} -mmin -60 2>/dev/null)
                                 if [[ -n $test ]]; then
-                                    echo "MSG: This ATCF is not old enough (${ATCF}). Forcing production."
+                                    echo "MSG: This ATCF is not old enough. Forcing production."
                                     FORCE="True"
                                     break
                                 fi
@@ -725,25 +739,25 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:14:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="00:44:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
-                            RUNTIME="01:14:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
-                            RUNTIME="01:44:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
-                            RUNTIME="02:14:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                            RUNTIME="02:29:59"
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="02:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="03:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="03:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="04:29:59"
+                        else
+                            RUNTIME="04:59:59"
                         fi
 
 

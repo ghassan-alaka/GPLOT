@@ -1254,7 +1254,9 @@ begin
 	
 	; This is a temp. fix for Precipitation variables that were updated to have time interval information.
 	; This should be integrated into the actual variable name, as with UV10, T2, etc.
-	if(isStrSubset(var,"PRCP") .and. isStrSubset(lev,"h"))then	newVar = newVar+lev   end if
+	if(any((/"GFS","HAFS"/).eq.dSource))then
+		if(isStrSubset(var,"PRCP") .and. isStrSubset(lev,"h"))then	newVar = newVar+lev   end if
+	end if
 	
 	
 	return(newVar)

@@ -632,23 +632,25 @@ if [ "${DO_POLAR}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:14:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="00:44:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
-                            RUNTIME="01:14:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
-                            RUNTIME="01:44:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="01:59:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                            RUNTIME="02:29:59"
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="02:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="03:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="03:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="04:29:59"
+                        else
+                            RUNTIME="04:59:59"
                         fi
 
                         # Call the batch job
