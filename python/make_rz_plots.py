@@ -578,6 +578,23 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			center_z = centroid.centroid(hgt,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 			center_z_2 = centroid.centroid(wind,threshold2,1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 
+
+			#Calculate 750-hPa RMW and Average Vmax
+			rmw_mean_index = np.argmax(vt_p_mean,0)
+			rmw_mean = r[rmw_mean_index]
+			vt_p_mean_max = np.max(vt_p_mean,0)
+			rmw_750 = rmw_mean[10]
+			vt_p_mean_max_750 = vt_p_mean_max[10]
+			rmwstring = np.str(np.int(np.round(rmw_750*0.54,0)))
+			vmaxstring = np.str(np.int(np.round(vt_p_mean_max_750*1.94,0)))
+
+			u750 = uwind[:,:,10]
+			v750 = vwind[:,:,10]
+			u450 = uwind[:,:,22]
+			v450 = vwind[:,:,22]
+			wind_750 = np.hypot(uwind[:,:,10],vwind[:,:,10])
+			dbz_750 = dbz[:,:,10]
+
 			#Make Plots
 			print('Doing Plots Now')
 
@@ -606,6 +623,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			colormap_rh = matplotlib.colors.ListedColormap(color_data_rh)
 			levs_rh = np.linspace(0,100,41,endpoint=True)
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
+
+
+			color_data_wind = np.genfromtxt('/home/rthr-aoml/GPLOT/python/colormaps/colormap_wind.txt')
+			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
+			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
+			norm_wind = colors.BoundaryNorm(levs_wind,256)
 
 			#First do Azimuthal Mean Radial Wind
 			plt.figure()
@@ -1147,7 +1170,69 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 
 			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.vt10_wavenumber.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
 			plt.close()			
-				
+
+			#Now Make Plot for Comparison With Radar
+			plt.figure(figsize=(19.5,12))
+			plt.subplot(121)
+			plt.contourf(x_sr*0.54,y_sr*0.54,dbz_750,levs_dbz,cmap=colormap_dbz,norm=norm_dbz)
+			plt.xlim(-132,132)
+			plt.ylim(-132,132)
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black')
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.xlabel('East-West Distance (n mi)',fontsize=18)
+			plt.ylabel('North-South Distance (n mi)',fontsize=18)
+			plt.title(EXPT.strip()+'\n'+ '750-hPa Reflectivity (dbz, Shading)'+'\n'+'750-hPa Wind Barbs (kt)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+			plt.barbs(x_sr[::9]*0.54,y_sr[::9]*0.54,u750[::9,::9]*1.94,v750[::9,::9]*1.94,length=6,sizes=dict(spacing=0.15,height=0.4))
+			ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80]
+			ax = plt.gca()
+			divider = make_axes_locatable(ax)
+			cax = divider.append_axes("right", size="5%", pad=0.05)
+			cbar_l = plt.colorbar(cax=cax,ticks=ticks,norm=norm_dbz,drawedges=True)
+			cbar_l.set_ticklabels([0, 10, 20, 30, 40, 50, 60, 70, 80])
+			cbar_l.ax.tick_params(labelsize=14)
+			#cbar_l.outline.set_color('black')
+			cbar_l.outline.set_linewidth(1)
+			cbar_l.dividers.set_color('black')
+			cbar_l.dividers.set_linewidth(1)
+
+			plt.subplot(122)
+			plt.contourf(x_sr*0.54,y_sr*0.54,wind_750*1.94,levs_wind,cmap=colormap_wind,norm=norm_wind)
+			plt.xlim(-132,132)
+			plt.ylim(-132,132)
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.xlabel('East-West Distance (n mi)',fontsize=18)
+			plt.ylabel('North-South Distance (n mi)',fontsize=18)
+			plt.title(EXPT.strip()+'\n'+'750-hPa Wind (kt, Shading)'+'\n'+'750-hPa (Black) and 450-hPa (Gray) Streamlines'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+			plt.text(-127,127,'2-km Max'+r'$\bf\overline{V}_{t}$'+' (RMW):\n'+vmaxstring+' kt ('+rmwstring+' n mi)',fontsize=14,verticalalignment='top', horizontalalignment='left',color='k',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
+			plt.text(127,127,'Shear:\n'+shearstring+' kt',fontsize=14,verticalalignment='top', horizontalalignment='right',color='blue',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
+			ticks=[7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155]
+			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u750*1.94,v750*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u450*1.94,v450*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black',zorder=10)
+			ax = plt.gca()
+			divider = make_axes_locatable(ax)
+			cax = divider.append_axes("right", size="5%", pad=0.05)
+			cbar_r = plt.colorbar(cax=cax,ticks=ticks,norm=norm_wind,drawedges=True)
+			cbar_r.set_ticklabels([7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155])
+			cbar_r.ax.tick_params(labelsize=14)
+			#cbar_r.outline.set_color('black')
+			cbar_r.outline.set_linewidth(1)
+			cbar_r.dividers.set_color('black')
+			cbar_r.dividers.set_linewidth(1)
+
+			plt.subplots_adjust(wspace=.25)
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+                        plt.close()
 			ga('close 1')
 
 			
