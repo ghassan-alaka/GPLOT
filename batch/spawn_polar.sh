@@ -389,16 +389,15 @@ if [ "${DO_POLAR}" = "True" ]; then
                         fi
 
                         # Create a list of IDIR subdirectory options
-                        IDIR_OPTS=("" "${EXPT}/com/${CYCLE}/${STORM}/" "${EXPT}/com/${CYCLE}/" "${EXPT}/com/" \
-                                   "${EXPT}/" "${CYCLE}/${STORM}/" "${CYCLE}/" "${STORM}/" "${EXPT}/${CYCLE}/${STORM}/" \
-                                   "${EXPT}/${CYCLE}/" "${EXPT}/com/${CYCLE}/${STORM}/${ENSID}/" "${EXPT}/com/${CYCLE}/${ENSID}/" \
-                                   "${EXPT}/com/${ENSID}/" "${EXPT}/${ENSID}/" "${CYCLE}/${STORM}/${ENSID}/" \
-                                   "${ENSID}/${CYCLE}/${STORM}/" "${CYCLE}/${ENSID}/${STORM}/" "${CYCLE}/${ENSID}/" \
-                                   "${ENSID}/${CYCLE}/" "${STORM}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE}/" \
-                                   "${EXPT}/${ENSID}/com/${CYCLE}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE}/" "${EXPT}/${ENSID}/com/" \
-                                   "${ENSID}/com/${CYCLE}/${STORM}/" "com/${CYCLE}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
+                        IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
+                                   "${EXPT}/" "${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/" "${STORM}/" "${EXPT}/${CYCLE_STR}/${STORM}/" \
+                                   "${EXPT}/${CYCLE_STR}/" "${EXPT}/com/${CYCLE_STR}/${STORM}/${ENSID}/" "${EXPT}/com/${CYCLE_STR}/${ENSID}/" \
+                                   "${EXPT}/com/${ENSID}/" "${EXPT}/${ENSID}/" "${CYCLE_STR}/${STORM}/${ENSID}/" \
+                                   "${ENSID}/${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/${ENSID}/${STORM}/" "${CYCLE_STR}/${ENSID}/" \
+                                   "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
+                                   "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
+                                   "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
                                    "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L")
-
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                         # If a match is found, write lead time to a data file "AllForecastHours"

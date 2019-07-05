@@ -1,6 +1,11 @@
 #!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
-#Import necessary modules
 
+# Check that GPLOT_DIR is defined in the environment.
+import os
+GPLOT_DIR = os.environ['GPLOT_DIR']
+print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
+
+#Import necessary modules
 print('Importing Everything Needed')
 from py3grads import Grads #This is how we'll get the data
 import numpy as np #Used for a lot of the calculations
@@ -12,17 +17,14 @@ import scipy #Used for interpolation to polar coordinates
 from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
 import sys #To change the path 
-sys.path.append('/home/rthr-aoml/GPLOT/python/modules')
+sys.path.append(GPLOT_DIR+'/python/modules')
 import centroid
-import os
+#import os
 import glob
 import cmath
 import subprocess
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# Check that GPLOT_DIR is defined in the environment.
-GPLOT_DIR = os.environ['GPLOT_DIR']
-print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
-	
 #Define Pygrads interface
 ga = Grads(verbose=False)
 
@@ -392,6 +394,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 
 			shearmag = np.hypot(ushear,vshear)
 			sheardir = np.arctan2(vshear,ushear)*180.0/pi
+			shearstring = np.str(np.int(np.round(shearmag*1.94,0)))
 
 			#Convert shear to meteorological convention
 			if sheardir <=90:
@@ -717,9 +720,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.yticks(np.linspace(1000,100,10),fontsize=24)
 			plt.xlabel('Radius (km)',fontsize=24)
 			plt.ylabel('Pressure Level (hPa)',fontsize=24)
-			plt.title(experiment+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+stormname+stormid,fontsize=24,color='brown',loc='right')
-			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
 			plt.close()
 
 			#Next do azimuthal mean RH
@@ -766,9 +769,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.ylabel('Pressure Level (hPa)',fontsize=24)
 			plt.text(-rmax+50,150,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
 			plt.text(rmax-50,150,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-			plt.title(experiment+'\n'+ r'Along-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+stormname+stormid,fontsize=24,color='brown',loc='right')
-			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.title(EXPT.strip()+'\n'+ r'Along-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
 			plt.close()
 
 			#Next do along-shear radial wind
@@ -870,9 +873,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.ylabel('Pressure Level (hPa)',fontsize=24)
 			plt.text(-rmax+50,150,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
 			plt.text(rmax-50,150,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-			plt.title(experiment+'\n'+ r'Across-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+stormname+stormid,fontsize=24,color='brown',loc='right')
-			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.title(EXPT.strip()+'\n'+ r'Across-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
 			plt.close()
 
 			#Next do across-shear radial wind
@@ -971,7 +974,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 			plt.gca().set_aspect('equal', adjustable='box')
 			plt.grid()
-			plt.title(experiment+'\n'+ r'WV#0,1,2 500-hPa Reflectivity ($dBZ$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+			plt.title(EXPT.strip()+'\n'+ r'WV#0,1,2 500-hPa Reflectivity ($dBZ$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
 			plt.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
 			plt.subplot(222)
@@ -988,7 +991,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 			plt.gca().set_aspect('equal', adjustable='box')
 			plt.grid()
-			plt.title(stormname+stormid+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+			plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
 			plt.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 			plt.subplot(223)
@@ -1023,7 +1026,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.grid()
 			plt.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
 
-			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz500_wavenumber.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz500_wavenumber.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
 			plt.close()
 
 			plt.figure()
@@ -1232,7 +1235,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 
 			plt.subplots_adjust(wspace=.25)
 			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-                        plt.close()
+			plt.close()
 			ga('close 1')
 
 			
