@@ -633,10 +633,7 @@ begin
 		else
 			cmap	= read_colormap_file(ColorMap)
 		
-		end if
-		end if
-		end if
-		end if
+		end if  end if  end if  end if
 		
 	return(cmap)
 
@@ -703,7 +700,7 @@ begin
 		
 		; For Mean Sea-Level Pressure
 		else if(var.eq."MSLP")then
-			cmap	= "mslp"
+			cmap	= "mslp2"
 			;cmap	= "ncl_default"
 		
 		; For Air Temperature
@@ -749,199 +746,151 @@ function defineLevels (var[1]:string,lev[1]:string)
 local levels
 begin
 
-		; For Relative Vorticity
-		if(var.eq."RVO")then
-			if(any((/"850","700","500","200"/).eq.lev))then
-				levels	= fspan(2.,70.,35)
-				levels@stride = 2
-			end if
+	; For Relative Vorticity
+	if(var.eq."RVO")then
+		if(any((/"850","700","500","200"/).eq.lev))then
+			levels	= fspan(2.,70.,35)
+			levels@stride = 2
 		end if
 		
-		; For Total Wind
-		if(var.eq."UV")then
-			;if(lev.eq."850")then
-			;	levels = new(41,float)
-			;	levels(:22)	= fspan(10.,65.,23)
-			;	levels(23:)	= fspan(70.,155.,18)
-			;	levels@stride	= 2
-			;end if
-			if(lev.eq."02000850d")then
-				;levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-				;		    17.5, 20.0, 22.5, 25.0, 27.5,\
-				;		    30.0, 35.0, 40.0, 45.0, 50.0,\
-				;		    55.0, 60.0, 70.0, 80.0, 90.0/)
-                levels      = fspan(5.0,50.0,19)
-				levels@stride	= 2
-			end if
-			if(lev.eq."05000850d")then
-				;levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-				;		    17.5, 20.0, 22.5, 25.0, 27.5,\
-				;		    30.0, 35.0, 40.0, 45.0, 50.0,\
-				;		    55.0, 60.0/)
-                levels      = fspan(5.0,50.0,19)
-				levels@stride	= 2
-			end if
-			if(lev.eq."07000850d")then
-				;levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-				;		    17.5, 20.0, 22.5, 25.0, 27.5,\
-				;		    30.0, 35.0, 40.0, 45.0, 50.0/)
-                levels      = fspan(5.0,50.0,19)
-				levels@stride	= 2
-			end if
-			if(lev.eq."02500850m")then
-				levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-						    17.5, 20.0, 22.5, 25.0, 27.5,\
-						    30.0, 35.0, 40.0, 45.0, 50.0,\
-						    55.0, 60.0, 70.0, 80.0, 90.0/)
-				levels@stride	= 1
-			end if
-			if(lev.eq."05000850m")then
-				levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-						    17.5, 20.0, 22.5, 25.0, 27.5,\
-						    30.0, 35.0, 40.0, 45.0, 50.0,\
-						    55.0, 60.0/)
-				levels@stride	= 1
-			end if
-			if(lev.eq."07000850m")then
-				levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-						    17.5, 20.0, 22.5, 25.0, 27.5,\
-						    30.0, 35.0, 40.0/)
-				levels@stride	= 1
-			end if
-			if(lev.eq."02500500m")then
-				levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
-						    17.5, 20.0, 22.5, 25.0, 27.5,\
-						    30.0, 35.0, 40.0, 45.0, 50.0,\
-						    55.0, 60.0, 70.0, 80.0, 90.0/)
-				levels@stride	= 1
-			end if
-			if (lev.eq."750") then
-				levels     = (/  7.0  ,  10.0  ,  13.0  ,  16.0  ,   \
-						 19.0  ,  22.0  ,  25.0  ,  28.0  ,  31.0  ,   \
-						 34.0  ,  36.0  ,  38.0  ,  40.0  ,  42.0  ,   \
-						 44.0  ,  46.0  ,  48.0  ,  50.0  ,  52.0  ,   \
-						 54.0  ,  56.0  ,  58.0  ,  60.0  ,  62.0  ,   \
-						 64.0  ,  69.333,  74.666,  80.0  ,  85.333,   \
-					 	 90.666,  96.0  , 100.666, 105.333, 110.0  ,   \
-						115.0  , 120.0  , 125.0  , 130.0  , 135.0  ,   \
-						140.0  , 145.0  , 150.0  , 155.0        /)
-				levels@stride   = 3
-			end if
-			if(any((/"10","850","0850","02001000","02001000y","02001000x"/).eq.lev))then
-				;levels		= (/ 10.00,  13.00,  16.00,  19.00,  22.00, \
-				;		     25.00,  28.00,  31.00,  34.00,  36.00, \
-				;		     38.00,  40.00,  42.00,  44.00,  46.00, \
-				;		     48.00,  50.00,  52.00,  54.00,  56.00, \
-				;		     58.00,  60.00,  62.00,  64.00,  68.75, \
-				;		     73.50,  78.25,  83.00,  86.25,  89.50, \
-				;		     92.75,  96.00, 100.50, 105.00, 109.50, \
-				;		    114.00, 119.25, 124.50, 129.75, 135.00, \
-				;		    140.00, 145.00, 150.00, 155.00/)
-				levels		= (/10., 20., 34., 50., 64., 83., 96., 114., 137./)
-				levels@stride = 1
-			end if
-		end if
-		
-		; For Relative Humidity
-		if(var.eq."RH")then
-			levels		= fspan(5.,95.,19)
+	; For Total Wind
+	else if(var.eq."UV")then
+		if(lev.eq."02000850d")then
+			levels      = fspan(5.0,50.0,19)
 			levels@stride	= 2
 		end if
-		
-		; For Precipitation
-		if(any((/"PRCP","PRATE"/).eq.var))then
-			levels			= (/ 0.1,  0.25, 0.5,  1.0,  1.5,\
-						     2.0,  3.0,  4.0,  5.0,  7.5,\
-						    10.0, 15.0, 20.0, 25.0, 30.0,\
-						    40.0/)
-			levels@stride		= 1
-		end if
-		
-		; For Total Precipitation
-		if(var.eq."TPRCP")then
-			;levels			= (/ 0.05, 0.1,  0.25, 0.5,  0.75,\
-			;			     1.0,  1.25, 1.5,  2.0,  2.5, \
-			;			     3.0,  3.5,  4.0,  5.0,  6.0, \
-			;			     8.0, 10.0, 12.0, 14.0, 16.0, \
-			;			    20.0, 24.0/)
-			;levels			= (/  0.01,  0.10,  0.25,  0.50,  0.75, \
-			;			      1.00,  1.25,  1.50,  1.75,  2.00, \
-			;			      3.00,  4.00,  6.00,  8.00, 10.00, \
-			;			     15.00, 20.00/)
-			levels          = (/ 0.01,  0.10,  0.25,  0.50,  0.75,  1.00, \
-					     1.25,  1.50,  1.75,  2.00,  2.50,  3.00, \
-					     4.00,  5.00,  7.00, 10.00, 15.00, 20.00, \
-					    25.00, 30.00, 25.00, 40.00, 50.00, 60.00/)
-			levels@stride		= 1
-		end if
-		
-		; For Total Precipitable Water
-		if(var.eq."TPW")then
-			levels	= fspan(5.,65.,31)
+		if(lev.eq."05000850d")then
+			;levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
+			;		    17.5, 20.0, 22.5, 25.0, 27.5,\
+			;		    30.0, 35.0, 40.0, 45.0, 50.0,\
+			;		    55.0, 60.0/)
+			levels      = fspan(5.0,50.0,19)
 			levels@stride	= 2
 		end if
-		
-		; For Geopotential Height
-		if(var.eq."HGT")then
-			if(any((/"02500500d"/).eq.lev))then
-				levels	= fspan(490.,510.,21)
-				levels@stride = 2
-			else if(any((/"500","0500"/).eq.lev))then
-				levels	= fspan(468.,540.,13)
-				levels	:= array_append_record(levels,fspan(542.,600.,30),0)
-				levels@stride	= 2
-			else if(lev.eq."200")then
-				levels	= fspan(1170.,1260.,31)
-				levels@stride	= 2
-			end if  end if  end if
-		end if
-		
-		; For Reflectivity
-		if(var.eq."REFL")then
-			levels	= fspan(5.,75.,15)
+		if(lev.eq."07000850d")then
+			;levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
+			;		    17.5, 20.0, 22.5, 25.0, 27.5,\
+			;		    30.0, 35.0, 40.0, 45.0, 50.0/)
+			levels      = fspan(5.0,50.0,19)
 			levels@stride	= 2
 		end if
-	
-		; For Reflectivity ay 750 hpa (MK)
-		if (var.eq."REFD") then
-			levels  = fspan(2.,78.,39)
-                        levels@stride   = 2
-		end if
-	
-		; For Storm_Relative Helicity
-		if(var.eq."HLCY")then
-			levels	= fspan(100.,600.,11)
-			levels@stride	= 2
-		end if
-		
-		; For Storm_Relative Helicity
-		if(var.eq."CAPE")then
-			levels	= fspan(500.,4500.,17)
-			levels@stride	= 2
-		end if
-		
-		; For Mean Sea-Level Pressure
-		if(var.eq."MSLP")then
-			levels	= fspan(980.,1040.,16)
+		if(lev.eq."02500850m")then
+			levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
+					    17.5, 20.0, 22.5, 25.0, 27.5,\
+					    30.0, 35.0, 40.0, 45.0, 50.0,\
+					    55.0, 60.0, 70.0, 80.0, 90.0/)
 			levels@stride	= 1
 		end if
+		if(lev.eq."05000850m")then
+			levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
+					    17.5, 20.0, 22.5, 25.0, 27.5,\
+					    30.0, 35.0, 40.0, 45.0, 50.0,\
+					    55.0, 60.0/)
+			levels@stride	= 1
+		end if
+		if(lev.eq."07000850m")then
+			levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
+					    17.5, 20.0, 22.5, 25.0, 27.5,\
+					    30.0, 35.0, 40.0/)
+			levels@stride	= 1
+		end if
+		if(lev.eq."02500500m")then
+			levels		= (/ 5.0,  7.5, 10.0, 12.5, 15.0,\
+					    17.5, 20.0, 22.5, 25.0, 27.5,\
+					    30.0, 35.0, 40.0, 45.0, 50.0,\
+					    55.0, 60.0, 70.0, 80.0, 90.0/)
+			levels@stride	= 1
+		end if
+		if (lev.eq."750") then
+			levels     = (/  7.0  ,  10.0  ,  13.0  ,  16.0  ,   \
+					 19.0  ,  22.0  ,  25.0  ,  28.0  ,  31.0  ,   \
+					 34.0  ,  36.0  ,  38.0  ,  40.0  ,  42.0  ,   \
+					 44.0  ,  46.0  ,  48.0  ,  50.0  ,  52.0  ,   \
+					 54.0  ,  56.0  ,  58.0  ,  60.0  ,  62.0  ,   \
+					 64.0  ,  69.333,  74.666,  80.0  ,  85.333,   \
+				 	 90.666,  96.0  , 100.666, 105.333, 110.0  ,   \
+					115.0  , 120.0  , 125.0  , 130.0  , 135.0  ,   \
+					140.0  , 145.0  , 150.0  , 155.0        /)
+			levels@stride   = 3
+		end if
+		if(any((/"10","850","0850","02001000","02001000y","02001000x"/).eq.lev))then
+			levels		= (/10., 20., 34., 50., 64., 83., 96., 114., 137./)
+			levels@stride = 1
+		end if
+	
+	; For Relative Humidity
+	else if(var.eq."RH")then	levels = fspan(5.,95.,19)
+					levels@stride = 2
+	
+	; For Precipitation
+	else if(any((/"PRCP","PRATE"/).eq.var))then
+		levels			= (/ 0.1,  0.25, 0.5,  1.0,  1.5,\
+					     2.0,  3.0,  4.0,  5.0,  7.5,\
+					    10.0, 15.0, 20.0, 25.0, 30.0,\
+					    40.0/)
+		levels@stride		= 1
+	
+	; For Total Precipitation
+	else if(var.eq."TPRCP")then	levels = (/ 0.01,  0.10,  0.25,  0.50,  0.75,  1.00, \
+						    1.25,  1.50,  1.75,  2.00,  2.50,  3.00, \
+						    4.00,  5.00,  7.00, 10.00, 15.00, 20.00, \
+						   25.00, 30.00, 25.00, 40.00, 50.00, 60.00/)
+					levels@stride = 1
+	
+	; For Total Precipitable Water
+	else if(var.eq."TPW")then	levels	= fspan(5.,65.,31)
+					levels@stride	= 2
+	
+	; For Geopotential Height
+	else if(var.eq."HGT")then
+		if(any((/"02500500d"/).eq.lev))then
+			levels	= fspan(490.,510.,21)
+			levels@stride = 2
+		else if(any((/"500","0500"/).eq.lev))then
+			levels	= fspan(468.,540.,13)
+			levels	:= array_append_record(levels,fspan(542.,600.,30),0)
+			levels@stride	= 2
+		else if(lev.eq."200")then
+			levels	= fspan(1170.,1260.,31)
+			levels@stride	= 2
+		end if  end if  end if
+	
+	; For Reflectivity
+	else if(var.eq."REFL")then	levels = fspan(5.,75.,15)
+					levels@stride = 2
 
-		; For Air Temperature
-                if(var.eq."T")then
-                        if(lev.eq."2")then
-				levels  = fspan(280.,320.,21)
-                        	levels@stride   = 1
-			else if(lev.eq."850")then
-				levels  = fspan(270.,310.,21)
-                        	levels@stride   = 1
-			end if  end if
-                end if
+	; For Reflectivity ay 750 hpa (MK)
+	else if (var.eq."REFD")then	levels = fspan(2.,78.,39)
+					levels@stride = 2
+
+	; For Storm_Relative Helicity
+	else if(var.eq."HLCY")then	levels = fspan(100.,600.,11)
+					levels@stride = 2
+	
+	; For Storm_Relative Helicity
+	else if(var.eq."CAPE")then	levels = fspan(500.,4500.,17)
+					levels@stride = 2
+	
+	; For Mean Sea-Level Pressure
+	else if(var.eq."MSLP")then	levels = fspan(940.,1040.,26)
+					levels@stride = 2
+	; For Air Temperature
+	else if(var.eq."T")then
+		if(lev.eq."2")then
+			levels  = fspan(280.,320.,21)
+			levels@stride   = 1
+		else if(lev.eq."850")then
+			levels  = fspan(270.,310.,21)
+                       	levels@stride   = 1
+		end if  end if
 		
-		; For Steering Flow
-		if(var.eq."SFLO")then
-			levels	= fspan(10.,60.,11)
-			levels@stride	= 1
-		end if
+	; For Steering Flow
+	else if(var.eq."SFLO")then	levels = fspan(10.,60.,11)
+					levels@stride = 1
+
+
+	end if  end if  end if  end if  end if  end if  end if
+	end if  end if  end if  end if  end if  end if  end if
 		
 	return(levels)
 
