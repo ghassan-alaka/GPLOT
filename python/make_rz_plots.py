@@ -1,6 +1,11 @@
 #!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
-#Import necessary modules
 
+# Check that GPLOT_DIR is defined in the environment.
+import os
+GPLOT_DIR = os.environ['GPLOT_DIR']
+print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
+
+#Import necessary modules
 print('Importing Everything Needed')
 from py3grads import Grads #This is how we'll get the data
 import numpy as np #Used for a lot of the calculations
@@ -12,17 +17,14 @@ import scipy #Used for interpolation to polar coordinates
 from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
 import sys #To change the path 
-sys.path.append('/home/rthr-aoml/GPLOT/python/modules')
+sys.path.append(GPLOT_DIR+'/python/modules')
 import centroid
-import os
+#import os
 import glob
 import cmath
 import subprocess
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# Check that GPLOT_DIR is defined in the environment.
-GPLOT_DIR = os.environ['GPLOT_DIR']
-print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
-	
 #Define Pygrads interface
 ga = Grads(verbose=False)
 
@@ -268,7 +270,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			vwind = ga.exp('vgrdprs')
 			omega = ga.exp('vvelprs')
 			print('Done With u,v,w')
-			#dbz = ga.exp('refdprs')
+			dbz = ga.exp('refdprs')
 			hgt = ga.exp('hgtprs')
 			temp = ga.exp('tmpprs')
 			print('Done with dbz, hgt, temp')
@@ -284,7 +286,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			uwind[mask] = np.nan
 			vwind[mask] = np.nan
 			omega[mask] = np.nan
-			#dbz[mask] = np.nan
+			dbz[mask] = np.nan
 			hgt[mask] = np.nan
 			temp[mask] = np.nan
 			q[mask] = np.nan
@@ -322,7 +324,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			u_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			v_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			w_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-		#	dbz_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			dbz_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			hgt_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			temp_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			q_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
@@ -332,16 +334,16 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 				f_uwind = interpolate.RegularGridInterpolator((y_sr, x_sr), uwind[:,:,k])
 				f_vwind = interpolate.RegularGridInterpolator((y_sr, x_sr), vwind[:,:,k])
 				f_wwind = interpolate.RegularGridInterpolator((y_sr, x_sr), wwind[:,:,k])
-		#		f_dbz = interpolate.RegularGridInterpolator((y_sr, x_sr), dbz[:,:,k])
+				f_dbz = interpolate.RegularGridInterpolator((y_sr, x_sr), dbz[:,:,k])
 				f_hgt = interpolate.RegularGridInterpolator((y_sr, x_sr), hgt[:,:,k])
 				f_temp = interpolate.RegularGridInterpolator((y_sr, x_sr), temp[:,:,k])
 				f_q = interpolate.RegularGridInterpolator((y_sr, x_sr), q[:,:,k])
 				f_rh = interpolate.RegularGridInterpolator((y_sr, x_sr), rh[:,:,k])
-			#
+			
 				u_p[:,:,k] = f_uwind((YI,XI),method='linear')
 				v_p[:,:,k] = f_vwind((YI,XI),method='linear')
 				w_p[:,:,k] = f_wwind((YI,XI),method='linear')
-		#		dbz_p[:,:,k] = f_dbz((YI,XI),method='linear')
+				dbz_p[:,:,k] = f_dbz((YI,XI),method='linear')
 				hgt_p[:,:,k] = f_hgt((YI,XI),method='linear')
 				temp_p[:,:,k] = f_temp((YI,XI),method='linear')
 				q_p[:,:,k] = f_q((YI,XI),method='linear')
@@ -392,6 +394,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 
 			shearmag = np.hypot(ushear,vshear)
 			sheardir = np.arctan2(vshear,ushear)*180.0/pi
+			shearstring = np.str(np.int(np.round(shearmag*1.94,0)))
 
 			#Convert shear to meteorological convention
 			if sheardir <=90:
@@ -416,7 +419,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			u_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			v_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			w_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-	#		dbz_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			dbz_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			hgt_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			temp_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			q_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
@@ -434,7 +437,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			u_p_rot = np.roll(u_p,[-sheardir_index, 0, 0],axis=(0,1,2))
 			v_p_rot = np.roll(v_p,[-sheardir_index, 0, 0],axis=(0,1,2))
 			w_p_rot = np.roll(w_p,[-sheardir_index, 0, 0],axis=(0,1,2))
-	#		dbz_p_rot = np.roll(dbz_p,[-sheardir_index, 0, 0],axis=(0,1,2))
+			dbz_p_rot = np.roll(dbz_p,[-sheardir_index, 0, 0],axis=(0,1,2))
 			hgt_p_rot = np.roll(hgt_p,[-sheardir_index, 0, 0],axis=(0,1,2))
 			temp_p_rot = np.roll(temp_p,[-sheardir_index, 0, 0],axis=(0,1,2))
 			q_p_rot = np.roll(q_p,[-sheardir_index, 0, 0],axis=(0,1,2))
@@ -452,7 +455,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			vt_p_mean = np.nanmean(vt_p,0)
 			ur_p_mean = np.nanmean(ur_p,0)
 			w_p_mean = np.nanmean(w_p,0)
-	#		dbz_p_mean = np.nanmean(dbz_p,0)
+			dbz_p_mean = np.nanmean(dbz_p,0)
 			temp_p_mean = np.nanmean(temp_p,0)
 			q_p_mean = np.nanmean(q_p,0)
 			rh_p_mean = np.nanmean(rh_p,0)
@@ -460,63 +463,63 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			#Calculate upshear, downshear, right of shear, and left of shear
 			ur_p_downshear = np.concatenate((ur_p_rot[1:9,:,:],ur_p_rot[63:72,:,:]),axis=0)
 			w_p_downshear = np.concatenate((w_p_rot[1:9,:,:],w_p_rot[63:72,:,:]),axis=0)
-	#		dbz_p_downshear = np.concatenate((dbz_p_rot[1:9,:,:],dbz_p_rot[63:72,:,:]),axis=0)
+			dbz_p_downshear = np.concatenate((dbz_p_rot[1:9,:,:],dbz_p_rot[63:72,:,:]),axis=0)
 			rh_p_downshear = np.concatenate((rh_p_rot[1:9,:,:],rh_p_rot[63:72,:,:]),axis=0)
 
 			ur_p_upshear = ur_p_rot[27:45,:,:]
 			w_p_upshear = w_p_rot[27:45,:,:]
-	#		dbz_p_upshear = dbz_p_rot[27:45,:,:]
+			dbz_p_upshear = dbz_p_rot[27:45,:,:]
 			rh_p_upshear = rh_p_rot[27:45,:,:]
 
 			ur_p_leftshear = ur_p_rot[9:27,:,:]
 			w_p_leftshear = w_p_rot[9:27,:,:]
-	#		dbz_p_leftshear = dbz_p_rot[9:27,:,:]
+			dbz_p_leftshear = dbz_p_rot[9:27,:,:]
 			rh_p_leftshear = rh_p_rot[9:27,:,:]
 
 			ur_p_rightshear = ur_p_rot[45:63,:,:]
 			w_p_rightshear = w_p_rot[45:63,:,:]
-	#		dbz_p_rightshear = dbz_p_rot[45:63,:,:]
+			dbz_p_rightshear = dbz_p_rot[45:63,:,:]
 			rh_p_rightshear = rh_p_rot[45:63,:,:]
 
 			#Calculate shear-relative means
 			ur_p_downshear_mean = np.nanmean(ur_p_downshear,0)
 			w_p_downshear_mean = np.nanmean(w_p_downshear,0)
-	#		dbz_p_downshear_mean = np.nanmean(dbz_p_downshear,0)
+			dbz_p_downshear_mean = np.nanmean(dbz_p_downshear,0)
 			rh_p_downshear_mean = np.nanmean(rh_p_downshear,0)
 
 			ur_p_upshear_mean = np.nanmean(ur_p_upshear,0)
 			w_p_upshear_mean = np.nanmean(w_p_upshear,0)
-	#		dbz_p_upshear_mean = np.nanmean(dbz_p_upshear,0)
+			dbz_p_upshear_mean = np.nanmean(dbz_p_upshear,0)
 			rh_p_upshear_mean = np.nanmean(rh_p_upshear,0)
 
 			ur_p_leftshear_mean = np.nanmean(ur_p_leftshear,0)
 			w_p_leftshear_mean = np.nanmean(w_p_leftshear,0)
-	#		dbz_p_leftshear_mean = np.nanmean(dbz_p_leftshear,0)
+			dbz_p_leftshear_mean = np.nanmean(dbz_p_leftshear,0)
 			rh_p_leftshear_mean = np.nanmean(rh_p_leftshear,0)
 
 			ur_p_rightshear_mean = np.nanmean(ur_p_rightshear,0)
 			w_p_rightshear_mean = np.nanmean(w_p_rightshear,0)
-	#		dbz_p_rightshear_mean = np.nanmean(dbz_p_rightshear,0)
+			dbz_p_rightshear_mean = np.nanmean(dbz_p_rightshear,0)
 			rh_p_rightshear_mean = np.nanmean(rh_p_rightshear,0)
 
 			#Calculate wavenumber-0,1,2 fits for both rotated and non-rotated grids 
-	#		dbz_p_w0 = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-	#		dbz_p_w1 = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-	#		dbz_p_w2 = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-	#
-	#		for j in range(np.shape(r)[0]):
-	#			for k in range(zsize):
-	#				dbzdata = dbz_p[:,j,k]
-	#				fourier_dbz = np.fft.fft(dbzdata)/len(dbzdata)
-	#				amp0_dbz = np.real(fourier_dbz[0])
-	#				phase0_dbz = cmath.polar(fourier_dbz[0])[1]
-	#				A1_dbz = 2*np.real(fourier_dbz[1])
-	#				B1_dbz = -2*np.imag(fourier_dbz[1])
-	#				A2_dbz = 2*np.real(fourier_dbz[2])
-	#				B2_dbz = -2*np.imag(fourier_dbz[2])
-	#				dbz_p_w0[:,j,k] = amp0_dbz
-	#				dbz_p_w1[:,j,k] = A1_dbz*np.cos(theta) + B1_dbz*np.sin(theta)
-	#				dbz_p_w2[:,j,k] = A2_dbz*np.cos(2*theta) + B2_dbz*np.sin(2*theta)
+			dbz_p_w0 = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			dbz_p_w1 = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			dbz_p_w2 = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+	
+			for j in range(np.shape(r)[0]):
+				for k in range(zsize):
+					dbzdata = dbz_p[:,j,k]
+					fourier_dbz = np.fft.fft(dbzdata)/len(dbzdata)
+					amp0_dbz = np.real(fourier_dbz[0])
+					phase0_dbz = cmath.polar(fourier_dbz[0])[1]
+					A1_dbz = 2*np.real(fourier_dbz[1])
+					B1_dbz = -2*np.imag(fourier_dbz[1])
+					A2_dbz = 2*np.real(fourier_dbz[2])
+					B2_dbz = -2*np.imag(fourier_dbz[2])
+					dbz_p_w0[:,j,k] = amp0_dbz
+					dbz_p_w1[:,j,k] = A1_dbz*np.cos(theta) + B1_dbz*np.sin(theta)
+					dbz_p_w2[:,j,k] = A2_dbz*np.cos(2*theta) + B2_dbz*np.sin(2*theta)
 
 			vt10_p_w0 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 			vt10_p_w1 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
@@ -578,6 +581,23 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			center_z = centroid.centroid(hgt,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 			center_z_2 = centroid.centroid(wind,threshold2,1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 
+
+			#Calculate 750-hPa RMW and Average Vmax
+			rmw_mean_index = np.argmax(vt_p_mean,0)
+			rmw_mean = r[rmw_mean_index]
+			vt_p_mean_max = np.max(vt_p_mean,0)
+			rmw_750 = rmw_mean[10]
+			vt_p_mean_max_750 = vt_p_mean_max[10]
+			rmwstring = np.str(np.int(np.round(rmw_750*0.54,0)))
+			vmaxstring = np.str(np.int(np.round(vt_p_mean_max_750*1.94,0)))
+
+			u750 = uwind[:,:,10]
+			v750 = vwind[:,:,10]
+			u450 = uwind[:,:,22]
+			v450 = vwind[:,:,22]
+			wind_750 = np.hypot(uwind[:,:,10],vwind[:,:,10])
+			dbz_750 = dbz[:,:,10]
+
 			#Make Plots
 			print('Doing Plots Now')
 
@@ -606,6 +626,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			colormap_rh = matplotlib.colors.ListedColormap(color_data_rh)
 			levs_rh = np.linspace(0,100,41,endpoint=True)
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
+
+
+			color_data_wind = np.genfromtxt('/home/rthr-aoml/GPLOT/python/colormaps/colormap_wind.txt')
+			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
+			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
+			norm_wind = colors.BoundaryNorm(levs_wind,256)
 
 			#First do Azimuthal Mean Radial Wind
 			plt.figure()
@@ -677,27 +703,27 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.close()
 
 			#Next do azimuthal mean reflectivity
-#			plt.figure()
-#			plt.gcf().set_size_inches(20.5, 10.5)
-#			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.gca().invert_yaxis()
-#			plt.yscale('log')
-#			plt.grid()
-#			plt.xlim(0,rmax)
-#			plt.ylim(1000,100)
-#			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
-#			cbar.ax.tick_params(labelsize=24)
-#			ax1 = plt.axes()
-#			ax1.yaxis.set_major_formatter(ScalarFormatter())
-#			ax1.yaxis.set_minor_formatter(plt.NullFormatter())
-#			plt.xticks(np.linspace(0,rmax,11),fontsize=24)
-#			plt.yticks(np.linspace(1000,100,10),fontsize=24)
-#			plt.xlabel('Radius (km)',fontsize=24)
-#			plt.ylabel('Pressure Level (hPa)',fontsize=24)
-#			plt.title(experiment+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-#			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+stormname+stormid,fontsize=24,color='brown',loc='right')
-#			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-#			plt.close()
+			plt.figure()
+			plt.gcf().set_size_inches(20.5, 10.5)
+			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.gca().invert_yaxis()
+			plt.yscale('log')
+			plt.grid()
+			plt.xlim(0,rmax)
+			plt.ylim(1000,100)
+			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
+			cbar.ax.tick_params(labelsize=24)
+			ax1 = plt.axes()
+			ax1.yaxis.set_major_formatter(ScalarFormatter())
+			ax1.yaxis.set_minor_formatter(plt.NullFormatter())
+			plt.xticks(np.linspace(0,rmax,11),fontsize=24)
+			plt.yticks(np.linspace(1000,100,10),fontsize=24)
+			plt.xlabel('Radius (km)',fontsize=24)
+			plt.ylabel('Pressure Level (hPa)',fontsize=24)
+			plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.close()
 
 			#Next do azimuthal mean RH
 			plt.figure()
@@ -723,30 +749,30 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.close()
 
 			#Next do along-shear reflectivity
-#			plt.figure()
-#			plt.gcf().set_size_inches(20.5, 10.5)
-#			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_downshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.contourf(-r,zlevs,np.flipud(np.rot90(dbz_p_upshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.gca().invert_yaxis()
-#			plt.yscale('log')
-#			plt.grid()
-#			plt.xlim(-rmax,rmax)
-#			plt.ylim(1000,100)
-#			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
-#			cbar.ax.tick_params(labelsize=24)
-#			ax1 = plt.axes()
-#			ax1.yaxis.set_major_formatter(ScalarFormatter())
-#			ax1.yaxis.set_minor_formatter(plt.NullFormatter())
-#			plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
-#			plt.yticks(np.linspace(1000,100,10),fontsize=24)
-#			plt.xlabel('Radius (km)',fontsize=24)
-#			plt.ylabel('Pressure Level (hPa)',fontsize=24)
-#			plt.text(-rmax+50,150,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-#			plt.text(rmax-50,150,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-#			plt.title(experiment+'\n'+ r'Along-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-#			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+stormname+stormid,fontsize=24,color='brown',loc='right')
-#			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-#			plt.close()
+			plt.figure()
+			plt.gcf().set_size_inches(20.5, 10.5)
+			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_downshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.contourf(-r,zlevs,np.flipud(np.rot90(dbz_p_upshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.gca().invert_yaxis()
+			plt.yscale('log')
+			plt.grid()
+			plt.xlim(-rmax,rmax)
+			plt.ylim(1000,100)
+			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
+			cbar.ax.tick_params(labelsize=24)
+			ax1 = plt.axes()
+			ax1.yaxis.set_major_formatter(ScalarFormatter())
+			ax1.yaxis.set_minor_formatter(plt.NullFormatter())
+			plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+			plt.yticks(np.linspace(1000,100,10),fontsize=24)
+			plt.xlabel('Radius (km)',fontsize=24)
+			plt.ylabel('Pressure Level (hPa)',fontsize=24)
+			plt.text(-rmax+50,150,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
+			plt.text(rmax-50,150,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
+			plt.title(EXPT.strip()+'\n'+ r'Along-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.close()
 
 			#Next do along-shear radial wind
 			plt.figure()
@@ -827,30 +853,30 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.close()
 
 			#Next do across-shear reflectivity
-#			plt.figure()
-#			plt.gcf().set_size_inches(20.5, 10.5)
-#			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_rightshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.contourf(-r,zlevs,np.flipud(np.rot90(dbz_p_leftshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.gca().invert_yaxis()
-#			plt.yscale('log')
-#			plt.grid()
-#			plt.xlim(-rmax,rmax)
-#			plt.ylim(1000,100)
-#			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
-#			cbar.ax.tick_params(labelsize=24)
-#			ax1 = plt.axes()
-#			ax1.yaxis.set_major_formatter(ScalarFormatter())
-#			ax1.yaxis.set_minor_formatter(plt.NullFormatter())
-#			plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
-#			plt.yticks(np.linspace(1000,100,10),fontsize=24)
-#			plt.xlabel('Radius (km)',fontsize=24)
-#			plt.ylabel('Pressure Level (hPa)',fontsize=24)
-#			plt.text(-rmax+50,150,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-#			plt.text(rmax-50,150,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-#			plt.title(experiment+'\n'+ r'Across-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-#			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+stormname+stormid,fontsize=24,color='brown',loc='right')
-#			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-#			plt.close()
+			plt.figure()
+			plt.gcf().set_size_inches(20.5, 10.5)
+			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_rightshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.contourf(-r,zlevs,np.flipud(np.rot90(dbz_p_leftshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.gca().invert_yaxis()
+			plt.yscale('log')
+			plt.grid()
+			plt.xlim(-rmax,rmax)
+			plt.ylim(1000,100)
+			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
+			cbar.ax.tick_params(labelsize=24)
+			ax1 = plt.axes()
+			ax1.yaxis.set_major_formatter(ScalarFormatter())
+			ax1.yaxis.set_minor_formatter(plt.NullFormatter())
+			plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+			plt.yticks(np.linspace(1000,100,10),fontsize=24)
+			plt.xlabel('Radius (km)',fontsize=24)
+			plt.ylabel('Pressure Level (hPa)',fontsize=24)
+			plt.text(-rmax+50,150,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
+			plt.text(rmax-50,150,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
+			plt.title(EXPT.strip()+'\n'+ r'Across-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+			plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.close()
 
 			#Next do across-shear radial wind
 			plt.figure()
@@ -931,77 +957,77 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 			plt.close()
 
 			#Make a plot of wavenumber-0,1,2 components of 500-mb reflectivity
-#			plt.figure()
-#			plt.gcf().set_size_inches(15,15)
-#
-#			plt.subplot(221)
-#			plt.contourf(XI,YI,dbz_p[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.xlim(-rmax/2,rmax/2)
-#			plt.ylim(-rmax/2,rmax/2)
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
-#			cbar.ax.tick_params(labelsize=18)
-#			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.xlabel('X (km)',fontsize=20)
-#			plt.ylabel('Y (km)',fontsize=20)
-#			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			plt.grid()
-#			plt.title(experiment+'\n'+ r'WV#0,1,2 500-hPa Reflectivity ($dBZ$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
-#			plt.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
-#
-#			plt.subplot(222)
-#			plt.contourf(XI,YI,dbz_p_w0[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.xlim(-rmax/2,rmax/2)
-#			plt.ylim(-rmax/2,rmax/2)
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
-#			cbar.ax.tick_params(labelsize=18)
-#			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.xlabel('X (km)',fontsize=20)
-#			plt.ylabel('Y (km)',fontsize=20)
-#			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			plt.grid()
-#			plt.title(stormname+stormid+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
-#			plt.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
-#
-#			plt.subplot(223)
-#			plt.contourf(XI,YI,dbz_p_w1[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.xlim(-rmax/2,rmax/2)
-#			plt.ylim(-rmax/2,rmax/2)
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
-#			cbar.ax.tick_params(labelsize=18)
-#			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.xlabel('X (km)',fontsize=20)
-#			plt.ylabel('Y (km)',fontsize=20)
-#			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			plt.grid()
-#			plt.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
-#
-#			plt.subplot(224)
-#			plt.contourf(XI,YI,dbz_p_w2[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-#			plt.xlim(-rmax/2,rmax/2)
-#			plt.ylim(-rmax/2,rmax/2)
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
-#			cbar.ax.tick_params(labelsize=18)
-#			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-#			plt.xlabel('X (km)',fontsize=20)
-#			plt.ylabel('Y (km)',fontsize=20)
-#			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-#			plt.gca().set_aspect('equal', adjustable='box')
-#			plt.grid()
-#			plt.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
-#
-#			plt.gcf().savefig(ODIR+'/'+stormname.lower()+stormid.lower()+'.dbz500_wavenumber.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-#			plt.close()
+			plt.figure()
+			plt.gcf().set_size_inches(15,15)
+
+			plt.subplot(221)
+			plt.contourf(XI,YI,dbz_p[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.xlim(-rmax/2,rmax/2)
+			plt.ylim(-rmax/2,rmax/2)
+			plt.gca().set_aspect('equal', adjustable='box')
+			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
+			cbar.ax.tick_params(labelsize=18)
+			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.xlabel('X (km)',fontsize=20)
+			plt.ylabel('Y (km)',fontsize=20)
+			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.title(EXPT.strip()+'\n'+ r'WV#0,1,2 500-hPa Reflectivity ($dBZ$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+			plt.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
+
+			plt.subplot(222)
+			plt.contourf(XI,YI,dbz_p_w0[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.xlim(-rmax/2,rmax/2)
+			plt.ylim(-rmax/2,rmax/2)
+			plt.gca().set_aspect('equal', adjustable='box')
+			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
+			cbar.ax.tick_params(labelsize=18)
+			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.xlabel('X (km)',fontsize=20)
+			plt.ylabel('Y (km)',fontsize=20)
+			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+			plt.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
+
+			plt.subplot(223)
+			plt.contourf(XI,YI,dbz_p_w1[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.xlim(-rmax/2,rmax/2)
+			plt.ylim(-rmax/2,rmax/2)
+			plt.gca().set_aspect('equal', adjustable='box')
+			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
+			cbar.ax.tick_params(labelsize=18)
+			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.xlabel('X (km)',fontsize=20)
+			plt.ylabel('Y (km)',fontsize=20)
+			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
+
+			plt.subplot(224)
+			plt.contourf(XI,YI,dbz_p_w2[:,:,20],levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
+			plt.xlim(-rmax/2,rmax/2)
+			plt.ylim(-rmax/2,rmax/2)
+			plt.gca().set_aspect('equal', adjustable='box')
+			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
+			cbar.ax.tick_params(labelsize=18)
+			plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+			plt.xlabel('X (km)',fontsize=20)
+			plt.ylabel('Y (km)',fontsize=20)
+			plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz500_wavenumber.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.close()
 
 			plt.figure()
 			plt.gcf().set_size_inches(15,15)
@@ -1147,7 +1173,69 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 
 			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.vt10_wavenumber.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
 			plt.close()			
-				
+
+			#Now Make Plot for Comparison With Radar
+			plt.figure(figsize=(19.5,12))
+			plt.subplot(121)
+			plt.contourf(x_sr*0.54,y_sr*0.54,dbz_750,levs_dbz,cmap=colormap_dbz,norm=norm_dbz)
+			plt.xlim(-132,132)
+			plt.ylim(-132,132)
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black')
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.xlabel('East-West Distance (n mi)',fontsize=18)
+			plt.ylabel('North-South Distance (n mi)',fontsize=18)
+			plt.title(EXPT.strip()+'\n'+ '750-hPa Reflectivity (dbz, Shading)'+'\n'+'750-hPa Wind Barbs (kt)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+			plt.barbs(x_sr[::9]*0.54,y_sr[::9]*0.54,u750[::9,::9]*1.94,v750[::9,::9]*1.94,length=6,sizes=dict(spacing=0.15,height=0.4))
+			ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80]
+			ax = plt.gca()
+			divider = make_axes_locatable(ax)
+			cax = divider.append_axes("right", size="5%", pad=0.05)
+			cbar_l = plt.colorbar(cax=cax,ticks=ticks,norm=norm_dbz,drawedges=True)
+			cbar_l.set_ticklabels([0, 10, 20, 30, 40, 50, 60, 70, 80])
+			cbar_l.ax.tick_params(labelsize=14)
+			#cbar_l.outline.set_color('black')
+			cbar_l.outline.set_linewidth(1)
+			cbar_l.dividers.set_color('black')
+			cbar_l.dividers.set_linewidth(1)
+
+			plt.subplot(122)
+			plt.contourf(x_sr*0.54,y_sr*0.54,wind_750*1.94,levs_wind,cmap=colormap_wind,norm=norm_wind)
+			plt.xlim(-132,132)
+			plt.ylim(-132,132)
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.grid()
+			plt.xticks(np.linspace(-100,100,5),fontsize=14)
+			plt.yticks(np.linspace(-100,100,5),fontsize=14)
+			plt.xlabel('East-West Distance (n mi)',fontsize=18)
+			plt.ylabel('North-South Distance (n mi)',fontsize=18)
+			plt.title(EXPT.strip()+'\n'+'750-hPa Wind (kt, Shading)'+'\n'+'750-hPa (Black) and 450-hPa (Gray) Streamlines'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+			plt.text(-127,127,'2-km Max'+r'$\bf\overline{V}_{t}$'+' (RMW):\n'+vmaxstring+' kt ('+rmwstring+' n mi)',fontsize=14,verticalalignment='top', horizontalalignment='left',color='k',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
+			plt.text(127,127,'Shear:\n'+shearstring+' kt',fontsize=14,verticalalignment='top', horizontalalignment='right',color='blue',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
+			ticks=[7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155]
+			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u750*1.94,v750*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u450*1.94,v450*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black',zorder=10)
+			ax = plt.gca()
+			divider = make_axes_locatable(ax)
+			cax = divider.append_axes("right", size="5%", pad=0.05)
+			cbar_r = plt.colorbar(cax=cax,ticks=ticks,norm=norm_wind,drawedges=True)
+			cbar_r.set_ticklabels([7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155])
+			cbar_r.ax.tick_params(labelsize=14)
+			#cbar_r.outline.set_color('black')
+			cbar_r.outline.set_linewidth(1)
+			cbar_r.dividers.set_color('black')
+			cbar_r.dividers.set_linewidth(1)
+
+			plt.subplots_adjust(wspace=.25)
+			plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			plt.close()
 			ga('close 1')
 
 			
