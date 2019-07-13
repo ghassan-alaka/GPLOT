@@ -642,11 +642,11 @@ begin
 	end if
 	
 	; Correct LAT to be oriented the same as the file dimension.
-	if(f->$DIM$(1)-f->$DIM$(0).gt.0 .and. LAT(1)-LAT(0).lt.0)then
-		LAT = LAT(::-1)
-	else if(f->$DIM$(1)-f->$DIM$(0).lt.0 .and. LAT(1)-LAT(0).gt.0)then
-		LAT = LAT(::-1)
-	end if  end if
+	;if(f->$DIM$(1)-f->$DIM$(0).gt.0 .and. LAT(1)-LAT(0).lt.0)then
+	;	LAT = LAT(::-1)
+	;else if(f->$DIM$(1)-f->$DIM$(0).lt.0 .and. LAT(1)-LAT(0).gt.0)then
+	;	LAT = LAT(::-1)
+	;end if  end if
 	
 	; Update metadata
 	LAT@BOCO	= BDS
@@ -993,7 +993,7 @@ begin
 				end if  end if
 				ISZ	= dimsizes(tmpV1(0,:))
 				JSZ	= dimsizes(tmpV1(:,0))
-								
+				
 				if(flipFlag)then	tmpV1	:= lonFlip(tmpV1)
 							tmpV2	:= lonFlip(tmpV2)
 				end if
@@ -1010,8 +1010,8 @@ begin
 							tmpV2	:= tmpV2(0,:,:)
 				end if
 								
-				V	= (/tmpV1 - tmpV2/)
-
+				V = (/tmpV1 - tmpV2/)
+				
 				if(isfilevaratt(f,findVarName(dSource,varInfo(0),tostring(toint(lev1))),"units"))then
 					V@units = f->$findVarName(dSource,varInfo(0),tostring(toint(lev1)))$@units
 				end if

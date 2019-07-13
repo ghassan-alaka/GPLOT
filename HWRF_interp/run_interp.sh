@@ -49,8 +49,18 @@ case ${LateModel} in
           hr12Interp=HB72 ;;
   HB18)   EarlyModel=HB8I ;
           hr12Interp=HB82 ;;
+  HB19)   EarlyModel=HB9I ;
+          hr12Interp=HB92 ;;
   HWRF)   EarlyModel=HWFI ;
           hr12Interp=HWF2 ;;
+  HWRF)   EarlyModel=HWFI ;
+          hr12Interp=HWF2 ;;
+  HAFS)   EarlyModel=HAFI ;
+          hr12Interp=HAF2 ;;
+  HAFA)   EarlyModel=HFAI ;
+          hr12Interp=HFA2 ;;
+  HAFB)   EarlyModel=HFBI ;
+          hr12Interp=HFB2 ;;
      *)   echo "Input model (${LateModel}) not as expected. Exiting..." ;
           exit 1 ;;
 esac

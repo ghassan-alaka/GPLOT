@@ -8,8 +8,6 @@
                               HB17_v1_forecast,                         2017 Basin-Scale HWRF
                                HB17_v1_history,                         2017 Basin-Scale HWRF
                                   GFS_Forecast,                        Global Forecast System
-                                          H18W,                              2018 HWRF Test-W
-                                       Test.MK,                         2017 Basin-Scale HWRF
                                      fvGFS_ATL,                                   2018 hfvGFS
                                     F218_sens1,                                2018 HWRF (S1)
                                           H218,                               2018 Oper. HWRF
@@ -17,5 +15,7 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                                         GEFS01,         Global Ensemble Forecast System (#01)
                                  HWRF_Forecast,                               2019 Oper. HWRF
                                HAFS0.B_Testing,   Hurricane Analysis and Forecast System V0.B
-                              HAFS0.B_Forecast,   Hurricane Analysis and Forecast System V0.B
+                             HAFSV0.A_Forecast,   Hurricane Analysis and Forecast System V0.A
+                             HAFSV0.B_Forecast,   Hurricane Analysis and Forecast System V0.B
+                                 HB19_Forecast,                         2019 Basin-Scale HWRF
                                 ECMWF_Forecast,              ECMWF Integrated Forecast System

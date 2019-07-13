@@ -88,7 +88,7 @@ begin
 	constant@d2r	= tofloat(constant@pi/180)		; Degrees-to-Radians Conversion [rad deg-1]
 	constant@r2d	= tofloat(180./constant@pi)		; Radians-to-Degrees Conversion [deg rad-1]
 	constant@r	= tofloat(6.371e+06)			; Earth Radius [m]
-	constant@omega	= tofloat(7.27e-05)			; Earth Angular Speed [rad s-1]
+	constant@omega	= tofloat(7.27e-05)			; Earth Angular Rotation Rate [rad s-1]
 	constant@kappa	= tofloat(constant@R/constant@c_p)	; Poisson Constant [n/a]
 	constant@sigma	= tofloat(5.67e-08)			; Stefan-Boltzmann Constant [J s-1 m-2 K-4]
 	constant@rho_0	= tofloat(1.25)				; Air Density at Sea Level [kg m-3]
@@ -97,7 +97,7 @@ begin
 	constant@fval2	= toint(-2147483647)			; Missing Value for Integer [n/a]
 	constant@fval3	= tofloat(1.0e+20)			; Missing Value for Float #2 [n/a]
 	constant@fval4	= tostring("missing")			; Missing value for String [n/a]
-	constant@tunits = "hours since 1970-01-01 00:00:00"	; Solid baseline date used to convert/compare dates.
+	constant@tunits = "hours since 1970-01-01 00:00:00"	; Baseline date used for date conversions
 	
 	return(constant)
 end
@@ -834,7 +834,7 @@ begin
 	else if(var.eq."TPRCP")then	levels = (/ 0.01,  0.10,  0.25,  0.50,  0.75,  1.00, \
 						    1.25,  1.50,  1.75,  2.00,  2.50,  3.00, \
 						    4.00,  5.00,  7.00, 10.00, 15.00, 20.00, \
-						   25.00, 30.00, 25.00, 40.00, 50.00, 60.00/)
+						   25.00, 30.00, 35.00, 40.00, 50.00, 60.00/)
 					levels@stride = 1
 	
 	; For Total Precipitable Water
@@ -3131,9 +3131,9 @@ begin
                 else if(short_name.eq."RVO850_UV200")then
                         List_Title	= "850mb Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), and 200mb Wind (kt; barbs)"
                 else if(short_name.eq."UV850_MSLP")then
-                        List_Title	= "850mb Wind (kt; shaded, lines), Streamlines, MSLP (mb; centers)"
+                        List_Title	= "850mb Wind (kt; shaded, streamlines), MSLP (mb; centers)"
                 else if(short_name.eq."UV750_UV550")then
-                        List_Title	= "750mb Wind (kt; shaded, streamlines), 550mb (kt, grey streamlines)"
+                        List_Title	= "750mb Wind (kt; shaded, streamlines), 550mb Wind (kt, grey streamlines)"
                 else if(short_name.eq."RVO700_Z700_UV700")then
                         List_Title	= "700mb  Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; contours), and Wind (kt; barbs)"
                 else if(short_name.eq."RH700_UV700_MSLP")then
@@ -3161,7 +3161,7 @@ begin
                 else if(short_name.eq."MSLP")then
                         List_Title	= "Mean Sea-Level Pressure (mb; shaded, lines)"
                 else if(short_name.eq."UV10_MSLP")then
-                        List_Title	= "10m Wind (kt; shaded, lines), MSLP (mb; centers)"
+                        List_Title	= "10m Wind (kt; shaded, streamlines), MSLP (mb; centers)"
                 else if(short_name.eq."T2")then
                         List_Title	= "2m Temperature (K; shaded)"
                 else if(short_name.eq."PRCP24_MSLP")then

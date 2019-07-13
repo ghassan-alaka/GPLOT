@@ -1120,7 +1120,8 @@ do fff = 0,nFiles-1
 		DAT_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
 		W	= "w"
 		if(.not.any((/"TCCEN","TCHODO"/).eq.FNAME(ppp)))then
-			NCOL	:= 2
+			OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN
+			NCOL := 2
 			; 1) Check if the file exists. If YES, change the write option
 			;    from overwrite (w) to append (a). Check if the data for
 			;    this particular forecast hour has been written. 
@@ -1139,13 +1140,14 @@ do fff = 0,nFiles-1
 				end if  end if
 			end if
 		else
+			OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 			if(FNAME(ppp).eq."TCCEN")then		NCOL = 5
 			else if(FNAME(ppp).eq."TCHODO")then	NCOL = 4
 			end if  end if
 			; 1) Check if the file exists. If YES, change the write option
 			;    from overwrite (w) to append (a). Check if the data for
 			;    this particular forecast hour has been written. 
-			if(fileexists(DAT_FILE))then; .and. fileexists(oFile))then
+			if(fileexists(DAT_FILE) .and. fileexists(OFILE+"."+wtype))then
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
 				if(.not.FORCE)then
@@ -1815,11 +1817,11 @@ do fff = 0,nFiles-1
 				
 			if(PLOT_ON(ppp))then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
-				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
+				OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 				
 				; 5) Produce TC center fixes graphic
-				wks	= gsn_open_wks(wtype,OFILE)	
-				cmapC	:= read_colormap_file("BlAqGrYeOrReVi200")
+				wks = gsn_open_wks(wtype,OFILE)	
+				cmapC := read_colormap_file("BlAqGrYeOrReVi200")
 		
 				; Update resources
 				resC@mpMaxLonF		= tcLons(fff)+5.
@@ -2051,7 +2053,7 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
 								
 				
 				print("MSG: Producing graphic for: "+FNAME(ppp)+"_zoom")
@@ -2223,7 +2225,7 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
 				
 			end if ; PLOT_ON			
 			
@@ -2370,7 +2372,7 @@ do fff = 0,nFiles-1
 				lresH2@gsLineDashPattern= 0
 				lresH2@gsLineThicknessF	= 1.0
 						
-				plot	:= gsn_csm_blank_plot(wks,resH)
+				plot := gsn_csm_blank_plot(wks,resH)
 				
 				
 				; Retrieve viewport info from 'plot'
@@ -2479,12 +2481,12 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
 				
 				
 				print("MSG: Producing graphic for: "+FNAME(ppp)+"_zoom")
 				; For the zoomed hodograph background
-				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"_zoom."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
+				OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"_zoom."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 				HODO_ZOOM = False
 				HODO_MAX := (/5.,10.,20.,30.,50.,80./)
 				HN = 0
@@ -2612,7 +2614,7 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
 				
 			end if ; ppp
 				
@@ -2630,13 +2632,14 @@ do fff = 0,nFiles-1
 		   FHR(fff).eq.max(FHR) .and.\
 		   .not.any((/"TCCEN","TCHODO"/).eq.FNAME(ppp)))then
 			;================================================================
-			; Produce SHRD/SHRS trends for current TC
+			; Produce trends for current variable.
 			;================================================================
-				
+			print("MSG: Producing graphic for: "+FNAME(ppp))
+			
 			; These are plotting variables
 			IDATE2	:= new(nTrend,"string")
-			Vp	:= new((/nTrend,50/),"float")
-			FHR2	:= new((/nTrend,50/),"float")
+			Vp	:= new((/nTrend,100/),"float")
+			FHR2	:= new((/nTrend,100/),"float")
 					
 			; Get the data from this and previous forecasts
 			tmp	:= tochar(IDATE)
@@ -2681,38 +2684,88 @@ do fff = 0,nFiles-1
 				maxInt	:= max(Vp)
 				minInt	:= min(Vp)
 				rngInt	:= abs(maxInt-minInt)
-				dInts = (/0.001,0.005,0.01,0.05,0.1,0.25,0.50,1,2,5,10,20,30,50,75,100/)
-				dInt  = 0.
-				hh = 0
-				do while(dInt.eq.0 .and. hh.le.dimsizes(dInts))
-					if(maxInt.eq.minInt)then
-						IntMjrGrd	:= fspan(0.,1.,5)
-					else if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then
-						if((dInts(hh)*tofloat(toint((maxInt+0.10*rngInt)/dInts(hh)))).ne.0)then
-							IntMjrGrd	:= fspan(0.,dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh))),\
-										 toint((maxInt+0.20*rngInt)/dInts(hh))+1)
-						end if
-					else
-						if(dInts(hh)*tofloat(toint((minInt-0.20*rngInt)/dInts(hh))).ne.dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh)))\
-						   .and. (toint((maxInt+0.20*rngInt)/dInts(hh))-toint((minInt+0.20*rngInt)/dInts(hh))+1).ne.0)then
-							IntMjrGrd	:= fspan(dInts(hh)*tofloat(toint((minInt-0.20*rngInt)/dInts(hh))),\
-										 dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh))),\
-										 toint((maxInt+0.20*rngInt)/dInts(hh))-toint((minInt+0.20*rngInt)/dInts(hh))+1)
-						end if
-					end if  end if
-					if(.not.isvar("IntMjrGrd"))then
-						hh = hh+1
-						dInt = 0
-					else if(dimsizes(IntMjrGrd).gt.8)then; .or. dimsizes(IntMjrGrd).lt.4)then
-						hh = hh+1
-						dInt = 0
-					else
-						dInt = dInts(hh)
-					end if  end if
-				end do
-				if(hh.gt.dimsizes(dInts))then   continue   end if
+				if(maxInt.eq.minInt)then
+					IntMjrGrd := fspan(0.,1.,5)
+				else
+					dInt = 0.
+					dInt_rng = (/0.00001,0.0001,0.001,0.01,0.1,1.0,10.0,100.0,1000.0,10000.0/)
+					dInt_div = (/10.,9.,8.,7.,6.,5.,4./)
+					hhh = 0
+					do while(dInt.eq.0 .and. hhh.le.dimsizes(dInt_div)-1)
+						dInt_guess = rngInt/dInt_div(hhh)
+						
+						iii = 0
+						do while(dInt.eq.0 .and. iii.le.dimsizes(dInt_rng)-2)
+						;do iii = 0,dimsizes(dInt_rng)-2
+							;print(dInt_guess+"  "+dInt_div(hhh)+"  "+dInt_rng(iii))	
+							if(dInt_guess.ge.dInt_rng(iii) .and. dInt_guess.lt.dInt_rng(iii+1))then
+								dInt = floor(dInt_guess/dInt_rng(iii))*dInt_rng(iii)
+							end if
+							if(dInt.eq.0)then	iii = iii+1
+										continue
+							end if
+						
+							if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then
+								if((dInt*tofloat(toint((maxInt+0.10*rngInt)/dInt))).ne.0)then
+									IntMjrGrd := fspan(0.,dInt*tofloat(toint((maxInt+0.20*rngInt)/dInt)),\
+											   toint((maxInt+0.20*rngInt)/dInt)+1)
+								end if
+							else
+								if(dInt*tofloat(toint((minInt-0.20*rngInt)/dInt)).ne.dInt*tofloat(toint((maxInt+0.20*rngInt)/dInt))\
+								   .and. (toint((maxInt+0.20*rngInt)/dInt)-toint((minInt+0.20*rngInt)/dInt)+1).ne.0)then
+									IntMjrGrd := fspan(dInt*tofloat(toint((minInt-0.20*rngInt)/dInt)),\
+											   dInt*tofloat(toint((maxInt+0.20*rngInt)/dInt)),\
+											   toint((maxInt+0.20*rngInt)/dInt)-toint((minInt+0.20*rngInt)/dInt)+1)
+								end if
+							end if
+							if(.not.isvar("IntMjrGrd"))then		dInt = 0
+							else if(dimsizes(IntMjrGrd).gt.10)then	dInt = 0
+												delete(IntMjrGrd)
+							end if  end if
+							iii = iii+1
+						end do
+						hhh = hhh+1
+					end do
+				end if
+				if(dInt.eq.0)then   print("WARNING: No suitable major grid array could be found.")   end if
+				;print(IntMjrGrd)
+				;print(dInt)
+				;print(dInt_rng)
+				;exit
+						
+						
+				;dInts = (/0.001,0.005,0.01,0.05,0.1,0.25,0.50,1,2,5,10,20,30,50,75,100,200,500,1000,2000,5000/)
+				
+				;hh = 0
+				;do while(dInt.eq.0 .and. hh.lt.dimsizes(dInts))
+				;	if(maxInt.eq.minInt)then
+				;		IntMjrGrd	:= fspan(0.,1.,5)
+				;	else if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then
+				;		if((dInts(hh)*tofloat(toint((maxInt+0.10*rngInt)/dInts(hh)))).ne.0)then
+				;			IntMjrGrd	:= fspan(0.,dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh))),\
+				;						 toint((maxInt+0.20*rngInt)/dInts(hh))+1)
+				;		end if
+				;	else
+				;		if(dInts(hh)*tofloat(toint((minInt-0.20*rngInt)/dInts(hh))).ne.dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh)))\
+				;		   .and. (toint((maxInt+0.20*rngInt)/dInts(hh))-toint((minInt+0.20*rngInt)/dInts(hh))+1).ne.0)then
+				;			IntMjrGrd	:= fspan(dInts(hh)*tofloat(toint((minInt-0.20*rngInt)/dInts(hh))),\
+				;						 dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh))),\
+				;						 toint((maxInt+0.20*rngInt)/dInts(hh))-toint((minInt+0.20*rngInt)/dInts(hh))+1)
+				;		end if
+				;	end if  end if
+				;	if(.not.isvar("IntMjrGrd"))then
+				;		hh = hh+1
+				;		dInt = 0
+				;	else if(dimsizes(IntMjrGrd).gt.8)then; .or. dimsizes(IntMjrGrd).lt.4)then
+				;		hh = hh+1
+				;		dInt = 0
+				;	else
+				;		dInt = dInts(hh)
+				;	end if  end if
+				;end do
+				;if(hh.gt.dimsizes(dInts))then   continue   end if
 			end if  end if
-			myHrs	:= ispan(-24,120,12)
+			myHrs	:= ispan(-24,FNL_HR,12)
 	
 			; Set up the output file
 			OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN

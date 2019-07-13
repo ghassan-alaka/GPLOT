@@ -69,19 +69,20 @@ print("")
 
 ;================================================================
 ; PART I. Set constants. DO NOT CHANGE.
+;         Constants are defined in GPLOT_util.ncl
 ;================================================================
 
 C	= load_constants()
-g	= C@g
-pi	= C@pi
-d2r	= C@d2r
-r	= C@r
-omega	= C@omega
-ms2kts	= C@ms2kts
-fval	= C@fval
-fval2	= C@fval2
-fval3	= C@fval3
-tunits	= C@tunits
+g	= C@g			; Gravitational acceleration [m s-2]
+pi	= C@pi			; Mathematical constant
+d2r	= C@d2r			; Degrees-to-radians conversion [rad deg-1]
+r	= C@r			; Earth's radius [m]
+omega	= C@omega		; Earth's angular rotation rate [rad s-1]
+ms2kts	= C@ms2kts		; Meters-per-second-to-knots conversion [m s-1 kt-1]
+fval	= C@fval		; Missing value for float #1 [n/a]
+fval2	= C@fval2		; Missing value for integer [n/a]
+fval3	= C@fval3		; Missing value for float #2 [n/a]
+tunits	= C@tunits		; Baseline date used for date conversions
 
 
 
@@ -295,6 +296,7 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 			ODIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ODIR =")))
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
+			ODIR_ADECK = ODIR+"adeck/"
 			ODIR	= ODIR+EXPT+"/"+IDATE+"/multi_model/"
 	
 			ATCF1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_DIR =")))
@@ -317,132 +319,302 @@ end if
 
 ; 8. Get non-automated variables from master namelist
 ; a. This is the actual initial forecast hour for which graphics will be produced.
-INIT_HR	= NML_DATA(ind(isStrSubset2(NML_DATA,"INIT_HR =")))
-INIT_HR	:= str_squeeze(str_split(INIT_HR," = "))
-INIT_HR	:= toint(tofloat(INIT_HR(1)))
+;    ONLY NEEDED FOR PRINT OUT INFORMATION
+val := ind(isStrSubset2(NML_DATA,"INIT_HR ="))
+if(ismissing(val(0)))then
+	INIT_HR = fval2
+	INIT_HR@_FillValue = fval2
+else
+	INIT_HR	= NML_DATA(val(0))
+	INIT_HR	:= str_squeeze(str_split(INIT_HR," = "))
+	INIT_HR	:= toint(tofloat(INIT_HR(1)))
+end if
 
 ; b. This is the actual final forecast hour for which graphics will be produced.
 ;    Its value may change based on the availability of ATCF data.
-FNL_HR	= NML_DATA(ind(isStrSubset2(NML_DATA,"FNL_HR =")))
-FNL_HR	:= str_squeeze(str_split(FNL_HR," = "))
-FNL_HR	:= toint(tofloat(FNL_HR(1)))
-
-; c. This is the format code for the forecast hour used in the input file name
-FMT_HR	= NML_DATA(ind(isStrSubset2(NML_DATA,"FMT_HR =")))
-FMT_HR	:= str_squeeze(str_split(FMT_HR," = "))
-FMT_HR	:= FMT_HR(1)
-
-; d. This is the time step between forecast hours
-DT	= NML_DATA(ind(isStrSubset2(NML_DATA,"DT =")))
-DT	:= str_squeeze(str_split(DT," = "))
-DT	:= toint(tofloat(DT(1)))
-
-; g. If True, trim the white space from graphics.
-DO_RMWHITE	= NML_DATA(ind(isStrSubset2(NML_DATA,"DO_RMWHITE =")))
-DO_RMWHITE	:= str_squeeze(str_split(DO_RMWHITE," = "))
-DO_RMWHITE	:= where(DO_RMWHITE(1).eq."True",True,False)
-
-; h. If True, add the data source to the graphic title.
-DO_SRCLBL	= NML_DATA(ind(isStrSubset2(NML_DATA,"DO_SRCLBL =")))
-DO_SRCLBL	:= str_squeeze(str_split(DO_SRCLBL," = "))
-DO_SRCLBL	:= where(DO_SRCLBL(1).eq."True",True,False)
-
-ADECK_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ADECK_DIR =")))
-ADECK_DIR	:= str_squeeze(str_split(ADECK_DIR," = "))
-ADECK_DIR	:= ADECK_DIR(1)
-
-BDECK1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"BDECK1_DIR =")))
-BDECK1_DIR	:= str_squeeze(str_split(BDECK1_DIR," = "))
-BDECK1_DIR	:= BDECK1_DIR(1)
-
-BDECK2_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"BDECK2_DIR =")))
-BDECK2_DIR	:= str_squeeze(str_split(BDECK2_DIR," = "))
-BDECK2_DIR	:= BDECK2_DIR(1)
-
-; Get the original model code. Default is "HWRF"
-val		:= ind(isStrSubset2(NML_DATA,"MORIG ="))
+;    ONLY NEEDED FOR PRINT OUT INFORMATION
+val := ind(isStrSubset2(NML_DATA,"FNL_HR ="))
 if(ismissing(val(0)))then
-	MORIG	= "HWRF"
+	FNL_HR = fval2
+	FNL_HR@_FillValue = fval2
 else
-	MORIG	= NML_DATA(val)
-	MORIG	:= str_squeeze(str_split(MORIG," = "))
-	MORIG	:= MORIG(1)
+	FNL_HR	= NML_DATA(val(0))
+	FNL_HR	:= str_squeeze(str_split(FNL_HR," = "))
+	FNL_HR	:= toint(tofloat(FNL_HR(1)))
 end if
 
-MCODE		= NML_DATA(ind(isStrSubset2(NML_DATA,"MCODE =")))
-MCODE		:= str_squeeze(str_split(MCODE," = "))
-MCODE		:= MCODE(1)
+; c. This is the format code for the forecast hour used in the input file name
+;FMT_HR	= NML_DATA(ind(isStrSubset2(NML_DATA,"FMT_HR =")))
+;FMT_HR	:= str_squeeze(str_split(FMT_HR," = "))
+;FMT_HR	:= FMT_HR(1)
 
-MCODEI		= NML_DATA(ind(isStrSubset2(NML_DATA,"MCODEI =")))
-MCODEI		:= str_squeeze(str_split(MCODEI," = "))
-MCODEI		:= MCODEI(1)
+; d. This is the time step between forecast hours
+;DT	= NML_DATA(ind(isStrSubset2(NML_DATA,"DT =")))
+;DT	:= str_squeeze(str_split(DT," = "))
+;DT	:= toint(tofloat(DT(1)))
 
+; g. If True, trim the white space from graphics.
+val := ind(isStrSubset2(NML_DATA,"DO_RMWHITE ="))
+if(ismissing(val(0)))then
+	DO_RMWHITE = False
+else
+	DO_RMWHITE	= NML_DATA(val(0))
+	DO_RMWHITE	:= str_squeeze(str_split(DO_RMWHITE," = "))
+	DO_RMWHITE	:= where(DO_RMWHITE(1).eq."True",True,False)
+end if
+
+; h. If True, add the data source to the graphic title.
+val := ind(isStrSubset2(NML_DATA,"DO_SRCLBL ="))
+if(ismissing(val(0)))then
+	DO_SRCLBL = False
+else
+	DO_SRCLBL	= NML_DATA(val(0))
+	DO_SRCLBL	:= str_squeeze(str_split(DO_SRCLBL," = "))
+	DO_SRCLBL	:= where(DO_SRCLBL(1).eq."True",True,False)
+end if
+
+; Get the A-Deck directory
+val := ind(isStrSubset2(NML_DATA,"ADECK_DIR ="))
+if(ismissing(val(0)))then
+	ADECK_DIR = "MISSING"
+else
+	ADECK_DIR	= NML_DATA(val(0))
+	ADECK_DIR	:= str_squeeze(str_split(ADECK_DIR," = "))
+	ADECK_DIR	:= ADECK_DIR(1)
+end if
+
+; Get the B-Deck directory. Fallback to the old 'BDECK2_DIR'
+val := ind(isStrSubset2(NML_DATA,"BDECK_DIR ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"BDECK_DIR2 ="))
+end if
+if(ismissing(val(0)))then
+	BDECK_DIR = "MISSING"
+else
+	BDECK_DIR	= NML_DATA(val(0))
+	BDECK_DIR	:= str_squeeze(str_split(BDECK_DIR," = "))
+	BDECK_DIR	:= BDECK_DIR(1)
+end if
+
+; Get the actual (late) model code
+val := ind(isStrSubset2(NML_DATA,"MCODE ="))
+if(ismissing(val(0)))then
+	print("ERROR: 'MCODE' must be defined in the namelist.")
+	exit
+else
+	MCODE	= NML_DATA(val(0))
+	MCODE	:= str_squeeze(str_split(MCODE," = "))
+	MCODE	:= MCODE(1)
+end if
 if(MCODE.eq."AVNO")then    MCODEV = "GFSO"
 else			   MCODEV = MCODE
+end if
+
+; Get the early model code. If not set, interpolation will be turned off.
+val := ind(isStrSubset2(NML_DATA,"MCODEI ="))
+if(ismissing(val(0)))then
+	MCODEI = "MISSING"
+else
+	MCODEI	= NML_DATA(val(0))
+	MCODEI	:= str_squeeze(str_split(MCODEI," = "))
+	MCODEI	:= MCODEI(1)
 end if
 if(MCODEI.eq."AVNI")then   MCODEVI = "GFSI"
 else			   MCODEVI = MCODEI
 end if
 
-TRKmodels00	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKM00 =")))
-TRKmodels00	:= str_squeeze(str_split(TRKmodels00," = "))
-TRKmodels00	:= array_append_record(MCODE,TRKmodels00(1:),0)
+; Get the original model code. Default is MCODE
+val := ind(isStrSubset2(NML_DATA,"MORIG ="))
+if(ismissing(val(0)))then
+	MORIG	= MCODE
+else
+	MORIG	= NML_DATA(val(0))
+	MORIG	:= str_squeeze(str_split(MORIG," = "))
+	MORIG	:= MORIG(1)
+end if
 
-TRKmodels06	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKM06 =")))
-TRKmodels06	:= str_squeeze(str_split(TRKmodels06," = "))
-TRKmodels06	:= array_append_record(MCODE,TRKmodels06(1:),0)
+; Get the 00Z/12Z late track models
+val := ind(isStrSubset2(NML_DATA,"TRKM00 ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"TRKM ="))
+end if
+if(ismissing(val(0)))then
+	TRKmodels00	= MCODE
+else
+	TRKmodels00	= NML_DATA(val(0))
+	TRKmodels00	:= str_squeeze(str_split(TRKmodels00," = "))
+	TRKmodels00	:= array_append_record(MCODE,TRKmodels00(1:),0)
+end if
 
-INTmodels	= NML_DATA(ind(isStrSubset2(NML_DATA,"INTM =")))
-INTmodels	:= str_squeeze(str_split(INTmodels," = "))
-INTmodels	:= array_append_record(MCODE,INTmodels(1:),0)
+; Get the 06Z/18Z late track models
+val := ind(isStrSubset2(NML_DATA,"TRKM06 ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"TRKM ="))
+end if
+if(ismissing(val(0)))then
+	TRKmodels06	= MCODE
+else
+	TRKmodels06	= NML_DATA(val(0))
+	TRKmodels06	:= str_squeeze(str_split(TRKmodels06," = "))
+	TRKmodels06	:= array_append_record(MCODE,TRKmodels06(1:),0)
+end if
 
-PRSmodels	= NML_DATA(ind(isStrSubset2(NML_DATA,"PRSM =")))
-PRSmodels	:= str_squeeze(str_split(PRSmodels," = "))
-PRSmodels	:= array_append_record(MCODE,PRSmodels(1:),0)
+; Get the late intensity models
+val := ind(isStrSubset2(NML_DATA,"INTM ="))
+if(ismissing(val(0)))then
+	INTmodels	= MCODE
+else
+	INTmodels	= NML_DATA(val(0))
+	INTmodels	:= str_squeeze(str_split(INTmodels," = "))
+	INTmodels	:= array_append_record(MCODE,INTmodels(1:),0)
+end if
 
-TRKmodelsI00	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKMI00 =")))
-TRKmodelsI00	:= str_squeeze(str_split(TRKmodelsI00," = "))
-TRKmodelsI00	:= array_append_record(MCODEI,TRKmodelsI00(1:),0)
+; Get the late pressure models
+val := ind(isStrSubset2(NML_DATA,"PRSM ="))
+if(ismissing(val(0)))then
+	PRSmodels	= MCODE
+else
+	PRSmodels	= NML_DATA(val(0))
+	PRSmodels	:= str_squeeze(str_split(PRSmodels," = "))
+	PRSmodels	:= array_append_record(MCODE,PRSmodels(1:),0)
+end if
 
-TRKmodelsI06	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKMI06 =")))
-TRKmodelsI06	:= str_squeeze(str_split(TRKmodelsI06," = "))
-TRKmodelsI06	:= array_append_record(MCODEI,TRKmodelsI06(1:),0)
+; Get the 00Z/12Z early track models
+val := ind(isStrSubset2(NML_DATA,"TRKMI00 ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"TRKMI ="))
+end if
+if(ismissing(val(0)))then
+	if(MCODEI.eq."MISSING")then	TRKmodelsI00 = "MISSING"
+	else				TRKmodelsI00 = MCODEI
+	end if
+else
+	TRKmodelsI00 = NML_DATA(val(0))
+	TRKmodelsI00 := str_squeeze(str_split(TRKmodelsI00," = "))
+	if(MCODEI.eq."MISSING")then	TRKmodelsI00 := TRKmodelsI00(1:)
+	else				TRKmodelsI00 := array_append_record(MCODEI,TRKmodelsI00(1:),0)
+	end if
+end if
 
-INTmodelsI	= NML_DATA(ind(isStrSubset2(NML_DATA,"INTMI =")))
-INTmodelsI	:= str_squeeze(str_split(INTmodelsI," = "))
-INTmodelsI	:= array_append_record(MCODEI,INTmodelsI(1:),0)
+; Get the 06Z/18Z early track models
+val := ind(isStrSubset2(NML_DATA,"TRKMI06 ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"TRKMI ="))
+end if
+if(ismissing(val(0)))then
+	if(MCODEI.eq."MISSING")then	TRKmodelsI06 = "MISSING"
+	else				TRKmodelsI06 = MCODEI
+	end if
+else
+	TRKmodelsI06 = NML_DATA(val(0))
+	TRKmodelsI06 := str_squeeze(str_split(TRKmodelsI06," = "))
+	if(MCODEI.eq."MISSING")then	TRKmodelsI06 := TRKmodelsI06(1:)
+	else				TRKmodelsI06 := array_append_record(MCODEI,TRKmodelsI06(1:),0)
+	end if
+end if
 
-TRKmodelsT00	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKMT00 =")))
-TRKmodelsT00	:= str_squeeze(str_split(TRKmodelsT00," = "))
-TRKmodelsT00	:= array_append_record(MCODE,TRKmodelsT00(1:),0)
+; Get the early intensity models
+val := ind(isStrSubset2(NML_DATA,"INTMI ="))
+if(ismissing(val(0)))then
+	if(MCODEI.eq."MISSING")then	INTmodelsI = "MISSING"
+	else				INTmodelsI = MCODEI
+	end if
+else
+	INTmodelsI = NML_DATA(val(0))
+	INTmodelsI := str_squeeze(str_split(INTmodelsI," = "))
+	if(MCODEI.eq."MISSING")then	INTmodelsI := INTmodelsI(1:)
+	else				INTmodelsI := array_append_record(MCODEI,INTmodelsI(1:),0)
+	end if
+end if
 
-TRKmodelsT06	= NML_DATA(ind(isStrSubset2(NML_DATA,"TRKMT06 =")))
-TRKmodelsT06	:= str_squeeze(str_split(TRKmodelsT06," = "))
-TRKmodelsT06	:= array_append_record(MCODE,TRKmodelsT06(1:),0)
+; Get the 00Z/12Z late track trend models
+val := ind(isStrSubset2(NML_DATA,"TRKMT00 ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"TRKMT ="))
+end if
+if(ismissing(val(0)))then
+	TRKmodelsT00	= MCODE
+else
+	TRKmodelsT00	= NML_DATA(val(0))
+	TRKmodelsT00	:= str_squeeze(str_split(TRKmodelsT00," = "))
+	TRKmodelsT00	:= array_append_record(MCODE,TRKmodelsT00(1:),0)
+end if
 
-INTmodelsT	= NML_DATA(ind(isStrSubset2(NML_DATA,"INTMT =")))
-INTmodelsT	:= str_squeeze(str_split(INTmodelsT," = "))
-INTmodelsT	:= array_append_record(MCODE,INTmodelsT(1:),0)
+; Get the 06Z/18Z late track trend models
+val := ind(isStrSubset2(NML_DATA,"TRKMT06 ="))
+if(ismissing(val(0)))then
+	val := ind(isStrSubset2(NML_DATA,"TRKMT ="))
+end if
+if(ismissing(val(0)))then
+	TRKmodelsT06	= MCODE
+else
+	TRKmodelsT06	= NML_DATA(val(0))
+	TRKmodelsT06	:= str_squeeze(str_split(TRKmodelsT06," = "))
+	TRKmodelsT06	:= array_append_record(MCODE,TRKmodelsT06(1:),0)
+end if
 
-etModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"ETM =")))
-etModels	:= str_squeeze(str_split(etModels," = "))
-etModels	:= array_append_record(MCODEVI,etModels(1:),0)
+; Get the late intensity trend models
+val := ind(isStrSubset2(NML_DATA,"INTMT ="))
+if(ismissing(val(0)))then
+	INTmodelsT	= MCODE
+else
+	INTmodelsT	= NML_DATA(val(0))
+	INTmodelsT	:= str_squeeze(str_split(INTmodelsT," = "))
+	INTmodelsT	:= array_append_record(MCODE,INTmodelsT(1:),0)
+end if
 
-eiModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"EIM =")))
-eiModels	:= str_squeeze(str_split(eiModels," = "))
-eiModels	:= array_append_record(MCODEVI,eiModels(1:),0)
+; Get the early track models for verification
+val := ind(isStrSubset2(NML_DATA,"ETM ="))
+if(ismissing(val(0)))then
+	if(MCODEI.eq."MISSING")then	etModels = "MISSING"
+	else				etModels = MCODEVI
+	end if
+else
+	etModels = NML_DATA(val(0))
+	etModels := str_squeeze(str_split(etModels," = "))
+	if(MCODEI.eq."MISSING")then	etModels := etModels(1:)
+	else				etModels := array_append_record(MCODEVI,etModels(1:),0)
+	end if
+end if
 
-ltModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"LTM =")))
-ltModels	:= str_squeeze(str_split(ltModels," = "))
-ltModels	:= array_append_record(MCODEV,ltModels(1:),0)
+; Get the early intensity models for verification
+val := ind(isStrSubset2(NML_DATA,"EIM ="))
+if(ismissing(val(0)))then
+	if(MCODEI.eq."MISSING")then	eiModels = "MISSING"
+	else				eiModels = MCODEVI
+	end if
+else
+	eiModels = NML_DATA(val(0))
+	eiModels := str_squeeze(str_split(eiModels," = "))
+	if(MCODEI.eq."MISSING")then	eiModels := eiModels(1:)
+	else				eiModels := array_append_record(MCODEVI,eiModels(1:),0)
+	end if
+end if
 
-liModels	= NML_DATA(ind(isStrSubset2(NML_DATA,"LIM =")))
-liModels	:= str_squeeze(str_split(liModels," = "))
-liModels	:= array_append_record(MCODEV,liModels(1:),0)
+; Get the late track models for verification
+val := ind(isStrSubset2(NML_DATA,"LTM ="))
+if(ismissing(val(0)))then
+	ltModels = MCODEV
+else
+	ltModels = NML_DATA(val(0))
+	ltModels := str_squeeze(str_split(ltModels," = "))
+	ltModels := array_append_record(MCODEV,ltModels(1:),0)
+end if
 
+; Get the late intensity models for verification
+val := ind(isStrSubset2(NML_DATA,"LIM ="))
+if(ismissing(val(0)))then
+	liModels = MCODEV
+else
+	liModels = NML_DATA(val(0))
+	liModels := str_squeeze(str_split(liModels," = "))
+	liModels := array_append_record(MCODEV,liModels(1:),0)
+end if
+
+; Get the lead times for X-axis tick marks and verification.
 val := ind(isStrSubset2(NML_DATA,"LEAD_TIMES ="))
 if(ismissing(val(0)))then
-	LEAD_TIMES = ispan(0,120,12)
+	LEAD_TIMES = ispan(0,168,12)
 else
 	LEAD_TIMES	= NML_DATA(val(0))
 	LEAD_TIMES	:= str_squeeze(str_split(LEAD_TIMES,"="))
@@ -450,6 +622,7 @@ else
 	LEAD_TIMES	:= toint(str_split(LEAD_TIMES," "))
 end if
 
+; Get the number of forecasts to include in trend graphics.
 val := ind(isStrSubset2(NML_DATA,"NTREND ="))
 if(ismissing(val(0)))then
 	nTrend = 6
@@ -479,8 +652,8 @@ print("MSG:   Input Directory:    "+IDIR)
 print("MSG:   Output Directory:   "+ODIR)
 print("MSG:   System Environment: "+SYS_ENV)
 print("MSG:   Initial/Final Hour: "+INIT_HR+"/"+FNL_HR)
-print("MSG:   Hour Format:        "+FMT_HR)
-print("MSG:   Time Step [h]:      "+DT)
+;print("MSG:   Hour Format:        "+FMT_HR)
+;print("MSG:   Time Step [h]:      "+DT)
 print("MSG:   Final ATCF Path:    "+ATCF2_DIR)
 print("MSG:   Final ATCF Tag:     "+ATCF2_TAG)
 if(ATCF1_DIR.ne.ATCF2_DIR .and. ATCF1_TAG.ne.ATCF2_TAG)then
@@ -488,8 +661,7 @@ if(ATCF1_DIR.ne.ATCF2_DIR .and. ATCF1_TAG.ne.ATCF2_TAG)then
 	print("MSG:   Temp. ATCF Tag:      "+ATCF1_TAG)
 end if
 print("MSG:   ADECK Directory:    "+ADECK_DIR)
-print("MSG:   BDECK Directory 1:  "+BDECK1_DIR)
-print("MSG:   BDECK Directory 2:  "+BDECK2_DIR)
+print("MSG:   BDECK Directory:    "+BDECK_DIR)
 if(DO_RMWHITE)then	print("MSG:   Trim graphics:      ON")
 else			print("MSG:   Trim graphics:      OFF")
 end if
@@ -523,6 +695,7 @@ print("MSG:   liModels:           "+stringOut(liModels))
 ; 2. Make the Output Directory (ODIR)
 ;    It should already exist, so this is a safety check.
 system("mkdir -p "+ODIR)
+system("mkdir -p "+ODIR_ADECK)
 
 
 MAX_FHR = 180
@@ -788,7 +961,7 @@ end if
 
 
 ;================================================================
-; USER INPUT SECTION.
+; ADDITIONAL CONFIGURATION OPTIONS
 ;================================================================
 
 ; Add a lat/lon grid on map plots
@@ -852,8 +1025,12 @@ INTERP_HOME = GPLOT_DIR+"/HWRF_interp/"
 INTERP_EXE = "run_interp.sh"
 
 
-; Option to do interpolation. Should be set to True unless testing
-DO_INTERP = True
+; Option to do interpolation. If 'MCODEI' is undefined, then
+; don't do interpolation. Otherwise, the default is to do
+; the interpolation.
+if(MCODEI.eq."MISSING")then	DO_INTERP = False
+else				DO_INTERP = True
+end if
 
 
 
@@ -944,6 +1121,7 @@ BASIN1	:= tostring(tmp(dimsizes(tmp)-1))
 if(BASIN1.eq."l")then   BASIN2 = "al"   end if
 if(BASIN1.eq."e")then   BASIN2 = "ep"   end if
 if(BASIN1.eq."c")then   BASIN2 = "cp"   end if
+if(BASIN1.eq."w")then   BASIN2 = "wp"   end if
 if(.not.isvar("BASIN2"))then
 	print("ERROR: Two-character basin could not be defined.")
 	exit
@@ -954,11 +1132,12 @@ ADECK	= "a"+SID2+".dat"
 ADECK_M = "a"+SID2+"_"+str_lower(MCODE)+".dat"
 ADECK_I = "a"+SID2+"_"+str_lower(MCODEI)+".dat"
 ADECK_N = "a"+SID2+"_new.dat"
+ADECK_T = "a"+SID2+"_tmp.dat"
 
 
 ; Verification is not performed for invests because NHC rules ignore them.
 if(toint(TC_NUM).gt.50)then
-	print("MSG:  Verification turned OFF since this is an invest.")
+	print("MSG: Verification turned OFF because this is an invest.")
 	DO_VERIFICATION = False
 else
 	DO_VERIFICATION = True
@@ -976,6 +1155,25 @@ else					TRKmodels  := TRKmodels00
 					TRKmodelsI := TRKmodelsI00
 					TRKmodelsT := TRKmodelsT00
 end if  end if
+
+
+; Update graphical products options based on what models were found.
+if(TRKmodelsI(0).eq."MISSING" .and. DO_ET_GUIDE)then
+	print("WARNING: Early track guidance turned OFF because no track models were found.")
+	DO_ET_GUIDE = False
+end if
+if(INTmodelsI(0).eq."MISSING" .and. DO_EI_GUIDE)then
+	print("WARNING: Early intensity guidance turned OFF because no intensity models were found.")
+	DO_EI_GUIDE = False
+end if
+if(etModels(0).eq."MISSING" .and. DO_ET_VER)then
+	print("WARNING: Early track verification turned OFF because no track models were found.")
+	DO_ET_VER = False
+end if
+if(eiModels(0).eq."MISSING" .and. DO_EI_VER)then
+	print("WARNING: Early intensity verification turned OFF because no intensity models were found.")
+	DO_EI_VER = False
+end if
 
 
 
@@ -1071,19 +1269,18 @@ test := systemfunc("ls "+ATCF2_DIR+"*"+str_lower(SID)+"*"+ATCF2_TAG+" 2>/dev/nul
 if(.not.ismissing(test(0)))then
 	system(ADECK_EXE+" "+ADIR+" "+ATCF_DIR+"*"+str_lower(SID)+"* >/dev/null 2>&1")
 	system("mv "+ADIR+ADECK+" "+ADIR+ADECK_M)
-	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"tmp.dat")
-	system("mv "+ADIR+"tmp.dat "+ADIR+ADECK_M)
+	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_M)
+	system("mv "+ADIR+"TMP."+ADECK_M+" "+ADIR+ADECK_M)
 else
 	system("cp "+ATCF_FILE+" "+ADIR+ADECK_M)
 end if
 
 
 ; If the original model code and the new model code do not match, update the ATCF
-if(MORIG.ne.MCODE)then
-	system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M)
-end if
+if(MORIG.ne.MCODE)then   system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M)   end if
 
 
+; Merge the NHC ADECK file, if available
 if(fileexists(ADECK_DIR+ADECK))then
 	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+ADECK)
 	system("cp "+ADECK_DIR+ADECK+" "+ADIR+ADECK)
@@ -1098,22 +1295,34 @@ else
 end if  end if
 
 
-print("MSG: Copy latest BDECK")
-if(fileexists(BDECK1_DIR+BDECK))then
-	print("MSG: NHC B-DECK found --> "+BDECK1_DIR+BDECK)
-	system("cp "+BDECK1_DIR+BDECK+" "+ADIR+BDECK)
-	sleep(5)
-else if(fileexists(BDECK2_DIR+BDECK))then
-	print("MSG: NHC B-DECK found --> "+BDECK2_DIR+BDECK)
-	system("cp "+BDECK2_DIR+BDECK+" "+ADIR+BDECK)
+; Merge the existing ADECK file, if available
+if(fileexists(ODIR_ADECK+ADECK_N))then
+	print("MSG: Existing A-DECK found in the GPLOT output directory --> "+ODIR_ADECK+ADECK_N)
+	system("cp "+ODIR_ADECK+ADECK_N+" "+ADIR+ADECK_T)
+	system("awk '!(/"+MCODE+"/ && /"+IDATE+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
+	system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
+	if(MCODEI.ne."MISSING")then
+		system("awk '!(/"+MCODEI+"/ && /"+IDATE06+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
+		system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
+	end if
+	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
+	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+end if
+
+
+print("MSG: Copy latest B-DECK")
+if(fileexists(BDECK_DIR+BDECK))then
+	print("MSG: NHC B-DECK found --> "+BDECK_DIR+BDECK)
+	system("cp "+BDECK_DIR+BDECK+" "+ADIR+BDECK)
 	sleep(5)
 else if(fileexists(ADIR+BDECK))then
 	print("MSG: NHC B-DECK found in working directory --> "+ADIR+BDECK)
 else
 	print("WARNING: NHC B-DECK file not found.")
-	print("WARNING: Verification turned OFF.")
+	print("WARNING: Verification turned OFF. Interpolation turned OFF.")
 	DO_VERIFICATION = False
-end if  end if  end if
+	DO_INTERP = False
+end if  end if
 
 
 
@@ -1140,10 +1349,11 @@ if(DO_INTERP)then
 
 	; Run the interpolation executable to produce early forecasts.
 	INTERP_EXE = INTERP_RUN+INTERP_EXE
+	print(BASIN2+"  "+YYYY+"  "+TC_NUM)
 	system(INTERP_EXE+" "+MCODE+" "+str_get_dq()+INTERP_RUN+str_get_dq()+" "+str_get_dq()+INTERP_DIR+str_get_dq()+" "+str_get_dq()+"_new"+str_get_dq()+" "+BASIN2+" "+YYYY+" "+TC_NUM)
 	system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
-	       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"tmp.dat")
-	system("mv "+ADIR+"tmp.dat "+ADIR+ADECK_N)
+	       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
+	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 	system("sed '/"+MCODEI+"/p' "+INTERP_FILE+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_I)
 
 	; Remove interpolation directories as they are no longer needed.
@@ -1151,6 +1361,36 @@ if(DO_INTERP)then
 	system("rm -rf "+INTERP_RUN)
 
 end if
+
+
+
+
+;================================================================
+; Copy the new ADECK to a common GPLOT path (ODIR_ADECK).
+; Because multiple jobs might try to access this ADECK at the
+; same time, check for a lock file. If the lock file exists, then
+; wait until it is deleted by another job. Once the coast is
+; clear, create a new lock file, merge/copy the new ADECK into
+; the common GPLOT path. Then, delete the lock file so other jobs
+; may proceed.
+;================================================================
+LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
+do while(fileexists(LOCK_FILE))
+	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 10 seconds...")
+	sleep(10)
+	LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
+	if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
+end do
+
+system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
+if(fileexists(ODIR_ADECK+ADECK_N))then
+	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
+	system("mv "+ODIR_ADECK+"TMP."+ADECK_N+" "+ODIR_ADECK+ADECK_N)
+else
+	
+	system("cp "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N)
+end if
+system("rm -f "+LOCK_FILE)
 
 
 
@@ -1712,6 +1952,7 @@ if(DO_LT_GUIDE)then
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
+		DO_LT_GUIDE = False
 	end if
 	
 
@@ -1770,10 +2011,10 @@ if(DO_LT_GUIDE)then
 
 
 		; Plot a blank map
-		plot	:= gsn_csm_map_ce(wks,mpres1a)
-		dum1	:= new(dimsizes(TRKmodels)+1,"graphic")
-		dum2	:= new(dimsizes(TRKmodels)+1,"graphic")
-		dum3	:= new((/dimsizes(TRKmodels)+1,50/),"graphic")
+		plot := gsn_csm_map_ce(wks,mpres1a)
+		dum1 := new(dimsizes(TRKmodels)+1,"graphic")
+		dum2 := new(dimsizes(TRKmodels)+1,"graphic")
+		dum3 := new((/dimsizes(TRKmodels)+1,50/),"graphic")
 
 
 		; Info about plot size
@@ -1785,6 +2026,10 @@ if(DO_LT_GUIDE)then
 		end getvalues
 		vpRGT = vpLFT+vpWID
 		vpBOT = vpTOP-vpHGT
+		
+		
+		; Determine how to use space on top of graphic
+		vpHEAD = 0.0125+0.02*tofloat((dimsizes(TRKmodels)-1)/4)
 
 
 		; Add best track
@@ -1814,15 +2059,15 @@ if(DO_LT_GUIDE)then
 		mkres1a@gsMarkerThicknessF	= 3.0
 		txares1a@txFontColor		= "black"
 		txares1a@txFontHeightF		= 0.009
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+0.0525,mkres1a)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+0.0525,vpTOP+0.0525/),plres1a)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+0.0525,txares1a)
+		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres1a)
+		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres1a)
+		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txares1a)
 
 
 		; Add model tracks
 		do ppp = 0,dimsizes(TRKmodels)-1
 			ppp2 = dimsizes(TRKmodels)-1-ppp
-			if(all(ismissing(aTRK(ppp2,0,:))))then	print("WARNING: "+TRKmodels(ppp)+" track is unavailable for "+IDATE+".")
+			if(all(ismissing(aTRK(ppp2,0,:))))then	print("WARNING: "+TRKmodels(ppp2)+" track is unavailable for "+IDATE+".")
 								continue
 			end if
 	
@@ -1851,10 +2096,14 @@ if(DO_LT_GUIDE)then
 			mkres1a@gsMarkerSizeF 		= 8.0
 			mkres1a@gsMarkerThicknessF 	= 3.0
 			txares1a@txFontHeightF		= 0.009
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres1a)
-			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
-					     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres1a)
-			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares1a)
+			;gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres1a)
+			;gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
+			;		     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres1a)
+			;gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares1a)
+			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres1a)
+			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
+					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres1a)
+			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txares1a)
 		end do
 
 
@@ -1862,7 +2111,7 @@ if(DO_LT_GUIDE)then
 		txares1a@txFontHeightF	= 0.015
 		txares1a@txJust		= "CenterCenter"
 		txares1a@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,0.50,0.75,txares1a)
+		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,0.50,vpTOP+vpHEAD+0.02,txares1a)
 
 		
 		; Add disclaimer
@@ -1884,6 +2133,8 @@ if(DO_LT_GUIDE)then
 end if ;DO_LT_GUIDE
 
 
+
+
 ;================================================================
 ; Produce early track guidance graphics.
 ;================================================================
@@ -1902,6 +2153,7 @@ if(DO_ET_GUIDE)then
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
+		DO_ET_GUIDE = False
 	end if
 	
 
@@ -2087,6 +2339,7 @@ if(DO_LI_GUIDE)then
 	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
 		print("WARNING: Late model intensity guidance can't be produced.")
 		DO_THIS = False
+		DO_LI_GUIDE = False
 	end if
 
 
@@ -2275,6 +2528,7 @@ if(DO_EI_GUIDE)then
 	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
 		print("WARNING: Early model intensity guidance can't be produced.")
 		DO_THIS = False
+		DO_EI_GUIDE = False
 	end if
 
 
@@ -2462,6 +2716,7 @@ if(DO_LP_GUIDE)then
 	if(ismissing(maxPrs) .or. ismissing(minPrs) .or. maxPrs.eq.minPrs)then
 		print("WARNING: Late model pressure guidance can't be produced.")
 		DO_THIS = False
+		DO_LP_GUIDE = False
 	end if
 
 
@@ -2675,6 +2930,7 @@ if(DO_LT_TREND)then
 
 
 	; Loop over selected models to produce 6-cycle trends & lifetime track maps
+	DO_LT_TREND = False
 	do mmm = 0,dimsizes(TRKmodelsT)-1
 
 		thisModel = TRKmodelsT(mmm)
@@ -2854,6 +3110,11 @@ if(DO_LT_TREND)then
 	
 		; Remove white space on plot
 		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		
+		
+		; Mark that a trend graphic has been produced
+		DO_LT_TREND = True
+		
 	
 
 
@@ -2861,7 +3122,7 @@ if(DO_LT_TREND)then
 		; Eventually make this its own option
 		print("MSG: Producing graphic for "+thisModel+" lifetime track.")
 	
-		if(all(ismissing(aTRK3(mmm,:,0,:))))then	print("WARNING: "+INTmodelsT(mmm)+" track is unavailable for any cycles.")
+		if(all(ismissing(aTRK3(mmm,:,0,:))))then	print("WARNING: "+TRKmodelsT(mmm)+" track is unavailable for any cycles.")
 								continue
 		end if
 
@@ -3114,6 +3375,7 @@ if(DO_LI_TREND)then
 	txbres5b = txbres
 
 
+	DO_LI_TREND = False
 	do mmm = 0,dimsizes(INTmodelsT)-1
 
 		; Define the current intensity trend model as 'thisModel'
@@ -3293,6 +3555,9 @@ if(DO_LI_TREND)then
 
 		; Remove white space from graphic
 		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		
+		; Mark that a trend graphic has been produced
+		DO_LI_TREND = True
 	
 
 
@@ -3526,6 +3791,7 @@ if(DO_LP_TREND)then
 	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
 		print("WARNING: Early model intensity guidance can't be produced.")
 		DO_THIS = False
+		DO_LP_TREND = False
 	end if
 	
 

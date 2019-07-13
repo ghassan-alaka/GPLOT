@@ -33,7 +33,9 @@ EGRR,              EGRR: UKMet,  3,           violetred,                        
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
 F218,    F218: 2018 HWRF-Gopal,  7,               brown,                               2018 HWRF-Gopal
 F18I,       F18I: Interp. F218,  7,               brown,                       2018 HWRF-Gopal (Early)
-HAFS,          HAFS: HAFS V0.B,  7,          aquamarine,   Hurricane Analysis and Forecast System V0.B
-HAFI,     HAFI: Interp. HAFS-B,  7,          aquamarine,                             HAFS V0.B (Early)
+HAFA,          HAFA: HAFS V0.A,  7,          aquamarine,   Hurricane Analysis and Forecast System V0.A
+HFAI,     HFAI: Interp. HAFS-A,  7,          aquamarine,                             HAFS V0.A (Early)
+HAFB,          HAFB: HAFS V0.B,  7,          aquamarine,   Hurricane Analysis and Forecast System V0.B
+HFBI,     HFBI: Interp. HAFS-B,  7,          aquamarine,                             HAFS V0.B (Early)
 HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                         2019 Basin-Scale HWRF
 HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)

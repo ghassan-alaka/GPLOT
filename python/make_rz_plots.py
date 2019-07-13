@@ -85,20 +85,8 @@ ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+DOMAIN.strip()+'.'+TIER.strip()+'
 STATUS_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
 
-#Define information needed for case
-#GJA - Don't do this anymore. Read the list of unplotted files
-#GJA - Then, read the corresponding ATCF.
-#GJA - Then, loop and use Andy's methodology.
-#nput_file = '/mnt/lfs3/projects/hur-aoml/Andrew.Hazelton/test_gplot_hafs/tempdir/python_input_file_temp_irma11l_2017090506_hafsprs.synoptic.0p03'
-#nput_data = np.genfromtxt(input_file,dtype='str')
 
 #Get parameters from input file
-#experiment = EXPT[0]
-#stormname = input_data[1].capitalize()
-#datadir = input_data[2]
-#tempdir = input_data[3]
-#trackfile = input_data[4]
-#modeltag = input_data[6]
 resolution = np.float(RESOLUTION)
 rmax = np.float(RMAX)
 zsize = np.int(LEVS)
@@ -106,51 +94,43 @@ zsize = np.int(LEVS)
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
 print(str(ATCF_LIST))
-print(SID)
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
 	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
 else:
 	ATCF = ATCF_LIST
-print(ATCF)
-#LONGSID = subprocess.run(['echo',str(ATCF_FILE),'|','rev','|','cut','-d"/"','-f1','|','rev','|','cut','-d"."','-f1'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+print('MSG: Found this ATCF --> '+str(ATCF))
 LONGSID = str(ATCF).split('/')[-1].split('.')[0]
-print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
+#print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
 TCNAME = LONGSID[::-1]
 TCNAME = TCNAME[3:]
 TCNAME = TCNAME[::-1]
-#print(TCNAME)
 SNUM = LONGSID[::-1]
 SNUM = SNUM[1:3]
 SNUM = SNUM[::-1]
-#print(SNUM)
 BASINID = LONGSID[::-1]
 BASINID = BASINID[0]
-#print(BASINID)
 ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
 ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
-#print(str(ATCF_DATA))
 
 
 # Get the list of unplotted files
-UNPLOTTED_LIST = np.genfromtxt(UNPLOTTED_FILE,dtype='str')
+UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
-#if len(UNPLOTTED_FILES) > 1:
-	
-#print(UNPLOTTED_FILES)
-
-
-# Get the list of forecast hours 
-FHR_LIST = [ int(x) for x in np.genfromtxt(ALLFHR_FILE,dtype='str') ]
-#print(FHRS)
+#FHR_LIST = [ int(x) for x in [np.genfromtxt(ALLFHR_FILE,dtype='str')] ]
+FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
+if (FHR_LIST.size == 1):
+	FHR_LIST = np.append(FHR_LIST,"999")
+	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
 
-#Open track file to get center information
-#trackdata = np.genfromtxt(trackfile,delimiter=',',dtype='str',autostrip='true')
-#num_lines = sum(1 for line in open(trackfile))
+for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
-for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
+	if (FILE == 'MISSING'):
+		continue
+
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
+
 	os.system('echo "working" > '+STATUS_FILE)
 
 	# Get some useful information about the file name
@@ -159,29 +139,36 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,range(UNPLOTTED_LIST.size)):
 
 	# Find the index of the forecast lead time in the ATCF file.
 	FHR = int(FHR_LIST[fff])
-	#print(FHR)
-	#FHRIND = [i for i, s in enumerate(trackdata) if str(SID) in s][0]
-	#print(ATCF_DATA[:,5])
 	FHRIND = [i for i, s in enumerate(ATCF_DATA[:,5]) if int(s)==FHR]
-	#print(list(FHRIND))
-	#sys.exit()
 
 	# Get coordinate information from ATCF
 	lonstr = ATCF_DATA[list(FHRIND),7][0]
+	lonstr1 = lonstr[::-1]
+	lonstr1 = lonstr1[1:]
+	lonstr1 = lonstr1[::-1]
+	lonstr2 = lonstr[::-1]
+	lonstr2 = lonstr2[0]
+	if (lonstr2 == 'W'):
+		centerlon = 360-float(lonstr1)/10
+	else:
+		centerlon = float(lonstr1)/10
 	latstr = ATCF_DATA[list(FHRIND),6][0]
-	centerlon = 360-(np.char.strip(lonstr,'W').astype(np.float)/10)
-	centerlat = np.char.strip(latstr,'N').astype(np.float)/10
-	#stormbasin = ATCF_DATA[list(FHRIND),0]
-	#stormnum = ATCF_DATA[list(FHRIND),1]
-	#if (stormbasin == 'AL'):
-	#	stormid = stormnum+stormbasin[1]
-	#if (stormbasin == 'EP'):
-	#	stormid = stormnum+stormbasin[0]
+	latstr1 = latstr[::-1]
+	latstr1 = latstr1[1:]
+	latstr1 = latstr1[::-1]
+	latstr2 = latstr[::-1]
+	latstr2 = latstr2[0]
+	if (latstr2 == 'N'):
+		centerlat = float(latstr1)/10
+	else:
+		centerlat = -1*float(latstr1)/10
+	#centerlon = 360-(np.char.strip(lonstr,'W').astype(np.float)/10)
+	#centerlat = np.char.strip(latstr,'N').astype(np.float)/10
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
-	#format(FHR,'03d') = ATCF_DATA[list(FHRIND),5]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
-
+	print(str(centerlon)+'  '+str(centerlat))
+	exit
 
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}.png")])[0]
 	if (figuretest < 1):

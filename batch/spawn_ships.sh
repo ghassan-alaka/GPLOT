@@ -134,7 +134,7 @@ cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -d ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
+    CYCLES=( `ls -rd ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
 else
     CYCLES=( "${IDATE[@]}" )
 fi
@@ -651,41 +651,49 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         fi
 
 
-                        # Call the batch job
+                        # Check if a similar job is already submitted
                         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
-                        LOG_DIR="$ODIR_FULL"
-                        LOGFILE="GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
-                        perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=48G/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^LOGFILE=.*/LOGFILE=\"${LOGFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^NMLIST=.*/NMLIST=\"${NMLIST}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^DOMAIN=.*/DOMAIN=\"${DMN}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^TIER=.*/TIER=\"${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^ENSID=.*/ENSID=\"${ENSID}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                        perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                        JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
+                        JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+
+                        # Change options in the batch submission script.
+                        if [ -z "$JOB_TEST" ]; then
+                            LOG_DIR="$ODIR_FULL"
+                            LOGFILE="GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                            perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=48G/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^LOGFILE=.*/LOGFILE=\"${LOGFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^NMLIST=.*/NMLIST=\"${NMLIST}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^DOMAIN=.*/DOMAIN=\"${DMN}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^TIER=.*/TIER=\"${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^ENSID=.*/ENSID=\"${ENSID}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
         
+                            # Submit the batch job.
+                            echo "Executing GPLOT batch job submission."
+                            sbatch ${BATCH_DIR}${BATCHFILE2}
 
-                        echo "Executing GPLOT batch job submission."
-                        sbatch ${BATCH_DIR}${BATCHFILE2}
+                            # Increase the batch job counter and check if we're over the limit.
+                            ((N++))
+                            if [ "$N" -ge "$MAXCOUNT" ]; then
+                                echo "MSG: Maximum number of batch submissions has been reached."
+                                echo "MSG: Further jobs will be submitted later."
+                                echo "MSG: spawn_ships.sh completed at `date`"
+                                exit
+                            fi
 
-
-                        # Increase the batch job counter and check if we're over the limit.
-                        ((N++))
-                        if [ "$N" -ge "$MAXCOUNT" ]; then
-                            echo "MSG: Maximum number of batch submissions has been reached."
-                            echo "MSG: Further jobs will be submitted later."
-                            echo "MSG: spawn_ships.sh completed at `date`"
-                            exit
+                        else
+                            echo "MSG: Found matching GPLOT batch job. Skipping submission."
                         fi
 
                     done #end of ID loop

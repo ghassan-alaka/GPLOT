@@ -86,6 +86,24 @@ for YMDH in "${ALL_YMDH[@]}"; do
         continue
     fi
 
+    # Identify all unique SIDs for the given date
+    if [ "$i" -gt "0" ]; then
+        OLD_SIDS=( `awk -v YMD="${ALL_YMD[i-1]}" -v Hm="${ALL_Hm[i-1]}" '$4==YMD && $5==Hm { print $2 }' ${NEW_TCV} | sort -u`  )
+        echo "MSG: Found these old Storm IDs from ${ALL_YMDH[i-1]} --> ${OLD_SIDS[*]}"
+
+        # If no SIDs, then no comparisons to make.
+        if [ -z "${OLD_SIDS[*]}" ]; then
+            echo "MSG: No old storms to compare at ${ALL_YMDH[i-1]}."
+            OLD_SIDS=()
+        fi
+    else
+        OLD_SIDS=()
+    fi
+#echo ${ALL_SIDS[*]}
+#echo ${OLD_SIDS[*]}
+#((i++))
+#continue
+
     # Get the year
     YYYY=`echo "$YMDH" | cut -c1-4`
 
@@ -227,13 +245,105 @@ for YMDH in "${ALL_YMDH[@]}"; do
             echo "SID1=${SID1},SID2=${SID2},LON1=${LON1},LON2=${LON2},LAT1=${LAT1},LAT2=${LAT2}"
             if (( $(echo "$LATDIFF < 2.0" | bc) ))  && (( $(echo "$LONDIFF < 2.0" | bc) )); then
                 echo "WE HAVE A MATCH between $SID1 and $SID2"
-echo "Writing to this output file --> ${TMPDIR}${OFILE}"
-echo "The line will look like this:"
-echo "${BASINLONG2}${REAL_SNUM}${YYYY}     ${YYYY}     ${REAL_SID^^}     ${PRE_SID^^}"
+                echo "Writing to this output file --> ${TMPDIR}${OFILE}"
+                echo "The line will look like this:"
+                echo "${BASINLONG2}${REAL_SNUM}${YYYY}     ${YYYY}     ${REAL_SID^^}     ${PRE_SID^^}"
                 echo "${BASINLONG2}${REAL_SNUM}${YYYY}     ${YYYY}     ${REAL_SID^^}     ${PRE_SID^^}" >> ${TMPDIR}${OFILE}
             fi
 
         done
+
+        # Loop over the old Storm IDs to find a potential match.
+        for SID2 in ${OLD_SIDS[@]}; do
+
+            # Skip if SID1=SID2
+            if [ "$SID1" == "$SID2" ]; then
+                echo "MSG: Skipping because the Storm IDs match: SID1=${SID1}, SID2=${SID2}."
+                continue
+            fi
+
+            # Skip if the basins are different
+            if [ "$(echo "${SID1}" | cut -c3)" != "$(echo "${SID2}" | cut -c3)" ]; then
+                echo "MSG: Skipping because the storm ID basins are different: BASIN1=$(echo "${SID1}" | cut -c3), BASIN2=$(echo "${SID2}" | cut -c3)."
+                continue
+            fi
+
+            # Process the basin. The basins must match!
+            BASIN2="$(echo "${SID2}" | cut -c3)"
+            if [ "$BASIN1" != "$BASIN2" ]; then
+                echo "MSG: Skipping because the basins do not match: BASIN1=${BASIN1}, BASIN2=${BASIN}."
+                continue
+            fi
+            BASINLONG2=""
+            if [ "${BASIN2^^}" == "L" ]; then
+                BASINLONG2="AL"
+            elif [ "${BASIN2^^}" == "E" ]; then
+                BASINLONG2="EP"
+            elif [ "${BASIN2^^}" == "C" ]; then
+                BASINLONG2="CP"
+            elif [ "${BASIN2^^}" == "W" ]; then
+                BASINLONG2="WP"
+            fi
+
+            # Is BASINLONG2 is undefined, then the basin is not recognized. Skip.
+            if [ -z "$BASINLONG2" ]; then
+                echo "MSG: Skipping because BASINLONG2 is undefined."
+                continue
+            fi
+
+            # Define Storm Number
+            SNUM2="`echo "$SID2" | cut -c1-2`"
+
+            # Determine which storm number applies to the named tropical cyclone.
+            # Do the same for the Storm ID.
+            if [[ $((10#$SNUM1)) -lt $((10#$SNUM2)) ]]; then
+                REAL_SNUM="${SNUM1}"
+                REAL_SID="${SID1}"
+                PRE_SID="${SID2}"
+            else
+                REAL_SNUM="${SNUM2}"
+                REAL_SID="${SID2}"
+                PRE_SID="${SID1}"
+            fi
+
+
+            # Get the latitude
+            LAT2=( `awk -v YMD="${ALL_YMD[i-1]}" -v Hm="${ALL_Hm[i-1]}" -v SID="${SID2}" '$4==YMD && $5==Hm && $2==SID { print $6 }' ${NEW_TCV}` )
+            LAT2="${LAT2[0]}"
+            LAT2="`echo "${LAT2}" | cut -c1-2`.`echo "${LAT2}" | cut -c3`"
+            #f [ "$(echo "${LAT2}" | cut -c4)" == "N" ]; then
+            #   LAT2="`echo "${LAT2}" | cut -c1-2`.`echo "${LAT2}" | cut -c3`"
+            #lif [ "$(echo "${LAT2}" | cut -c4)" == "S" ]; then
+            #   LAT2="-`echo "${LAT2}" | cut -c1-2`.`echo "${LAT2}" | cut -c3`"
+            #i
+            LAT2="${LAT2#0}"
+
+            # Get the longitude
+            LON2=( `awk -v YMD="${ALL_YMD[i-1]}" -v Hm="${ALL_Hm[i-1]}" -v SID="${SID2}" '$4==YMD && $5==Hm && $2==SID { print $7 }' ${NEW_TCV}` )
+            LON2="${LON2[0]}"
+            LON2="`echo "${LON2}" | cut -c1-3`.`echo "${LON2}" | cut -c4`"
+            #f [ "$(echo "${LON2}" | cut -c5)" == "E" ]; then
+            #   LON2="`echo "${LON2}" | cut -c1-3`.`echo "${LON2}" | cut -c4`"
+            #lif [ "$(echo "${LON2}" | cut -c5)" == "W" ]; then
+            #   LON2="-`echo "${LON2}" | cut -c1-3`.`echo "${LON2}" | cut -c4`"
+            #i
+            LON2="${LON2#0}"
+
+            # Find out if there is have a match based on proximity of lat/lon coordinates
+            LATDIFF=`echo "scale=1;${LAT1}-${LAT2}" | bc | sed 's/-//'`
+            LONDIFF=`echo "scale=1;${LON1}-${LON2}" | bc | sed 's/-//'`
+            echo "MSG: LATDIFF=${LATDIFF}, LONDIFF=${LONDIFF}"
+            echo "SID1=${SID1},SID2=${SID2},LON1=${LON1},LON2=${LON2},LAT1=${LAT1},LAT2=${LAT2}"
+            if (( $(echo "$LATDIFF < 2.0" | bc) ))  && (( $(echo "$LONDIFF < 2.0" | bc) )); then
+                echo "WE HAVE A MATCH between $SID1 and $SID2"
+                echo "Writing to this output file --> ${TMPDIR}${OFILE}"
+                echo "The line will look like this:"
+                echo "${BASINLONG2}${REAL_SNUM}${YYYY}     ${YYYY}     ${REAL_SID^^}     ${PRE_SID^^}"
+                echo "${BASINLONG2}${REAL_SNUM}${YYYY}     ${YYYY}     ${REAL_SID^^}     ${PRE_SID^^}" >> ${TMPDIR}${OFILE}
+            fi
+
+        done
+
     done
 
     ((i++))
