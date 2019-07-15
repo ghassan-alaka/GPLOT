@@ -39,3 +39,5 @@ HAFB,          HAFB: HAFS V0.B,  7,          aquamarine,   Hurricane Analysis an
 HFBI,     HFBI: Interp. HAFS-B,  7,          aquamarine,                             HAFS V0.B (Early)
 HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                         2019 Basin-Scale HWRF
 HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)
+HNVI,     HNVI: 2019 HWRF-NoVI,  7,         deepskyblue,                             2019 No-V.I. HWRF
+HVII,       HVII: Interp. HNVI,  7,         deepskyblue,                     2019 No-V.I. HWRF (Early)

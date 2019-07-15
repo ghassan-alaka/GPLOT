@@ -386,7 +386,7 @@ end if
 ; Get the B-Deck directory. Fallback to the old 'BDECK2_DIR'
 val := ind(isStrSubset2(NML_DATA,"BDECK_DIR ="))
 if(ismissing(val(0)))then
-	val := ind(isStrSubset2(NML_DATA,"BDECK_DIR2 ="))
+	val := ind(isStrSubset2(NML_DATA,"BDECK2_DIR ="))
 end if
 if(ismissing(val(0)))then
 	BDECK_DIR = "MISSING"
@@ -1287,6 +1287,8 @@ if(fileexists(ADECK_DIR+ADECK))then
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
 else if(fileexists(ADIR+ADECK))then
 	print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK)
+	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK+" > "+ADIR+"TMP."+ADECK)
+	system("mv "+ADIR+"TMP."+ADECK+" > "+ADIR+ADECK)
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
 else
 	print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+ADECK)
@@ -1298,7 +1300,7 @@ end if  end if
 ; Merge the existing ADECK file, if available
 if(fileexists(ODIR_ADECK+ADECK_N))then
 	print("MSG: Existing A-DECK found in the GPLOT output directory --> "+ODIR_ADECK+ADECK_N)
-	system("cp "+ODIR_ADECK+ADECK_N+" "+ADIR+ADECK_T)
+	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+ADECK_N+" > "+ADIR+ADECK_T)
 	system("awk '!(/"+MCODE+"/ && /"+IDATE+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
 	system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
 	if(MCODEI.ne."MISSING")then
@@ -1308,6 +1310,11 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
 	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 end if
+
+
+; Make sure only forecasts through the current time are included.
+; This is tricky to implement because of early vs. late cycles.
+;systemfunc("awk '$3 <= "
 
 
 print("MSG: Copy latest B-DECK")
@@ -1385,10 +1392,12 @@ end do
 system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
 if(fileexists(ODIR_ADECK+ADECK_N))then
 	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
-	system("mv "+ODIR_ADECK+"TMP."+ADECK_N+" "+ODIR_ADECK+ADECK_N)
+	system("rm -f "+ODIR_ADECK+ADECK_N)
+	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+"TMP."+ADECK_N+" > "+ODIR_ADECK+ADECK_N)
+	system("rm -f "+ODIR_ADECK+"TMP."+ADECK_N)
 else
 	
-	system("cp "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N)
+	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK_N+" > "+ODIR_ADECK+ADECK_N)
 end if
 system("rm -f "+LOCK_FILE)
 
@@ -1820,6 +1829,7 @@ do ddd = 0,dimsizes(allDates)-1
 		if(any((/"HU","TS","TD","SS","SD"/).eq.bCLAS3(ddd)))then   TC_FOUND = True   end if
 	end if
 end do
+
 
 ; Turn off verification is no TC cycles were found.
 if(.not.TC_FOUND)then
@@ -3296,7 +3306,7 @@ if(DO_LT_TREND)then
 		txares4b@txJust		= "CenterRight"
 		gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+")",vpRGT,vpTOP+0.01,txares4b)
 		txares4b@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,sprinti("%0.2i",dimsizes(allDates))+" Forecasts thru "+IDATE,vpLFT,vpTOP+0.01,txares4b)
+		gsn_text_ndc(wks,sprinti("%0.2i",dimsizes(ind(.not.ismissing(aTRK3(mmm,:,0,0)))))+" Forecasts thru "+IDATE,vpLFT,vpTOP+0.01,txares4b)
 	
 		; Add disclaimer
 		xloc = mpres4b@mpMinLonF + 0.02*(mpres4b@mpMaxLonF-mpres4b@mpMinLonF)

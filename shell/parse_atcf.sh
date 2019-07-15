@@ -104,7 +104,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Second, try to get the TC name from the Best Track entry in the B-Deck
             if [ -z "$TCNAME" ]; then
                 # Check that the B-Deck is available
-                BDECK=${BDECKDIR}b${BASIN}${SID}${YEAR}.dat
+                BDECK=${BDECKDIR}b${BASIN,,}${SNUM}${YEAR}.dat
                 if [ -f ${BDECK} ]; then
                     echo "MSG: B-Deck file found --> ${BDECK}"
                     TCNAME=`awk -v CYCLE="${CYCLE}" '$3==CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | sed -e 's/^[[:space:]]*//'`

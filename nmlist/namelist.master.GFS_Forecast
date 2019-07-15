@@ -59,8 +59,7 @@ ATCF3_TAG = trak.hwrf.raw
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
-BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
+BDECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0

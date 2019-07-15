@@ -2681,15 +2681,20 @@ do fff = 0,nFiles-1
 			else if(any((/"RHLO","RHMD","RHHI"/).eq.FNAME(ppp)))then
 				IntMjrGrd := ispan(0,100,20)
 			else
-				maxInt	:= max(Vp)
-				minInt	:= min(Vp)
+				if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then	minInt = 0.
+														maxInt = ceil(max(Vp)+0.10*max(Vp))
+				else if(any((/"PENV","MSLP"/).eq.FNAME(ppp)))then				minInt = floor(min(Vp))
+														maxInt = ceil(max(Vp))
+				else										minInt = floor(min(Vp)-0.10*abs(min(Vp)))
+														maxInt = ceil(max(Vp)+0.10*abs(max(Vp)))
+				end if  end if
 				rngInt	:= abs(maxInt-minInt)
 				if(maxInt.eq.minInt)then
 					IntMjrGrd := fspan(0.,1.,5)
 				else
 					dInt = 0.
 					dInt_rng = (/0.00001,0.0001,0.001,0.01,0.1,1.0,10.0,100.0,1000.0,10000.0/)
-					dInt_div = (/10.,9.,8.,7.,6.,5.,4./)
+					dInt_div = (/10.0,9.0,8.0,7.0,6.0,5.0,4.0/)
 					hhh = 0
 					do while(dInt.eq.0 .and. hhh.le.dimsizes(dInt_div)-1)
 						dInt_guess = rngInt/dInt_div(hhh)
@@ -2704,66 +2709,29 @@ do fff = 0,nFiles-1
 							if(dInt.eq.0)then	iii = iii+1
 										continue
 							end if
-						
-							if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then
-								if((dInt*tofloat(toint((maxInt+0.10*rngInt)/dInt))).ne.0)then
-									IntMjrGrd := fspan(0.,dInt*tofloat(toint((maxInt+0.20*rngInt)/dInt)),\
-											   toint((maxInt+0.20*rngInt)/dInt)+1)
-								end if
-							else
-								if(dInt*tofloat(toint((minInt-0.20*rngInt)/dInt)).ne.dInt*tofloat(toint((maxInt+0.20*rngInt)/dInt))\
-								   .and. (toint((maxInt+0.20*rngInt)/dInt)-toint((minInt+0.20*rngInt)/dInt)+1).ne.0)then
-									IntMjrGrd := fspan(dInt*tofloat(toint((minInt-0.20*rngInt)/dInt)),\
-											   dInt*tofloat(toint((maxInt+0.20*rngInt)/dInt)),\
-											   toint((maxInt+0.20*rngInt)/dInt)-toint((minInt+0.20*rngInt)/dInt)+1)
-								end if
-							end if
-							if(.not.isvar("IntMjrGrd"))then		dInt = 0
-							else if(dimsizes(IntMjrGrd).gt.10)then	dInt = 0
+							
+							IntMjrGrd := minInt
+							do while(max(IntMjrGrd).lt.maxInt)
+								IntMjrGrd := array_append_record(IntMjrGrd,max(IntMjrGrd)+dInt,0)
+							end do
+							
+							if(dimsizes(IntMjrGrd).gt.10)then	dInt = 0
 												delete(IntMjrGrd)
-							end if  end if
+							end if
 							iii = iii+1
 						end do
 						hhh = hhh+1
 					end do
 				end if
-				if(dInt.eq.0)then   print("WARNING: No suitable major grid array could be found.")   end if
-				;print(IntMjrGrd)
+				if(dInt.eq.0 .and. .not.isvar("IntMjrGrd"))then
+					print("WARNING: No suitable major grid array could be found.")
+					IntMjrGrd = fspan(min(Vp),max(Vp),8)
+				end if
+				print(IntMjrGrd)
 				;print(dInt)
 				;print(dInt_rng)
 				;exit
-						
-						
-				;dInts = (/0.001,0.005,0.01,0.05,0.1,0.25,0.50,1,2,5,10,20,30,50,75,100,200,500,1000,2000,5000/)
-				
-				;hh = 0
-				;do while(dInt.eq.0 .and. hh.lt.dimsizes(dInts))
-				;	if(maxInt.eq.minInt)then
-				;		IntMjrGrd	:= fspan(0.,1.,5)
-				;	else if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then
-				;		if((dInts(hh)*tofloat(toint((maxInt+0.10*rngInt)/dInts(hh)))).ne.0)then
-				;			IntMjrGrd	:= fspan(0.,dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh))),\
-				;						 toint((maxInt+0.20*rngInt)/dInts(hh))+1)
-				;		end if
-				;	else
-				;		if(dInts(hh)*tofloat(toint((minInt-0.20*rngInt)/dInts(hh))).ne.dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh)))\
-				;		   .and. (toint((maxInt+0.20*rngInt)/dInts(hh))-toint((minInt+0.20*rngInt)/dInts(hh))+1).ne.0)then
-				;			IntMjrGrd	:= fspan(dInts(hh)*tofloat(toint((minInt-0.20*rngInt)/dInts(hh))),\
-				;						 dInts(hh)*tofloat(toint((maxInt+0.20*rngInt)/dInts(hh))),\
-				;						 toint((maxInt+0.20*rngInt)/dInts(hh))-toint((minInt+0.20*rngInt)/dInts(hh))+1)
-				;		end if
-				;	end if  end if
-				;	if(.not.isvar("IntMjrGrd"))then
-				;		hh = hh+1
-				;		dInt = 0
-				;	else if(dimsizes(IntMjrGrd).gt.8)then; .or. dimsizes(IntMjrGrd).lt.4)then
-				;		hh = hh+1
-				;		dInt = 0
-				;	else
-				;		dInt = dInts(hh)
-				;	end if  end if
-				;end do
-				;if(hh.gt.dimsizes(dInts))then   continue   end if
+
 			end if  end if
 			myHrs	:= ispan(-24,FNL_HR,12)
 	

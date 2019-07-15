@@ -61,6 +61,8 @@ case ${LateModel} in
           hr12Interp=HFA2 ;;
   HAFB)   EarlyModel=HFBI ;
           hr12Interp=HFB2 ;;
+  HNVI)   EarlyModel=HVII ;
+          hr12Interp=HVI2 ;;
      *)   echo "Input model (${LateModel}) not as expected. Exiting..." ;
           exit 1 ;;
 esac
