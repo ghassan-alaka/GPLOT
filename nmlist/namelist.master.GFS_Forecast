@@ -48,6 +48,7 @@ EXT = .grb2
 
 ; 1I. OUTPUT PATH
 ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
+;ODIR; = /lfs1/projects/hur-aoml/Lew.Gramer/GPLOT/
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
@@ -86,6 +87,11 @@ AUTO_DIR = False
 
 ; 1S. FORCE
 FORCE = False
+
+; 1T. BATCH SUBMISSION MODE
+;BATCH_MODE; = Foreground
+;BATCH_MODE; = Background
+BATCH_MODE = SBatch
 
 
 
@@ -149,6 +155,7 @@ NTREND = 6
 ;================================================================
 
 TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
+;TEMPDIR; = /lfs1/projects/hur-aoml/rthr-aoml/GPLOT_Lew/HB18_v3_history/tempdir
 RESOLUTION = 1.5
 RMAX = 600
 MODELTAG = hwrfprs.storm.0p015

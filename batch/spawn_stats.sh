@@ -104,6 +104,15 @@ if [ -z "$FORCE" ]; then
     FORCE="False"
 fi
 
+# Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
+BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
+if [ -z "$BATCH_MODE" ]; then
+    BATCH_MODE="SBATCH"
+    echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE[*]}"
+else
+    echo "MSG: Found a batch-submission mode in the namelist   --> ${BATCH_MODE[*]}"
+fi
+
 # Get a list of forecast lead times
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
@@ -138,6 +147,7 @@ BATCHFILE2="batch_stats.${EXPT}.sh"
 # Some housekeeping
 #mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
+chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 
 # Find output files from which graphics should be created
@@ -355,8 +365,14 @@ echo $BDECK
 
         # Check if a similar job is already submitted
         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
-        JOB_NAME="GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}"
-        JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+        if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+            JOB_TEST=""
+        elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+            JOB_TEST=""
+        else
+            JOB_NAME="GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}"
+            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+        fi
 
         # Change options in the batch submission script.
         if [ -z "$JOB_TEST" ]; then
@@ -377,8 +393,14 @@ echo $BDECK
             perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
 
             # Call the batch job
-            echo "MSG: Executing GPLOT batch job submission."
-            sbatch ${BATCH_DIR}${BATCHFILE2}
+            echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
+            if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+                ${BATCH_DIR}${BATCHFILE2}
+            elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+                ${BATCH_DIR}${BATCHFILE2} &
+            else
+                sbatch ${BATCH_DIR}${BATCHFILE2}
+            fi
 
             # If the job was submitted, then increase the counter.
             N=$((N+1))

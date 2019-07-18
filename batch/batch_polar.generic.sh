@@ -109,7 +109,7 @@ fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-python ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE} &
+python ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
 
 wait
 
