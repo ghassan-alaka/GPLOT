@@ -1890,8 +1890,8 @@ end if
 mpres@mpShapeMode		= "FreeAspect"
 mpres@vpWidthF			= 0.8
 mpres@vpHeightF			= 0.4
-mpres@tiMainString		= "Late Track Guidance"
-mpres@tiMainOffsetYF		= 0.05
+;mpres@tiMainString		= "Late Track Guidance"
+;mpres@tiMainOffsetYF		= 0.05
 mpres@tmXBMajorLengthF		= 0.005
 mpres@tmXBMajorOutwardLengthF	= 0.0
 mpres@tmXBMinorLengthF		= 0.0025
@@ -1943,6 +1943,88 @@ txbres@txFont		= 25
 txbres@txFontColor	= "black"
 txbres@txFontHeightF	= 0.009
 
+; Text Resources for map main title
+txres1			:= True
+txres1@txFontHeightF	= 0.020
+txres1@txJust		= "CenterCenter"
+txres1@txFontColor	= "black"
+txres1@txFont		= 25
+
+; Text Resources for map sub-title
+txres2			:= True
+txres2@txFontHeightF	= 0.015
+txres2@txJust		= "CenterCenter"
+txres2@txFontColor	= "black"
+txres2@txFont		= 25
+
+; Text Resources for forecast hour labels
+txres3			:= True
+txres3@txJust		= "CenterLeft"
+txres3@txFontHeightF	= 0.005
+
+; Text Resources for legend labels
+txres4			:= True
+txres4@txJust		= "CenterLeft"
+txres4@txFontHeightF	= 0.009
+
+; Text Resources for XY main title
+txres5			:= True
+txres5@txFontHeightF	= 0.025
+txres5@txJust		= "CenterCenter"
+txres5@txFontColor	= "black"
+txres5@txFont		= 25
+
+; Text Resources for XY sub-title
+txres6			:= True
+txres6@txFontHeightF	= 0.018
+txres6@txJust		= "CenterCenter"
+txres6@txFontColor	= "black"
+txres6@txFont		= 25
+
+; Polyline Resources for best track
+plres1			:= True
+plres1@gsLineThicknessF	= 15.0
+
+; Polyline Resources for legend
+plres2			:= True
+plres2@gsLineThicknessF	= 5.0
+
+; Polyline Resources for models
+plres3			:= True
+plres3@gsLineThicknessF	= 8.0
+
+; Polyline Resources for XY 0-line
+plres4			:= True
+plres4@gsLineThicknessF	= 5.0
+plres4@gsLineColor	= "black"
+plres4@gsLineDashPattern= 0
+plres4@tfPolyDrawOrder	= "PreDraw"
+
+; Polyline Resources for XY major lines
+plres5			:= True
+plres5@gsLineThicknessF	= 1.5
+plres5@gsLineDashPattern= 11
+plres5@gsLineColor	= "grey70"
+plres5@tfPolyDrawOrder	= "PreDraw"
+
+; Marker Resources for best track
+mkres1				:= True
+mkres1@gsMarkerSizeF		= 12.0
+mkres1@gsMarkerThicknessF	= 5.0
+
+; Marker Resources for legend
+mkres2				:= True
+mkres2@gsMarkerSizeF		= 8.0
+mkres2@gsMarkerThicknessF	= 3.0
+
+; Marker Resources for XY legend
+mkres3				:= True 
+mkres3@gsMarkerSizeF		= 10.0
+mkres3@gsMarkerThicknessF	= 3.0
+
+
+
+
 
 ;================================================================
 ; Produce late track guidance graphics.
@@ -1982,9 +2064,9 @@ if(DO_LT_GUIDE)then
 	
 
 		; Set up the output file
-		oFile	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE
-		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-		wks	= gsn_open_wks(wtype,oFile)
+		OFILE	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE
+		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
+		wks	= gsn_open_wks(wtype,OFILE)
 
 
 		;Create a hurricane symbol marker
@@ -2007,17 +2089,11 @@ if(DO_LT_GUIDE)then
 		mpres1a@mpMinLonF	= minLon-(0.05*rngLon)
 		mpres1a@mpMaxLatF	= maxLat+(0.05*rngLat)
 		mpres1a@mpMinLatF	= minLat-(0.05*rngLat)
-		mpres1a@tiMainString	= "Late Track Guidance"
+		;mpres1a@tiMainString	= "Late Track Guidance"
 		if(gridOn)then
 			mpres1a@mpGridLatSpacingF = mpres1a@gsnMajorLatSpacing
 			mpres1a@mpGridLonSpacingF = mpres1a@gsnMajorLonSpacing
 		end if
-
-
-		plres1a = plres
-		mkres1a = mkres
-		txares1a = txares
-		txbres1a = txbres
 
 
 		; Plot a blank map
@@ -2043,35 +2119,30 @@ if(DO_LT_GUIDE)then
 
 
 		; Add best track
-		plres1a@gsLineThicknessF	= 15.0
-		plres1a@gsLineColor		= "black"
-		mkres1a@gsMarkerSizeF		= 12.0
-		mkres1a@gsMarkerColor		= "black"
-		mkres1a@gsMarkerIndex		= tc_marker
-		mkres1a@gsMarkerThicknessF	= 5.0
-		txares1a@txFontColor		= "black"
-		txares1a@txFontHeightF		= 0.005
+		mkres1@gsMarkerColor      = "black"
+		mkres1@gsMarkerIndex	  = tc_marker
+		mkres1@gsMarkerThicknessF = 5.0
+		txres3@txFontColor        = "black"
+		plres1@gsLineColor	= "black"
 		vals  := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
 		vals2 := ind(toint(bHrs)%12.eq.0 .and. bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
 		if(.not.all(ismissing(bTRK(:,vals))))then
-			dum1(dimsizes(TRKmodels))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1a)
-			dum2(dimsizes(TRKmodels))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1a)
+			dum1(dimsizes(TRKmodels))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
+			dum2(dimsizes(TRKmodels))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
 			dum3(dimsizes(TRKmodels),vals2)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),\
-										bTRK(1,vals2)+0.3,\
-										bTRK(0,vals2)+0.3,\
-										txares1a)
+										bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,\
+										txres3)
 		end if
 
 
 		; Add best track legend
-		plres1a@gsLineThicknessF	= 5.0
-		mkres1a@gsMarkerSizeF		= 8.0
-		mkres1a@gsMarkerThicknessF	= 3.0
-		txares1a@txFontColor		= "black"
-		txares1a@txFontHeightF		= 0.009
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres1a)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres1a)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txares1a)
+		mkres2@gsMarkerColor = "black"
+		mkres2@gsMarkerIndex = tc_marker
+		txres4@txFontColor   = "black"
+		plres2@gsLineColor   = "black"
+		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
+		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
+		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
 
 
 		; Add model tracks
@@ -2084,44 +2155,39 @@ if(DO_LT_GUIDE)then
 			tmp	:= toint(where(ismissing(aTRK(ppp2,2,:)), fval2, aTRK(ppp2,2,:)))
 			vals2	:= ind(tmp%12.eq.0)
 		
-			plres1a@gsLineColor   		= TRKcolors(ppp2)
-			plres1a@gsLineThicknessF	= 8.0
-			mkres1a@gsMarkerSizeF 		= 8.0
-			mkres1a@gsMarkerColor 		= TRKcolors(ppp2)
-			mkres1a@gsMarkerIndex 		= TRKmarkers(ppp2)
-			mkres1a@gsMarkerThicknessF 	= 3.0
-			txares1a@txFontColor   		= TRKcolors(ppp2)
-			txares1a@txFontHeightF		= 0.005
+			plres2@gsLineColor   = TRKcolors(ppp2)
+			plres3@gsLineColor   = TRKcolors(ppp2)
+			mkres2@gsMarkerColor = TRKcolors(ppp2)
+			mkres2@gsMarkerIndex = TRKmarkers(ppp2)
+			txres3@txFontColor   = TRKcolors(ppp2)
+			txres4@txFontColor   = TRKcolors(ppp2)
 
-			dum1(ppp) = gsn_add_polyline(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),plres1a)
-			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),mkres1a)		
+			dum1(ppp) = gsn_add_polyline(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),plres3)
+			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),mkres2)		
 	
 			if(.not.ismissing(vals2(0)))then
 				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
-									    aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txares1a)
+									    aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
 			end if		
 	
 			; Add legend info for each model
-			plres1a@gsLineThicknessF	= 5.0
-			mkres1a@gsMarkerSizeF 		= 8.0
-			mkres1a@gsMarkerThicknessF 	= 3.0
-			txares1a@txFontHeightF		= 0.009
 			;gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres1a)
 			;gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
 			;		     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres1a)
 			;gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares1a)
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres1a)
+			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
-					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres1a)
-			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txares1a)
+					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
+			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
+		
+		
+		; Add a main title
+		gsn_text_ndc(wks,"Late Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
 
 
 		; Add a sub-title
-		txares1a@txFontHeightF	= 0.015
-		txares1a@txJust		= "CenterCenter"
-		txares1a@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,0.50,vpTOP+vpHEAD+0.02,txares1a)
+		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres2)
 
 		
 		; Add disclaimer
@@ -2136,7 +2202,7 @@ if(DO_LT_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 
 	end if ;DO_THIS
 
@@ -2182,9 +2248,9 @@ if(DO_ET_GUIDE)then
 	
 
 		; Set up the output file
-		oFile	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
-		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-		wks	= gsn_open_wks(wtype,oFile)
+		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
+		wks	= gsn_open_wks(wtype,OFILE)
 
 
 		;Create a hurricane symbol marker
@@ -2211,13 +2277,6 @@ if(DO_ET_GUIDE)then
 			mpres1b@mpGridLatSpacingF = mpres1b@gsnMajorLatSpacing
 			mpres1b@mpGridLonSpacingF = mpres1b@gsnMajorLonSpacing
 		end if
-		mpres1b@tiMainString = "Early Track Guidance"
-
-
-		plres1b = plres
-		mkres1b = mkres
-		txares1b = txares
-		txbres1b = txbres
 
 
 		; Plot a blank map
@@ -2236,36 +2295,35 @@ if(DO_ET_GUIDE)then
 		end getvalues
 		vpRGT = vpLFT+vpWID
 		vpBOT = vpTOP-vpHGT
+		
+		; Determine how to use space on top of graphic
+		vpHEAD = 0.0125+0.02*tofloat((dimsizes(TRKmodelsI)-1)/4)
 
 
 		; Add best track
-		plres1b@gsLineThicknessF	= 15.0
-		plres1b@gsLineColor	= "black"
-		mkres1b@gsMarkerSizeF	= 12.0
-		mkres1b@gsMarkerColor	= "black"
-		mkres1b@gsMarkerIndex	= tc_marker
-		mkres1b@gsMarkerThicknessF= 5.0
-		txares1b@txFontColor	= "black"
-		txares1b@txFontHeightF	= 0.005
+		mkres1@gsMarkerColor      = "black"
+		mkres1@gsMarkerIndex	  = tc_marker
+		mkres1@gsMarkerThicknessF = 5.0
+		txres3@txFontColor        = "black"
+		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
 		if(.not.all(ismissing(bTRK(:,vals))))then
-			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1b)
-			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1b)
+			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
+			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
 			dum3(dimsizes(TRKmodelsI),vals2) = gsn_add_text(wks,plot,tostring(toint(bHrsI(vals2))),\
-									bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txares1b)
+									bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
 		end if
 
 
 		; Add best track legend
-		plres1b@gsLineThicknessF	= 5.0
-		mkres1b@gsMarkerSizeF = 8.0
-		mkres1b@gsMarkerThicknessF = 3.0
-		txares1b@txFontColor	= "black"
-		txares1b@txFontHeightF	= 0.009
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+0.0525,mkres1b)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+0.0525,vpTOP+0.0525/),plres1b)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+0.0525,txares1b)
+		mkres2@gsMarkerColor = "black"
+		mkres2@gsMarkerIndex = tc_marker
+		txres4@txFontColor   = "black"
+		plres2@gsLineColor   = "black"
+		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
+		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
+		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
 
 
 		; Add model tracks
@@ -2278,40 +2336,35 @@ if(DO_ET_GUIDE)then
 			tmp	:= toint(where(ismissing(aTRKI(ppp2,2,:)), fval2, aTRKI(ppp2,2,:)))
 			vals2	:= ind(tmp%12.eq.0)
 		
-			plres1b@gsLineColor   = TRKcolorsI(ppp2)
-			plres1b@gsLineThicknessF	= 8.0
-			mkres1b@gsMarkerSizeF = 8.0
-			mkres1b@gsMarkerColor = TRKcolorsI(ppp2)
-			mkres1b@gsMarkerIndex = TRKmarkersI(ppp2)
-			mkres1b@gsMarkerThicknessF = 3.0
-			txares1b@txFontColor   = TRKcolorsI(ppp2)
-			txares1b@txFontHeightF	= 0.005
+			plres2@gsLineColor   = TRKcolors(ppp2)
+			plres3@gsLineColor   = TRKcolors(ppp2)
+			mkres2@gsMarkerColor = TRKcolors(ppp2)
+			mkres2@gsMarkerIndex = TRKmarkers(ppp2)
+			txres3@txFontColor   = TRKcolors(ppp2)
+			txres4@txFontColor   = TRKcolors(ppp2)
 	
-			dum1(ppp) = gsn_add_polyline(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),plres1b)
-			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),mkres1b)	
+			dum1(ppp) = gsn_add_polyline(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),plres3)
+			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),mkres2)	
 		
 			if(.not.ismissing(vals2(0)))then
 				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRKI(ppp2,2,vals2))),\
-									    aTRKI(ppp2,1,vals2)+0.3,aTRKI(ppp2,0,vals2)+0.3,txares1b)
+									    aTRKI(ppp2,1,vals2)+0.3,aTRKI(ppp2,0,vals2)+0.3,txres3)
 			end if
 			
 			; Add legend info for each model
-			plres1b@gsLineThicknessF	= 5.0
-			mkres1b@gsMarkerSizeF = 8.0
-			mkres1b@gsMarkerThicknessF = 3.0
-			txares1b@txFontHeightF	= 0.009
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres1b)
-			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
-					     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres1b)
-			gsn_text_ndc(wks,TRKlongnameI(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares1b)
+			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
+					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
+			gsn_text_ndc(wks,TRKlongnameI(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
+		
+		
+		; Add a main title
+		gsn_text_ndc(wks,"Early Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
 
 
 		; Add a sub-title
-		txares1b@txFontHeightF	= 0.015
-		txares1b@txJust		= "CenterCenter"
-		txares1b@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,0.50,0.75,txares1b)
+		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres2)
 
 
 		; Add disclaimer
@@ -2326,7 +2379,7 @@ if(DO_ET_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 
 
 	end if ;DO_THIS
@@ -2369,9 +2422,9 @@ if(DO_LI_GUIDE)then
 
 
 		; Setup the output file & workstation
-		oFile	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE
-		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-		wks	= gsn_open_wks(wtype,oFile)
+		OFILE	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE
+		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
+		wks	= gsn_open_wks(wtype,OFILE)
 
 
 		;Create a hurricane symbol marker
@@ -2380,7 +2433,7 @@ if(DO_LI_GUIDE)then
 
 		; Update resources
 		xyres2a = xyres
-		xyres2a@tiMainString	= "Late Intensity Guidance"
+		;xyres2a@tiMainString	= "Late Intensity Guidance"
 		xyres2a@tiYAxisString	= "Wind Speed [kt]"
 		xyres2a@tmXBMode	= "Explicit"	
 		xyres2a@tmXBValues	= XYHrs
@@ -2396,12 +2449,6 @@ if(DO_LI_GUIDE)then
 		xyres2a@trYMinF		= minInt-(0.10*rngInt)
 		xyres2a@xyMarkers		= tc_marker
 
-		plres2a = plres
-		mkres2a = mkres
-		txares2a = txares
-		txbres2a = txbres
-
-
 		; Plot the best track
 		;plot	:= gsn_csm_xy(wks,bHrs({-6:6.}),bINT(0,{-6:6.}),res)
 		plot	:= gsn_csm_xy(wks,bHrs,bINT(0,:),xyres2a)
@@ -2416,41 +2463,31 @@ if(DO_LI_GUIDE)then
 		end getvalues
 		vpRGT = vpLFT+vpWID
 		vpBOT = vpTOP-vpHGT
+		
+		; Determine how to use space on top of graphic
+		vpHEAD = 0.0125+0.02*tofloat((dimsizes(INTmodels)-1)/4)
 
 
-		; Plot the best track legend
-		plres2a@gsLineThicknessF	= 5.0
-		plres2a@gsLineColor	= "black"
-		plres2a@gsLineDashPattern	= 0
-		mkres2a@gsMarkerSizeF	= 10.0
-		mkres2a@gsMarkerColor	= "black"
-		mkres2a@gsMarkerIndex	= tc_marker
-		mkres2a@gsMarkerThicknessF= 3.0
-		txares2a@txFontColor	= "black"
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+0.0525,mkres2a)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+0.0525,vpTOP+0.0525/),plres2a)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+0.0525,txares2a)
+		; Add best track legend
+		mkres2@gsMarkerColor = "black"
+		mkres2@gsMarkerIndex = tc_marker
+		txres4@txFontColor   = "black"
+		plres2@gsLineColor   = "black"
+		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
+		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
+		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
 
 
 		; Draw the background grid
 		dum1	:= new(dimsizes(XYHrs),"graphic")
 		dum2	:= new(dimsizes(IntMjrGrd),"graphic")
-
-		plres2a@gsLineThicknessF	= 5.0
-		plres2a@gsLineColor	= "black"
-		plres2a@gsLineDashPattern	= 0
-		plres2a@tfPolyDrawOrder	= "PreDraw"
-		dum1(ind(XYHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres2a@trYMinF,xyres2a@trYMaxF/),plres2a)
-
-		plres2a@gsLineThicknessF	= 1.5
-		plres2a@gsLineDashPattern	= 11
-		plres2a@gsLineColor	= "grey70"
+		dum1(ind(XYHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres2a@trYMinF,xyres2a@trYMaxF/),plres4)
 		do fff = 0,dimsizes(XYHrs)-1
-			if(XYHrs(fff).eq.0)then continue end if
-			dum1(fff)	= gsn_add_polyline(wks,plot,(/XYHrs(fff),XYHrs(fff)/),(/xyres2a@trYMinF,xyres2a@trYMaxF/),plres2a)
+			if(XYHrs(fff).eq.0)then   continue   end if
+			dum1(fff) = gsn_add_polyline(wks,plot,(/XYHrs(fff),XYHrs(fff)/),(/xyres2a@trYMinF,xyres2a@trYMaxF/),plres5)
 		end do
 		do fff = 0,dimsizes(IntMjrGrd)-1
-			dum2(fff)	= gsn_add_polyline(wks,plot,(/xyres2a@trXMinF,xyres2a@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres2a)
+			dum2(fff) = gsn_add_polyline(wks,plot,(/xyres2a@trXMinF,xyres2a@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres5)
 		end do
 
 
@@ -2469,40 +2506,35 @@ if(DO_LI_GUIDE)then
 			; Update resources
 			xyres2a@xyLineThicknessF	= 10.0
 			xyres2a@xyMarkers		= INTmarkers(ppp2)
-			xyres2a@xyMarkerColor	= INTcolors(ppp2)
+			xyres2a@xyMarkerColor		= INTcolors(ppp2)
 			xyres2a@xyMarkerThicknessF	= 6.0
-			xyres2a@xyMarkerSizeF	= 0.015
+			xyres2a@xyMarkerSizeF		= 0.015
 			xyres2a@xyLineColor		= INTcolors(ppp2)
-			xyres2a@tiXAxisString	= ""
-			xyres2a@tiYAxisString	= ""
+			xyres2a@tiXAxisString		= ""
+			xyres2a@tiYAxisString		= ""
 	
-			plres2a@gsLineThicknessF	= 5.0
-			plres2a@gsLineColor	= INTcolors(ppp2)
-			plres2a@gsLineDashPattern	= 0
-		
-			mkres2a@gsMarkerSizeF	= 10.0
-			mkres2a@gsMarkerColor	= INTcolors(ppp2)
-			mkres2a@gsMarkerIndex	= INTmarkers(ppp2)
-			mkres2a@gsMarkerThicknessF= 3.0
-		
-			txares2a@txFontColor   	= INTcolors(ppp2)
+			plres2@gsLineColor   = INTcolors(ppp2)
+			mkres2@gsMarkerColor = INTcolors(ppp2)
+			mkres2@gsMarkerIndex = INTmarkers(ppp2)
+			txres4@txFontColor   = INTcolors(ppp2)
 	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINT(ppp2,1,vals),aINT(ppp2,0,vals),xyres2a))
 	
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres2a)
-			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
-					     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres2a)
-			gsn_text_ndc(wks,INTlongname(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares2a)
+			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
+					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
+			gsn_text_ndc(wks,INTlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
+		
+		
+		; Add a main title
+		gsn_text_ndc(wks,"Late Intensity Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
 
 
 		; Add a sub-title
-		txares2a@txFontHeightF	= 0.018
-		txares2a@txJust		= "CenterCenter"
-		txares2a@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,0.59,0.855,txares2a)
+		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
 
 
 		; Add disclaimer
@@ -2517,7 +2549,7 @@ if(DO_LI_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 
 
 	end if ;DO_THIS
@@ -2558,9 +2590,9 @@ if(DO_EI_GUIDE)then
 
 
 		; Setup the output file
-		oFile	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
-		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-		wks	= gsn_open_wks(wtype,oFile)
+		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
+		wks	= gsn_open_wks(wtype,OFILE)
 
 
 		;Create a hurricane symbol marker
@@ -2569,7 +2601,7 @@ if(DO_EI_GUIDE)then
 
 		; Update resources
 		xyres2b = xyres
-		xyres2b@tiMainString	= "Early Intensity Guidance"
+		;xyres2b@tiMainString	= "Early Intensity Guidance"
 		xyres2b@tiYAxisString	= "Wind Speed [kt]"
 		xyres2b@tmXBMode	= "Explicit"	
 		xyres2b@tmXBValues	= XYHrs
@@ -2585,12 +2617,6 @@ if(DO_EI_GUIDE)then
 		xyres2b@trYMinF		= minInt-(0.10*rngInt)
 		xyres2b@xyMarkers	= tc_marker
 	
-		plres2b = plres
-		mkres2b = mkres
-		txares2b = txares
-		txbres2b = txbres
-
-
 		; Plot the best track
 		;plot	:= gsn_csm_xy(wks,bHrs({-6:6.}),bINT(0,{-6:6.}),res)
 		plot	:= gsn_csm_xy(wks,bHrsI,bINT(0,:),xyres2b)
@@ -2605,41 +2631,31 @@ if(DO_EI_GUIDE)then
 		end getvalues
 		vpRGT = vpLFT+vpWID
 		vpBOT = vpTOP-vpHGT
+		
+		; Determine how to use space on top of graphic
+		vpHEAD = 0.0125+0.02*tofloat((dimsizes(INTmodelsI)-1)/4)
 
 
-		; Plot the best track legend
-		plres2b@gsLineThicknessF	= 5.0
-		plres2b@gsLineColor	= "black"
-		plres2b@gsLineDashPattern	= 0
-		mkres2b@gsMarkerSizeF	= 10.0
-		mkres2b@gsMarkerColor	= "black"
-		mkres2b@gsMarkerIndex	= tc_marker
-		mkres2b@gsMarkerThicknessF= 3.0
-		txares2b@txFontColor	= "black"
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+0.0525,mkres2b)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+0.0525,vpTOP+0.0525/),plres2b)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+0.0525,txares2b)
+		; Add best track legend
+		mkres2@gsMarkerColor = "black"
+		mkres2@gsMarkerIndex = tc_marker
+		txres4@txFontColor   = "black"
+		plres2@gsLineColor   = "black"
+		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
+		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
+		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
 
 
 		; Draw the background grid
 		dum1	:= new(dimsizes(XYHrs),"graphic")
 		dum2	:= new(dimsizes(IntMjrGrd),"graphic")
-
-		plres2b@gsLineThicknessF	= 5.0
-		plres2b@gsLineColor	= "black"
-		plres2b@gsLineDashPattern	= 0
-		plres2b@tfPolyDrawOrder	= "PreDraw"
-		dum1(ind(XYHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres2b@trYMinF,xyres2b@trYMaxF/),plres2b)
-
-		plres2b@gsLineThicknessF	= 1.5
-		plres2b@gsLineDashPattern	= 11
-		plres2b@gsLineColor	= "grey70"
+		dum1(ind(XYHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres2b@trYMinF,xyres2b@trYMaxF/),plres4)
 		do fff = 0,dimsizes(XYHrs)-1
-			if(XYHrs(fff).eq.0)then continue end if
-			dum1(fff)	= gsn_add_polyline(wks,plot,(/XYHrs(fff),XYHrs(fff)/),(/xyres2b@trYMinF,xyres2b@trYMaxF/),plres2b)
+			if(XYHrs(fff).eq.0)then   continue   end if
+			dum1(fff) = gsn_add_polyline(wks,plot,(/XYHrs(fff),XYHrs(fff)/),(/xyres2b@trYMinF,xyres2b@trYMaxF/),plres5)
 		end do
 		do fff = 0,dimsizes(IntMjrGrd)-1
-			dum2(fff)	= gsn_add_polyline(wks,plot,(/xyres2b@trXMinF,xyres2b@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres2b)
+			dum2(fff) = gsn_add_polyline(wks,plot,(/xyres2b@trXMinF,xyres2b@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres5)
 		end do
 
 
@@ -2665,33 +2681,28 @@ if(DO_EI_GUIDE)then
 			xyres2b@tiXAxisString	= ""
 			xyres2b@tiYAxisString	= ""
 	
-			plres2b@gsLineThicknessF	= 5.0
-			plres2b@gsLineColor	= INTcolorsI(ppp2)
-			plres2b@gsLineDashPattern	= 0
-		
-			mkres2b@gsMarkerSizeF	= 10.0
-			mkres2b@gsMarkerColor	= INTcolorsI(ppp2)
-			mkres2b@gsMarkerIndex	= INTmarkersI(ppp2)
-			mkres2b@gsMarkerThicknessF= 3.0
-		
-			txares2b@txFontColor   	= INTcolorsI(ppp2)
+			plres2@gsLineColor   = INTcolors(ppp2)
+			mkres2@gsMarkerColor = INTcolors(ppp2)
+			mkres2@gsMarkerIndex = INTmarkers(ppp2)
+			txres4@txFontColor   = INTcolors(ppp2)
 	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINTI(ppp2,1,vals),aINTI(ppp2,0,vals),xyres2b))
 
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres2b)
-			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
-					     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres2b)
-			gsn_text_ndc(wks,INTlongnameI(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares2b)
+			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
+					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
+			gsn_text_ndc(wks,INTlongnameI(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
+		
+		
+		; Add a main title
+		gsn_text_ndc(wks,"Early Intensity Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
 
 
 		; Add a sub-title
-		txares2b@txFontHeightF	= 0.018
-		txares2b@txJust		= "CenterCenter"
-		txares2b@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,0.59,0.855,txares2b)
+		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
 
 
 		; Add disclaimer
@@ -2705,7 +2716,7 @@ if(DO_EI_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 
 	end if ;DO_THIS
 
@@ -2746,9 +2757,9 @@ if(DO_LP_GUIDE)then
 
 
 		; Setup the output file
-		oFile	= ODIR+"PressureGuidance."+LONGSID+"."+IDATE
-		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
-		wks	= gsn_open_wks(wtype,oFile)
+		OFILE	= ODIR+"PressureGuidance."+LONGSID+"."+IDATE
+		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
+		wks	= gsn_open_wks(wtype,OFILE)
 
 
 		;Create a hurricane symbol marker
@@ -2757,7 +2768,7 @@ if(DO_LP_GUIDE)then
 
 		; Set resources
 		xyres3a = xyres
-		xyres3a@tiMainString	= "Late Pressure Guidance"
+		;xyres3a@tiMainString	= "Late Pressure Guidance"
 		xyres3a@tiYAxisString	= "Pressure [mb]"
 		xyres3a@tiYAxisOffsetXF	= 0.015
 		xyres3a@tmXBMode	= "Explicit"	
@@ -2774,12 +2785,6 @@ if(DO_LP_GUIDE)then
 		xyres3a@trYMinF		= minPrs-(0.10*rngPrs)
 		xyres3a@xyMarkers	= tc_marker
 
-		plres3a = plres
-		mkres3a = mkres
-		txares3a = txares
-		txbres3a = txbres
-
-
 		; Plot the best track
 		;plot	:= gsn_csm_xy(wks,bHrs({-6:6.}),bINT(1,{-6:6.}),res)
 		plot	:= gsn_csm_xy(wks,bHrs,bINT(1,:),xyres3a)
@@ -2794,41 +2799,31 @@ if(DO_LP_GUIDE)then
 		end getvalues
 		vpRGT = vpLFT+vpWID
 		vpBOT = vpTOP-vpHGT
+		
+		; Determine how to use space on top of graphic
+		vpHEAD = 0.0125+0.02*tofloat((dimsizes(PRSmodels)-1)/4)
 
 
-		; Plot the best track legend
-		plres3a@gsLineThicknessF	= 5.0
-		plres3a@gsLineColor	= "black"
-		plres3a@gsLineDashPattern	= 0
-		mkres3a@gsMarkerSizeF	= 10.0
-		mkres3a@gsMarkerColor	= "black"
-		mkres3a@gsMarkerIndex	= tc_marker
-		mkres3a@gsMarkerThicknessF= 3.0
-		txares3a@txFontColor	= "black"
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+0.0525,mkres3a)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+0.0525,vpTOP+0.0525/),plres3a)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+0.0525,txares3a)
+		; Add best track legend
+		mkres2@gsMarkerColor = "black"
+		mkres2@gsMarkerIndex = tc_marker
+		txres4@txFontColor   = "black"
+		plres2@gsLineColor   = "black"
+		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
+		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
+		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
 
 
 		; Draw the background grid
 		dum1	:= new(dimsizes(XYHrs),"graphic")
-		dum2	:= new(dimsizes(PrsMjrGrd),"graphic")
-
-		plres3a@gsLineThicknessF	= 5.0
-		plres3a@gsLineColor	= "black"
-		plres3a@gsLineDashPattern	= 0
-		plres3a@tfPolyDrawOrder	= "PreDraw"
-		dum1(ind(XYHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres3a@trYMinF,xyres3a@trYMaxF/),plres3a)
-
-		plres3a@gsLineThicknessF	= 1.5
-		plres3a@gsLineDashPattern	= 11
-		plres3a@gsLineColor	= "grey70"
+		dum2	:= new(dimsizes(IntMjrGrd),"graphic")
+		dum1(ind(XYHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/xyres3a@trYMinF,xyres3a@trYMaxF/),plres4)
 		do fff = 0,dimsizes(XYHrs)-1
 			if(XYHrs(fff).eq.0)then   continue   end if
-			dum1(fff) = gsn_add_polyline(wks,plot,(/XYHrs(fff),XYHrs(fff)/),(/xyres3a@trYMinF,xyres3a@trYMaxF/),plres3a)
+			dum1(fff) = gsn_add_polyline(wks,plot,(/XYHrs(fff),XYHrs(fff)/),(/xyres3a@trYMinF,xyres3a@trYMaxF/),plres5)
 		end do
-		do fff = 0,dimsizes(PrsMjrGrd)-1
-			dum2(fff) = gsn_add_polyline(wks,plot,(/xyres3a@trXMinF,xyres3a@trXMaxF/),(/PrsMjrGrd(fff),PrsMjrGrd(fff)/),plres3a)
+		do fff = 0,dimsizes(IntMjrGrd)-1
+			dum2(fff) = gsn_add_polyline(wks,plot,(/xyres3a@trXMinF,xyres3a@trXMaxF/),(/IntMjrGrd(fff),IntMjrGrd(fff)/),plres5)
 		end do
 
 
@@ -2852,33 +2847,28 @@ if(DO_LP_GUIDE)then
 			xyres3a@tiXAxisString	= ""
 			xyres3a@tiYAxisString	= ""
 	
-			plres3a@gsLineThicknessF	= 5.0
-			plres3a@gsLineColor	= PRScolors(ppp2)
-			plres3a@gsLineDashPattern	= 0
-		
-			mkres3a@gsMarkerSizeF	= 10.0
-			mkres3a@gsMarkerColor	= PRScolors(ppp2)
-			mkres3a@gsMarkerIndex	= PRSmarkers(ppp2)
-			mkres3a@gsMarkerThicknessF= 3.0
-		
-			txares3a@txFontColor   	= PRScolors(ppp2)
+			plres2@gsLineColor   = INTcolors(ppp2)
+			mkres2@gsMarkerColor = INTcolors(ppp2)
+			mkres2@gsMarkerIndex = INTmarkers(ppp2)
+			txres4@txFontColor   = INTcolors(ppp2)
 		
 			; Overlay the new pressure line
 			overlay(plot,gsn_csm_xy(wks,aPRS(ppp2,1,vals),aPRS(ppp2,0,vals),xyres3a))
 	
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ppp2%2),mkres3a)
-			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
-					     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres3a)
-			gsn_text_ndc(wks,PRSlongname(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares3a)
+			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
+					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
+			gsn_text_ndc(wks,PRSlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
+		
+		
+		; Add a main title
+		gsn_text_ndc(wks,"Late Pressure Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
 
 
 		; Add a sub-title
-		txares3a@txFontHeightF	= 0.018
-		txares3a@txJust		= "CenterCenter"
-		txares3a@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,0.59,0.855,txares3a)
+		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
 
 
 		; Add disclaimer
@@ -2892,7 +2882,7 @@ if(DO_LP_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 
 	end if ;DO_THIS
 

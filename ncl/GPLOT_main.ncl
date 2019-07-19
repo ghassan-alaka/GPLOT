@@ -198,8 +198,8 @@ begin
 		end if  end if
 		vals := ind(ICTR(1,:).ge.0 .and. .not.ismissing(ICTR(1,:)))
 		if(.not.ismissing(vals(0)))then
-			CNTR(0,vals) = (/V2&lat(ICTR(1,vals))/)
-			CNTR(1,vals) = (/V2&lon(ICTR(0,vals))/)
+			CNTR(0,vals) = (/V2&lat(ICTR(1,vals)-1)/)
+			CNTR(1,vals) = (/V2&lon(ICTR(0,vals)-1)/)
 		end if
 			
 	end if  end if

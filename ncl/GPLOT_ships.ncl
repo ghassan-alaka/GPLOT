@@ -1881,7 +1881,7 @@ do fff = 0,nFiles-1
 				add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
 				
 				; Storm Title
-				if(isStrSubset(DSOURCE,"HWRF"))then   add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")   end if
+				add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")
 				
 				; Add the Model to the Title
 				if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
@@ -2117,7 +2117,7 @@ do fff = 0,nFiles-1
 				add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
 				
 				; Storm Title
-				if(isStrSubset(DSOURCE,"HWRF"))then   add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")   end if
+				add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")
 			
 				; Add the Model to the Title
 				if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
@@ -2469,7 +2469,7 @@ do fff = 0,nFiles-1
 				add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
 				
 				; Storm Title
-				if(isStrSubset(DSOURCE,"HWRF"))then   add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")   end if
+				add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")
 				
 				; Add the Model to the Title
 				if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
@@ -2602,7 +2602,7 @@ do fff = 0,nFiles-1
 				add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
 				
 				; Storm Title
-				if(isStrSubset(DSOURCE,"HWRF"))then   add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")   end if
+				add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.008,"right")
 				
 				; Add the Model to the Title
 				if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)			
@@ -2834,8 +2834,7 @@ do fff = 0,nFiles-1
 			add_time_title(wks,TimeTitle,vpRGT,vpTOP+0.023,0.012,"right")
 				
 			; Storm Title
-			if(isStrSubset(DSOURCE,"HWRF"))then	add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.012,"right")
-			end if
+			add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.012,"right")
 				
 			; Add the Model to the Title & Disclaimer to the bottom
 			if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.065,0.016)
