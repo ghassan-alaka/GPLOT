@@ -64,7 +64,7 @@ fi
 
 # 2. Submit the NCL job
 echo "${NCL_ARGS[@]}"
-ncl "${NCL_ARGS[@]}" ${NCLDIR}${NCLFILE}  > ${LOGDIR}${LOGFILE} &
+ncl "${NCL_ARGS[@]}" ${NCLDIR}${NCLFILE}  > ${LOGDIR}${LOGFILE}
 
 wait
 

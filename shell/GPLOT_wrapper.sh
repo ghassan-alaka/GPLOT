@@ -88,6 +88,9 @@ for d in "${EXPT[@]}"; do
     DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
     DO_POLAR=`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
 
+    BATCH_MODE=`sed -n -e 's/^.*BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
+    echo "MSG: BATCH_MODE --> ${BATCH_MODE}."
+
 
     # This part submits the spawn file for MAPS
     if [ "${DO_MAPS}" = "True" ]; then
@@ -96,7 +99,11 @@ for d in "${EXPT[@]}"; do
         SPAWNLOG="spawn_maps.${d}.log"
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-	${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+	    ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        else
+	    ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        fi
     fi
 
 
@@ -107,7 +114,11 @@ for d in "${EXPT[@]}"; do
         SPAWNLOG="spawn_ships.${d}.log"
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        else
+            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        fi
     fi
 
 
@@ -118,7 +129,11 @@ for d in "${EXPT[@]}"; do
         SPAWNLOG="spawn_stats.${d}.log"
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        else
+            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        fi
     fi
 
 
@@ -129,7 +144,11 @@ for d in "${EXPT[@]}"; do
         SPAWNLOG="spawn_polar.${d}.log"
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        else
+            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+        fi
     fi
 done
 

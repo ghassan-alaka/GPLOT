@@ -86,7 +86,7 @@ if [ "$IS_MSTORM" == "True" ]; then
 fi
 echo "MSG: Found this top level input directory in the namelist --> $IDIR"
 if [ ! -z "$ITAG" ]; then
-    echo "MSG: Condering these input file tag --> $ITAG"
+    echo "MSG: Considering these input file tag --> $ITAG"
 fi
 if [ ! -z "$EXT" ]; then
     echo "MSG: Considering these input file extensions --> $EXT"
@@ -97,6 +97,15 @@ echo "MSG: Found this top level output directory in the namelist --> $ODIR"
 # If FORCE is undefined, set it to False.
 if [ -z "$FORCE" ]; then
     FORCE="False"
+fi
+
+# Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
+BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
+if [ -z "$BATCH_MODE" ]; then
+    BATCH_MODE="SBATCH"
+    echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE[*]}"
+else
+    echo "MSG: Found a batch-submission mode in the namelist   --> ${BATCH_MODE[*]}"
 fi
 
 # Get a list of forecast lead times
@@ -133,6 +142,7 @@ BATCHFILE2="batch_polar.${EXPT}.sh"
 # Some housekeeping
 #mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
+chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 
 # Find output files from which graphics should be created
@@ -654,8 +664,14 @@ if [ "${DO_POLAR}" = "True" ]; then
 
                         # Check if a similar job is already submitted
                         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
-                        JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                        JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+                        if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+                            JOB_TEST=""
+                        elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+                            JOB_TEST=""
+                        else
+                            JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
+                            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+                        fi
 
                         # Change options in the batch submission script.
                         if [ -z "$JOB_TEST" ]; then
@@ -684,8 +700,14 @@ if [ "${DO_POLAR}" = "True" ]; then
                             perl -pi -e "s/^LEVS=.*/LEVS=\"${LEVS}\"/g" ${BATCH_DIR}${BATCHFILE2}
 
                             # Call the batch job
-                            echo "Executing GPLOT batch job submission."
-                            sbatch ${BATCH_DIR}${BATCHFILE2}
+                            echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
+                            if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+                                ${BATCH_DIR}${BATCHFILE2}
+                            elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+                                ${BATCH_DIR}${BATCHFILE2} &
+                            else
+                                sbatch ${BATCH_DIR}${BATCHFILE2}
+                            fi
 
                             # Increase the batch job counter and check if we're over the limit.
                             ((N++))
@@ -697,14 +719,14 @@ if [ "${DO_POLAR}" = "True" ]; then
                             fi
                         else
                             echo "MSG: Found matching GPLOT batch job. Skipping submission."
-                        fi
+                        fi #if [ -z "$JOB_TEST" ]; then else
 
                     done #end of ID loop
                 done #end of TR loop
             done #end of DMN loop
         done #end of STORM loop
     done #end of CYCLE loop
-fi #end of DO_SHIPS
+fi #end of DO_POLAR
 
 wait
 
