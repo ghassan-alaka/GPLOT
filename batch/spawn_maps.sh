@@ -228,7 +228,7 @@ if [ "${DO_MAPS}" = "True" ]; then
             # Third, try to get STORMS from the HWRF file path.
             # This is hard-coded and might not work.
             if [ -z "$STORMS" ]; then
-                if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
+                if [ ! -z "$(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
                     STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
                 fi
             fi
@@ -239,7 +239,6 @@ if [ "${DO_MAPS}" = "True" ]; then
             if [ -z "$STORMS" ]; then
                 STORMS+=("NONE")
             fi
-
 
             # Fifth, append Fake Storm (00L) if IS_MSTORM=True and if other storms
             # were found, i.e., STORMS != NONE
@@ -457,7 +456,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             FORCE="True"
                         elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
                             for ATCF in ${PREV_ATCF[@]}; do
-                                test=$(find ${ATCF} -mmin -60 2>/dev/null)
+                                test=$(find ${ATCF} -mmin -120 2>/dev/null)
                                 if [[ -n $test ]]; then
                                     echo "MSG: This ATCF is not old enough. Forcing production."
                                     FORCE="True"
@@ -465,18 +464,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 fi
                             done
                         fi
-                    fi
-
-                    # Create a text file with ATCFs for this cycle in the output directory
-                    if [ -z "${CYCLE_ATCF[*]}" ]; then
-                        echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
-                    else
-                        if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
-                            rm -f ${ODIR_FULL}ATCF_FILES.dat
-                        fi
-                        for ATCF in ${CYCLE_ATCF[@]}; do
-                            echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
-                        done
                     fi
 
 
@@ -784,6 +771,24 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Change options in the batch submission script.
                         if [ -z "$JOB_TEST" ]; then
+
+                            # Create a text file with ATCFs for this cycle in the output directory.
+                            # This file should only be updated when a new job is being submitted.
+                            # If this file changes and a job is not submitted, then it could cause
+                            # issues with storm labels for non-storm-centered graphics.
+                            if [ -z "${CYCLE_ATCF[*]}" ]; then
+                                echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
+                            else
+                                if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                                    rm -f ${ODIR_FULL}ATCF_FILES.dat
+                                fi
+                                for ATCF in ${CYCLE_ATCF[@]}; do
+                                    echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
+                                done
+                            fi
+
+
+                            # Change options in the batch submission script.
                             LOG_DIR="$ODIR_FULL"
                             LOGFILE="GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                             perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -804,6 +809,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+
 
                             # Call the batch job
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"

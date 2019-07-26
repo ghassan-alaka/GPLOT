@@ -62,6 +62,7 @@ FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 RESOLUTION=`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 RMAX=`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 LEVS=`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+PYTHONFILE=`sed -n -e 's/^.*PYTHONFILE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 
 # Print information
 echo "MSG: Found this data source in the namelist      --> $DSOURCE"
@@ -147,12 +148,18 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -d ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
+    CYCLES=( `ls -rd ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
 else
     CYCLES=( "${IDATE[@]}" )
 fi
 echo "MSG: Found these cycles: ${CYCLES[*]}"
 echo ""
+
+
+# If PYTHONFILE is empty, set it to a default script.
+if [ -z "$PYTHONFILE" ]; then
+    PYTHONFILE="make_rz_plots.py"
+fi
 
 
 # Define the maximum number of batch submissions.
@@ -169,7 +176,6 @@ MAXCOUNT=25
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
 if [ "${DO_POLAR}" = "True" ]; then
-    PYTHONFILE="make_rz_plots.py"
     DOMAIN="polar"
     TIER="Tier1"
     SC="True"

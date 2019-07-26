@@ -2496,13 +2496,15 @@ function getInvestSID (iYYYY[1]:string,iSID[1]:string)
 local invSID, data, dFile, SIDlong, YYYY, tcSID, invSID
 begin
 
-	dFile = "/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
-	oSID	= "missing"
+	GPLOT_DIR = systemfunc("echo $GPLOT_DIR")
+	if(ismissing(GPLOT_DIR))then
+		print("ERROR: getInvestSID: GPLOT directory not found.")
+	end if
+	dFile = GPLOT_DIR+"/tbl/SIDs_Old_New.dat"
+	oSID  = "missing"
 	oSID@_FillValue = "missing"
 	
-	if(.not.fileexists(dFile))then	oSID	= "missing"
-					;print("WARNING:  getInvestSID:  SID table not found.")
-	end if
+	if(.not.fileexists(dFile))then	oSID	= "missing"   end if
 
 	data	= asciiread(dFile,-1,"string")
 	SIDlong	= str_squeeze(str_get_field(data,1," "))

@@ -15,7 +15,7 @@
 set -x
 
 # Set stack size
-limit stacksize unlimited
+#limit stacksize unlimited
 
 # Source the .profile to optimize the environment
 source ~/.profile
@@ -34,8 +34,12 @@ module load grads
 module load intel
 
 # Use the Python 3 install
-alias python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+#alias python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+PYTHONEXE="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
 PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
+
+# Turn off buffered output
+export PYTHONUNBUFFERED=1
 
 
 # 1. Get command line variables
@@ -109,7 +113,7 @@ fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-python ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
+${PYTHONEXE} ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
 
 wait
 

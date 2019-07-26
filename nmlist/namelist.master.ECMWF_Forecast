@@ -12,16 +12,16 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = GFS_Forecast
+EXPT = ECMWF_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
-DO_STATS = True
-DO_SHIPS = True
-DO_POLAR = True
+DO_STATS = False
+DO_SHIPS = False
+DO_POLAR = False
 
 ; 1C. DATA SOURCE
-DSOURCE = GFS
+DSOURCE = ECMWF
 
 ; 1D. BASIN-SCALE HWRF DATA?
 IS_MSTORM = False
@@ -42,33 +42,33 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/
+IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/ECMWF_Forecast/
 ITAG =
-EXT = .grb2
+EXT = .nc
 
 ; 1I. OUTPUT PATH
 ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
-;ODIR; = /lfs1/projects/hur-aoml/Lew.Gramer/GPLOT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
 ATCF1_TAG = trak.hwrf.raw
-ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
 ATCF2_TAG = atcfunix
-ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
 ATCF3_TAG = trak.hwrf.raw
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
+BDECK1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
+BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
-FNL_HR = 384
+FNL_HR = 240
 FMT_HR = 3
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
-DT = 3
+DT = 24
 
 ; 1N. MASK TOPOGRAPHY
 DO_TOPOMASK = False
@@ -88,11 +88,6 @@ AUTO_DIR = False
 ; 1S. FORCE
 FORCE = False
 
-; 1T. BATCH SUBMISSION MODE
-;BATCH_MODE; = Foreground
-;BATCH_MODE; = Background
-BATCH_MODE = SBatch
-
 
 
 ;================================================================
@@ -100,10 +95,10 @@ BATCH_MODE = SBatch
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac d03
+DOMAIN = basin atl epac wlant elant eus gom cpac
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1 Tier2 Tier3
+TIER = Tier1
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
@@ -115,26 +110,26 @@ ATCF_REQD = False
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = AVNO
-MCODE = AVNO
-MCODEI = AVNI
+MORIG = IFSO
+MCODE = IFSO
+MCODEI = IFSI
 
 ; 3B. FORECAST GUIDANCE MODELS
 TRKM00 = HWRF HMON NVGM CTCX EGRR
 TRKM06 = HWRF HMON NVGM CTCX
 INTM = HWRF HMON DSHP LGEM CTCX
-PRSM = HWRF HMON CTCX
+PRSM = HWRF HMON NVGM CTCX
 TRKMI00 = HWFI HMNI EGRI CTCI TVCN OFCL
-TRKMI06 = HWFI HMNI CTCI TVCN OFCL
+TRKMI06 = HWFI HMNI NVGI CTCI TVCN OFCL
 INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
 TRKMT00 = HWRF HMON EGRR OFCL
-TRKMT06 = HWRF HMON OFCL
+TRKMT06 = HWRF HMON EGRR OFCL
 INTMT = HWRF HMON DSHP OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HWFI HMNI CTCI TVCN OFCL
+ETM = HWFI HMNI NVGI CTCI TVCN OFCL
 EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-LTM = HWRF HMON CTCX
+LTM = HWRF HMON NVGM CTCX
 LIM = HWRF HMON CTCX
 
 
@@ -143,9 +138,6 @@ LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
 
 ; 3E. NUMBER OF TREND FORECASTS
 NTREND = 6
-
-; 3F. INTERPOLATION
-DO_INTERP = False
 
 
 
@@ -157,9 +149,7 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots.nodbz.py
 TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
-;TEMPDIR; = /lfs1/projects/hur-aoml/rthr-aoml/GPLOT_Lew/HB18_v3_history/tempdir
 RESOLUTION = 1.5
 RMAX = 600
 MODELTAG = hwrfprs.storm.0p015

@@ -668,17 +668,24 @@ end
 
 undef("get_dim_lon")
 function get_dim_lon (f:file,DIM[1]:string,BOCO[4]:float,TCLONS[*]:float,TCLATS[*]:float,i[1]:integer,TYPE[1]:integer)
-local LON, LONF, BDS, rngLat, rngLon, LLratio, flipFlag
+local LON, LONF, BDS, rngLat, rngLon, LLratio, flipFlag, PIV
 begin
 
 	; New boundaries
 	BDS = BOCO
 	
+	; Get the pivot longitude, if applicable
+	if(isatt(BOCO,"PivotLon"))then	PIV = BOCO@PivotLon
+	else				PIV = 180.
+	end if
+	
 	; Check if the longitude coordinate is as expected.
 	; -180<->180 needs to be treated differently than 0<->360
-	if(min(f->$DIM$).eq.0.)then		LONF	= (/where(lonFlip(f->$DIM$).ge.180.,\
-									   lonFlip(f->$DIM$)-360.,\
-									   lonFlip(f->$DIM$))/)
+	if(min(f->$DIM$).eq.0.)then		;LONF	= (/where(lonFlip(f->$DIM$).ge.180.,\
+						;			   lonFlip(f->$DIM$)-360.,\
+						;			   lonFlip(f->$DIM$))/)
+						LONF	= lonPivot(f->$DIM$,PIV)
+						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
 						flipFlag= True
 	else if(max(f->$DIM$).gt.360.)then	LONF	= (/f->$DIM$ - 360./)
 						flipFlag= False
@@ -832,7 +839,7 @@ end
 
 function getVar2d (f:file,dSource[1]:string,varInfo[*]:string,nDims[1]:integer,iBds[*]:float,mf[1]:float,flags[*]:logical,lon[*]:numeric)
 local tmp, lev1, lev2, levFlag, flipFlag, rmVortex, lonsz, tmpU, tmpV, tmpU1, tmpU2, tmpV1, tmpV2, \
-      V, V3d, wgt, wgtTot, nLevs, ppp, fff, allLevs, N, ISZ, JSZ, KSZ, DX, NP
+      V, V3d, wgt, wgtTot, nLevs, ppp, fff, allLevs, N, ISZ, JSZ, KSZ, DX, NP, PIV
 begin
 
 	; Set the minimum pressure difference between levels
@@ -846,12 +853,14 @@ begin
 									     .or. isStrSubset2(nDims@dNames,"grid_yt"))
 								; Get resolution
 								DX = abs(f->$nDims@dNames(latIND)$(1) - f->$nDims@dNames(latIND)$(0))
+								latNAME = nDims@dNames(latIND)
 	else							latDim = False
 	end if
 	if(  any(isStrSubset2(nDims@dNames,"lon"))\
 	.or. any(isStrSubset2(nDims@dNames,"grid_xt")))then	lonDim = True
 								lonIND = ind(     isStrSubset2(nDims@dNames,"lon")\
 									     .or. isStrSubset2(nDims@dNames,"grid_xt"))
+								lonNAME = nDims@dNames(lonIND)
 	else							lonDim = False
 	end if
 	if(  any(isStrSubset2(nDims@dNames,"ISBL"))\
@@ -862,6 +871,7 @@ begin
 									     isStrSubset2(nDims@dNames,"HGT")  .or.\
 									     isStrSubset2(nDims@dNames,"lev")  .or.\
 									     isStrSubset2(nDims@dNames,"lv")        )
+								levNAME = nDims@dNames(levIND)
 	else							levDim = False
 	end if
 	if(any(isStrSubset2(nDims@dNames,"time")))then		timeDim = True
@@ -869,6 +879,7 @@ begin
 												exit
 								end if
 								tIND	 = toint(varInfo(2))
+								tNAME	= nDims@dNames(tIND)
 	else							timeDim = False
 	end if
 	
@@ -876,6 +887,12 @@ begin
 	; Need at least lat and lon for the function
 	if(.not.latDim .or. .not.lonDim)then	print("ERROR: getVar2d: Must have Latitude and Longitude dimensions.")
 						exit
+	end if
+	
+	
+	; Get the pivot longitude, if applicable
+	if(isatt(iBds,"PivotLon"))then	PIV = iBds@PivotLon
+	else				PIV = 180.
 	end if
 	
 	
@@ -901,10 +918,7 @@ begin
 				else if(DX.lt.0.15 .and. DX.ge.0.05)then	N = 45
 				else if(DX.lt.0.05)then				N = 60
 				else						N = 15
-				end if
-				end if
-				end if
-				end if
+				end if  end if  end if  end if
 				;N = 60
 	end if
 	;print(rmVortex)
@@ -945,10 +959,14 @@ begin
 				JSZ	= dimsizes(tmpU1(:,0))
 				if(isatt(tmpU1,"units"))then   units = tmpU1@units   end if
 				
-				if(flipFlag)then	tmpU1	:= lonFlip(tmpU1)
-							tmpU2	:= lonFlip(tmpU2)
-							tmpV1	:= lonFlip(tmpV1)
-							tmpV2	:= lonFlip(tmpV2)
+				if(flipFlag)then	;tmpU1	:= lonFlip(tmpU1)
+							;tmpU2	:= lonFlip(tmpU2)
+							;tmpV1	:= lonFlip(tmpV1)
+							;tmpV2	:= lonFlip(tmpV2)
+							tmpU1	:= lonPivot(tmpU1,PIV)
+							tmpU2	:= lonPivot(tmpU2,PIV)
+							tmpV1	:= lonPivot(tmpV1,PIV)
+							tmpV2	:= lonPivot(tmpV2,PIV)
 				end if
 				
 				if(rmVortex)then	tmp	:= new((/1,JSZ,ISZ/),"float")
@@ -994,8 +1012,10 @@ begin
 				ISZ	= dimsizes(tmpV1(0,:))
 				JSZ	= dimsizes(tmpV1(:,0))
 				
-				if(flipFlag)then	tmpV1	:= lonFlip(tmpV1)
-							tmpV2	:= lonFlip(tmpV2)
+				if(flipFlag)then	;tmpV1	:= lonFlip(tmpV1)
+							;tmpV2	:= lonFlip(tmpV2)
+							tmpV1	:= lonPivot(tmpV1,PIV)
+							tmpV2	:= lonPivot(tmpV2,PIV)
 				end if
 								
 				if(rmVortex)then	tmp	:= new((/1,JSZ,ISZ/),"float")
@@ -1057,8 +1077,10 @@ begin
 				JSZ	= dimsizes(tmpU(0,:,0))
 				KSZ	= dimsizes(tmpU(:,0,0))
 				
-				if(flipFlag)then	tmpU	:= lonFlip(tmpU)
-							tmpV	:= lonFlip(tmpV)
+				if(flipFlag)then	;tmpU	:= lonFlip(tmpU)
+							;tmpV	:= lonFlip(tmpV)
+							tmpU	:= lonPivot(tmpU,PIV)
+							tmpV	:= lonPivot(tmpV,PIV)
 				end if
 				
 				if(rmVortex)then	tmp	:= tmpU
@@ -1102,7 +1124,9 @@ begin
 				JSZ	= dimsizes(V(0,:,0))
 				KSZ	= dimsizes(V(:,0,0))
 							
-				if(flipFlag)then	V	:= lonFlip(V)	end if
+				if(flipFlag)then	;V	:= lonFlip(V)
+							V	:= lonPivot(V,PIV)
+				end if
 				if(rmVortex)then	tmp	:= V
 							HBFILTER::hbfilter(tmp,V,N,ISZ,JSZ,KSZ)
 				end if
@@ -1177,8 +1201,10 @@ begin
 				end if
 				
 				; Flip the longitude dimension, if flipFlag=True
-				if(flipFlag)then	tmpU	= lonFlip(tmpU)
-							tmpV	= lonFlip(tmpV)
+				if(flipFlag)then	;tmpU	= lonFlip(tmpU)
+							;tmpV	= lonFlip(tmpV)
+							tmpU	:= lonPivot(tmpU,PIV)
+							tmpV	:= lonPivot(tmpV,PIV)
 							xAdd	= -360.
 				else			xAdd	= 0.
 				end if
@@ -1238,7 +1264,8 @@ begin
 				end if
 				
 				; Flip the longitude dimension, if flipFlag=True
-				if(flipFlag)then	V	= lonFlip(V)
+				if(flipFlag)then	;V	= lonFlip(V)
+							V	:= lonPivot(V,PIV)
 							xAdd	= -360.
 				else			xAdd	= 0.
 				end if
@@ -1304,8 +1331,10 @@ begin
 			ISZ	= dimsizes(tmpU(0,:))
 			JSZ	= dimsizes(tmpU(:,0))
 				
-			if(flipFlag)then	tmpU	= lonFlip(tmpU)
-						tmpV	= lonFlip(tmpV)
+			if(flipFlag)then	;tmpU	= lonFlip(tmpU)
+						;tmpV	= lonFlip(tmpV)
+						tmpU	:= lonPivot(tmpU,PIV)
+						tmpV	:= lonPivot(tmpV,PIV)
 						xAdd	= -360.
 			else			xAdd	= 0.
 			end if
@@ -1339,8 +1368,10 @@ begin
 			ISZ	= dimsizes(tmpU(0,:))
 			JSZ	= dimsizes(tmpU(:,0))
 				
-			if(flipFlag)then	tmpU	= lonFlip(tmpU)
-						tmpV	= lonFlip(tmpV)
+			if(flipFlag)then	;tmpU	= lonFlip(tmpU)
+						;tmpV	= lonFlip(tmpV)
+						tmpU	:= lonPivot(tmpU,PIV)
+						tmpV	:= lonPivot(tmpV,PIV)
 						xAdd	= -360.
 			else			xAdd	= 0.
 			end if
@@ -1378,7 +1409,8 @@ begin
 			ISZ = dimsizes(V(0,:))
 			JSZ = dimsizes(V(:,0))
 			
-			if(flipFlag)then	V	= lonFlip(V)
+			if(flipFlag)then	;V	= lonFlip(V)
+						V	:= lonPivot(V,PIV)
 						xAdd	= -360.
 			else			xAdd	= 0.
 			end if
@@ -1449,7 +1481,7 @@ end
 
 undef("getVar3d")
 function getVar3d (f:file,dSource[1]:string,varInfo[2]:string,nDims[1]:integer,iBds[*]:float,mf[1]:float,flags[*]:logical,lon[*]:numeric)
-local tmp, lev1, lev2, tmpU, tmpV, V
+local tmp, lev1, lev2, tmpU, tmpV, V, PIV
 begin
 	
 	do fff = 0,dimsizes(flags)-1
@@ -1486,6 +1518,12 @@ begin
 				end if
 				;N = 15
 	end if
+	
+	
+	; Get the pivot longitude, if applicable
+	if(isatt(iBds,"PivotLon"))then	PIV = iBds@PivotLon
+	else				PIV = 180.
+	end if
 
 
 	if(strlen(varInfo(1)).ne.8)then
@@ -1507,8 +1545,10 @@ begin
 			tmpU	= f->$findVarName(dSource,"U",tostring(lev1))$({mf*lev1:mf*lev2},{iBds(0):iBds(1)},:)
 			tmpV	= f->$findVarName(dSource,"V",tostring(lev1))$({mf*lev1:mf*lev2},{iBds(0):iBds(1)},:)
 				
-			if(flipFlag)then	tmpU	= lonFlip(tmpU)
-						tmpV	= lonFlip(tmpV)
+			if(flipFlag)then	;tmpU	= lonFlip(tmpU)
+						;tmpV	= lonFlip(tmpV)
+						tmpU	:= lonPivot(tmpU,PIV)
+						tmpV	:= lonPivot(tmpV,PIV)
 						xAdd	= -360.
 			else			xAdd	= 0.
 			end if
@@ -1528,7 +1568,8 @@ begin
 		else
 			V	= f->$findVarName(dSource,varInfo(0),varInfo(1))$({mf*lev1:mf*lev2},{iBds(0):iBds(1)},:)
 			
-			if(flipFlag)then	V	= lonFlip(V)
+			if(flipFlag)then	;V	= lonFlip(V)
+						V	:= lonPivot(V,PIV)
 						xAdd	= -360.
 			else			xAdd	= 0.
 			end if
@@ -1598,7 +1639,7 @@ end
 ; Upper and lower pressure bounds are specified by a string -- varInfo(1)
 
 function getVarXC (f:file,dSource[1]:string,varInfo[2]:string,nDims[1]:integer,iBds[*]:float,mf[1]:float,flags[*]:logical,lon[*]:numeric)
-local V,flipFlag, rmVortex
+local V,flipFlag, rmVortex, PIV
 begin
 
 
@@ -1634,6 +1675,11 @@ begin
 		print("ERROR: getVarXC: Level Info must have a length of 9: "+varInfo(1))
 		exit
 	end if
+	
+	; Get the pivot longitude, if applicable
+	if(isatt(iBds,"PivotLon"))then	PIV = iBds@PivotLon
+	else				PIV = 180.
+	end if
 
 	tmp     = tochar(varInfo(1))
 	lev1    = mf*tofloat(tostring(tmp(:3)))
@@ -1644,8 +1690,10 @@ begin
 	if(levFlag.eq."x")then
                 if(varInfo(0).eq."UV")then
                         if(flipFlag)then
-                                tmpU    = ms2kts*(/lonFlip(f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:))/)
-                                tmpV    = ms2kts*(/lonFlip(f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:))/)
+                                ;tmpU    = ms2kts*(/lonFlip(f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:))/)
+                                ;tmpV    = ms2kts*(/lonFlip(f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:))/)
+				tmpU    = ms2kts*(/lonPivot(f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:),PIV)/)
+                                tmpV    = ms2kts*(/lonPivot(f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:),PIV)/)
                         else
                                 tmpU    = ms2kts*(/f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:)/)
                                 tmpV    = ms2kts*(/f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:)/)
@@ -1656,7 +1704,8 @@ begin
 
                 else
                         if(flipFlag)then
-                                V       = (/lonFlip(f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:))/)
+                                ;V       = (/lonFlip(f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:))/)
+				V       = (/lonPivot(f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:),PIV)/)
                         else
                                 V       = (/f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{avg((/iBds(0),iBds(1)/))},:)/)
                         end if
@@ -1668,8 +1717,10 @@ begin
 	else if(levFlag.eq."y")then
                 if(varInfo(0).eq."UV")then
                         if(flipFlag)then
-                                tmpU    = ms2kts*(/lonFlip(f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:))/)
-                                tmpV    = ms2kts*(/lonFlip(f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:))/)
+                                ;tmpU    = ms2kts*(/lonFlip(f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:))/)
+                                ;tmpV    = ms2kts*(/lonFlip(f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:))/)
+				tmpU    = ms2kts*(/lonPivot(f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:),PIV)/)
+                                tmpV    = ms2kts*(/lonPivot(f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:),PIV)/)
                         else
                                 tmpU    = ms2kts*(/f->$findVarName(dSource,"U",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:)/)
                                 tmpV    = ms2kts*(/f->$findVarName(dSource,"V",tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:)/)
@@ -1680,7 +1731,8 @@ begin
 
                 else
                         if(flipFlag)then
-                                V       = (/lonFlip(f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:))/)
+                                ;V       = (/lonFlip(f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:))/)
+				V       = (/lonPivot(f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:),PIV)/)
                         else
                                 V       = (/f->$findVarName(dSource,varInfo(0),tostring(lev1))$({lev1:lev2},{iBds(0):iBds(1)},:)/)
                         end if

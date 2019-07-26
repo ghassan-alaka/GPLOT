@@ -1,4 +1,4 @@
-;================================================================
+hank;================================================================
 ;
 ; File Name: GPLOT_stats.ncl
 ;
@@ -632,6 +632,16 @@ else
 	nTrend	:= toint(nTrend(1))
 end if
 
+; Determine whether or not to do the interpolation.
+val := ind(isStrSubset2(NML_DATA,"DO_INTERP ="))
+if(ismissing(val(0)))then
+	DO_INTERP	= False
+else
+	DO_INTERP	= NML_DATA(val(0))
+	DO_INTERP	:= str_squeeze(str_split(DO_INTERP,"="))
+	DO_INTERP	:= where(DO_INTERP(1).eq."True",True,False)
+end if
+
 
 
 
@@ -650,6 +660,9 @@ print("MSG:   Storm ID:           "+SID)
 if(ENSID.ne."")then	print("MSG:   Ensemble Member:    "+ENSID)	end if
 print("MSG:   Input Directory:    "+IDIR)
 print("MSG:   Output Directory:   "+ODIR)
+if(DO_INTERP)then	print("MSG:   Interpolation:      ON")
+else			print("MSG:   Interpolation:      OFF")
+end if
 print("MSG:   System Environment: "+SYS_ENV)
 print("MSG:   Initial/Final Hour: "+INIT_HR+"/"+FNL_HR)
 ;print("MSG:   Hour Format:        "+FMT_HR)
@@ -1025,12 +1038,8 @@ INTERP_HOME = GPLOT_DIR+"/HWRF_interp/"
 INTERP_EXE = "run_interp.sh"
 
 
-; Option to do interpolation. If 'MCODEI' is undefined, then
-; don't do interpolation. Otherwise, the default is to do
-; the interpolation.
-if(MCODEI.eq."MISSING")then	DO_INTERP = False
-else				DO_INTERP = True
-end if
+; Get the old SID (the invest), if it exists
+SID_OLD = getInvestSID(YYYY,SID)
 
 
 
@@ -1133,6 +1142,17 @@ ADECK_M = "a"+SID2+"_"+str_lower(MCODE)+".dat"
 ADECK_I = "a"+SID2+"_"+str_lower(MCODEI)+".dat"
 ADECK_N = "a"+SID2+"_new.dat"
 ADECK_T = "a"+SID2+"_tmp.dat"
+
+
+; Parse some important info about the old SID, if it exists.
+if(.not.ismissing(SID_OLD))then
+	tmp := tochar(SID_OLD)
+	TC_NUM_OLD := tostring(tmp(:1))
+	SID2_OLD    = BASIN2+tostring(tmp(:1))+YYYY
+	ADECK_OLD   = "a"+SID2_OLD+".dat"
+	ADECK_M_OLD = "a"+SID2_OLD+"_"+str_lower(MCODE)+".dat"
+	ADECK_N_OLD = "a"+SID2_OLD+"_new.dat"
+end if
 
 
 ; Verification is not performed for invests because NHC rules ignore them.
@@ -1297,10 +1317,56 @@ else
 end if  end if
 
 
+; Get the ATCFs that match the old storm ID, if appllicable
+if(.not.ismissing(SID_OLD))then
+	test := systemfunc("ls "+ATCF2_DIR+"*"+str_lower(SID_OLD)+"*"+ATCF2_TAG+" 2>/dev/null")
+	if(.not.ismissing(test(0)))then
+		system(ADECK_EXE+" "+ADIR+" "+ATCF_DIR+"*"+str_lower(SID_OLD)+"* >/dev/null 2>&1")
+		system("mv "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD)
+	else
+		system("echo "+str_get_dq()+str_get_dq()+" > "+ADIR+ADECK_M_OLD)
+	end if
+	
+	if(MORIG.ne.MCODE)then   system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M_OLD)   end if
+	
+	; Merge the NHC ADECK file, if available
+	if(fileexists(ADECK_DIR+ADECK_OLD))then
+		print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+ADECK_OLD)
+		system("cp "+ADECK_DIR+ADECK_OLD+" "+ADIR+ADECK_OLD)
+		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
+	else if(fileexists(ADIR+ADECK_OLD))then
+		print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK_OLD)
+		system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM_OLD+","+str_get_dq()+" "+ADIR+ADECK_OLD+" > "+ADIR+"TMP."+ADECK_OLD)
+		system("mv "+ADIR+"TMP."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
+		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
+	else
+		print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+ADECK_OLD)
+		print("WARNING: This is OK, but graphics will be incomplete.")
+		system("cp "+ADIR+ADECK_M_OLD+" "+ADIR+ADECK_N_OLD)
+	end if  end if
+	
+	
+	system("sed 's/"+str_upper(BASIN2)+", "+TC_NUM_OLD+",/"+str_upper(BASIN2)+", "+TC_NUM+",/g' "+ADIR+ADECK_N_OLD+" > "+ADIR+"TMP."+ADECK_N_OLD)
+	system("cat "+ADIR+"TMP."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
+	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+	system("rm -f "+ADIR+"TMP."+ADECK_N_OLD)
+end if
+
+
 ; Merge the existing ADECK file, if available
+LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
+do while(fileexists(LOCK_FILE))
+	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 10 seconds...")
+	sleep(10)
+	LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
+	if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
+end do
+
+system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
 if(fileexists(ODIR_ADECK+ADECK_N))then
 	print("MSG: Existing A-DECK found in the GPLOT output directory --> "+ODIR_ADECK+ADECK_N)
 	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+ADECK_N+" > "+ADIR+ADECK_T)
+	system("rm -f "+LOCK_FILE)
 	system("awk '!(/"+MCODE+"/ && /"+IDATE+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
 	system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
 	if(MCODEI.ne."MISSING")then
@@ -1337,6 +1403,11 @@ end if  end if
 ;================================================================
 ; Produce Interpolated Forecasts
 ;================================================================
+
+; Check if the interpolated forecast already exists. If it does,
+; skip the interpolation here.
+;TEST := systemfunc("grep "+str_get_dq()+MCODEI")
+
 if(DO_INTERP)then
 	print("MSG: Produce Interpolated Forecasts.")
 
@@ -1358,6 +1429,27 @@ if(DO_INTERP)then
 	INTERP_EXE = INTERP_RUN+INTERP_EXE
 	print(BASIN2+"  "+YYYY+"  "+TC_NUM)
 	system(INTERP_EXE+" "+MCODE+" "+str_get_dq()+INTERP_RUN+str_get_dq()+" "+str_get_dq()+INTERP_DIR+str_get_dq()+" "+str_get_dq()+"_new"+str_get_dq()+" "+BASIN2+" "+YYYY+" "+TC_NUM)
+	;DATA := asciiread(INTERP_FILE,-1,"string")
+	;windRad := toint(str_squeeze(str_get_field(DATA,12,",")))
+	;tcFHR	:= toint(str_squeeze(str_get_field(DATA,6,",")))
+	;tcModel := str_squeeze(str_get_field(DATA,5,","))
+	;tcInit	:= str_squeeze(str_get_field(DATA,3,","))
+	;;vals	:= ind(any((/34,0/).eq.windRad) .and. tcModel.eq.MCODEI .and. tcInit.eq.IDATE06)
+	;vals	:= ind(tcModel.eq.MCODEI .and. tcInit.eq.IDATE06)
+	;if(.not.ismissing(vals(0)))then
+	;	tcFHR	:= tcFHR(vals)
+	;	do hhh = 0, dimsizes(tcFHR)-1
+	;		TEST := systemfunc("grep "+str_get_dq()+tcInit(vals(hhh))+","+str_get_dq+" "+ADIR+ADECK_N+" | grep "+str_get_dq()+tcModel(vals(hhh))+","+str_get_dq)
+	;		if(.not.ismissing(TEST(0)))then
+	;			TESTFHR := toint(str_squeeze(str_get_field(TEST,12,",")))
+	;			if(.not.any(TESTFHR.eq.tcFHR(hhh)))then
+	;				;system("echo "+DATA(vals(hhh))+" >> "+ADIR+ADECK_N)
+	;				print("Will copy new interpolated forecast hour "+tcFHR(hhh)+" to A-Deck.")
+	;			end if
+	;		end if
+	;	end do
+	;end if
+	;exit
 	system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
 	       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
 	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
@@ -1411,7 +1503,7 @@ print("MSG: Reading A-DECK file --> "+ADIR+ADECK_N)
 data	:= asciiread(ADIR+ADECK_N,-1,"string")
 
 ; Get Wind Radii - only keep indices for 34 kts.
-windRad	= toint(str_squeeze(str_get_field(data,12,",")))
+windRad	:= toint(str_squeeze(str_get_field(data,12,",")))
 vals	:= ind(windRad.eq.34 .or. windRad.eq.0)
 
 ; Get Latitude
@@ -1420,7 +1512,7 @@ if(dimsizes(dimsizes(tmp)).eq.1)then
 	tmp := new((/1,dimsizes(tochar(str_squeeze(str_get_field(data(vals),7,","))))/),"character")
 	tmp(0,:) = tochar(str_squeeze(str_get_field(data(vals),7,",")))
 end if
-tcLats	= tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.;
+tcLats	:= tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.;
 
 
 
@@ -1430,24 +1522,24 @@ if(dimsizes(dimsizes(tmp)).eq.1)then
 	tmp := new((/1,dimsizes(tochar(str_squeeze(str_get_field(data(vals),8,","))))/),"character")
 	tmp(0,:) = tochar(str_squeeze(str_get_field(data(vals),8,",")))
 end if
-tcLons	= -1.*tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.
+tcLons	:= -1.*tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.
 ;print(tcLats(:100)+"   "+tcLons(:100))
 ;exit
 
 ; Get Forecast Hours
-tcFHR	= toint(str_squeeze(str_get_field(data(vals),6,",")))
+tcFHR	:= toint(str_squeeze(str_get_field(data(vals),6,",")))
 
 ; Get Intensity
-tcINT	= toint(str_squeeze(str_get_field(data(vals),9,",")))
+tcINT	:= toint(str_squeeze(str_get_field(data(vals),9,",")))
 
 ; Get Central Pressure
-tcPRES	= toint(str_squeeze(str_get_field(data(vals),10,",")))
+tcPRES	:= toint(str_squeeze(str_get_field(data(vals),10,",")))
 
 ; Get Models
-tcModel	= str_squeeze(str_get_field(data(vals),5,","))
+tcModel	:= str_squeeze(str_get_field(data(vals),5,","))
 
 ; Get Initial Times
-tcInit	= str_squeeze(str_get_field(data(vals),3,","))
+tcInit	:= str_squeeze(str_get_field(data(vals),3,","))
 
 
 ; Get all the dates that apply to MCODE
@@ -2336,12 +2428,12 @@ if(DO_ET_GUIDE)then
 			tmp	:= toint(where(ismissing(aTRKI(ppp2,2,:)), fval2, aTRKI(ppp2,2,:)))
 			vals2	:= ind(tmp%12.eq.0)
 		
-			plres2@gsLineColor   = TRKcolors(ppp2)
-			plres3@gsLineColor   = TRKcolors(ppp2)
-			mkres2@gsMarkerColor = TRKcolors(ppp2)
-			mkres2@gsMarkerIndex = TRKmarkers(ppp2)
-			txres3@txFontColor   = TRKcolors(ppp2)
-			txres4@txFontColor   = TRKcolors(ppp2)
+			plres2@gsLineColor   = TRKcolorsI(ppp2)
+			plres3@gsLineColor   = TRKcolorsI(ppp2)
+			mkres2@gsMarkerColor = TRKcolorsI(ppp2)
+			mkres2@gsMarkerIndex = TRKmarkersI(ppp2)
+			txres3@txFontColor   = TRKcolorsI(ppp2)
+			txres4@txFontColor   = TRKcolorsI(ppp2)
 	
 			dum1(ppp) = gsn_add_polyline(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),plres3)
 			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),mkres2)	
@@ -2681,10 +2773,10 @@ if(DO_EI_GUIDE)then
 			xyres2b@tiXAxisString	= ""
 			xyres2b@tiYAxisString	= ""
 	
-			plres2@gsLineColor   = INTcolors(ppp2)
-			mkres2@gsMarkerColor = INTcolors(ppp2)
-			mkres2@gsMarkerIndex = INTmarkers(ppp2)
-			txres4@txFontColor   = INTcolors(ppp2)
+			plres2@gsLineColor   = INTcolorsI(ppp2)
+			mkres2@gsMarkerColor = INTcolorsI(ppp2)
+			mkres2@gsMarkerIndex = INTmarkersI(ppp2)
+			txres4@txFontColor   = INTcolorsI(ppp2)
 	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINTI(ppp2,1,vals),aINTI(ppp2,0,vals),xyres2b))

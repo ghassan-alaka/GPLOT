@@ -144,6 +144,9 @@ LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
 ; 3E. NUMBER OF TREND FORECASTS
 NTREND = 6
 
+; 3F. INTERPOLATION
+DO_INTERP = False
+
 
 ;================================================================
 ; SECTION 4: GPLOT_Ships variables

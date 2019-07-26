@@ -358,7 +358,7 @@ echo $BDECK
 
         # Write the ATCF file name to a text file to be accessed later.
         # Be sure to delete duplicate entries.
-        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
+        echo "$ATCF" > ${ODIR_FULL}ATCF_FILES.dat
         sort -u ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}ATCF_FILES.dat.TMP
         mv ${ODIR_FULL}ATCF_FILES.dat.TMP ${ODIR_FULL}ATCF_FILES.dat
 

@@ -384,9 +384,9 @@ DT      := toint(tofloat(DT(1)))
 
 ; e. This variable determines if the case is real-time.
 ;    (may be deprecated)
-IS_REAL     = data(ind(isStrSubset2(data,"IS_REAL =")))
-IS_REAL    := str_squeeze(str_split(IS_REAL," = "))
-IS_REAL    := where(IS_REAL(1).eq."True",True,False)
+;IS_REAL     = data(ind(isStrSubset2(data,"IS_REAL =")))
+;IS_REAL    := str_squeeze(str_split(IS_REAL," = "))
+;IS_REAL    := where(IS_REAL(1).eq."True",True,False)
 
 ; f. This variable determines if the case is from Basin-Scale HWRF.
 ;    It is important because that means multiple high-res domains
@@ -414,6 +414,15 @@ DO_SRCLBL       := where(DO_SRCLBL(1).eq."True",True,False)
 ;DO_TOPOMASK    := str_squeeze(str_split(DO_TOPOMASK," = "))
 ;DO_TOPOMASK    := where(DO_TOPOMASK(1).eq."True",True,False)
 
+; j. Pivot longitude. For strange regional domains (e.g., HWRF-B),
+;    the longitude array must be reordered.
+val := ind(isStrSubset2(data,"PIV ="))
+if(.not.ismissing(val(0)))then	PIV = data(val)
+				PIV := str_squeeze(str_split(PIV," = "))
+				PIV := tofloat(PIV(1))
+else				PIV = 180.
+end if
+
 
 
 
@@ -426,9 +435,9 @@ DO_SRCLBL       := where(DO_SRCLBL(1).eq."True",True,False)
 ;================================================================
 
 print("MSG: Running GPLOT with these settings:")
-if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
-else                    print("MSG:   Real-Time Forecast: OFF")
-end if
+;if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
+;else                    print("MSG:   Real-Time Forecast: OFF")
+;end if
 if(IS_MSTORM)then        print("MSG:   Basin-Scale HWRF:   ON")
 else                    print("MSG:   Basin-Scale HWRF:   OFF")
 end if
@@ -862,10 +871,11 @@ do sss = 0,nAll-1
                         
         ; c. Read the ATCF data
         data := atcfRead(ATCF_FILES(sss))
+	;print(data)
+	;exit
         
         ; d. Loop over all forecast hours (from input files)
         do fff = 0,nFHR-1               
-                
                 ; i. Find the index where the ATCF forecast hour matches the input file forecast hour.
                 val     := ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
                 if(fff.eq.nFHR-1)then   val1    = default_fillvalue("integer")
@@ -1278,7 +1288,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         if(any((/"d01","hwrf"/).eq.DOMAIN))then
                                 TEST := f->$findVarName(DSOURCE,"MSLP","")$
-                                do ddd = 0,nDims-1
+				do ddd = 0,nDims-1
                                         ; LATITUDE
                                         if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
                                                 LATTEST := where(ismissing(TEST),fval3,conform(TEST,f->$dNames(ddd)$,0))
@@ -1288,9 +1298,28 @@ do fff = 0,nFiles-1
                                         end if
                                         ; LONGITUDE
                                         if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
-                                                LONTEST := where(ismissing(TEST),fval3,conform(TEST,f->$dNames(ddd)$,1))
+						if(min(f->$dNames(ddd)$).eq.0.)then		LONTMP := f->$dNames(ddd)$
+												LONTMP := lonPivot(LONTMP,PIV)
+												LONTMP := where(LONTMP.ge.PIV,LONTMP-360.,LONTMP)
+												TEST := lonPivot(TEST,PIV)
+												printMaxMin(LONTMP,0)
+												printMaxMin(TEST@$dNames(ddd)$,0)
+												if(max(LONTMP).ne.max(TEST&$dNames(ddd)$) \
+												   .or. min(LONTMP).ne.min(TEST&$dNames(ddd)$))then
+													TEST&$dNames(ddd)$ = LONTMP
+												end if
+						else if(max(f->$dNames(ddd)$).gt.360.)then	LONTMP	:= (/f->$dNames(ddd)$ - 360./)
+						else if(max(f->$dNames(ddd)$).gt.180. .and. \
+							min(f->$dNames(ddd)$).gt.180.)then	LONTMP	:= (/f->$dNames(ddd)$ - 360./)
+						else						LONTMP	:= (/f->$dNames(ddd)$/)
+						end if  end if  end if
+						LONTMP!0 = "lon"
+						LONTMP@units = "degrees_east"
+						LONTMP&lon = LONTMP
+						
+                                                LONTEST := where(ismissing(TEST),fval3,conform(TEST,LONTMP,1))
                                                 LONTEST@_FillValue = fval3
-                                                BOCO(2) = min(LONTEST)
+						BOCO(2) = min(LONTEST)
                                                 if(BOCO(2).gt.180.)then   BOCO(2) = BOCO(2) - 360.   end if
                                                 BOCO(3) = max(LONTEST)
                                                 if(BOCO(3).gt.180.)then   BOCO(3) = BOCO(3) - 360.   end if
@@ -1307,7 +1336,8 @@ do fff = 0,nFiles-1
                         if(SC_GRAPHICS .and. .not.ATCF_REQD .and. any((/ATCF_FILES(0),SID/).eq."NONE"))then
                                 B = 1
                         end if
-                
+
+			                
                         ;================================================================
                         ; xi. Read dimension data (only for available dims)
                         ;================================================================
@@ -1322,6 +1352,7 @@ do fff = 0,nFiles-1
                                 ; 2. X-COORDINATE --> LONGITUDE
                                 if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
                                         x = ddd
+					BOCO@PivotLon = PIV
                                         lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
                                         BOCO = lon@BOCO
                                         flipFlag = lon@flipFlag
@@ -1396,7 +1427,14 @@ do fff = 0,nFiles-1
                         ;     Most of the time, BOCO=BOCO2. Found that this was critical
                         ;     for the 'hwrf' domain centered on the HWRF outer nest.
                         ;================================================================
-                        BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
+                        BOCO@PivotLon = PIV
+			BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
+			BOCO2@PivotLon = PIV
+			
+			;print(lonF)
+			;print(BOCO)
+			;print(BOCO2)
+			
                         
                         ;================================================================f
                         ;================================================================
@@ -1493,7 +1531,7 @@ do fff = 0,nFiles-1
                                                         MSLPmin := min(getVar2d(f,DSOURCE,(/"MSLP","",tostring(ttt)/),MSLPdims,\
                                                                                 BOCO2,1.,flipFlag,lonF))
                                 end if
-                        
+                        	
                                 
                                 ; 3. Determine which file contains the G_BASE variable
                                 ;    Reset "f" if UV10max and MSLPmin were calculated
@@ -3235,9 +3273,9 @@ end if  end if  end if
 print("")
 print("MSG: Ran GPLOT with these settings:")
 print("********************")
-if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
-else                    print("MSG:   Real-Time Forecast: OFF")
-end if
+;if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
+;else                    print("MSG:   Real-Time Forecast: OFF")
+;end if
 if(IS_MSTORM)then        print("MSG:   Basin-Scale HWRF:   ON")
 else                    print("MSG:   Basin-Scale HWRF:   OFF")
 end if

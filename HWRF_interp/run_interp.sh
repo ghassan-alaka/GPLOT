@@ -31,8 +31,8 @@ LateModel=${MODEL}                  #
 case ${LateModel} in
   EMXX)   EarlyModel=EMXI ;
           hr12Interp=EMX2 ;;
-  AVNO)   EarlyModel=GFSI ;
-          hr12Interp=GFS2 ;;
+  AVNO)   EarlyModel=AVNI ;
+          hr12Interp=AVN2 ;;
   H216)   EarlyModel=H16I ;
           hr12Interp=H162 ;;
   NMMB)   EarlyModel=NMMI ;
