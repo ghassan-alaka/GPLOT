@@ -1298,7 +1298,11 @@ do fff = 0,nFiles-1
                                         end if
                                         ; LONGITUDE
                                         if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
-						if(min(f->$dNames(ddd)$).eq.0.)then		LONTMP := f->$dNames(ddd)$
+						BOCO@doPivot = False
+						
+						if(min(f->$dNames(ddd)$).eq.0.)then
+							LONTMP := f->$dNames(ddd)$
+							if(.not.all(ismissing(TEST(:,{1.}))) .and. .not.all(ismissing(TEST(:,{359.}))))then
 												LONTMP := lonPivot(LONTMP,PIV)
 												LONTMP := where(LONTMP.ge.PIV,LONTMP-360.,LONTMP)
 												TEST := lonPivot(TEST,PIV)
@@ -1308,6 +1312,8 @@ do fff = 0,nFiles-1
 												   .or. min(LONTMP).ne.min(TEST&$dNames(ddd)$))then
 													TEST&$dNames(ddd)$ = LONTMP
 												end if
+												BOCO@doPivot = True
+							end if
 						else if(max(f->$dNames(ddd)$).gt.360.)then	LONTMP	:= (/f->$dNames(ddd)$ - 360./)
 						else if(max(f->$dNames(ddd)$).gt.180. .and. \
 							min(f->$dNames(ddd)$).gt.180.)then	LONTMP	:= (/f->$dNames(ddd)$ - 360./)
@@ -1320,12 +1326,14 @@ do fff = 0,nFiles-1
                                                 LONTEST := where(ismissing(TEST),fval3,conform(TEST,LONTMP,1))
                                                 LONTEST@_FillValue = fval3
 						BOCO(2) = min(LONTEST)
-                                                if(BOCO(2).gt.180.)then   BOCO(2) = BOCO(2) - 360.   end if
+                                                ;if(BOCO(2).gt.180.)then   BOCO(2) = BOCO(2) - 360.   end if
                                                 BOCO(3) = max(LONTEST)
-                                                if(BOCO(3).gt.180.)then   BOCO(3) = BOCO(3) - 360.   end if
+                                                ;if(BOCO(3).gt.180.)then   BOCO(3) = BOCO(3) - 360.   end if
                                         end if
                                 end do
                         end if
+			
+			
 
                         ;================================================================               
                         ; x. Get info based on domain.

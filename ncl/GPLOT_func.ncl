@@ -679,14 +679,23 @@ begin
 	else				PIV = 180.
 	end if
 	
+	; Check if the longitude should be pivoted
+	if(isatt(BOCO,"doPivot"))then	DO_PIVOT = BOCO@doPivot
+	else				DO_PIVOT = True
+	end if
+	
 	; Check if the longitude coordinate is as expected.
 	; -180<->180 needs to be treated differently than 0<->360
-	if(min(f->$DIM$).eq.0.)then		;LONF	= (/where(lonFlip(f->$DIM$).ge.180.,\
+	if(min(f->$DIM$).eq.0.)then
+		if(DO_PIVOT)then		;LONF	= (/where(lonFlip(f->$DIM$).ge.180.,\
 						;			   lonFlip(f->$DIM$)-360.,\
 						;			   lonFlip(f->$DIM$))/)
 						LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
 						flipFlag= True
+		else				LONF 	= (/f->$DIM$/)
+						flipFlag= False
+		end if
 	else if(max(f->$DIM$).gt.360.)then	LONF	= (/f->$DIM$ - 360./)
 						flipFlag= False
 	else if(max(f->$DIM$).gt.180. .and. \
@@ -764,6 +773,7 @@ begin
 	; Create LON if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LON, then adjust
 	; to coordinates that are outside of BDS.
+	print(BDS)
 	if(.not.isvar("LON"))then
 		if(BDS(3).lt.max(LONF))then
 			if(LONF({BDS(3)}).ne.BDS(3))then

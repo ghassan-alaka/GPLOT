@@ -1,4 +1,4 @@
-hank;================================================================
+;================================================================
 ;
 ; File Name: GPLOT_stats.ncl
 ;
@@ -1551,6 +1551,46 @@ if(ismissing(vals(0)))then
 end if
 allDates := remove_duplicates(toint(tcInit(vals)))
 
+; Remove all dates that are not within a week of any other date.
+; This removes old invest forecasts that we don't want.
+allOffset := new(dimsizes(allDates),"float")
+allOffsetD := new(dimsizes(allDates),"float")
+MaxOffset := 7.*24.
+tmp := tochar(tostring(IDATE))
+do ddd = 0,dimsizes(allDates)-1
+
+	; Get the offset of each date from the current date (IDATE)
+	tmp0	:= tochar(tostring(allDates(ddd)))
+	allOffset(ddd)	= tofloat(cd_inv_calendar(toint(tostring(tmp(0:3))),toint(tostring(tmp(4:5))),\
+					  toint(tostring(tmp(6:7))),toint(tostring(tmp(8:9))),0,0,tunits,0))\
+			- tofloat(cd_inv_calendar(toint(tostring(tmp0(0:3))),toint(tostring(tmp0(4:5))),\
+					  toint(tostring(tmp0(6:7))),toint(tostring(tmp0(8:9))),0,0,tunits,0))
+	
+	; Get the offset difference to find large jumps in time.
+	if(ddd.ge.1)then   allOffsetD(ddd) = abs(allOffset(ddd) - allOffset(ddd-1))   end if
+	
+	; Only retain blocks of dates that include allOffset(ddd) = 0.
+	if(.not.ismissing(allOffsetD(ddd)))then
+		if(allOffsetD(ddd).gt.MaxOffset)then
+			if(isvar("allDates2") .and. isvar("allOffset2"))then
+				if(.not.any(allOffset2.eq.0))then	delete([/allDates2,allOffset2/])
+				else					break
+				end if
+			end if
+		end if
+		
+		if(isvar("allDates2"))then
+			allDates2 := array_append_record(allDates2,allDates(ddd),0)
+			allOffset2 := array_append_record(allOffset2,allOffset(ddd),0)
+		else
+			allDates2 = allDates(ddd)
+			allOffset2 = allOffset(ddd)
+		end if
+	end if
+end do
+allDates := allDates2
+delete([/allOffset2,allDates2,allOffsetD/])
+
 
 
 ; LATE TRACK GUIDANCE
@@ -2156,7 +2196,7 @@ if(DO_LT_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE
+		OFILE	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
 
@@ -2181,6 +2221,7 @@ if(DO_LT_GUIDE)then
 		mpres1a@mpMinLonF	= minLon-(0.05*rngLon)
 		mpres1a@mpMaxLatF	= maxLat+(0.05*rngLat)
 		mpres1a@mpMinLatF	= minLat-(0.05*rngLat)
+		mpres1a@mpCenterLonF	= avg((/mpres1a@mpMaxLonF,mpres1a@mpMinLonF/))
 		;mpres1a@tiMainString	= "Late Track Guidance"
 		if(gridOn)then
 			mpres1a@mpGridLatSpacingF = mpres1a@gsnMajorLatSpacing
@@ -2365,6 +2406,7 @@ if(DO_ET_GUIDE)then
 		mpres1b@mpMinLonF = minLon-(0.05*rngLon)
 		mpres1b@mpMaxLatF = maxLat+(0.05*rngLat)
 		mpres1b@mpMinLatF = minLat-(0.05*rngLat)
+		mpres1b@mpCenterLonF = avg((/mpres1b@mpMaxLonF,mpres1b@mpMinLonF/))
 		if(gridOn)then
 			mpres1b@mpGridLatSpacingF = mpres1b@gsnMajorLatSpacing
 			mpres1b@mpGridLonSpacingF = mpres1b@gsnMajorLonSpacing
@@ -2514,7 +2556,7 @@ if(DO_LI_GUIDE)then
 
 
 		; Setup the output file & workstation
-		OFILE	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE
+		OFILE	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
 
@@ -2849,7 +2891,7 @@ if(DO_LP_GUIDE)then
 
 
 		; Setup the output file
-		OFILE	= ODIR+"PressureGuidance."+LONGSID+"."+IDATE
+		OFILE	= ODIR+"PressureGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
 
@@ -3089,6 +3131,7 @@ if(DO_LT_TREND)then
 		mpres4a@mpMinLonF			= minLon-(0.05*rngLon)
 		mpres4a@mpMaxLatF			= maxLat+(0.05*rngLat)
 		mpres4a@mpMinLatF			= minLat-(0.05*rngLat)
+		mpres4a@mpCenterLonF			= avg((/mpres4a@mpMaxLonF,mpres4a@mpMinLonF/))
 		if(gridOn)then
 			mpres4a@mpGridLatSpacingF	= mpres4a@gsnMajorLatSpacing
 			mpres4a@mpGridLonSpacingF	= mpres4a@gsnMajorLonSpacing
@@ -3225,6 +3268,7 @@ if(DO_LT_TREND)then
 		maxLon	:= max((/max(aTRK3(mmm,:,1,:)),max(bTRK(1,:))/))
 		minLon	:= min((/min(aTRK3(mmm,:,1,:)),min(bTRK(1,:))/))
 		rngLon	:= abs(maxLon-minLon)
+		
 		if(ismissing(rngLat) .or. ismissing(rngLon) .or. rngLon.eq.0)then
 			print("WARNING: "+thisModel+" track trend can't be produced.")
 			continue
@@ -3263,9 +3307,12 @@ if(DO_LT_TREND)then
 		mpres4b@mpMinLonF		= minLon-(0.05*rngLon)
 		mpres4b@mpMaxLatF		= maxLat+(0.05*rngLat)
 		mpres4b@mpMinLatF		= minLat-(0.05*rngLat)
+		mpres4b@mpCenterLonF		= avg((/mpres4b@mpMaxLonF,mpres4b@mpMinLonF/))
 		if(gridOn)then			mpres4b@mpGridLatSpacingF	= mpres4b@gsnMajorLatSpacing
 						mpres4b@mpGridLonSpacingF	= mpres4b@gsnMajorLonSpacing
 		end if
+		print(maxLat+"  "+minLat+"  "+maxLon+"  "+minLon)
+		print(mpres4b@mpMaxLatF+"  "+mpres4b@mpMinLatF+"  "+mpres4b@mpMaxLonF+"  "+mpres4b@mpMinLonF)
 	
 	
 		; Plot a blank map
@@ -3393,6 +3440,7 @@ if(DO_LT_TREND)then
 		; Add disclaimer
 		xloc = mpres4b@mpMinLonF + 0.02*(mpres4b@mpMaxLonF-mpres4b@mpMinLonF)
 		yloc = mpres4b@mpMinLatF + 0.02*(mpres4b@mpMaxLatF-mpres4b@mpMinLatF)
+		print(yloc+"  "+xloc)
 		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
 	
 		; Finish plot
@@ -3520,13 +3568,18 @@ if(DO_LI_TREND)then
 		tc_marker := NhlNewMarker(wks,"p",137,0.0,0.0,1.0,1.0,0.0)
 
 		; Update resources
-		xyres5a@xyMarkers	= tc_marker
 		;xyres5a@tiMainString	= thisModel+" Late Intensity Trend"
 		xyres5a@tmYLValues	:= IntMjrGrd
 		xyres5a@tmYLLabels	:= "" + xyres5a@tmYLValues
 		xyres5a@tmYROn		= False
 		xyres5a@trYMaxF		= maxInt+(0.10*rngInt)
 		xyres5a@trYMinF		= max((/0.,minInt-(0.10*rngInt)/))
+		xyres5a@xyLineThicknessF	= 15.0
+		xyres5a@xyLineColor		:= "black"
+		xyres5a@xyMarkers	= tc_marker
+		xyres5a@xyMarkerColor	:= "red"
+		xyres5a@xyMarkerThicknessF	= 10.0
+		xyres5a@xyMarkerSizeF	= 0.020
 
 		; Plot the best track
 		plot	:= gsn_csm_xy(wks,bHrs(:),bINT(0,:),xyres5a)
