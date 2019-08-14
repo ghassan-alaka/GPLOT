@@ -773,7 +773,6 @@ begin
 	; Create LON if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LON, then adjust
 	; to coordinates that are outside of BDS.
-	print(BDS)
 	if(.not.isvar("LON"))then
 		if(BDS(3).lt.max(LONF))then
 			if(LONF({BDS(3)}).ne.BDS(3))then

@@ -1856,8 +1856,8 @@ if(fileexists(ADIR+BDECK))then
 	data	:= asciiread(ADIR+BDECK,-1,"string")
 
 	; Get Wind Radii - only keep indices for 34 kts.
-	windRadB	= toint(str_squeeze(str_get_field(data,12,",")))
-	vals		:= ind(windRadB.eq.34 .or. windRadB.eq.0)
+	windRadB = toint(str_squeeze(str_get_field(data,12,",")))
+	vals := ind(windRadB.eq.34 .or. windRadB.eq.0)
 
 	; Get Latitude
 	tmp	:= tochar(str_squeeze(str_get_field(data(vals),7,",")))
@@ -5234,7 +5234,7 @@ system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
 
 if(DO_GUIDANCE)then
 	if(DO_LT_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"TrackGuidance*"+IDATE+".png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"TrackGuidance*"+IDATE+".late.png 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Track Guidance graphic not produced.")
 						exit
 		end if
@@ -5244,7 +5244,7 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_LI_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"IntensityGuidance*"+IDATE+".png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"IntensityGuidance*"+IDATE+".late.png 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Intensity Guidance graphic not produced.")
 						exit
 		end if
@@ -5254,7 +5254,7 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_LP_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"PressureGuidance*"+IDATE+".png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"PressureGuidance*"+IDATE+".late.png 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: LAte Pressure Guidance graphic not produced.")
 						exit
 		end if
