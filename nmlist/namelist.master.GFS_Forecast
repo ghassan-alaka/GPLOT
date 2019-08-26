@@ -93,6 +93,10 @@ FORCE = False
 ;BATCH_MODE; = Background
 BATCH_MODE = SBatch
 
+; 1U. CONVERT FROM PNG TO GIF
+DO_CONVERTGIF = False
+;DO_CONVERTGIF; = True
+
 
 
 ;================================================================
@@ -100,7 +104,7 @@ BATCH_MODE = SBatch
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac d03
+DOMAIN = basin atl epac wlant elant gom cpac d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1 Tier2 Tier3

@@ -10,9 +10,12 @@
 ; Namelist:     /home/Ghassan.Alaka/NCL/scripts/namelist.GPLOT
 ;
 ; Created By:    Ghassan Alaka Jr.
-; Assisted By:   Mu-Chieh Ko
+; Assisted By:   Mu-Chieh Ko, Lewis J. Gramer
 ; Date Created:  September 2, 2015
+;
 ; Last Modified: April 18, 2019
+;
+; Last Modified by LJG: August 16, 2019
 ;
 ; V1:           original
 ; V2:           05/04/2016 - Plot only 1 domain per script call 
@@ -30,6 +33,9 @@
 ;  MK LOG:
 ; V4: update finding IDIR path logic (Function: getIDIR)
 ; V5: update iStorms and get rid of other checking if statements
+;================================================================
+;  LJG LOG:
+; V1: added DO_CONVERTGIF to call ImageMagick to 'convert' to GIF
 ;================================================================
 ; Load scripts
 ;================================================================
@@ -423,6 +429,11 @@ if(.not.ismissing(val(0)))then	PIV = data(val)
 else				PIV = 180.
 end if
 
+; k. If True, convert PNG files to GIF and remove PNG files.
+DO_CONVERTGIF      = data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
+DO_CONVERTGIF      := str_squeeze(str_split(DO_CONVERTGIF," = "))
+DO_CONVERTGIF      := where(DO_CONVERTGIF(1).eq."True",True,False)
+
 
 
 
@@ -473,6 +484,9 @@ end if
 ;if(DO_TOPOMASK)then    print("MSG:   Topography mask:    ON")
 ;else                   print("MSG:   Topography mask:    OFF")
 ;end if
+if(DO_CONVERTGIF)then   print("MSG:   Convert to GIF:     ON")
+else                    print("MSG:   Convert to GIF:     OFF")
+end if
 
 
 
@@ -3158,8 +3172,18 @@ do fff = 0,nFiles-1
 		
 			;================================================================
                         ; lxxii. Remove white space on plot using the terminal
+                        ; lxxiii. Convert to GIF and removed PNG on success
+                        ; NOTE: These are handled together, so we can call
+                        ;  'convert' only once per plot when both are True
 			;================================================================
-			if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+OFILE+".png "+OFILE+".png")
+			end if  end if  end if
 
 		end do ;ppp
         
@@ -3318,6 +3342,9 @@ else                    print("MSG:   Source Labels:      OFF")
 end if
 ;if(DO_TOPOMASK)then    print("MSG:   Topography mask:    ON")
 ;else                   print("MSG:   Topography mask:    OFF")
+if(DO_CONVERTGIF)then   print("MSG:   Convert to GIF:     ON")
+else                    print("MSG:   Convert to GIF:     OFF")
+end if
 print("MSG:   Plotted Files file: "+PLOTTED_FILES)
 print("MSG:   Status file:        "+STATUS_FILE)
 ;end if
