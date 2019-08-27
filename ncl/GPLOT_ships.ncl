@@ -17,9 +17,12 @@
 ;
 ; Last Modified by Mu-Chieh Ko: Jun 04, 2018
 ;
+; Last Modified by Lewis J. Gramer: Aug 16, 2019
+;
 ; V1:		original, based on GPLOT_realtime.v6.ncl
 ; 2018-02-23 --> moved here from GPLOT_data.ncl
 ; 2018-06-04 --> bugs fixed for non-realtime mode (check MKedit)
+; 2019-08-16 --> added DO_CONVERTGIF to call ImageMagick to 'convert' to GIF
 ;================================================================
 ;
 ;================================================================
@@ -397,6 +400,11 @@ DO_SRCLBL	= data(ind(isStrSubset2(data,"DO_SRCLBL =")))
 DO_SRCLBL	:= str_squeeze(str_split(DO_SRCLBL," = "))
 DO_SRCLBL	:= where(DO_SRCLBL(1).eq."True",True,False)
 
+; i. If True, convert PNG files to GIF and remove PNG files.
+DO_CONVERTGIF	= data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
+DO_CONVERTGIF	:= str_squeeze(str_split(DO_CONVERTGIF," = "))
+DO_CONVERTGIF	:= where(DO_CONVERTGIF(1).eq."True",True,False)
+
 
 
 
@@ -436,6 +444,9 @@ else			print("MSG:   Trim graphics:      OFF")
 end if
 if(DO_SRCLBL)then	print("MSG:   Source Labels:      ON")
 else			print("MSG:   Source Labels:      OFF")
+end if
+if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
+else			print("MSG:   Convert to GIF:     OFF")
 end if
 
 
@@ -2053,8 +2064,14 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
-								
+				;if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				if (DO_RMWHITE .and. DO_CONVERTGIF) then
+				    system("convert -trim "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_CONVERTGIF) then
+				    system("convert "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_RMWHITE) then
+				    system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)
+				end if  end if  end if
 				
 				print("MSG: Producing graphic for: "+FNAME(ppp)+"_zoom")
 				; This is the "zoomed" version of the TC center fix graphic
@@ -2225,7 +2242,14 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				;if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				if (DO_RMWHITE .and. DO_CONVERTGIF) then
+				    system("convert -trim "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_CONVERTGIF) then
+				    system("convert "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_RMWHITE) then
+				    system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)
+				end if  end if  end if
 				
 			end if ; PLOT_ON			
 			
@@ -2481,7 +2505,14 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				;if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				if (DO_RMWHITE .and. DO_CONVERTGIF) then
+				    system("convert -trim "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_CONVERTGIF) then
+				    system("convert "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_RMWHITE) then
+				    system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)
+				end if  end if  end if
 				
 				
 				print("MSG: Producing graphic for: "+FNAME(ppp)+"_zoom")
@@ -2614,7 +2645,14 @@ do fff = 0,nFiles-1
 				frame(wks)
 				
 				; Remove white space on plot using the terminal
-				if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				;if(DO_RMWHITE)then   system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)   end if
+				if (DO_RMWHITE .and. DO_CONVERTGIF) then
+				    system("convert -trim "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_CONVERTGIF) then
+				    system("convert "+OFILE+"."+wtype+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+"."+wtype)
+				else if (DO_RMWHITE) then
+				    system("convert -trim "+OFILE+"."+wtype+" "+OFILE+"."+wtype)
+				end if  end if  end if
 				
 			end if ; ppp
 				
@@ -2846,8 +2884,15 @@ do fff = 0,nFiles-1
 			frame(wks)
 
 			; Remove white space on plot
-			if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
-				
+			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+			end if  end if  end if
+			
 		end if		
 		
 		ppp2 = ppp2+1
@@ -2991,6 +3036,9 @@ else			print("MSG:   Source Labels:      OFF")
 end if
 ;if(DO_TOPOMASK)then	print("MSG:   Topography mask:    ON")
 ;else			print("MSG:   Topography mask:    OFF")
+if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
+else			print("MSG:   Convert to GIF:     OFF")
+end if
 print("MSG:   Plotted Files file: "+PLOTTED_FILES)
 print("MSG:   Status file:        "+STATUS_FILE)
 ;end if

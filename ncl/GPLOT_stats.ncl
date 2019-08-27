@@ -14,6 +14,8 @@
 ; Date Created:  July 20, 2016
 ; Last Modified: February 23, 2018
 ;
+; Last Modified by Lewis J. Gramer: Aug 16, 2019
+;
 ; V1:		original
 ; V2:		Tweaked code to allow for model input. Now, I
 ;		can switch between "HB15" and "HB16" with ease.
@@ -29,6 +31,7 @@
 ; V8:		Extended lifetime track & intensity to all trend models
 ; 2018-02-23 --> file moved to GPLOT_stats.v1.ncl
 ; 2018-06-05 --> bug fixed by Mu-Chieh Ko 
+; 2019-08-16 --> (LJG) added DO_CONVERTGIF to call ImageMagick to 'convert' to GIF
 ;
 ;================================================================
 ;
@@ -373,6 +376,16 @@ else
 	DO_SRCLBL	:= where(DO_SRCLBL(1).eq."True",True,False)
 end if
 
+; i. If True, convert PNG files to GIF and remove PNG files.
+val := ind(isStrSubset2(NML_DATA,"DO_CONVERTGIF ="))
+if(ismissing(val(0)))then
+	DO_CONVERTGIF = False
+else
+	DO_CONVERTGIF	= NML_DATA(val(0))
+	DO_CONVERTGIF	:= str_squeeze(str_split(DO_CONVERTGIF," = "))
+	DO_CONVERTGIF	:= where(DO_CONVERTGIF(1).eq."True",True,False)
+end if
+
 ; Get the A-Deck directory
 val := ind(isStrSubset2(NML_DATA,"ADECK_DIR ="))
 if(ismissing(val(0)))then
@@ -680,6 +693,9 @@ else			print("MSG:   Trim graphics:      OFF")
 end if
 if(DO_SRCLBL)then	print("MSG:   Source Labels:      ON")
 else			print("MSG:   Source Labels:      OFF")
+end if
+if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
+else			print("MSG:   Convert to GIF:     OFF")
 end if
 ;print("MSG:   TRKmodels00:        "+stringOut(TRKmodels00))
 ;print("MSG:   TRKmodels06:        "+stringOut(TRKmodels06))
@@ -2335,7 +2351,14 @@ if(DO_LT_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+		end if  end if  end if
 
 	end if ;DO_THIS
 
@@ -2513,7 +2536,14 @@ if(DO_ET_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+		end if  end if  end if
 
 
 	end if ;DO_THIS
@@ -2683,7 +2713,14 @@ if(DO_LI_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+		end if  end if  end if
 
 
 	end if ;DO_THIS
@@ -2850,7 +2887,14 @@ if(DO_EI_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+		end if  end if  end if
 
 	end if ;DO_THIS
 
@@ -3016,7 +3060,14 @@ if(DO_LP_GUIDE)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+		end if  end if  end if
 
 	end if ;DO_THIS
 
@@ -3244,7 +3295,14 @@ if(DO_LT_TREND)then
 	
 	
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+		end if  end if  end if
 		
 		
 		; Mark that a trend graphic has been produced
@@ -3448,7 +3506,14 @@ if(DO_LT_TREND)then
 		frame(wks)
 	
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+		end if  end if  end if
 
 	end do ;mmm
 
@@ -3699,7 +3764,14 @@ if(DO_LI_TREND)then
 		frame(wks)
 
 		; Remove white space from graphic
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+		end if  end if  end if
 		
 		; Mark that a trend graphic has been produced
 		DO_LI_TREND = True
@@ -3913,7 +3985,14 @@ if(DO_LI_TREND)then
 		frame(wks)
 	
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+		end if  end if  end if
 	
 	
 	end do ;mmm
@@ -4128,7 +4207,14 @@ if(DO_LP_TREND)then
 
 
 		; Remove white space on plot
-		if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		;if(DO_RMWHITE)then   system("convert -trim "+oFile+".png "+oFile+".png")   end if
+		if (DO_RMWHITE .and. DO_CONVERTGIF) then
+		    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_CONVERTGIF) then
+		    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+		else if (DO_RMWHITE) then
+		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+		end if  end if  end if
 
 	end if ;DO_THIS
 
@@ -4466,7 +4552,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;TK_ERR
 
@@ -4515,7 +4608,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove the white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;ALTK_ERR
 
@@ -4564,7 +4664,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if
 
@@ -4712,7 +4819,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove the white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;ABS_WIND_ERR
 
@@ -4761,7 +4875,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove the white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;WIND_ERR
 
@@ -4913,7 +5034,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;TK_ERR
 
@@ -4961,7 +5089,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;ALTK_ERR
 
@@ -5011,7 +5146,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;CRTK_ERR
 
@@ -5160,7 +5302,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;ABS_WIND_ERR
 
@@ -5210,7 +5359,14 @@ if(DO_VERIFICATION)then
 			frame(wks)
 
 			; Remove white space from the border of the graphic.
-			if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			;if(DO_RMWHITE)then system("convert -trim "+oFile+".png "+oFile+".png") end if
+			if (DO_RMWHITE .and. DO_CONVERTGIF) then
+			    system("convert -trim "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_CONVERTGIF) then
+			    system("convert "+oFile+".png"+" +repage gif:"+oFile+".gif && /bin/rm "+oFile+".png")
+			else if (DO_RMWHITE) then
+			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
+			end if  end if  end if
 
 		end if ;WIND_ERR
 
@@ -5234,66 +5390,66 @@ system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
 
 if(DO_GUIDANCE)then
 	if(DO_LT_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"TrackGuidance*"+IDATE+".late.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"TrackGuidance*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Track Guidance graphic not produced.")
 						exit
 		end if
 	else if(DO_ET_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance*"+IDATE+".early.png 2>/dev/null")
+		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Guidance graphic ot produced.")
 						exit
 		end if
 	else if(DO_LI_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"IntensityGuidance*"+IDATE+".late.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"IntensityGuidance*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Intensity Guidance graphic not produced.")
 						exit
 		end if
 	else if(DO_EI_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance*"+IDATE+".early.png 2>/dev/null")
+		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Guidance graphic not produced.")
 						exit
 		end if
 	else if(DO_LP_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"PressureGuidance*"+IDATE+".late.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"PressureGuidance*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: LAte Pressure Guidance graphic not produced.")
 						exit
 		end if
 	end if  end if  end if  end if  end if
 else if(DO_TRENDS)then
 	if(DO_LT_TREND)then
-		chk := systemfunc("ls "+ODIR+"TrackTrend."+MCODE+"*"+IDATE+".png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"TrackTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: "+MCODE+" Late Track Trend graphic not produced.")
 						exit
 		end if
 	else if(DO_LI_TREND)then
-		chk := systemfunc("ls "+ODIR+"IntensityTrend."+MCODE+"*"+IDATE+".png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"IntensityTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: "+MCODE+" Late Intensity Trend graphic not produced.")
 						exit
 		end if
 	else if(DO_LP_TREND)then
-		chk := systemfunc("ls "+ODIR+"PressureTrend."+MCODE+"*"+IDATE+".png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"PressureTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: "+MCODE+" Late Pressure Trend graphic not produced.")
 						exit
 		end if
 	end if  end if  end if
 else if(DO_VERIFICATION)then
 	if(DO_ET_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*TK_ERR*"+IDATE+".early.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"Verification*TK_ERR*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Model Verification did not plot.")
 						exit
 		end if
 	else if(DO_EI_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*WIND_ERR*"+IDATE+".early.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"Verification*WIND_ERR*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Model Verification did not plot.")
 						exit
 		end if
 	else if(DO_LT_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*TK_ERR*"+IDATE+".late.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"Verification*TK_ERR*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Track Model Verification did not plot.")
 						exit
 		end if
 	else if(DO_LI_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*WIND_ERR*"+IDATE+".late.png 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"Verification*WIND_ERR*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Intensity Model Verification did not plot.")
 						exit
 		end if

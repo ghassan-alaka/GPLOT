@@ -221,7 +221,34 @@ AUTO_DIR = False
 ; 1S. FORCE
 ;     Description: Force graphic based on input file list even
 ;                  if graphic already exists.
+
 FORCE = True
+
+
+
+; 1T. BATCH SUBMISSION MODE
+;    Description:  Determine how GPLOT jobs are run.
+;    Option 1:     SBatch
+;                    --> Use SLURM 'sbatch' parameters and command
+;    Option 2:     Background
+;                    --> Run jobs in the background (&) on the current FE
+;    Option 3:     Foreground
+;                    --> Run jobs in the foreground (blocking command line) on the current FE
+
+BATCH_MODE = SBatch
+
+
+
+; 1U. CONVERT FROM PNG TO GIF
+;    Description: Set if the intended output of GPLOT is figures in GIF format
+;      (smaller file size, not directly produced by NCL) rather than PNG.
+;    Option 1:     True
+;                    --> call ImageMagick 'convert' on each figure produced
+;                         by NCL, to generate GIF; remove PNG on success
+;    Option 2:     False
+;                    --> do not convert
+
+DO_CONVERTGIF = False
 
 
 
