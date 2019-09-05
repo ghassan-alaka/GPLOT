@@ -126,7 +126,7 @@ for ATCF in ${ATCF2_ALL[@]}; do
     ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
 done
 ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
-
+#echo ${ATCF_ALL} | 
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
@@ -220,7 +220,7 @@ if [ "${DO_STATS}" = "True" ]; then
             continue
         fi
 
-        # Create the B-Deck file name
+        # Parse important information from $STORM and $CYCLE
         SNUM=`echo "$STORM" | cut -c1-2`
         BASIN1=`echo "$STORM" | cut -c3`
         if [ "${BASIN1,,}" == "l" ]; then
@@ -233,7 +233,19 @@ if [ "${DO_STATS}" = "True" ]; then
             BASIN2="wp"
         fi
         YYYY=`echo "$CYCLE" | cut -c1-4`
+        MM=`echo "$CYCLE" | cut -c5-6`
+        DD=`echo "$CYCLE" | cut -c7-8`
+        HH=`echo "$CYCLE" | cut -c9-10`
+        CYCLE2="${YYYY}-${MM}-${DD} ${HH}:00:00"
+
+        # Create the B-Deck file name
         BDECK="${BDECK_DIR}b${BASIN2}${SNUM}${YYYY}.dat"
+
+        # Computes dates in YYYYMMDDHH format. This will be used to determine if
+        # production for the current cycle should be forced.
+        DATE_NOW="`date +'%Y%m%d%H'`"
+        DATE_CUT="`date -d "${CYCLE2} UTC + ${FNL_HR} hours" +'%Y%m%d%H'`"
+        echo "CYCLE = $CYCLE, DATE_NOW = $DATE_NOW, DATE_CUT = $DATE_CUT"
 
         # Process this ATCF only if the cycle is found in IDATE
         # or if IDATE is empty.
@@ -305,14 +317,21 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
         # If the BDECK is new enough, force production.
-echo $BDECK
         if [ -f ${BDECK} ]; then
             echo "MSG: Found this B-Deck --> $BDECK"
-            test=$(find ${BDECK} -mmin -180 2>/dev/null)
+            test=$(find ${BDECK} -mmin -90 2>/dev/null)
             if [[ -n $test ]]; then
                 echo "MSG: This BDECK is not old enough. Forcing production."
                 FORCE="True"
             fi
+        fi
+
+
+        # If the current date is more recent than the date for the final lead time (DATE_CUT)
+        # do NOT force production.
+        if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
+            echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
+            FORCE="False"
         fi
 
 
@@ -358,7 +377,11 @@ echo $BDECK
 
         # Write the ATCF file name to a text file to be accessed later.
         # Be sure to delete duplicate entries.
-        echo "$ATCF" > ${ODIR_FULL}ATCF_FILES.dat
+        if [ ! -z "$(cat ${ODIR_FULL}ATCF_FILES.dat)" ]; then
+            grep -v "${ATCF_BASE}" ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}TMP.dat
+            mv ${ODIR_FULL}TMP.dat ${ODIR_FULL}ATCF_FILES.dat
+        fi
+        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
         sort -u ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}ATCF_FILES.dat.TMP
         mv ${ODIR_FULL}ATCF_FILES.dat.TMP ${ODIR_FULL}ATCF_FILES.dat
 
@@ -406,7 +429,7 @@ echo $BDECK
             N=$((N+1))
 
             # Limit the number of jobs to 50 to now overwhelm the batch scheduler
-            if [[ N -ge 50 ]]; then
+            if [[ N -ge 20 ]]; then
                 echo "WARNING: Maximum number of jobs reahed (50)."
                 break
             fi

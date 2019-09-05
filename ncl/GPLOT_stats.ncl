@@ -12,7 +12,7 @@
 ;
 ; Created By:    Ghassan Alaka Jr.
 ; Date Created:  July 20, 2016
-; Last Modified: February 23, 2018
+; Last Modified: September 4, 2019
 ;
 ; Last Modified by Lewis J. Gramer: Aug 16, 2019
 ;
@@ -423,7 +423,7 @@ if(MCODE.eq."AVNO")then    MCODEV = "GFSO"
 else			   MCODEV = MCODE
 end if
 
-; Get the early model code. If not set, interpolation will be turned off.
+; Get the 6-h early model code. If not set, interpolation will be turned off.
 val := ind(isStrSubset2(NML_DATA,"MCODEI ="))
 if(ismissing(val(0)))then
 	MCODEI = "MISSING"
@@ -435,6 +435,17 @@ end if
 if(MCODEI.eq."AVNI")then   MCODEVI = "GFSI"
 else			   MCODEVI = MCODEI
 end if
+
+; Get the 12-h early model code. If not set, interpolation will be turned off.
+val := ind(isStrSubset2(NML_DATA,"MCODE12 ="))
+if(ismissing(val(0)))then
+	MCODE12 = "MISSING"
+else
+	MCODE12	= NML_DATA(val(0))
+	MCODE12	:= str_squeeze(str_split(MCODE12," = "))
+	MCODE12	:= MCODE12(1)
+end if
+
 
 ; Get the original model code. Default is MCODE
 val := ind(isStrSubset2(NML_DATA,"MORIG ="))
@@ -1050,8 +1061,9 @@ XYHrs2	:= array_append_record((/-24,-12/),LEAD_TIMES,0)	; trends
 
 ; Define some executables
 ADECK_EXE = GPLOT_DIR+"/shell/createADeck.ksh"
-INTERP_HOME = GPLOT_DIR+"/HWRF_interp/"
-INTERP_EXE = "run_interp.sh"
+INTERP_HOME = GPLOT_DIR+"/NHC_interp/"
+INTERP_EXE = "run.sh"
+INTERP_NML = "intrfcst.input"
 
 
 ; Get the old SID (the invest), if it exists
@@ -1370,19 +1382,37 @@ end if
 
 
 ; Merge the existing ADECK file, if available
-LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
-do while(fileexists(LOCK_FILE))
-	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 10 seconds...")
-	sleep(10)
-	LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
-	if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
-end do
+;LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
+;do while(fileexists(LOCK_FILE))
+;	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 5 seconds...")
+;	sleep(5)
+;	LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
+;	if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
+;end do
+;system("lockfile -r-1 -l 180 "+LOCK_FILE);+" 2>&1")
+;print("LOCK_TEST = "+LOCK_TEST)
+;do while(.not.ismissing(LOCK_TEST))
+;	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 5 seconds...")
+;	sleep(5)
+;	LOCK_TEST := systemfunc("lockfile -r-1 -l 60 "+LOCK_FILE+" 2>&1")
+;end do
+;exit
+;if(ismissing(LOCK_TEST))then
+;	print("MSG: '"+ODIR_ADECK+ADECK_N+"' has been locked ("+LOCK_FILE+").")
+;end if
 
-system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
+;system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
 if(fileexists(ODIR_ADECK+ADECK_N))then
 	print("MSG: Existing A-DECK found in the GPLOT output directory --> "+ODIR_ADECK+ADECK_N)
-	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+ADECK_N+" > "+ADIR+ADECK_T)
-	system("rm -f "+LOCK_FILE)
+	LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
+	do while(fileexists(LOCK_FILE))
+		print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 5 seconds...")
+		sleep(5)
+		LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
+		if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
+	end do
+	
+	system("grep '^"+str_upper(BASIN2)+", "+TC_NUM+",' "+ODIR_ADECK+ADECK_N+" > "+ADIR+ADECK_T)
 	system("awk '!(/"+MCODE+"/ && /"+IDATE+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
 	system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
 	if(MCODEI.ne."MISSING")then
@@ -1393,10 +1423,20 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 end if
 
+;print("MSG: '"+ODIR_ADECK+ADECK_N+"' has been unlocked ("+LOCK_FILE+").")
+;system("rm -f "+LOCK_FILE)
+;exit
+
 
 ; Make sure only forecasts through the current time are included.
 ; This is tricky to implement because of early vs. late cycles.
 ;systemfunc("awk '$3 <= "
+
+; Remove any blank lines from ADECK_N
+;system("sed -i '/^$/d' "+ADIR+ADECK_N)
+system("awk -F',' 'NF > 7 {print}' "+ADIR+ADECK_N+" > "+ADIR+"TMP."+ADECK_N)
+system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+;exit
 
 
 print("MSG: Copy latest B-DECK")
@@ -1425,56 +1465,51 @@ end if  end if
 ;TEST := systemfunc("grep "+str_get_dq()+MCODEI")
 
 if(DO_INTERP)then
+if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	print("MSG: Produce Interpolated Forecasts.")
 
 	; Set up the interpolation running directory.
 	; Copy this from GPLOT_DIR to avoid too many jobs from accessing
 	; it at the same time.
-	INTERP_RUN = ADIR+"HWRF_interp/"
-	system("rm -rf "+INTERP_RUN)
-	system("cp -r "+INTERP_HOME+" "+INTERP_RUN)
+	INTERP_DIR = ADIR+"NHC_interp"
+	system("rm -rf "+INTERP_DIR)
+	system("cp -r "+INTERP_HOME+" "+INTERP_DIR)
 
 	; Set up the interpolation ATCF directory.
-	INTERP_DIR = ADIR+"interp/"
-	INTERP_FILE = INTERP_DIR+"/a"+SID2+"."+MCODE+".interp"
+	INTERP_ODIR = INTERP_DIR+"/atcf"
+	INTERP_FILE = INTERP_ODIR+"/a"+SID2+".gun"
 	system("mkdir -p "+INTERP_DIR)
-	system("ln -sf "+ADIR+ADECK_N+" "+INTERP_DIR+ADECK_N)
-	system("ln -sf "+ADIR+BDECK+" "+INTERP_DIR+BDECK)
+	system("ln -sf "+ADIR+ADECK_N+" "+INTERP_ODIR+"/"+ADECK)
+	system("ln -sf "+ADIR+BDECK+" "+INTERP_ODIR+"/"+BDECK)
+	
+	; Set up the namelist
+	system("cp "+INTERP_DIR+"/"+INTERP_NML+".template "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/AAAA/"+MCODE+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/BBBB/"+MCODE12+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/CCCC/"+MCODEI+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/DDD/006/g' "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	
 
 	; Run the interpolation executable to produce early forecasts.
-	INTERP_EXE = INTERP_RUN+INTERP_EXE
-	print(BASIN2+"  "+YYYY+"  "+TC_NUM)
-	system(INTERP_EXE+" "+MCODE+" "+str_get_dq()+INTERP_RUN+str_get_dq()+" "+str_get_dq()+INTERP_DIR+str_get_dq()+" "+str_get_dq()+"_new"+str_get_dq()+" "+BASIN2+" "+YYYY+" "+TC_NUM)
-	;DATA := asciiread(INTERP_FILE,-1,"string")
-	;windRad := toint(str_squeeze(str_get_field(DATA,12,",")))
-	;tcFHR	:= toint(str_squeeze(str_get_field(DATA,6,",")))
-	;tcModel := str_squeeze(str_get_field(DATA,5,","))
-	;tcInit	:= str_squeeze(str_get_field(DATA,3,","))
-	;;vals	:= ind(any((/34,0/).eq.windRad) .and. tcModel.eq.MCODEI .and. tcInit.eq.IDATE06)
-	;vals	:= ind(tcModel.eq.MCODEI .and. tcInit.eq.IDATE06)
-	;if(.not.ismissing(vals(0)))then
-	;	tcFHR	:= tcFHR(vals)
-	;	do hhh = 0, dimsizes(tcFHR)-1
-	;		TEST := systemfunc("grep "+str_get_dq()+tcInit(vals(hhh))+","+str_get_dq+" "+ADIR+ADECK_N+" | grep "+str_get_dq()+tcModel(vals(hhh))+","+str_get_dq)
-	;		if(.not.ismissing(TEST(0)))then
-	;			TESTFHR := toint(str_squeeze(str_get_field(TEST,12,",")))
-	;			if(.not.any(TESTFHR.eq.tcFHR(hhh)))then
-	;				;system("echo "+DATA(vals(hhh))+" >> "+ADIR+ADECK_N)
-	;				print("Will copy new interpolated forecast hour "+tcFHR(hhh)+" to A-Deck.")
-	;			end if
-	;		end if
-	;	end do
-	;end if
-	;exit
-	system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
-	       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
-	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
-	system("sed '/"+MCODEI+"/p' "+INTERP_FILE+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_I)
+	INTERP_EXE = INTERP_DIR+"/"+INTERP_EXE
+	system("cp "+INTERP_EXE+".template "+INTERP_EXE)
+	system("sed -i 's#AAAA#"+INTERP_DIR+"#g' "+INTERP_EXE)
+	system("sed -i 's#BBBB#"+INTERP_ODIR+"#g' "+INTERP_EXE)
+	print("MSG: "+INTERP_EXE+" "+SID2+" doall "+INTERP_NML)
+	system(INTERP_EXE+" "+SID2+" doall "+INTERP_NML+" &> "+INTERP_ODIR+"/a"+SID2+".log")
+	
+	if(fileexists(INTERP_FILE))then
+		system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
+		       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
+		system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+		system("sed '/"+MCODEI+"/p' "+INTERP_FILE+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_I)
+	end if
 
 	; Remove interpolation directories as they are no longer needed.
-	system("rm -rf "+INTERP_DIR)
-	system("rm -rf "+INTERP_RUN)
+	;system("rm -rf "+INTERP_DIR)
 
+end if
 end if
 
 
@@ -1490,24 +1525,73 @@ end if
 ; may proceed.
 ;================================================================
 LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
-do while(fileexists(LOCK_FILE))
-	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 10 seconds...")
-	sleep(10)
-	LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
-	if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
-end do
+;do while(fileexists(LOCK_FILE))
+;	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 5 seconds...")
+;	sleep(5)
+;	LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
+;	if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
+;end do
 
-system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
+;SIZE_TEST := systemfunc("find "+ADIR+ADECK_N+" -size 0 2>/dev/null")
+;if(.not.ismissing(SIZE_TEST))then
+;	print("ERROR: File is empty --> "+ADIR+ADECK_N)
+;	exit
+;end if
+
+;system("echo "+str_get_dq()+ODIR_ADECK+ADECK_N+" is locked"+str_get_dq()+" > "+LOCK_FILE)
+system("lockfile -r-1 -l 180 "+LOCK_FILE);+" 2>&1")
+;LOCK_TEST := systemfunc("lockfile -r 0 "+LOCK_FILE)
+;print("LOCK_TEST = "+LOCK_TEST)
+;do while(.not.ismissing(LOCK_TEST))
+;	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 5 seconds...")
+;	sleep(5)
+;	LOCK_TEST := systemfunc("lockfile -r 0 "+LOCK_FILE)
+;end do
+;if(ismissing(LOCK_TEST))then
+	print("MSG: '"+ODIR_ADECK+ADECK_N+"' has been locked ("+LOCK_FILE+").")
+;end if
+
 if(fileexists(ODIR_ADECK+ADECK_N))then
-	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
-	system("rm -f "+ODIR_ADECK+ADECK_N)
-	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+"TMP."+ADECK_N+" > "+ODIR_ADECK+ADECK_N)
-	system("rm -f "+ODIR_ADECK+"TMP."+ADECK_N)
-else
 	
-	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK_N+" > "+ODIR_ADECK+ADECK_N)
+	; Check is the file is empty
+	SIZE_TEST := systemfunc("find "+ODIR_ADECK+ADECK_N+" -size 0 2>/dev/null")
+	if(.not.ismissing(SIZE_TEST))then
+		print("ERROR: File is empty before writing --> "+ODIR_ADECK+ADECK_N)
+	end if
+
+	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
+	if(.not.fileexists(ODIR_ADECK+"TMP."+ADECK_N))then
+		print("ERROR: File does not exist --> "+ODIR_ADECK+"TMP."+ADECK_N)
+	end if
+	
+	SIZE_TEST := systemfunc("find "+ODIR_ADECK+"TMP."+ADECK_N+" -size 0 2>/dev/null")
+	if(ismissing(SIZE_TEST))then
+	;system("rm -f "+ODIR_ADECK+ADECK_N)
+	;system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+"TMP."+ADECK_N+" > "+ODIR_ADECK+ADECK_N)
+	;system("rm -f "+ODIR_ADECK+"TMP."+ADECK_N)
+	;system("sed -i '/^$/d' "+ODIR_ADECK+ADECK_N)
+		print("MSG: File is not empty --> "+ODIR_ADECK+"TMP."+ADECK_N)
+		system("awk -F',' 'NF > 7 {print}' "+ODIR_ADECK+"TMP."+ADECK_N+" | grep '^"+str_upper(BASIN2)+", "+TC_NUM+",' > "+ODIR_ADECK+ADECK_N)
+	else
+		print("ERROR: File is empty --> "+ODIR_ADECK+"TMP."+ADECK_N)
+		print("ERROR: File is empty --> "+ADIR+ADECK_N)
+	end if
+	system("rm -f "+ODIR_ADECK+"TMP."+ADECK_N)
+	;system("mv "+ODIR_ADECK+"TMP."+ADECK_N+" "+ODIR_ADECK+ADECK_N)
+else
+	system("cp "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N)
 end if
+
+; Check if the file is empty
+SIZE_TEST := systemfunc("find "+ODIR_ADECK+ADECK_N+" -size 0 2>/dev/null")
+if(.not.ismissing(SIZE_TEST))then
+	print("ERROR: File is empty after writing --> "+ODIR_ADECK+ADECK_N)
+end if
+
+; Remove the lock file so other jobs can access the common ATCF.
+print("MSG: '"+ODIR_ADECK+ADECK_N+"' has been unlocked ("+LOCK_FILE+").")
 system("rm -f "+LOCK_FILE)
+;exit
 
 
 
@@ -4500,7 +4584,7 @@ if(DO_VERIFICATION)then
 			
 		end do
 
-		print("MSG: Producing graphics for late track model verifications.")
+		
 
 		; f. Produce the graphic for late track models.
 		;    Need to check if the track errors are missing.
@@ -4512,6 +4596,7 @@ if(DO_VERIFICATION)then
 		else if(ismissing(vals2(0)))then	DO_THIS = False
 		end if  end if  end if
 		if(DO_THIS)then
+			print("MSG: Producing graphics for late track model verifications.")
 
 			; Setup the file, open the workstation, and update resources.
 			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".late"
