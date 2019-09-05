@@ -1,0 +1,11 @@
+# Input file for intrfcst.
+#AID 12-h 6-h  Intensity adjustment
+#            start stop
+#xxx xxxx xxxx xxx xxx
+#START INTERPOLATOR INPUT (maximum 1000 aids)
+AAAA BBBB CCCC DDD EEE
+#END INTERPOLATOR INPUT
+
+#START CONSENSUS INPUT (maximum 100 consensus aids)
+#END CONSENSUS INPUT
+

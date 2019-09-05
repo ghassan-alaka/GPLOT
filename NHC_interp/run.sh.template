@@ -1,0 +1,19 @@
+#!/bin/sh --login
+
+#module load pgi
+module load intel
+
+# read args
+SID="$1"
+CYCLE="$2"
+IFILE="$3"
+
+# load necessary env vars
+export ATCFINC=AAAA
+export ATCFSTRMS=BBBB
+echo $ATCFINC
+echo $ATCFSTRMS
+
+cd ${ATCFINC}
+./intrfcst.exe $SID $CYCLE $IFILE
+#( export ATCFINC=$ATCFINC ; export ATCFSTRMS=$ATCFSTRMS ; ./intrfcst.exe $SID $CYCLE $IFILE )

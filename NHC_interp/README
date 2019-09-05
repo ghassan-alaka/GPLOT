@@ -1,0 +1,17 @@
+pgf90 -c anystips.f
+pgf90 -c dataio.f
+pgf90 -c dirdst.f
+pgf90 -c direction_and_spread.f
+pgf90 -c dtgchk.f 
+pgf90 -c dtgmod.f 
+pgf90 -c dtgnum.f 
+pgf90 -c dtgutils.f 
+pgf90 -c dtgyrhr.f 
+pgf90 -c greatcirc.f 
+pgf90 -c hermite.f 
+pgf90 -c hermite_routines.f90 
+pgf90 -c mat_vect_mult.f 
+pgf90 -c rltlg.f 
+pgf90 -c site_cor.f 
+
+pgf90 intrfcst.f dataio.o dirdst.o dtgchk.o dtgmod.o dtgnum.o dtgyrhr.o hermite.o hermite_routines.o rltlg.o -o intrfcst.exe
