@@ -2909,10 +2909,10 @@ do fff = 0,nFiles-1
 	do ppp = 0,dimsizes(FNAME)-1
 		if(PLOT_ON(ppp))then
 			if(any((/"TCCEN","TCHODO"/).eq.FNAME(ppp)))then
-				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".png"
+				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".gif"
 			else
 				if(FHR(fff).ne.max(FHR))then   continue   end if
-				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".png"
+				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".gif"
 			end if
 			p := systemfunc("ls "+PNG_FILE+" 2>/dev/null")
 			if(ismissing(p(0)))then

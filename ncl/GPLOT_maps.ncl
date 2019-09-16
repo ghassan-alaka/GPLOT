@@ -1320,8 +1320,8 @@ do fff = 0,nFiles-1
 												LONTMP := lonPivot(LONTMP,PIV)
 												LONTMP := where(LONTMP.ge.PIV,LONTMP-360.,LONTMP)
 												TEST := lonPivot(TEST,PIV)
-												printMaxMin(LONTMP,0)
-												printMaxMin(TEST@$dNames(ddd)$,0)
+												;printMaxMin(LONTMP,0)
+												;printMaxMin(TEST@$dNames(ddd)$,0)
 												if(max(LONTMP).ne.max(TEST&$dNames(ddd)$) \
 												   .or. min(LONTMP).ne.min(TEST&$dNames(ddd)$))then
 													TEST&$dNames(ddd)$ = LONTMP
@@ -3209,7 +3209,7 @@ do fff = 0,nFiles-1
                 if(      DOMAIN.eq."d03"\
                    .and. isStrSubset(FNAME2(ppp),"PRCP"))then                   continue   end if
                                                         
-                PNGname = FNAME2(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".png"
+                PNGname = FNAME2(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".gif"
                 ;print(PNGname)
                 ;exit
                 if(SC_DOMAIN .or. SC_DSOURCE)then
