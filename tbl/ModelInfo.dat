@@ -41,3 +41,5 @@ HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                        
 HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)
 HNVI,     HNVI: 2019 HWRF-NoVI,  9,         deepskyblue,                             2019 No-V.I. HWRF
 HVII,       HVII: Interp. HNVI,  9,         deepskyblue,                     2019 No-V.I. HWRF (Early)
+HWFA,          HWFA: HWRF Kren,  7,               brown,                                   HWRF Andrew
+HWAI,       HWAI: Interp. HWFA,  7,               brown,                           HWRF Andrew (Early)
