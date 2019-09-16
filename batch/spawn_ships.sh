@@ -134,10 +134,10 @@ fi
 BATCHFILE1="batch_ships.generic.sh"
 BATCHFILE2="batch_ships.${EXPT}.sh"
 CTIME=`date +"%Y%m%d%H_%M"`
-LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
+#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
-mkdir -p ${LOG_DIR}
+#mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 chmod +x ${BATCH_DIR}${BATCHFILE2}
 

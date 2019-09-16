@@ -153,7 +153,9 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -rd ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
+echo ${IDIR}
+ls -rd ${IDIR}*/ | xargs -n 1 basename
+    CYCLES=( `ls -rd ${IDIR}/*/ | xargs -n 1 basename | tr "\n" " "` )
 else
     CYCLES=( "${IDATE[@]}" )
 fi
@@ -296,6 +298,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                         if [ "$DMN" == "basin" ] || [ "$DMN" == "bigd01" ] || [ "$DMN" == "d03" ]; then
                             continue
                         fi
+                        if [ "$DSOURCE" == "HWRF" ] && [ "$DMN" == "d01" ]; then
+                            continue
+                        fi
                     fi
 
                     # Read 'FORCE' from the namelist.
@@ -328,6 +333,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                     # Determine if this domain is storm-centered (SC)
                     # For storm-centered domains, the Storm ID is appended
                     # to most file names.
+                    # GJA: Integrate SC as 3rd column in DomainInfo.dat
                     if [ "$DMN" == "hwrf" ] || [ "$DMN" == "d03" ] || \
                        [ "$DMN" == "d02" ] || [ "$DMN" == "tkfull" ]; then
                         SC="True"
@@ -346,7 +352,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                     fi
 
                     # Skip subsequent storms if the outer domain has been plotted
-                    if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
+                    #if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
+                    if [ "$SC" == "False" ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
                     #if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
                         continue
                     fi
@@ -456,7 +463,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             FORCE="True"
                         elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
                             for ATCF in ${PREV_ATCF[@]}; do
-                                test=$(find ${ATCF} -mmin -120 2>/dev/null)
+                                test=$(find ${ATCF} -mmin -60 2>/dev/null)
                                 if [[ -n $test ]]; then
                                     echo "MSG: This ATCF is not old enough. Forcing production."
                                     FORCE="True"
