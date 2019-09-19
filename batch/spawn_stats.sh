@@ -104,6 +104,10 @@ if [ -z "$FORCE" ]; then
     FORCE="False"
 fi
 
+
+# Set the maximum number of job submissions
+NMAX=25
+
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
 if [ -z "$BATCH_MODE" ]; then
@@ -119,14 +123,19 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | sort -t. -k2`)
-ATCF2_ALL+=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | sort -t. -k2`)
+ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
+ATCF2_ALL=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
 for ATCF in ${ATCF2_ALL[@]}; do
     ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
     ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
 done
 ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
-#echo ${ATCF_ALL} | 
+NATCF="${#ATCF_ALL[*]}"
+if [[ NATCF -gt NMAX ]]; then
+    C=$((NATCF - NMAX))
+    ATCF_ALL=("${ATCF_ALL[@]:$C}" "${ATCF_ALL[@]:0:$C}")
+fi
+
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
@@ -158,6 +167,14 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 #fi
 echo "MSG: Found these cycles: ${CYCLES[*]}"
 echo ""
+
+
+# For EXPT=GFS_Forecast, FNL_HR=240
+if [ "$EXPT" == "GFS_Forecast" ]; then
+    FNL_HR=240
+fi
+
+
 
 
 ####################################################
@@ -428,9 +445,9 @@ if [ "${DO_STATS}" = "True" ]; then
             # If the job was submitted, then increase the counter.
             N=$((N+1))
 
-            # Limit the number of jobs to 50 to now overwhelm the batch scheduler
-            if [[ N -ge 20 ]]; then
-                echo "WARNING: Maximum number of jobs reahed (50)."
+            # Limit the number of jobs to now overwhelm the batch scheduler
+            if [[ N -ge NMAX ]]; then
+                echo "WARNING: Maximum number of jobs reahed (${NMAX})."
                 break
             fi
         else
