@@ -137,20 +137,21 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Copy this entry to the new parsed ATCF
             OFILE="${ODIR}${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
             OFILE2="${ODIR}${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            TMPFILE="${ODIR}TMP.${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
             if [ -f ${OFILE2} ]; then
                 echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
                 rm -f ${OFILE}
                 continue
             fi
             if [ -f ${OFILE} ]; then
-                awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${ODIR}TMP.atcfunix
+                awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
                 #grep "${MODEL}" ${ADECK} | awk -F ', ' '$2=="${SNUM}"' | awk -F ', ' '$3=="${CYCLE}"' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${ODIR}TMP.atcfunix
-                if diff -q "${OFILE}" "${ODIR}TMP.atcfunix" ; then
+                if diff -q "${OFILE}" "${TMPFILE}" ; then
                     echo "MSG: Parsed A-Deck has not changed --> ${OFILE}"
-                    rm -f ${ODIR}TMP.atcfunix
+                    rm -f ${TMPFILE}
                 else
                     echo "MSG: Parsed A-Deck has changed. Copying new version --> ${OFILE}"
-                    mv ${ODIR}TMP.atcfunix ${OFILE}
+                    mv ${TMPFILE} ${OFILE}
                 fi
             else
                 awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
