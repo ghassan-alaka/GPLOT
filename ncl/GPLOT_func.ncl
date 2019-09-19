@@ -259,7 +259,7 @@ end
 
 undef("add_storm_title")
 procedure add_storm_title (wks[1],TITLE[1]:string,XLOC[1]:float,YLOC[1]:float,TXHGT[1]:float,JUST[1]:string)
-local txres, TITLE
+local txres, TITLE, T_SPLT, T1, T2, T3
 begin
 
 	; Define resources
@@ -268,15 +268,52 @@ begin
 	txres@txFont		= 25
 	txres@txFontHeightF	= TXHGT
 	
-	; Get the right justification
+	; Get the correct justification
 	if(str_lower(JUST).eq."left")then	txres@txJust	= "CenterLeft"
 	else if(str_lower(JUST).eq."center")	txres@txJust	= "CenterCenter"
 	else if(str_lower(JUST).eq."right")	txres@txJust	= "CenterRight"
 	else					txres@txJust	= "CenterLeft"
 	end if  end if  end if
-	
+
+	; Split the title string to get the number of items (e.g., storms)
+	T_SPLT = str_split(TITLE,",")
+
 	; Add title to the existing workstation
-	gsn_text_ndc(wks,TITLE,XLOC,YLOC,txres)
+	if(dimsizes(T_SPLT).le.4)then
+		gsn_text_ndc(wks,TITLE,XLOC,YLOC,txres)
+	else if(dimsizes(T_SPLT).eq.5)then
+		T1 = T_SPLT(0)+","+T_SPLT(1)+","+T_SPLT(2)+","+T_SPLT(3)
+		T2 = T_SPLT(4)
+		gsn_text_ndc(wks,T1,XLOC,YLOC,txres)
+		gsn_text_ndc(wks,T2,XLOC,YLOC+0.010,txres)
+	else if(dimsizes(T_SPLT).gt.5 .and. dimsizes(T_SPLT).le.8)then
+		T1 = T_SPLT(0)+","+T_SPLT(1)+","+T_SPLT(2)+","+T_SPLT(3)
+		T2 = ""
+		do ttt = 4,dimsizes(T_SPLT)-2
+			T2 = T2+T_SPLT(ttt)+","
+		end do
+		T2 = T2+T_SPLT(dimsizes(T_SPLT)-1)
+		gsn_text_ndc(wks,T1,XLOC,YLOC,txres)
+		gsn_text_ndc(wks,T2,XLOC,YLOC+0.010,txres)
+	else if(dimsizes(T_SPLT).eq.9)then
+		T1 = T_SPLT(0)+","+T_SPLT(1)+","+T_SPLT(2)+","+T_SPLT(3)
+		T2 = T_SPLT(4)+","+T_SPLT(5)+","+T_SPLT(6)+","+T_SPLT(7)
+		T3 = T_SPLT(8)
+		gsn_text_ndc(wks,T1,XLOC,YLOC,txres)
+		gsn_text_ndc(wks,T2,XLOC,YLOC+0.010,txres)
+		gsn_text_ndc(wks,T3,XLOC,YLOC+0.020,txres)
+	else if(dimsizes(T_SPLT).gt.9 .and. dimsizes(T_SPLT).le.12)then
+		T1 = T_SPLT(0)+","+T_SPLT(1)+","+T_SPLT(2)+","+T_SPLT(3)
+		T2 = T_SPLT(4)+","+T_SPLT(5)+","+T_SPLT(6)+","+T_SPLT(7)
+		T3 = ""
+		do ttt = 8,dimsizes(T_SPLT)-2
+			T3 = T3+T_SPLT(ttt)+","
+		end do
+		T3 = T3+T_SPLT(dimsizes(T_SPLT)-1)
+		gsn_text_ndc(wks,T1,XLOC,YLOC,txres)
+		gsn_text_ndc(wks,T2,XLOC,YLOC+0.010,txres)
+		gsn_text_ndc(wks,T3,XLOC,YLOC+0.020,txres)
+	end if  end if  end if  end if  end if
 
 end
 
