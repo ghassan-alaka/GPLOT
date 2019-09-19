@@ -155,7 +155,7 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 if [ -z "$IDATE" ]; then
 echo ${IDIR}
 ls -rd ${IDIR}*/ | xargs -n 1 basename
-    CYCLES=( `ls -rd ${IDIR}/*/ | xargs -n 1 basename | tr "\n" " "` )
+    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*/ | xargs -n 1 basename | tr "\n" " "` )
 else
     CYCLES=( "${IDATE[@]}" )
 fi

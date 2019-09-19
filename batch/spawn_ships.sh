@@ -144,7 +144,7 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -rd ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "` )
+    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*/ | xargs -n 1 basename | tr "\n" " "` )
 else
     CYCLES=( "${IDATE[@]}" )
 fi
