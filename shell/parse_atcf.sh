@@ -53,8 +53,8 @@ for ADECK in ${ALL_ADECKS[@]}; do
     echo ""
     echo "MSG: Found this ADECK --> ${ADECK}"
 
-    ALL_SNUM=( `awk -v MODEL="${MODEL}" -F ', ' '$5==MODEL && $2!="00"' ${ADECK} | cut -d "," -f2 | sort -u | sed -e 's/^[[:space:]]*//'` )
-
+    #ALL_SNUM=( `awk -v MODEL="${MODEL}" -F ', ' '$5==MODEL && $2!="00"' ${ADECK} | cut -d "," -f2 | sort -u | sed -e 's/^[[:space:]]*//'` )
+    ALL_SNUM=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -F, '$5==MODEL && $2!="00"' | cut -d "," -f2 | sort -u` )
     for SNUM in ${ALL_SNUM[@]}; do
         echo "MSG: Found this Storm Number --> ${SNUM}"
         if [ "$SNUM" == "00" ]; then
@@ -62,12 +62,12 @@ for ADECK in ${ALL_ADECKS[@]}; do
         fi
 
         # Get a list of available cycles
-        ALL_CYCLES=( `awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -F ', ' '$5==MODEL && $2==SNUM' ${ADECK} | cut -d "," -f3 | sort -u | sed -e 's/^[[:space:]]*//'` )
+        ALL_CYCLES=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -F, '$5==MODEL && $2==SNUM' | cut -d "," -f3 | sort -u` )
 
         for CYCLE in ${ALL_CYCLES[@]}; do
             echo "MSG: Found this cycle --> ${CYCLE}"
             # Get basin and year information. This will help build the output ATCF
-            BASIN=`awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | cut -d "," -f1 | sort -u | sed -e 's/^[[:space:]]*//'`
+            BASIN=`cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u`
             YEAR=`echo "$CYCLE" | cut -c1-4`
             YMD=`echo "$CYCLE" | cut -c1-8`
             HHHH=`echo "$CYCLE" | cut -c9-10`"00"
@@ -98,7 +98,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
 
             # First, try to get the TC name from the CARQ entry in the A-Deck
             if [ -z "$TCNAME" ]; then
-                TCNAME=`awk -v CYCLE="${CYCLE}" -F ', ' '$3==CYCLE && $5=="CARQ"' ${ADECK} | head -1 | cut -d "," -f28 | sed -e 's/^[[:space:]]*//'`
+                TCNAME=`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`
             fi
 
             # Second, try to get the TC name from the Best Track entry in the B-Deck
@@ -107,7 +107,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
                 BDECK=${BDECKDIR}b${BASIN,,}${SNUM}${YEAR}.dat
                 if [ -f ${BDECK} ]; then
                     echo "MSG: B-Deck file found --> ${BDECK}"
-                    TCNAME=`awk -v CYCLE="${CYCLE}" '$3==CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | sed -e 's/^[[:space:]]*//'`
+                    TCNAME=`cat ${BDECK} | awk -v CYCLE="${CYCLE}" '$3==CYCLE' | head -1 | cut -d "," -f28`
                     #TCNAME=`grep "${CYCLE}" ${BDECK} | grep -v " 50, NEQ," | grep -v " 64, NEQ," | cut -d "," -f28 | sed -e 's/^[[:space:]]*//' | tr '[:upper:]' '[:lower:]'`
                 else
                     echo "WARNING: B-Deck not found --> ${BDECK}"
@@ -144,8 +144,9 @@ for ADECK in ${ALL_ADECKS[@]}; do
                 continue
             fi
             if [ -f ${OFILE} ]; then
-                awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
-                #grep "${MODEL}" ${ADECK} | awk -F ', ' '$2=="${SNUM}"' | awk -F ', ' '$3=="${CYCLE}"' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${ODIR}TMP.atcfunix
+                #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
                 if diff -q "${OFILE}" "${TMPFILE}" ; then
                     echo "MSG: Parsed A-Deck has not changed --> ${OFILE}"
                     rm -f ${TMPFILE}
@@ -154,8 +155,9 @@ for ADECK in ${ALL_ADECKS[@]}; do
                     mv ${TMPFILE} ${OFILE}
                 fi
             else
-                awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
-                #grep "${MODEL}" ${ADECK} | awk -F ', ' '$2=="${SNUM}"' | awk -F ', ' '$3=="${CYCLE}"' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
                 echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
             fi
 

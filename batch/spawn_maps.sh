@@ -164,7 +164,7 @@ echo "MSG: Found these cycles -->${CYCLES[*]}"
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAXCOUNT=25
+MAXCOUNT=20
 
 # Define the batch submission counter.
 N=0

@@ -51,11 +51,11 @@ ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF1_TAG = trak.hwrf.raw
+ATCF1_TAG = trak.emx.atcfunix
 ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF2_TAG = atcfunix
+ATCF2_TAG = trak.emx.atcfunix
 ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF3_TAG = trak.hwrf.raw
+ATCF3_TAG = trak.emx.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
@@ -104,7 +104,7 @@ DO_CONVERTGIF = True
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac
+DOMAIN = basin atl epac wlant elant eus gom cpac d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1

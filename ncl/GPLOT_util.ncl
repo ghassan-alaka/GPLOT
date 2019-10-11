@@ -2768,8 +2768,10 @@ end
 ;================================================================
 ; getModelInfo
 ;
-; res - Input is existing NCL resources variable
-; dydx - 2 element array giving DY and DX, in degrees
+; MODELS   --> An array of models to get information for. Must be
+;              a 1D array.
+; infoType --> The type of model information to retrieve. Must be
+;              listed in 'masterType'.
 
 undef("getModelInfo")
 function getModelInfo (MODELS[*]:string, infoType[1]:string)

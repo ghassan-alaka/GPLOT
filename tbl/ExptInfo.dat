@@ -21,3 +21,5 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                               HB19_v2_Forecast,                         2019 Basin-Scale HWRF
                                 ECMWF_Forecast,              ECMWF Integrated Forecast System
                                  HNVI_Forecast,                             2019 No-V.I. HWRF
+                                  HWRFB_TEST01,                            2020 HWRF-B TEST01
+                                  HWRFB_TEST02,          2020 HWRF-B (35N90W nx=1080 ny=1050)

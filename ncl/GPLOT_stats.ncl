@@ -32,6 +32,7 @@
 ; 2018-02-23 --> file moved to GPLOT_stats.v1.ncl
 ; 2018-06-05 --> bug fixed by Mu-Chieh Ko 
 ; 2019-08-16 --> (LJG) added DO_CONVERTGIF to call ImageMagick to 'convert' to GIF
+; 2019-09-25 --> GJA added DO_MARKERS to turn markers on/off on all graphics.
 ;
 ;================================================================
 ;
@@ -666,6 +667,36 @@ else
 	DO_INTERP	:= where(DO_INTERP(1).eq."True",True,False)
 end if
 
+; Determine whether or not to plot markers.
+val := ind(isStrSubset2(NML_DATA,"DO_MARKERS ="))
+if(ismissing(val(0)))then
+	DO_MARKERS	= True
+else
+	DO_MARKERS	= NML_DATA(val(0))
+	DO_MARKERS	:= str_squeeze(str_split(DO_MARKERS,"="))
+	DO_MARKERS	:= where(DO_MARKERS(1).eq."True",True,False)
+end if
+
+; Determine the maximum lead time for graphics.
+val := ind(isStrSubset2(NML_DATA,"MAX_FHR ="))
+if(ismissing(val(0)))then
+	MAX_FHR = 180
+else
+	MAX_FHR	= NML_DATA(val(0))
+	MAX_FHR := str_squeeze(str_split(MAX_FHR,"="))
+	MAX_FHR := toint(MAX_FHR(1))
+end if
+
+;Determine whether or not to show forecast lead time labels.
+val := ind(isStrSubset2(NML_DATA,"DO_FHRLABELS ="))
+if(ismissing(val(0)))then
+	DO_FHRLABELS = True
+else
+	DO_FHRLABELS = NML_DATA(val(0))
+	DO_FHRLABELS := str_squeeze(str_split(DO_FHRLABELS,"="))
+	DO_FHRLABELS := where(DO_FHRLABELS(1).eq."True",True,False)
+end if
+
 
 
 
@@ -673,6 +704,7 @@ end if
 ; PART IV. Print some information to the terminal
 ;================================================================
 
+print("===========================================")
 print("MSG: Running GPLOT with these settings:")
 print("MSG:   Experiment Name:    "+EXPT)
 print("MSG:   Data Source:        "+DSOURCE)
@@ -708,6 +740,9 @@ end if
 if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
 else			print("MSG:   Convert to GIF:     OFF")
 end if
+if(DO_MARKERS)then	print("MSG:   Line Markers:       ON")
+else			print("MSG:   Line Markers:       OFF")
+end if
 ;print("MSG:   TRKmodels00:        "+stringOut(TRKmodels00))
 ;print("MSG:   TRKmodels06:        "+stringOut(TRKmodels06))
 ;print("MSG:   INTmodels:          "+stringOut(INTmodels))
@@ -722,6 +757,7 @@ print("MSG:   etModels:           "+stringOut(etModels))
 print("MSG:   eiModels:           "+stringOut(eiModels))
 print("MSG:   ltModels:           "+stringOut(ltModels))
 print("MSG:   liModels:           "+stringOut(liModels))
+print("===========================================")
 
 
 
@@ -738,7 +774,7 @@ system("mkdir -p "+ODIR)
 system("mkdir -p "+ODIR_ADECK)
 
 
-MAX_FHR = 180
+;MAX_FHR = 180
 
 
 
@@ -2267,11 +2303,14 @@ if(DO_LT_GUIDE)then
 	DO_THIS = True
 
 	; Find optimal map boundaries by automatically resizing (if necessary)
-	maxLat = max((/max(aTRK(:,0,:)),max(bTRK(0,:))/))
-	minLat = min((/min(aTRK(:,0,:)),min(bTRK(0,:))/))
+	vals   := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
+	aTRK_LT = where(aTRK(:,2,:).le.tofloat(MAX_FHR),aTRK(:,0,:),aTRK@_FillValue)
+	maxLat = max((/max(aTRK_LT),max(bTRK(0,vals))/))
+	minLat = min((/min(aTRK_LT),min(bTRK(0,vals))/))
 	rngLat = abs(maxLat-minLat)
-	maxLon = max((/max(aTRK(:,1,:)),max(bTRK(1,:))/))
-	minLon = min((/min(aTRK(:,1,:)),min(bTRK(1,:))/))
+	aTRK_LT := where(aTRK(:,2,:).le.tofloat(MAX_FHR),aTRK(:,1,:),aTRK@_FillValue)
+	maxLon = max((/max(aTRK_LT),max(bTRK(1,vals))/))
+	minLon = min((/min(aTRK_LT),min(bTRK(1,vals))/))
 	rngLon = abs(maxLon-minLon)
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
@@ -2386,7 +2425,8 @@ if(DO_LT_GUIDE)then
 			end if
 	
 			tmp	:= toint(where(ismissing(aTRK(ppp2,2,:)), fval2, aTRK(ppp2,2,:)))
-			vals2	:= ind(tmp%12.eq.0)
+			vals	:= ind(tmp.le.tofloat(MAX_FHR))
+			vals2	:= ind(tmp%12.eq.0 .and. tmp.le.tofloat(MAX_FHR))
 		
 			plres2@gsLineColor   = TRKcolors(ppp2)
 			plres3@gsLineColor   = TRKcolors(ppp2)
@@ -2395,10 +2435,12 @@ if(DO_LT_GUIDE)then
 			txres3@txFontColor   = TRKcolors(ppp2)
 			txres4@txFontColor   = TRKcolors(ppp2)
 
-			dum1(ppp) = gsn_add_polyline(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),plres3)
-			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRK(ppp2,1,:),aTRK(ppp2,0,:),mkres2)		
+			dum1(ppp) = gsn_add_polyline(wks,plot,aTRK(ppp2,1,vals),aTRK(ppp2,0,vals),plres3)
+			if(DO_MARKERS)then
+				dum2(ppp) = gsn_add_polymarker(wks,plot,aTRK(ppp2,1,vals),aTRK(ppp2,0,vals),mkres2)
+			end if
 	
-			if(.not.ismissing(vals2(0)))then
+			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)))then
 				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
 									    aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
 			end if		
@@ -2408,7 +2450,9 @@ if(DO_LT_GUIDE)then
 			;gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2/2)*0.25*vpWID),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.04/),\
 			;		     (/vpTOP+0.0325-0.02*tofloat(ppp2%2),vpTOP+0.0325-0.02*tofloat(ppp2%2)/),plres1a)
 			;gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ppp2%2),txares1a)
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			if(DO_MARKERS)then
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
 			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
@@ -2460,11 +2504,19 @@ if(DO_ET_GUIDE)then
 	DO_THIS = True
 
 	; Find map boundaries. Resize if necessary
-	maxLat	= max((/max(aTRKI(:,0,:)),max(bTRK(0,:))/))
-	minLat	= min((/min(aTRKI(:,0,:)),min(bTRK(0,:))/))
-	rngLat	= abs(maxLat-minLat)
-	maxLon	= max((/max(aTRKI(:,1,:)),max(bTRK(1,:))/))
-	minLon	= min((/min(aTRKI(:,1,:)),min(bTRK(1,:))/))
+        vals   := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
+        aTRKI_0 = where(aTRKI(:,2,:).le.tofloat(MAX_FHR),aTRKI(:,0,:),aTRKI@_FillValue)
+        maxLat = max((/max(aTRKI_0),max(bTRK(0,vals))/))
+        minLat = min((/min(aTRKI_0),min(bTRK(0,vals))/))
+        rngLat = abs(maxLat-minLat)
+        aTRKI_1 := where(aTRKI(:,2,:).le.tofloat(MAX_FHR),aTRKI(:,1,:),aTRKI@_FillValue)
+        maxLon = max((/max(aTRKI_1),max(bTRK(1,vals))/))
+        minLon = min((/min(aTRKI_1),min(bTRK(1,vals))/))
+	;maxLat	= max((/max(aTRKI(:,0,:)),max(bTRK(0,:))/))
+	;minLat	= min((/min(aTRKI(:,0,:)),min(bTRK(0,:))/))
+	;rngLat	= abs(maxLat-minLat)
+	;maxLon	= max((/max(aTRKI(:,1,:)),max(bTRK(1,:))/))
+	;minLon	= min((/min(aTRKI(:,1,:)),min(bTRK(1,:))/))
 	rngLon	= abs(maxLon-minLon)
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
@@ -2575,7 +2627,8 @@ if(DO_ET_GUIDE)then
 			end if
 	
 			tmp	:= toint(where(ismissing(aTRKI(ppp2,2,:)), fval2, aTRKI(ppp2,2,:)))
-			vals2	:= ind(tmp%12.eq.0)
+			vals	:= ind(tmp.le.tofloat(MAX_FHR))
+			vals2  := ind(tmp%12.eq.0 .and. tmp.le.tofloat(MAX_FHR))
 		
 			plres2@gsLineColor   = TRKcolorsI(ppp2)
 			plres3@gsLineColor   = TRKcolorsI(ppp2)
@@ -2584,16 +2637,20 @@ if(DO_ET_GUIDE)then
 			txres3@txFontColor   = TRKcolorsI(ppp2)
 			txres4@txFontColor   = TRKcolorsI(ppp2)
 	
-			dum1(ppp) = gsn_add_polyline(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),plres3)
-			dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,:),aTRKI(ppp2,0,:),mkres2)	
+			dum1(ppp) = gsn_add_polyline(wks,plot,aTRKI(ppp2,1,vals),aTRKI(ppp2,0,vals),plres3)
+			if(DO_MARKERS)then
+				dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,vals),aTRKI(ppp2,0,vals),mkres2)
+			end if
 		
-			if(.not.ismissing(vals2(0)))then
+			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)))then
 				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRKI(ppp2,2,vals2))),\
 									    aTRKI(ppp2,1,vals2)+0.3,aTRKI(ppp2,0,vals2)+0.3,txres3)
 			end if
 			
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			if(DO_MARKERS)then
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
 			gsn_text_ndc(wks,TRKlongnameI(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
@@ -2680,7 +2737,7 @@ if(DO_LI_GUIDE)then
 
 
 		; Update resources
-		xyres2a = xyres
+		xyres2a			= xyres
 		;xyres2a@tiMainString	= "Late Intensity Guidance"
 		xyres2a@tiYAxisString	= "Wind Speed [kt]"
 		xyres2a@tmXBMode	= "Explicit"	
@@ -2695,7 +2752,8 @@ if(DO_LI_GUIDE)then
 		xyres2a@tmYROn		= False
 		xyres2a@trYMaxF		= maxInt+(0.10*rngInt)
 		xyres2a@trYMinF		= minInt-(0.10*rngInt)
-		xyres2a@xyMarkers		= tc_marker
+		xyres2a@xyMarkLineMode	= "MarkLines"
+		xyres2a@xyMarkers	= tc_marker
 
 		; Plot the best track
 		;plot	:= gsn_csm_xy(wks,bHrs({-6:6.}),bINT(0,{-6:6.}),res)
@@ -2753,24 +2811,31 @@ if(DO_LI_GUIDE)then
 
 			; Update resources
 			xyres2a@xyLineThicknessF	= 10.0
-			xyres2a@xyMarkers		= INTmarkers(ppp2)
-			xyres2a@xyMarkerColor		= INTcolors(ppp2)
-			xyres2a@xyMarkerThicknessF	= 6.0
-			xyres2a@xyMarkerSizeF		= 0.015
 			xyres2a@xyLineColor		= INTcolors(ppp2)
 			xyres2a@tiXAxisString		= ""
 			xyres2a@tiYAxisString		= ""
+			if(DO_MARKERS)then
+				xyres2a@xyMarkLineMode		= "MarkLines"
+				xyres2a@xyMarkers               = INTmarkers(ppp2)
+				xyres2a@xyMarkerColor           = INTcolors(ppp2)
+				xyres2a@xyMarkerThicknessF      = 6.0
+				xyres2a@xyMarkerSizeF           = 0.015
+			else
+				xyres2a@xyMarkLineMode  	= "Lines"
+			end if
 	
 			plres2@gsLineColor   = INTcolors(ppp2)
-			mkres2@gsMarkerColor = INTcolors(ppp2)
-			mkres2@gsMarkerIndex = INTmarkers(ppp2)
 			txres4@txFontColor   = INTcolors(ppp2)
 	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINT(ppp2,1,vals),aINT(ppp2,0,vals),xyres2a))
 	
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			if(DO_MARKERS)then
+				mkres2@gsMarkerColor = INTcolors(ppp2)
+				mkres2@gsMarkerIndex = INTmarkers(ppp2)
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
 			gsn_text_ndc(wks,INTlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
@@ -2870,6 +2935,7 @@ if(DO_EI_GUIDE)then
 		xyres2b@tmYROn		= False
 		xyres2b@trYMaxF		= maxInt+(0.10*rngInt)
 		xyres2b@trYMinF		= minInt-(0.10*rngInt)
+		xyres2b@xyMarkLineMode	= "MarkLines"
 		xyres2b@xyMarkers	= tc_marker
 	
 		; Plot the best track
@@ -2928,24 +2994,31 @@ if(DO_EI_GUIDE)then
 
 			; Update resources
 			xyres2b@xyLineThicknessF= 10.0
-			xyres2b@xyMarkers	= INTmarkersI(ppp2)
-			xyres2b@xyMarkerColor	= INTcolorsI(ppp2)
-			xyres2b@xyMarkerThicknessF = 6.0
-			xyres2b@xyMarkerSizeF	= 0.015
 			xyres2b@xyLineColor	= INTcolorsI(ppp2)
 			xyres2b@tiXAxisString	= ""
 			xyres2b@tiYAxisString	= ""
+			if(DO_MARKERS)then
+				xyres2b@xyMarkLineMode  = "MarkLines"
+				xyres2b@xyMarkers       = INTmarkersI(ppp2)
+				xyres2b@xyMarkerColor   = INTcolorsI(ppp2)
+				xyres2b@xyMarkerThicknessF = 6.0
+				xyres2b@xyMarkerSizeF   = 0.015
+			else
+				xyres2b@xyMarkLineMode  = "Lines"
+			end if
 	
 			plres2@gsLineColor   = INTcolorsI(ppp2)
-			mkres2@gsMarkerColor = INTcolorsI(ppp2)
-			mkres2@gsMarkerIndex = INTmarkersI(ppp2)
 			txres4@txFontColor   = INTcolorsI(ppp2)
 	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINTI(ppp2,1,vals),aINTI(ppp2,0,vals),xyres2b))
 
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			if(DO_MARKERS)then
+				mkres2@gsMarkerColor = INTcolorsI(ppp2)
+				mkres2@gsMarkerIndex = INTmarkersI(ppp2)
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
 			gsn_text_ndc(wks,INTlongnameI(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
@@ -3045,6 +3118,7 @@ if(DO_LP_GUIDE)then
 		xyres3a@tmYROn		= False
 		xyres3a@trYMaxF		= maxPrs+(0.10*rngPrs)
 		xyres3a@trYMinF		= minPrs-(0.10*rngPrs)
+		xyres3a@xyMarkLineMode	= "MarkLines"
 		xyres3a@xyMarkers	= tc_marker
 
 		; Plot the best track
@@ -3101,24 +3175,31 @@ if(DO_LP_GUIDE)then
 	
 			; Update resources
 			xyres3a@xyLineThicknessF= 10.0
-			xyres3a@xyMarkers	= PRSmarkers(ppp2)
-			xyres3a@xyMarkerColor	= PRScolors(ppp2)
-			xyres3a@xyMarkerThicknessF = 6.0
-			xyres3a@xyMarkerSizeF	= 0.015
 			xyres3a@xyLineColor	= PRScolors(ppp2)
 			xyres3a@tiXAxisString	= ""
 			xyres3a@tiYAxisString	= ""
+			if(DO_MARKERS)then
+				xyres3a@xyMarkLineMode  = "MarkLines"
+				xyres3a@xyMarkers       = PRSmarkers(ppp2)
+				xyres3a@xyMarkerColor   = PRScolors(ppp2)
+				xyres3a@xyMarkerThicknessF = 6.0
+				xyres3a@xyMarkerSizeF   = 0.015
+			else
+				xyres3a@xyMarkLineMode  = "Lines"
+			end if
 	
 			plres2@gsLineColor   = INTcolors(ppp2)
-			mkres2@gsMarkerColor = INTcolors(ppp2)
-			mkres2@gsMarkerIndex = INTmarkers(ppp2)
 			txres4@txFontColor   = INTcolors(ppp2)
 		
 			; Overlay the new pressure line
 			overlay(plot,gsn_csm_xy(wks,aPRS(ppp2,1,vals),aPRS(ppp2,0,vals),xyres3a))
 	
 			; Add legend info for each model
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			if(DO_MARKERS)then
+				mkres2@gsMarkerColor = INTcolors(ppp2)
+				mkres2@gsMarkerIndex = INTmarkers(ppp2)
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
 			gsn_text_ndc(wks,PRSlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
@@ -3335,22 +3416,26 @@ if(DO_LT_TREND)then
 			; Add each model as polyline & polymarker objects
 			plres4a@gsLineColor	:= TRDcolors(ttt,:)
 			plres4a@gsLineThicknessF= 10.0
-			mkres4a@gsMarkerSizeF	= 6.0
-			mkres4a@gsMarkerColor	:= TRDcolors(ttt,:)
-			mkres4a@gsMarkerIndex	= TRDmarkers(ttt)
-			mkres4a@gsMarkerThicknessF= 5.0
 			txares4a@txFontColor	:= TRDcolors(ttt,:)
 			txares4a@txFontHeightF	= 0.005
 			dum1(ttt)	= gsn_add_polyline(wks,plot,aTRK2(mmm,ttt,1,vals),aTRK2(mmm,ttt,0,vals),plres4a)
-			dum2(ttt)	= gsn_add_polymarker(wks,plot,aTRK2(mmm,ttt,1,vals),aTRK2(mmm,ttt,0,vals),mkres4a)
+			if(DO_MARKERS)then
+				mkres4a@gsMarkerSizeF   = 6.0
+				mkres4a@gsMarkerColor   := TRDcolors(ttt,:)
+				mkres4a@gsMarkerIndex   = TRDmarkers(ttt)
+				mkres4a@gsMarkerThicknessF= 5.0
+				dum2(ttt)	= gsn_add_polymarker(wks,plot,aTRK2(mmm,ttt,1,vals),aTRK2(mmm,ttt,0,vals),mkres4a)
+			end if
 			dum3(ttt,:dimsizes(vals2)-1)	= gsn_add_text(wks,plot,tostring(toint(aTRK2(mmm,ttt,2,vals2))),aTRK2(mmm,ttt,1,vals2)+0.2,aTRK2(mmm,ttt,0,vals2)+0.2,txares4a)
 	
 			; Add legend info for each model
 			plres4a@gsLineThicknessF	= 3.5
-			mkres4a@gsMarkerSizeF	= 8.0
-			mkres4a@gsMarkerThicknessF= 5.0
 			txares4a@txFontHeightF	= 0.009
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ttt%2),mkres4a)
+			if(DO_MARKERS)then
+				mkres4a@gsMarkerSizeF   = 8.0
+				mkres4a@gsMarkerThicknessF= 5.0
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ttt%2),mkres4a)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ttt/2)*0.25*vpWID),vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+0.0325-0.02*tofloat(ttt%2),vpTOP+0.0325-0.02*tofloat(ttt%2)/),plres4a)
 			gsn_text_ndc(wks,IDATES(ttt),vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ttt%2),txares4a)
@@ -3725,6 +3810,7 @@ if(DO_LI_TREND)then
 		xyres5a@trYMinF		= max((/0.,minInt-(0.10*rngInt)/))
 		xyres5a@xyLineThicknessF	= 15.0
 		xyres5a@xyLineColor		:= "black"
+		xyres5a@xyMarkLineMode	= "MarkLines"
 		xyres5a@xyMarkers	= tc_marker
 		xyres5a@xyMarkerColor	:= "red"
 		xyres5a@xyMarkerThicknessF	= 10.0
@@ -3797,13 +3883,18 @@ if(DO_LI_TREND)then
 			; Update resources
 			xyres5a@xyMarkLineMode	= "MarkLines"
 			xyres5a@xyLineThicknessF= 12.0
-			xyres5a@xyMarkers	:= TRDmarkers(ttt)
-			xyres5a@xyMarkerColor	:= TRDcolors(ttt,:)
-			xyres5a@xyMarkerThicknessF	= 4.0
-			xyres5a@xyMarkerSizeF	= 0.01
 			xyres5a@xyLineColor	:= TRDcolors(ttt,:)
 			xyres5a@tiXAxisString	= ""
 			xyres5a@tiYAxisString	= ""
+			if(DO_MARKERS)then
+				xyres5a@xyMarkLineMode  = "MarkLines"
+				xyres5a@xyMarkers       := TRDmarkers(ttt)
+				xyres5a@xyMarkerColor   := TRDcolors(ttt,:)
+				xyres5a@xyMarkerThicknessF      = 4.0
+				xyres5a@xyMarkerSizeF   = 0.01
+			else
+				xyres5a@xyMarkLineMode  = "Lines"
+			end if
 	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINT2(mmm,ttt,1,vals),aINT2(mmm,ttt,0,vals),xyres5a))
@@ -3814,15 +3905,16 @@ if(DO_LI_TREND)then
 			plres5a@gsLineDashPattern	= 0
 			plres5a@tfPolyDrawOrder	= "PostDraw"
 			
-			mkres5a@gsMarkerSizeF	= 8.0
-			mkres5a@gsMarkerColor	:= TRDcolors(ttt,:)
-			mkres5a@gsMarkerIndex	= TRDmarkers(ttt)
-			mkres5a@gsMarkerThicknessF= 5.0
-			
 			txares5a@txFontColor	:= TRDcolors(ttt,:)
 			txares5a@txFontHeightF	= 0.009
-			
-			gsn_polymarker_ndc(wks,vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ttt%2),mkres5a)
+
+			if(DO_MARKERS)then
+				mkres5a@gsMarkerSizeF   = 8.0
+				mkres5a@gsMarkerColor   := TRDcolors(ttt,:)
+				mkres5a@gsMarkerIndex   = TRDmarkers(ttt)
+				mkres5a@gsMarkerThicknessF= 5.0
+				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.02,vpTOP+0.0325-0.02*tofloat(ttt%2),mkres5a)
+			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ttt/2)*0.25*vpWID),vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.04/),\
 					     (/vpTOP+0.0325-0.02*tofloat(ttt%2),vpTOP+0.0325-0.02*tofloat(ttt%2)/),plres5a)
 			gsn_text_ndc(wks,IDATES2(ttt),vpLFT+(tofloat(ttt/2)*0.25*vpWID)+0.045,vpTOP+0.0325-0.02*tofloat(ttt%2),txares5a)
@@ -4429,7 +4521,11 @@ if(DO_VERIFICATION)then
 	res@gsnDraw		= False
 	res@gsnMaximize		= False
 	res@xyDashPattern	= 0
-	res@xyMarkLineMode	= "MarkLines"			; Markers *and* lines
+	if(DO_MARKERS)then
+		res@xyMarkLineMode	= "MarkLines"		; Markers *and* lines
+	else
+		res@xyMarkLineMode      = "Lines"		; Lines only (no markers)
+	end if
 	res@xyMarkerSizeF	= 0.015
 	res@xyMarkerThicknessF	= 2.0
 	res@xyLineThicknessF	= 7.5

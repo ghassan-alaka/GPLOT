@@ -2079,6 +2079,7 @@ do fff = 0,nFiles-1
 				wks	= gsn_open_wks(wtype,OFILE)	
 				
 				EDGE	= max((/1.10*abs(max(CTR(1,:))-min(CTR(1,:))),1.10*abs(max(CTR(0,:))-min(CTR(0,:)))/))
+				if(EDGE.eq.0)then   EDGE = 0.5   end if
 				resC@mpMaxLonF		= avg(CTR(1,:))+EDGE
 				resC@mpMinLonF		= avg(CTR(1,:))-EDGE
 				resC@mpCenterLonF	= (resC@mpMaxLonF+resC@mpMinLonF)/2.
