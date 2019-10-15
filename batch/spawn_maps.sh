@@ -35,8 +35,8 @@ fi
 
 # Pull important variables from the namelist
 DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+#DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+#DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 DSOURCE=`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 EXPT=`sed -n -e 's/^EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 MCODE=`sed -n -e 's/^MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -231,6 +231,7 @@ if [ "${DO_MAPS}" = "True" ]; then
             # This is hard-coded and might not work.
             if [ -z "$STORMS" ]; then
                 if [ ! -z "$(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
+                    #ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename
                     STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
                 fi
             fi
@@ -246,6 +247,7 @@ if [ "${DO_MAPS}" = "True" ]; then
             # were found, i.e., STORMS != NONE
             if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
                 STORMS+=("00L")
+                STORMS=(`echo "${STORMS[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -257,6 +259,8 @@ if [ "${DO_MAPS}" = "True" ]; then
             # By default, it is False. If it is set to 
             FOUND_FILES="False"
 
+            echo "MSG: Found these storms: ${STORMS[*]}"
+
 
             ####################
             # LOOP OVER STORMS #
@@ -264,8 +268,11 @@ if [ "${DO_MAPS}" = "True" ]; then
             for STORM in ${STORMS[@]}; do
 
                 # Increase the storm counter
-                ((NSTORM=NSTORM+1))
-    
+                if [ "$STORM" != "00L" ]; then
+                    ((NSTORM=NSTORM+1))
+                fi
+                echo "MSG: Storm number=${NSTORM}"
+
                 # Find the forecast hours from the ATCF for thie particular storm
                 STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}"` )
                 if [ -z "${STORM_ATCF[*]}" ]; then
@@ -355,6 +362,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                     #if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
                     if [ "$SC" == "False" ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
                     #if [ $NEST -eq 1 ] && [ "$FOUND_FILES" == "True" ]; then
+                        echo "MSG: Skipping this domain because it is not storm-centered and this is at least the 2nd storm."
                         continue
                     fi
     
@@ -520,7 +528,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                         IFHRS=()
                         while [ -z "$IFILES" ]; do
                             IDIR_FULL="${IDIR}${IDIR_OPTS[$F]}"
-
+#echo ${IDIR_FULL}
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
                                 ((F=F+1))
@@ -558,8 +566,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                             fi
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "WARNING: Nothing to do here. Moving on to the next case."
-                            continue
+                            echo "WARNING: No input files found. Skipping the rest of the ensemble IDs."
+                            break
                         fi
                         echo "MSG: Input directory     --> ${IDIR_FULL}"
 
@@ -844,6 +852,12 @@ if [ "${DO_MAPS}" = "True" ]; then
 
 
                     done #end of ID loop
+
+                    if [ -z "${IFILES[*]}" ]; then
+                        echo "WARNING: No input files found. Skipping the rest of the domains."
+                        break
+                    fi
+
                 done #end of DMN loop
             done #end of STORM loop
         done #end of CYCLE loop
