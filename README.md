@@ -47,8 +47,8 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 	To download the source code, go to the Python web site:
 		https://www.python.org/downloads/
 
-	Version 3.6.5 has been well-tested for GPLOT:
-		https://www.python.org/downloads/release/python-365/
+	Version 3.7.3 has been well-tested for GPLOT:
+		https://www.python.org/downloads/release/python-373/
 
 	On NOAA Jet:
 		*Add alias for python:	alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
