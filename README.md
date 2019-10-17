@@ -6,49 +6,75 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 
 # Instructions for installation
 
-1. Install NCL (NCAR Command Language).
+1. Add 'GPLOT_DIR' to environment
+        Define GPLOT_DIR as the path where you cloned the GPLOT repository.
+        This variable is critical to the functionality of GPLOT.
+        Add it to your ~/.cshrc or ~/.bashrc file.
+
+
+2. Install NCL (NCAR Command Language).
 	Pre-compiled libraries are preferred. To learn more, start here:
 		https://www.ncl.ucar.edu/Download/
 
-	Version 6.3.0 has been well-tested for GPLOT:
-		https://www.earthsystemgrid.org/dataset/ncl.630.html
+	Version 6.5.0 has been well-tested for GPLOT:
+		https://www.earthsystemgrid.org/dataset/ncl.650.html
 
 	On NOAA Jet:
-		a) Copy the NCL6.3.0 tarball from the following location:
-			/mnt/lfs1/projects/hur-aoml/Ghassan.Alaka/NCL/tarballs/ncl_ncarg-6.3.0.Linux_RHEL6.4_x86_64_nodap_gcc447.tar.gz
-		b) Install the version with GCC 4.4.7:
-			https://www.earthsystemgrid.org/dataset/ncl.630.1/file/ncl_ncarg-6.3.0.Linux_RHEL6.4_x86_64_nodap_gcc447.tar.gz
+		*Load the module:	module load ncl/6.5.0
+
+	On NOAA Hera:
+		*Load the module:	module load ncl/6.5.0
 
 
-2. Install MET-TC (Model Evaluation Tools for Tropical Cyclones)
+3. Install MET (Model Evaluation Tools)
 	To download the source code, go to the DTC web site:
 		https://dtcenter.org/community-code/model-evaluation-tools-met/download
 
-	Version 8.0 has been well-tested for GPLOT:
-		https://dtcenter.org/sites/default/files/met-8.0.20180927.tar.gz
+	Version 8.1 has been well-tested for GPLOT:
+		https://dtcenter.org/sites/default/files/community-code/met/met-8.1.1.20190708.tar.gz
 
-	On NOAA Jet, point to the pre-compiled version of MET-TC:
-		Add important variables to your environment. Preferable to add these to your ~/.cshrc or ~/.bashrc file:
-			PATH --> /lfs1/projects/dtc-hurr/MET/MET_releases/8.0/bin
-			LD_LIBRARY_PATH --> /lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib
+	On NOAA Jet:
+		*Load the modules:	module load contrib
+					module load intel/18.0.5.274
+					module load met/8.1_beta2
 
+	On NOAA Hera:
+		*Load the modules:	module load intel/18.0.5.274
+					module load anaconda/anaconda2-4.4.0
+					module load met/8.1
 
-3. Install Python 3 Anaconda
+4. Install Python 3 Anaconda
 	To download the source code, go to the Python web site:
 		https://www.python.org/downloads/
 
 	Version 3.6.5 has been well-tested for GPLOT:
 		https://www.python.org/downloads/release/python-365/
 
-	On NOAA Jet, point to the installed version of Python 3:
-		Add to PATH --> /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin
-		Alias python to /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+	On NOAA Jet:
+		*Add alias for python:	alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
+		*Add python to path:	export PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
+		Build the centroid module:
+					cd python/modules
+					python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
+
+	On NOAA Hera:
+		*Add alias for python:	alias python="/scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/python"
+		*Add python to path:	export PATH=/scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/:$PATH
+		Build the centroid module:
+					cd python/modules
+					python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
 
 
-4. Add 'GPLOT_DIR' to environment
-	Define GPLOT_DIR as the path where you cloned the GPLOT repository.
-	This variable is critical to the functionality of GPLOT.
-	Add it to your ~/.cshrc or ~/.bashrc file.
+5. Link the correct module file (for NOAA systems only)
+	Anything with an asterisk in Steps 2-4 should be taken care of automatically by loading
+	the appropriate modulefile.
+
+	On NOAA Jet:	cd modulefiles
+			ln -sf GPLOT_mods.jet GPLOT_mods
+
+	On NOAA Hera:	cd modulefiles
+			ln -sf GPLOT_mods.hera GPLOT_mods
+	
 
 
 
