@@ -50,6 +50,9 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 	Version 3.7.3 has been well-tested for GPLOT:
 		https://www.python.org/downloads/release/python-373/
 
+	On NOAA RDHPCS systems (e.g., Jet, Hera), follow these instructions to build:
+		https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda
+
 	On NOAA Jet:
 		*Add alias for python:	alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
 		*Add python to path:	export PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
