@@ -6,7 +6,7 @@
 #module load slurm
 
 # Define critical environmental variables (based on NOAA's Jet)
-LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
+#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 
 echo "MSG: Submitting jobs for POLAR module."
@@ -59,6 +59,8 @@ ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t
 #ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 RESOLUTION=`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 RMAX=`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 LEVS=`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -93,7 +95,10 @@ if [ ! -z "$EXT" ]; then
     echo "MSG: Considering these input file extensions --> $EXT"
 fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
-
+if [ -z "$CPU_ACCT" ]; then
+    echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
+    CPU_ACCT="hur-aoml"
+fi
 
 # If FORCE is undefined, set it to False.
 if [ -z "$FORCE" ]; then
@@ -132,16 +137,15 @@ if [ $ENSMEM -eq 0 ] || [ -z $ENSMEM ]; then
 else
     IS_ENS="True"
     ENSIDS=`seq 1 $ENSMEM`  # SKIP MEM 00, Start from 01
+
 fi
 
 # Define other important variables
 BATCHFILE1="batch_polar.generic.sh"
 BATCHFILE2="batch_polar.${EXPT}.sh"
-#CTIME=`date +"%Y%m%d%H_%M"`
-#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
+
 
 # Some housekeeping
-#mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 chmod +x ${BATCH_DIR}${BATCHFILE2}
 
@@ -683,6 +687,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                         if [ -z "$JOB_TEST" ]; then
                             LOG_DIR="$ODIR_FULL"
                             LOGFILE="GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -704,6 +709,14 @@ if [ "${DO_POLAR}" = "True" ]; then
                             perl -pi -e "s/^RESOLUTION=.*/RESOLUTION=\"${RESOLUTION}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^RMAX=.*/RMAX=\"${RMAX}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^LEVS=.*/LEVS=\"${LEVS}\"/g" ${BATCH_DIR}${BATCHFILE2}
+
+                            if [ "$SYS_ENV" == "JET" ]; then
+                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
+                                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
+                            elif [ "$SYS_ENV" == "HERA" ]; then
+                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
+                                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
+                            fi
 
                             # Call the batch job
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
