@@ -1,4 +1,4 @@
-#!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+###!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 
 # Check that GPLOT_DIR is defined in the environment.
 import os
@@ -19,7 +19,6 @@ from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis tic
 import sys #To change the path 
 sys.path.append(GPLOT_DIR+'/python/modules')
 import centroid
-#import os
 import glob
 import cmath
 import subprocess
@@ -71,7 +70,7 @@ MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
-print(ODIR)
+#print(ODIR)
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -101,7 +100,7 @@ zsize = np.int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-print(str(ATCF_LIST))
+#print(str(ATCF_LIST))
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
 	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
@@ -303,7 +302,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			y_sr = lat_sr*111.1e3
 
 			#Define the polar coordinates needed
-			r = np.linspace(0,rmax,(rmax/resolution+1))
+			#r = np.linspace(0,rmax,(rmax//resolution+1))
+			r = np.linspace(0,600,201)
+			#print(r)
+			#sys.exit()
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)
@@ -573,9 +575,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			threshold2 = np.ones(zsize)*np.nan
 			for k in range(zsize):
 				threshold2[k] = np.nanmax(wind[:,:,k])-0.05*(np.nanmax(wind[:,:,k])-np.nanmin(wind[:,:,k]))
-
-			center_z = centroid.centroid(hgt,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
-			center_z_2 = centroid.centroid(wind,threshold2,1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
+			center_z = np.ones((np.shape(hgt)[2],2),order='F').astype(np.int32)
+			center_z_2 = np.ones((np.shape(wind)[2],2),order='F').astype(np.int32)
+			centroid.centroid(hgt,center_z,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
+			centroid.centroid(hgt,center_z_2,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 
 
 			#Calculate 750-hPa RMW and Average Vmax
@@ -624,7 +627,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
 
 
-			color_data_wind = np.genfromtxt('/home/rthr-aoml/GPLOT/python/colormaps/colormap_wind.txt')
+			color_data_wind = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
 			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 			norm_wind = colors.BoundaryNorm(levs_wind,256)
