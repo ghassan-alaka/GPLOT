@@ -6,7 +6,7 @@
 #module load slurm
 
 # Define critical environmental variables (based on NOAA's Jet)
-LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
+#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 
 echo "MSG: Submitting jobs for STATS."
@@ -58,6 +58,10 @@ ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t
 ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+
 #ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -97,7 +101,10 @@ if [ ! -z "$EXT" ]; then
     echo "MSG: Considering these input file extensions --> $EXT"
 fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
-
+if [ -z "$CPU_ACCT" ]; then
+    echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
+    CPU_ACCT="hur-aoml"
+fi
 
 # If FORCE is undefined, set it to False.
 if [ -z "$FORCE" ]; then
@@ -150,8 +157,6 @@ fi
 # Define other important variables
 BATCHFILE1="batch_stats.generic.sh"
 BATCHFILE2="batch_stats.${EXPT}.sh"
-#CTIME=`date +"%Y%m%d%H_%M"`
-#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
 #mkdir -p ${LOG_DIR}
@@ -418,6 +423,7 @@ if [ "${DO_STATS}" = "True" ]; then
         if [ -z "$JOB_TEST" ]; then
             LOG_DIR="$ODIR_FULL"
             LOGFILE="GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.log"
+            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
             perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
             perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
             perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -431,6 +437,14 @@ if [ "${DO_STATS}" = "True" ]; then
             perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
             perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
             perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+
+            if [ "$SYS_ENV" == "JET" ]; then
+                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
+                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
+            elif [ "$SYS_ENV" == "HERA" ]; then
+                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
+                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
+            fi
 
             # Call the batch job
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			

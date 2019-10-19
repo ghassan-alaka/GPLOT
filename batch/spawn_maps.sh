@@ -6,7 +6,7 @@
 #module load slurm
 
 # Define critical environmental variables (based on NOAA's Jet)
-LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
+#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 echo "MSG: Submitting jobs for GPLOT_MAPS."
 
@@ -57,6 +57,9 @@ ATCF1_DIR=`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*/
 ATCF1_TAG=`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ATCF2_DIR=`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ATCF2_TAG=`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+
 #ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -75,11 +78,6 @@ if [ -z "$SID" ]; then
 else
     echo "MSG: Found these Storm IDs in the namelist       --> $SID"
 fi
-#if [ "$IS_REAL" == "True" ]; then
-#    echo "MSG: This is a real-time case."
-#else
-#    echo "MSG: This is not a real-time case."
-#fi
 if [ "$IS_MSTORM" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."
 fi
@@ -91,6 +89,11 @@ if [ ! -z "$EXT" ]; then
     echo "MSG: Considering this input file suffix          --> $EXT"
 fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
+
+if [ -z "$CPU_ACCT" ]; then
+    echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
+    CPU_ACCT="hur-aoml"
+fi
 
 # Get the domains
 DOMAIN=( `sed -n -e 's/^DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
@@ -127,7 +130,6 @@ for ATCF in ${ATCF2_ALL[@]}; do
     ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
 done
 ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
-
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
@@ -518,7 +520,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L")
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L")
 
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
@@ -528,7 +530,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                         IFHRS=()
                         while [ -z "$IFILES" ]; do
                             IDIR_FULL="${IDIR}${IDIR_OPTS[$F]}"
-#echo ${IDIR_FULL}
+
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
                                 ((F=F+1))
@@ -806,6 +808,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             # Change options in the batch submission script.
                             LOG_DIR="$ODIR_FULL"
                             LOGFILE="GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -824,6 +827,14 @@ if [ "${DO_MAPS}" = "True" ]; then
                             perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+
+                            if [ "$SYS_ENV" == "JET" ]; then
+                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
+                                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
+                            elif [ "$SYS_ENV" == "HERA" ]; then
+                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
+                                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
+                            fi
 
 
                             # Call the batch job
@@ -853,6 +864,8 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                     done #end of ID loop
 
+                    # If input files were not found in the ID loop, then also skip all remaining domains
+                    # Might need to optimize this if 'd03' graphics use a different file (e.g., HWRF).
                     if [ -z "${IFILES[*]}" ]; then
                         echo "WARNING: No input files found. Skipping the rest of the domains."
                         break
