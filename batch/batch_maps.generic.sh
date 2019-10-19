@@ -16,14 +16,11 @@ set -x
 
 echo "`date`"
 
-# Source the .profile to optimize the environment
-source ~/.profile
-
-# Load modules
-module load intel
+# Source GPLOT_mods to optimize the environment
+source ${GPLOT_DIR}/modulefiles/GPLOT_mods
 
 # Define critical environmental variables (based on NOAA's Jet)
-LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
+#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 #export OMP_NUM_THREADS=1
 
 # 1. Get command line variables
