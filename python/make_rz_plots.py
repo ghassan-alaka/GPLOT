@@ -312,8 +312,17 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			XI = R * np.cos(THETA)
 			YI = R * np.sin(THETA)
 
-			x_sr = x_sr/1000
-			y_sr = y_sr/1000
+			x_sr = np.round(x_sr/1000,3)
+			y_sr = np.round(y_sr/1000,3)
+
+			x_sr_2 = np.linspace(x_sr.min(), x_sr.max(), x_sr.size)
+			y_sr_2 = np.linspace(y_sr.min(), y_sr.max(), y_sr.size)
+			print('THIS IS X')
+			print(x_sr)
+			print('THIS IS XI')
+			print(x_sr_2)
+			print('THIS IS THE DIFFERENCE')
+			print(x_sr-x_sr_2)
 
 			#Do interpolation
 			print('Doing the Interpolation Now')
@@ -1282,8 +1291,19 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.text(-127,127,'2-km Max'+r'$\bf\overline{V}_{t}$'+' (RMW):\n'+vmaxstring+' kt ('+rmwstring+' n mi)',fontsize=14,verticalalignment='top', horizontalalignment='left',color='k',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
 			plt.text(127,127,'Shear:\n'+shearstring+' kt',fontsize=14,verticalalignment='top', horizontalalignment='right',color='blue',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
 			ticks=[7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155]
-			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u750*1.94,v750*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
-			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u450*1.94,v450*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
+			print('SHAPE OF X_SR, X_SR_2')
+			print(np.shape(x_sr))
+			print(np.shape(x_sr_2))
+			print('SHAPE OF Y_SR, Y_SR_2')
+			print(np.shape(y_sr))
+			print(np.shape(y_sr_2))
+			print('SHAPE OF u750')
+			print(np.shape(u750))
+			print('SHAPE OF v750')
+			print(np.shape(v750))
+			
+			plt.gca().streamplot(x_sr_2*0.54,y_sr_2*0.54,u750*1.94,v750*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().streamplot(x_sr_2*0.54,y_sr_2*0.54,u450*1.94,v450*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
 			plt.gca().arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black',zorder=10)
 			ax = plt.gca()
 			divider = make_axes_locatable(ax)
