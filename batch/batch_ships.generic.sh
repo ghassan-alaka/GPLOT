@@ -15,14 +15,14 @@
 set -x
 
 # Source the .profile to optimize the environment
-source ~/.profile
+source ${GPLOT_DIR}/modulefiles/GPLOT_mods
 
 # Load modules
-module load intel
+#module load intel
 
 # Define critical environmental variables (based on NOAA's Jet)
-LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
-export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
+#export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 #export OMP_NUM_THREADS=1
 
 # 1. Get command line variables

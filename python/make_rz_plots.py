@@ -1,4 +1,4 @@
-#!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+###!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 
 # Check that GPLOT_DIR is defined in the environment.
 import os
@@ -19,7 +19,6 @@ from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis tic
 import sys #To change the path 
 sys.path.append(GPLOT_DIR+'/python/modules')
 import centroid
-#import os
 import glob
 import cmath
 import subprocess
@@ -71,7 +70,7 @@ MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
-print(ODIR)
+#print(ODIR)
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -101,7 +100,7 @@ zsize = np.int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-print(str(ATCF_LIST))
+#print(str(ATCF_LIST))
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
 	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
@@ -303,15 +302,21 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			y_sr = lat_sr*111.1e3
 
 			#Define the polar coordinates needed
-			r = np.linspace(0,rmax,(rmax/resolution+1))
+			#r = np.linspace(0,rmax,(rmax//resolution+1))
+			r = np.linspace(0,600,201)
+			#print(r)
+			#sys.exit()
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)
 			XI = R * np.cos(THETA)
 			YI = R * np.sin(THETA)
 
-			x_sr = x_sr/1000
-			y_sr = y_sr/1000
+			x_sr = np.round(x_sr/1000,3)
+			y_sr = np.round(y_sr/1000,3)
+
+			x_sr_2 = np.linspace(x_sr.min(), x_sr.max(), x_sr.size)
+			y_sr_2 = np.linspace(y_sr.min(), y_sr.max(), y_sr.size)
 
 			#Do interpolation
 			print('Doing the Interpolation Now')
@@ -573,9 +578,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			threshold2 = np.ones(zsize)*np.nan
 			for k in range(zsize):
 				threshold2[k] = np.nanmax(wind[:,:,k])-0.05*(np.nanmax(wind[:,:,k])-np.nanmin(wind[:,:,k]))
-
-			center_z = centroid.centroid(hgt,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
-			center_z_2 = centroid.centroid(wind,threshold2,1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
+			center_z = np.ones((np.shape(hgt)[2],2),order='F').astype(np.int32)
+			center_z_2 = np.ones((np.shape(wind)[2],2),order='F').astype(np.int32)
+			centroid.centroid(hgt,center_z,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
+			centroid.centroid(hgt,center_z_2,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 
 
 			#Calculate 750-hPa RMW and Average Vmax
@@ -624,7 +630,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
 
 
-			color_data_wind = np.genfromtxt('/home/rthr-aoml/GPLOT/python/colormaps/colormap_wind.txt')
+			color_data_wind = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
 			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 			norm_wind = colors.BoundaryNorm(levs_wind,256)
@@ -633,11 +639,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(ur_p_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -660,11 +666,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(vt_p_mean,1)),levs_vt,cmap=colormap_vt,norm=norm_vt,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -687,11 +693,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(w_p_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -714,11 +720,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -741,11 +747,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(rh_p_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -769,11 +775,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_downshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(dbz_p_upshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -799,11 +805,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(ur_p_downshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -829,11 +835,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(w_p_downshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(w_p_upshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -859,11 +865,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(rh_p_downshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(rh_p_upshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -889,11 +895,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(dbz_p_rightshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(dbz_p_leftshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -919,11 +925,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(ur_p_rightshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(ur_p_leftshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -949,11 +955,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(w_p_rightshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(w_p_leftshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -979,11 +985,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(rh_p_rightshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(rh_p_leftshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -1279,8 +1285,8 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.text(-127,127,'2-km Max'+r'$\bf\overline{V}_{t}$'+' (RMW):\n'+vmaxstring+' kt ('+rmwstring+' n mi)',fontsize=14,verticalalignment='top', horizontalalignment='left',color='k',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
 			plt.text(127,127,'Shear:\n'+shearstring+' kt',fontsize=14,verticalalignment='top', horizontalalignment='right',color='blue',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
 			ticks=[7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155]
-			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u750*1.94,v750*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
-			plt.gca().streamplot(x_sr*0.54,y_sr*0.54,u450*1.94,v450*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().streamplot(x_sr_2*0.54,y_sr_2*0.54,u750*1.94,v750*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
+			plt.gca().streamplot(x_sr_2*0.54,y_sr_2*0.54,u450*1.94,v450*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
 			plt.gca().arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black',zorder=10)
 			ax = plt.gca()
 			divider = make_axes_locatable(ax)

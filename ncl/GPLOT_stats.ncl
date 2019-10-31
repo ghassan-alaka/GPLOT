@@ -123,8 +123,10 @@ print("MSG: Verbose level = "+tostring(verbose))
 
 
 ; 5. Setup variables to achieve an optimal environment
-system("source "+HOME+"/.profile")
-system("export LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:$LD_LIBRARY_PATH")
+MOD_FILE = GPLOT_DIR+"/modulefiles/GPLOT_mods"
+;print("MSG: Loading GPLOT modulefile: "+GPLOT_DIR+"/modulefiles/GPLOT_mods")
+;system("source "+GPLOT_DIR+"/modulefiles/GPLOT_mods")
+;system("export LD_LIBRARY_PATH=/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:$LD_LIBRARY_PATH")
 
 
 
@@ -1514,7 +1516,7 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	; Set up the interpolation ATCF directory.
 	INTERP_ODIR = INTERP_DIR+"/atcf"
 	INTERP_FILE = INTERP_ODIR+"/a"+SID2+".gun"
-	system("mkdir -p "+INTERP_DIR)
+	system("mkdir -p "+INTERP_ODIR)
 	system("ln -sf "+ADIR+ADECK_N+" "+INTERP_ODIR+"/"+ADECK)
 	system("ln -sf "+ADIR+BDECK+" "+INTERP_ODIR+"/"+BDECK)
 	
@@ -1722,11 +1724,14 @@ do ddd = 0,dimsizes(allDates)-1
 			allDates2 = allDates(ddd)
 			allOffset2 = allOffset(ddd)
 		end if
-	end if
+	else if(dimsizes(allDates).eq.1)then
+		allDates2 := allDates(ddd)
+		allOffset2 := allOffset(ddd)
+		allOffsetD := allOffset@_FillValue
+	end if  end if
 end do
 allDates := allDates2
 delete([/allOffset2,allDates2,allOffsetD/])
-
 
 
 ; LATE TRACK GUIDANCE
@@ -2373,6 +2378,7 @@ if(DO_LT_GUIDE)then
 		dum1 := new(dimsizes(TRKmodels)+1,"graphic")
 		dum2 := new(dimsizes(TRKmodels)+1,"graphic")
 		dum3 := new((/dimsizes(TRKmodels)+1,50/),"graphic")
+		TEST := new((/dimsizes(TRKmodels)+1/),"graphic")
 
 
 		; Info about plot size
@@ -2398,12 +2404,15 @@ if(DO_LT_GUIDE)then
 		plres1@gsLineColor	= "black"
 		vals  := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
 		vals2 := ind(toint(bHrs)%12.eq.0 .and. bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
-		if(.not.all(ismissing(bTRK(:,vals))))then
+		vals3 := vals2(ind(.not.ismissing(bTRK(0,vals2))))
+
+		if(.not.ismissing(vals(0)) .and. .not.all(ismissing(bTRK(:,vals))) .and. .not.all(ismissing(bTRK(:,vals2))))then
 			dum1(dimsizes(TRKmodels))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
 			dum2(dimsizes(TRKmodels))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
-			dum3(dimsizes(TRKmodels),vals2)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),\
-										bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,\
-										txres3)
+			;dum3(dimsizes(TRKmodels),vals2)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),\
+			;							bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,\
+			;							txres3)
+			dum3(dimsizes(TRKmodels),vals3)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
 		end if
 
 
@@ -2427,6 +2436,7 @@ if(DO_LT_GUIDE)then
 			tmp	:= toint(where(ismissing(aTRK(ppp2,2,:)), fval2, aTRK(ppp2,2,:)))
 			vals	:= ind(tmp.le.tofloat(MAX_FHR))
 			vals2	:= ind(tmp%12.eq.0 .and. tmp.le.tofloat(MAX_FHR))
+			vals3	:= vals2(ind(.not.ismissing(aTRK(ppp2,0,vals2))))
 		
 			plres2@gsLineColor   = TRKcolors(ppp2)
 			plres3@gsLineColor   = TRKcolors(ppp2)
@@ -2441,8 +2451,9 @@ if(DO_LT_GUIDE)then
 			end if
 	
 			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)))then
-				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
-									    aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
+				;dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
+				;					    aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
+				dum3(ppp,vals3) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
 			end if		
 	
 			; Add legend info for each model
@@ -2457,8 +2468,8 @@ if(DO_LT_GUIDE)then
 					     (/vpTOP+vpHEAD-0.02*tofloat(ppp2/4),vpTOP+vpHEAD-0.02*tofloat(ppp2/4)/),plres2)
 			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
-		
-		
+	
+	
 		; Add a main title
 		gsn_text_ndc(wks,"Late Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
 
@@ -2601,10 +2612,11 @@ if(DO_ET_GUIDE)then
 		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
+		vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
 		if(.not.all(ismissing(bTRK(:,vals))))then
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
 			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
-			dum3(dimsizes(TRKmodelsI),vals2) = gsn_add_text(wks,plot,tostring(toint(bHrsI(vals2))),\
+			dum3(dimsizes(TRKmodelsI),vals3) = gsn_add_text(wks,plot,tostring(toint(bHrsI(vals2))),\
 									bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
 		end if
 
@@ -2628,7 +2640,8 @@ if(DO_ET_GUIDE)then
 	
 			tmp	:= toint(where(ismissing(aTRKI(ppp2,2,:)), fval2, aTRKI(ppp2,2,:)))
 			vals	:= ind(tmp.le.tofloat(MAX_FHR))
-			vals2  := ind(tmp%12.eq.0 .and. tmp.le.tofloat(MAX_FHR))
+			vals2	:= ind(tmp%12.eq.0 .and. tmp.le.tofloat(MAX_FHR))
+			vals3	:= vals2(ind(.not.ismissing(aTRKI(ppp2,0,vals2))))
 		
 			plres2@gsLineColor   = TRKcolorsI(ppp2)
 			plres3@gsLineColor   = TRKcolorsI(ppp2)
@@ -2643,7 +2656,7 @@ if(DO_ET_GUIDE)then
 			end if
 		
 			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)))then
-				dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRKI(ppp2,2,vals2))),\
+				dum3(ppp,vals3) = gsn_add_text(wks,plot,tostring(toint(aTRKI(ppp2,2,vals2))),\
 									    aTRKI(ppp2,1,vals2)+0.3,aTRKI(ppp2,0,vals2)+0.3,txres3)
 			end if
 			
@@ -3408,9 +3421,11 @@ if(DO_LT_TREND)then
 			; Retain only forecast hours that are divisible by 6
 			tmp	:= toint(where(ismissing(aTRK2(mmm,ttt,2,:)), fval2, aTRK2(mmm,ttt,2,:)))
 			vals	:= ind(tmp%6.eq.0)
-			vals2	:= ind(tmp%12.eq.0)	
+			vals2	:= ind(tmp%12.eq.0)
+			;vals3	:= vals2(ind(.not.ismissing(aTRK2(mmm,ttt,0,vals2))))
 			if(ismissing(vals2(0)) .or. ismissing(vals(0)))then   continue   end if
 			if(dimsizes(vals).eq.1)then   continue   end if
+			vals3	:= vals2(ind(.not.ismissing(aTRK2(mmm,ttt,0,vals2))))
 	
 		
 			; Add each model as polyline & polymarker objects
@@ -3426,7 +3441,7 @@ if(DO_LT_TREND)then
 				mkres4a@gsMarkerThicknessF= 5.0
 				dum2(ttt)	= gsn_add_polymarker(wks,plot,aTRK2(mmm,ttt,1,vals),aTRK2(mmm,ttt,0,vals),mkres4a)
 			end if
-			dum3(ttt,:dimsizes(vals2)-1)	= gsn_add_text(wks,plot,tostring(toint(aTRK2(mmm,ttt,2,vals2))),aTRK2(mmm,ttt,1,vals2)+0.2,aTRK2(mmm,ttt,0,vals2)+0.2,txares4a)
+			dum3(ttt,vals3)	= gsn_add_text(wks,plot,tostring(toint(aTRK2(mmm,ttt,2,vals2))),aTRK2(mmm,ttt,1,vals2)+0.2,aTRK2(mmm,ttt,0,vals2)+0.2,txares4a)
 	
 			; Add legend info for each model
 			plres4a@gsLineThicknessF	= 3.5
@@ -4586,11 +4601,12 @@ if(DO_VERIFICATION)then
 		
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-		       ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-		       " >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
+		;       ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
+		;       " >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
 		       " -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
@@ -4609,11 +4625,12 @@ if(DO_VERIFICATION)then
 
 		; d. Create shell script to run TC_STAT with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-		       ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-		       " >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
+		;       ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
+		;       " >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout3+".tcst -config "+TCSconf_f+str_get_dq()+\
 		       " >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
@@ -4637,11 +4654,12 @@ if(DO_VERIFICATION)then
 	
 			; Create shell script to run TC_STAT with shell options (better)
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-			       ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-			       " >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
+			;       ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
+			;       " >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout3+".tcst -config "+TCSconf_s+\
 			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
@@ -4871,8 +4889,9 @@ if(DO_VERIFICATION)then
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout4+" -log "+TCPout4+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
@@ -4890,8 +4909,9 @@ if(DO_VERIFICATION)then
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout4+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
@@ -4913,8 +4933,9 @@ if(DO_VERIFICATION)then
 			
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout4+".tcst -config "+TCSconf_s+" -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
@@ -5082,8 +5103,9 @@ if(DO_VERIFICATION)then
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout1+" -log "+TCPout1+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
@@ -5101,8 +5123,9 @@ if(DO_VERIFICATION)then
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout1+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
@@ -5125,8 +5148,9 @@ if(DO_VERIFICATION)then
 	
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout1+".tcst -config "+TCSconf_s+" -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
@@ -5353,8 +5377,9 @@ if(DO_VERIFICATION)then
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout2+" -log "+TCPout2+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
@@ -5372,8 +5397,9 @@ if(DO_VERIFICATION)then
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout2+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
@@ -5395,10 +5421,11 @@ if(DO_VERIFICATION)then
 	
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-			       ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-			       " >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
+			;       ODIR+"mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
+			;       " >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout2+".tcst -config "+TCSconf_s+\
 			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")

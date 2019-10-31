@@ -1,12 +1,20 @@
 #!/bin/sh --login
+#SBATCH --account=hur-aoml
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=00:45:00
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --qos=batch
+#SBATCH --chdir=.
+#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --job-name="GPLOT.Default"
+#SBATCH --mem=16G
+
+
 #set -x
 
-
-# Load modules (based on NOAA's Jet)
-#module load slurm
-
-# Define critical environmental variables (based on NOAA's Jet)
-#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 echo "MSG: Submitting jobs for GPLOT_MAPS."
 
@@ -35,8 +43,6 @@ fi
 
 # Pull important variables from the namelist
 DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 DSOURCE=`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 EXPT=`sed -n -e 's/^EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 MCODE=`sed -n -e 's/^MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -144,8 +150,6 @@ fi
 # Define other important variables
 BATCHFILE1="batch_maps.generic.sh"
 BATCHFILE2="batch_maps.${EXPT}.sh"
-#CTIME=`date +"%Y%m%d%H_%M"`
-#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
 #mkdir -p ${LOG_DIR}

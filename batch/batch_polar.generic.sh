@@ -18,25 +18,25 @@ set -x
 #limit stacksize unlimited
 
 # Source the .profile to optimize the environment
-source ~/.profile
+source ${GPLOT_DIR}/modulefiles/GPLOT_mods
 
 # Load MET-TC library path
-LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
+#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 # Load wgrib module (needed for gribmap)
-module load wgrib
-module load wgrib2/0.2.0.1
+#module load wgrib
+#module load wgrib2/0.2.0.1
 
 # Load GrADs for interfacing in Python
-module load grads
+#module load grads
 
 # Load intel module (needed for wgrib)
-module load intel
+#module load intel
 
 # Use the Python 3 install
 #alias python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
-PYTHONEXE="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
-PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
+#PYTHONEXE="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
+#PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
 
 # Turn off buffered output
 export PYTHONUNBUFFERED=1
@@ -113,7 +113,8 @@ fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-${PYTHONEXE} ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
+#${PYTHONEXE} ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
+python ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
 
 wait
 

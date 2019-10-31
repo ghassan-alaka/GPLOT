@@ -1,12 +1,20 @@
 #!/bin/sh --login
+#SBATCH --account=hur-aoml
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=00:45:00
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --qos=batch
+#SBATCH --chdir=.
+#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --job-name="GPLOT.Default"
+#SBATCH --mem=16G
+
+
 #set -x
 
-
-# Load modules (based on NOAA's Jet)
-#module load slurm
-
-# Define critical environmental variables (based on NOAA's Jet)
-#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
 
 
 echo "MSG: Submitting jobs for POLAR module."
@@ -40,7 +48,6 @@ DO_POLAR=`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*/
 DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_REAL=`sed -n -e 's/^.*IS_REAL =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -78,11 +85,6 @@ if [ -z "$SID" ]; then
     echo "MSG: No Storm IDs defined in the namelist. Will consider all."
 else
     echo "MSG: Found these Storm IDs in the namelist       --> $SID"
-fi
-if [ "$IS_REAL" == "True" ]; then
-    echo "MSG: This is a real-time case."
-else
-    echo "MSG: This is not a real-time case."
 fi
 if [ "$IS_MSTORM" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."

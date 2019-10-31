@@ -1,21 +1,25 @@
 #!/bin/sh --login
+#SBATCH --account=hur-aoml
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=00:45:00
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --qos=batch
+#SBATCH --chdir=.
+#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --job-name="GPLOT.Default"
+#SBATCH --mem=16G
+
+
 #set -x
-
-
-# Load modules (based on NOAA's Jet)
-#module load slurm
-
-# Define critical environmental variables (based on NOAA's Jet)
-#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
-
-
-echo "MSG: Submitting jobs for POLAR module."
 
 
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
 BATCH_DIR="${GPLOT_DIR}/batch/"
-PYTHON_DIR="${GPLOT_DIR}/python/"
+NCL_DIR="${GPLOT_DIR}/ncl/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -36,11 +40,10 @@ fi
 
 
 # Pull important variables from the namelist
-DO_POLAR=`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_REAL=`sed -n -e 's/^.*IS_REAL =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -61,10 +64,6 @@ ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t
 FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-RESOLUTION=`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-RMAX=`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-LEVS=`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-PYTHONFILE=`sed -n -e 's/^.*PYTHONFILE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 
 # Print information
 echo "MSG: Found this data source in the namelist      --> $DSOURCE"
@@ -79,17 +78,12 @@ if [ -z "$SID" ]; then
 else
     echo "MSG: Found these Storm IDs in the namelist       --> $SID"
 fi
-if [ "$IS_REAL" == "True" ]; then
-    echo "MSG: This is a real-time case."
-else
-    echo "MSG: This is not a real-time case."
-fi
 if [ "$IS_MSTORM" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."
 fi
 echo "MSG: Found this top level input directory in the namelist --> $IDIR"
 if [ ! -z "$ITAG" ]; then
-    echo "MSG: Considering these input file tag --> $ITAG"
+    echo "MSG: Condering these input file tag --> $ITAG"
 fi
 if [ ! -z "$EXT" ]; then
     echo "MSG: Considering these input file extensions --> $EXT"
@@ -99,6 +93,7 @@ if [ -z "$CPU_ACCT" ]; then
     echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
     CPU_ACCT="hur-aoml"
 fi
+
 
 # If FORCE is undefined, set it to False.
 if [ -z "$FORCE" ]; then
@@ -137,15 +132,16 @@ if [ $ENSMEM -eq 0 ] || [ -z $ENSMEM ]; then
 else
     IS_ENS="True"
     ENSIDS=`seq 1 $ENSMEM`  # SKIP MEM 00, Start from 01
-
 fi
 
 # Define other important variables
-BATCHFILE1="batch_polar.generic.sh"
-BATCHFILE2="batch_polar.${EXPT}.sh"
-
+BATCHFILE1="batch_ships.generic.sh"
+BATCHFILE2="batch_ships.${EXPT}.sh"
+CTIME=`date +"%Y%m%d%H_%M"`
+#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
+#mkdir -p ${LOG_DIR}
 cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
 chmod +x ${BATCH_DIR}${BATCHFILE2}
 
@@ -158,12 +154,6 @@ else
 fi
 echo "MSG: Found these cycles: ${CYCLES[*]}"
 echo ""
-
-
-# If PYTHONFILE is empty, set it to a default script.
-if [ -z "$PYTHONFILE" ]; then
-    PYTHONFILE="make_rz_plots.py"
-fi
 
 
 # Define the maximum number of batch submissions.
@@ -179,8 +169,10 @@ MAXCOUNT=25
 #    This script is responsible for creating graphics based #
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
-if [ "${DO_POLAR}" = "True" ]; then
-    DOMAIN="polar"
+if [ "${DO_SHIPS}" = "True" ]; then
+    echo "MSG: Submitting jobs for SHIPS."
+    NCLFILE="GPLOT_ships.ncl"
+    DOMAIN="ships"
     TIER="Tier1"
     SC="True"
     ATCF_REQD="True"
@@ -258,18 +250,18 @@ if [ "${DO_POLAR}" = "True" ]; then
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}"` )
+            STORM_ATCF=`printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}"`
             echo "MSG: The ATCF for this storm --> $STORM_ATCF"
-            if [ -z "${STORM_ATCF[*]}" ]; then
+            if [ -z $STORM_ATCF ]; then
                 echo "WARNING: No ATCF found for this storm. This might be OK."
             else
-                ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                ATCF_FHRS=( `awk -F',' '{print $6}' $STORM_ATCF | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
             fi
 
             #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
             NEW_ATCF_FHRS=()
             for FHR in ${ATCF_FHRS[@]}; do
-                if [ $((10#$FHR)) -ge $INIT_HR ] && [ $((10#$FHR)) -le $FNL_HR ] && [ $((10#$FHR % $DT)) -eq 0 ]; then
+                if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
                     NEW_ATCF_FHRS+=( $FHR )
                 fi
             done
@@ -612,7 +604,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                         if [ -z "${IFILES[*]}" ]; then
                         #if [ -z "$(echo -e "${IFILES[*]}" | tr -d '[:space:]')" ]; then
                         #if [ -z $(echo "${IFILES[*]}" | sed -e 's/^[[:space:]]*//') ]; then
-                            if ! find "${STORM_ATCF[0]}" -mmin +60 >/dev/null ; then
+                            if ! find "$STORM_ATCF" -mmin +60 >/dev/null ; then
                                 echo "MSG: All available files have already been processed."
                                 echo "MSG: However, ATCF is not old enough to complete."
                                 echo "MSG: More files might become available."
@@ -672,6 +664,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                             RUNTIME="04:59:59"
                         fi
 
+
                         # Check if a similar job is already submitted
                         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
                         if [ "$BATCH_MODE" == "FOREGROUND" ]; then
@@ -686,17 +679,17 @@ if [ "${DO_POLAR}" = "True" ]; then
                         # Change options in the batch submission script.
                         if [ -z "$JOB_TEST" ]; then
                             LOG_DIR="$ODIR_FULL"
-                            LOGFILE="GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                            LOGFILE="GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                             perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=32G/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=48G/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^PYTHONDIR=.*/PYTHONDIR=\"${PYTHON_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^PYTHONFILE=.*/PYTHONFILE=\"${PYTHONFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^LOGFILE=.*/LOGFILE=\"${LOGFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^NMLIST=.*/NMLIST=\"${NMLIST}\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -706,9 +699,6 @@ if [ "${DO_POLAR}" = "True" ]; then
                             perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^RESOLUTION=.*/RESOLUTION=\"${RESOLUTION}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^RMAX=.*/RMAX=\"${RMAX}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^LEVS=.*/LEVS=\"${LEVS}\"/g" ${BATCH_DIR}${BATCHFILE2}
 
                             if [ "$SYS_ENV" == "JET" ]; then
                                 perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
@@ -717,8 +707,8 @@ if [ "${DO_POLAR}" = "True" ]; then
                                 perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
                                 perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
                             fi
-
-                            # Call the batch job
+        
+                            # Submit the batch job.
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
                             if [ "$BATCH_MODE" == "FOREGROUND" ]; then
                                 ${BATCH_DIR}${BATCHFILE2}
@@ -736,6 +726,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                                 echo "MSG: spawn_ships.sh completed at `date`"
                                 exit
                             fi
+
                         else
                             echo "MSG: Found matching GPLOT batch job. Skipping submission."
                         fi #if [ -z "$JOB_TEST" ]; then else
@@ -745,7 +736,7 @@ if [ "${DO_POLAR}" = "True" ]; then
             done #end of DMN loop
         done #end of STORM loop
     done #end of CYCLE loop
-fi #end of DO_POLAR
+fi #end of DO_SHIPS
 
 wait
 
