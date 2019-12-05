@@ -14,6 +14,7 @@
 ; Last Modified:  August 28, 2017
 ;
 ; Last MK Modified: 13 Jun 2018 (getModelInfo and getExptInfo)
+; Last Lew.Gramer@noaa.gov modifications: 23 Oct 2019 (air-sea variables)
 ;
 ; FUNCTION LIST
 ; 1)  calcTheta
@@ -887,6 +888,23 @@ begin
 	; For Steering Flow
 	else if(var.eq."SFLO")then	levels = fspan(10.,60.,11)
 					levels@stride = 1
+
+	; For air-sea variables
+	else if(var.eq."DPT")then
+		if(lev.eq."2")then
+			levels  = fspan(270.,310.,21)
+			levels@stride   = 1
+		else if(lev.eq."850")then
+			levels  = fspan(270.,310.,21)
+                       	levels@stride   = 1
+		end if  end if
+	else if(var.eq."SST")then	levels = fspan(285.,310.,26)
+					levels@stride = 1
+	else if(var.eq."LHFLX")then	levels = fspan(-50.,800.,35)
+					levels@stride = 1
+	else if(var.eq."SHFLX")then	levels = fspan(-50.,300.,11)
+					levels@stride = 1
+	end if  end if  end if  end if
 
 
 	end if  end if  end if  end if  end if  end if  end if
@@ -3229,6 +3247,18 @@ begin
 			List_Title	= "Near-Storm Hodograph [kts] (zoom)"
 		else if(short_name.eq."T850_UV850_MSLP")then
 			List_Title	= "850mb Temperature (K; shaded), 850mb Wind (kt; barbs), and MSLP (mb; centers)"
+
+                ; For air-sea variables
+                else if(short_name.eq."DPT2_SST")then
+			List_Title	= "2m DwPt. (K; shaded), SST (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
+		else if(short_name.eq."SST_T2")then
+			List_Title	= "SST (K; shaded), 2m Temp. (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
+		else if(short_name.eq."LHFLX_MSLP")then
+			List_Title	= "Latent Ht. Flx (Wm~S~-2~N~; shaded), 10m Wind (kt; stmlines), MSLP (mb; centers)"
+		else if(short_name.eq."SHFLX_MSLP")then
+			List_Title	= "Sensi. Ht. Flx (Wm~S~-2~N~; shaded), 10m Wind (kt; stmlines), MSLP (mb; centers)"
+		end if  end if  end if  end if
+
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
