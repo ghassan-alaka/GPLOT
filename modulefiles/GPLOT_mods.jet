@@ -20,7 +20,8 @@ module load contrib
 module load met/8.1_beta2
 
 # Python 3 Anaconda
-export python=/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+#export python=/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
 export PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
 export PYTHONBUFFERED=1
 
