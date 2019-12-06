@@ -9,7 +9,7 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 1. Add 'GPLOT_DIR' to environment
         Define GPLOT_DIR as the path where you cloned the GPLOT repository.
         This variable is critical to the functionality of GPLOT.
-        Add it to your ~/.cshrc or ~/.bashrc file.
+        Add it to your ~/.cshrc and ~/.profile files.
 
 
 2. Install NCL (NCAR Command Language).
@@ -24,6 +24,14 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 
 	On NOAA Hera:
 		*Load the module:	module load ncl/6.5.0
+
+	.hluresfile:
+		NCL configuration options are stored in .hluresfile. An example version
+		of this file is stored in ncl/.hluresfile.example. Copy it to your
+		home directory, for example $HOME/.hluresfile. You may add/change any
+		value in .hluresfile, but only change 'wxMaximumSize' if you have
+		good reason for doing so. 'wsMaximumSize' controls the memory
+		available for NCL contour graphics.
 
 
 3. Install MET (Model Evaluation Tools)
@@ -77,6 +85,13 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 
 	On NOAA Hera:	cd modulefiles
 			ln -sf GPLOT_mods.hera GPLOT_mods
+
+	If running via wrapper scripts and batch nodes, it is critical that GPLOT_mods point to the
+	correct version.
+
+	If running interactively in a tcsh or csh environment, you must specifically source the "tcsh"
+	version of these files:
+		source /PATH/TO/GPLOT/modulefiles/GPLOT_mods.jet.tcsh
 	
 
 
