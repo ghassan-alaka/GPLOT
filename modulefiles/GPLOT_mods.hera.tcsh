@@ -1,4 +1,7 @@
+#!/bin/sh --login
 
+# MODULEFILE for HERA (tcsh)
+#
 # Load modules
 module load intel
 module load wgrib
