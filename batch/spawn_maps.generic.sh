@@ -65,6 +65,7 @@ ATCF2_DIR=`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*/
 ATCF2_TAG=`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 
 #ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
 #ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
@@ -99,6 +100,11 @@ echo "MSG: Found this top level output directory in the namelist --> $ODIR"
 if [ -z "$CPU_ACCT" ]; then
     echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
     CPU_ACCT="hur-aoml"
+fi
+
+if [ -z "$QOS" ]; then
+    echo "MSG: Could not find a Queue of Service (QOS) in the namelist. Assuming 'batch'."
+    QOS="batch"
 fi
 
 # Get the domains
@@ -820,6 +826,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=32G/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
@@ -834,10 +841,10 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                             if [ "$SYS_ENV" == "JET" ]; then
                                 perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
-                                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
+                                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
                             elif [ "$SYS_ENV" == "HERA" ]; then
                                 perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
-                                perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
+                                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
                             fi
 
 
