@@ -1831,7 +1831,10 @@ do fff = 0,nFiles-1
 				OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 				
 				; 5) Produce TC center fixes graphic
-				wks = gsn_open_wks(wtype,OFILE)	
+				wks = gsn_open_wks(wtype,OFILE)
+	                        setvalues NhlGetWorkspaceObjectId()
+	                                "wsMaximumSize" : 500000000
+	                        end setvalues
 				cmapC := read_colormap_file("BlAqGrYeOrReVi200")
 		
 				; Update resources
@@ -2076,7 +2079,10 @@ do fff = 0,nFiles-1
 				print("MSG: Producing graphic for: "+FNAME(ppp)+"_zoom")
 				; This is the "zoomed" version of the TC center fix graphic
 				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"_zoom."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
-				wks	= gsn_open_wks(wtype,OFILE)	
+				wks	= gsn_open_wks(wtype,OFILE)
+	                        setvalues NhlGetWorkspaceObjectId()
+	                                "wsMaximumSize" : 500000000
+	                        end setvalues
 				
 				EDGE	= max((/1.10*abs(max(CTR(1,:))-min(CTR(1,:))),1.10*abs(max(CTR(0,:))-min(CTR(0,:)))/))
 				if(EDGE.eq.0)then   EDGE = 0.5   end if
@@ -2354,7 +2360,10 @@ do fff = 0,nFiles-1
 				; 5) Produce hodograph graphic
 				TITLE = "Near-Storm Hodograph [kts]"
 				wks	= gsn_open_wks(wtype,OFILE)
-				;wks	= gsn_open_wks("x11","HODOGRAPH_TEST")	
+				;wks	= gsn_open_wks("x11","HODOGRAPH_TEST")
+	                        setvalues NhlGetWorkspaceObjectId()
+	                                "wsMaximumSize" : 500000000
+	                        end setvalues
 				cmapH	:= read_colormap_file("BlAqGrYeOrReVi200")
 		
 				; For the map background
@@ -2540,7 +2549,10 @@ do fff = 0,nFiles-1
 				; 5) Produce zoomed hodograph graphic
 				TITLE = "Near-Storm Hodograph (zoom) [kts]"
 				wks	= gsn_open_wks(wtype,OFILE)
-				;wks	= gsn_open_wks("x11","HODOGRAPH_ZOOM_TEST")	
+				;wks	= gsn_open_wks("x11","HODOGRAPH_ZOOM_TEST")
+	                        setvalues NhlGetWorkspaceObjectId()
+	                                "wsMaximumSize" : 500000000
+	                        end setvalues
 				plot	:= gsn_csm_blank_plot(wks,resH)
 				;print(data(:,0)+"  "+data(:,1)+"  "+data(:,2))			
 				
@@ -2777,6 +2789,9 @@ do fff = 0,nFiles-1
 			; Set up the output file
 			OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN
 			wks	= gsn_open_wks(wtype,OFILE)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 
 			; Update resources
 			res@tiMainString	= "";TITLE

@@ -1586,7 +1586,7 @@ do fff = 0,nFiles-1
                         ;wks    = gsn_open_wks("x11","TEST")
                         wks     := gsn_open_wks(wtype,OFILE)
                         setvalues NhlGetWorkspaceObjectId() 
-                                "wsMaximumSize" : 100000000 
+                                "wsMaximumSize" : 500000000 
                         end setvalues
                         ;if(reverseMap)then gsn_reverse_colormap(wks) end if
                 

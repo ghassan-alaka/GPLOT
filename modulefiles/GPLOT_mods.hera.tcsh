@@ -1,4 +1,7 @@
+#!/bin/sh --login
 
+# MODULEFILE for HERA (tcsh)
+#
 # Load modules
 module load intel
 module load wgrib
@@ -16,6 +19,6 @@ module use /contrib/modulefiles
 module load met/8.1
 
 # Python 3 Anaconda
-setenv python /scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/python
-setenv PATH /scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin:$PATH
+setenv python /scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python
+setenv PATH /scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin:$PATH
 setenv PYTHONBUFFERED 1

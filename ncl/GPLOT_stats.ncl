@@ -2343,6 +2343,9 @@ if(DO_LT_GUIDE)then
 		OFILE	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
+		setvalues NhlGetWorkspaceObjectId()
+                	"wsMaximumSize" : 500000000
+		end setvalues
 
 
 		;Create a hurricane symbol marker
@@ -2554,6 +2557,9 @@ if(DO_ET_GUIDE)then
 		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
+                setvalues NhlGetWorkspaceObjectId()
+	                "wsMaximumSize" : 500000000
+                end setvalues
 
 
 		;Create a hurricane symbol marker
@@ -2743,6 +2749,9 @@ if(DO_LI_GUIDE)then
 		OFILE	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
+                setvalues NhlGetWorkspaceObjectId()
+	                "wsMaximumSize" : 500000000
+                end setvalues
 
 
 		;Create a hurricane symbol marker
@@ -2926,6 +2935,9 @@ if(DO_EI_GUIDE)then
 		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
+                setvalues NhlGetWorkspaceObjectId()
+	                "wsMaximumSize" : 500000000
+                end setvalues
 
 
 		;Create a hurricane symbol marker
@@ -3108,6 +3120,9 @@ if(DO_LP_GUIDE)then
 		OFILE	= ODIR+"PressureGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
+                setvalues NhlGetWorkspaceObjectId()
+	                "wsMaximumSize" : 500000000
+                end setvalues
 
 
 		;Create a hurricane symbol marker
@@ -3334,6 +3349,9 @@ if(DO_LT_TREND)then
 		oFile	= ODIR+"TrackTrend."+thisModel+"."+LONGSID+"."+IDATE
 		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 		wks	:= gsn_open_wks(wtype,oFile)
+                setvalues NhlGetWorkspaceObjectId()
+                        "wsMaximumSize" : 500000000
+                end setvalues
 	
 	
 		;Create a hurricane symbol marker
@@ -3529,6 +3547,9 @@ if(DO_LT_TREND)then
 		oFile	= ODIR+"AllTracks."+TRKmodelsT(mmm)+"."+LONGSID+"."+IDATE
 		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 		wks	:= gsn_open_wks(wtype,oFile)
+                setvalues NhlGetWorkspaceObjectId()
+                        "wsMaximumSize" : 500000000
+                end setvalues
 			
 		;Create a hurricane symbol marker
 		tc_marker := NhlNewMarker(wks,"p",137,0.0,0.0,1.0,1.0,0.0)
@@ -3812,6 +3833,9 @@ if(DO_LI_TREND)then
 		oFile	= ODIR+"IntensityTrend."+thisModel+"."+LONGSID+"."+IDATE
 		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 		wks	= gsn_open_wks(wtype,oFile)
+                setvalues NhlGetWorkspaceObjectId()
+                        "wsMaximumSize" : 500000000
+                end setvalues
 	
 		;Create a hurricane symbol marker
 		tc_marker := NhlNewMarker(wks,"p",137,0.0,0.0,1.0,1.0,0.0)
@@ -4011,6 +4035,9 @@ if(DO_LI_TREND)then
 		oFile	= ODIR+"AllIntensity."+INTmodelsT(mmm)+"."+LONGSID+"."+IDATE
 		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 		wks	:= gsn_open_wks(wtype,oFile)
+                setvalues NhlGetWorkspaceObjectId()
+                        "wsMaximumSize" : 500000000
+                end setvalues
 			
 		;Create a hurricane symbol marker
 		tc_marker := NhlNewMarker(wks,"p",137,0.0,0.0,1.0,1.0,0.0)
@@ -4229,7 +4256,9 @@ if(DO_LP_TREND)then
 		oFile	= ODIR+"PressureTrend."+MCODE+"."+LONGSID+"."+IDATE
 		if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 		wks	= gsn_open_wks(wtype,oFile)
-
+                setvalues NhlGetWorkspaceObjectId()
+                        "wsMaximumSize" : 500000000
+                end setvalues
 
 		; Set resources
 		res			:= True
@@ -4716,6 +4745,10 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+	                setvalues NhlGetWorkspaceObjectId()
+	                        "wsMaximumSize" : 500000000
+	                end setvalues
+
 			res@xyLineColors	:= LTcolors
 			res@xyMarkers		:= LTmarkers
 			res@xyMarkerColors	:= LTcolors
@@ -4777,6 +4810,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.ALTK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+	                setvalues NhlGetWorkspaceObjectId()
+	                        "wsMaximumSize" : 500000000
+	                end setvalues
 			res@tiMainString	= "LATE ALONG TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(ALTK_ERR).lt.0.)then	res@trYMinF = floor(min(ALTK_ERR) - 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
@@ -4833,6 +4869,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.CRTK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+	                setvalues NhlGetWorkspaceObjectId()
+	                        "wsMaximumSize" : 500000000
+	                end setvalues
 			res@tiMainString	= "LATE CROSS TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(CRTK_ERR).lt.0.)then	res@trYMinF = floor(min(CRTK_ERR) - 0.1*(max(CRTK_ERR)-min(CRTK_ERR)))
@@ -4983,6 +5022,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+	                setvalues NhlGetWorkspaceObjectId()
+	                        "wsMaximumSize" : 500000000
+	                end setvalues
 			res@xyLineColors	:= LIcolors
 			res@xyMarkers		:= LImarkers
 			res@xyMarkerColors	:= LIcolors
@@ -5047,6 +5089,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.WIND_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 			res@tiMainString	= "LATE INTENSITY ERROR (bias)"
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			if(min(WIND_ERR).lt.0.)then	res@trYMinF = floor(min(WIND_ERR) - 0.1*(max(WIND_ERR)-min(WIND_ERR)))
@@ -5202,6 +5247,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 			res@xyLineColors	:= ETcolors
 			res@xyMarkers		:= ETmarkers
 			res@xyMarkerColors	:= ETcolors
@@ -5264,6 +5312,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.ALTK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 			res@tiMainString	= "EARLY ALONG TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(ALTK_ERR).lt.0.)then	res@trYMinF = floor(min(ALTK_ERR) - 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
@@ -5319,6 +5370,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.CRTK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 			res@tiMainString	= "EARLY CROSS TRACK ERROR"
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(CRTK_ERR).lt.0.)then
@@ -5475,6 +5529,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 			res@xyLineColors	:= EIcolors
 			res@xyMarkers		:= EImarkers
 			res@xyMarkerColors	:= EIcolors
@@ -5536,6 +5593,9 @@ if(DO_VERIFICATION)then
 			oFile	:= ODIR+"Verification.WIND_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
+                        setvalues NhlGetWorkspaceObjectId()
+                                "wsMaximumSize" : 500000000
+                        end setvalues
 			res@tiMainString	= "EARLY INTENSITY ERROR (bias)"
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			res@tiXAxisString	= "Lead Time [h]"
