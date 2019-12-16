@@ -10,6 +10,7 @@ module load ncl/6.5.0
 setenv NCARG_COLORMAPS $GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 
 # Model Evaluation Tools (MET)
+module load contrib
 module load anaconda/anaconda2-4.4.0
 module use /contrib/modulefiles
 module load met/8.1
