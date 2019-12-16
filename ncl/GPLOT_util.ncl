@@ -1982,6 +1982,7 @@ end
 ; dydx - 2 element array giving DY and DX, in degrees
 undef("getExptInfo")
 function getExptInfo (EXPTS[*]:string, infoType[1]:string)
+local masterInfo, masterExpt, masterType, typeind, N, vartype, EXPTINFO, EXPT, exptind
 begin
 	masterInfo=asciiread(GPLOT+"/tbl/ExptInfo.dat",-1,"string")
 	masterExpt=str_squeeze(str_get_field(masterInfo(:),1,","))
@@ -2001,16 +2002,19 @@ begin
 	do aaa = 0, N-1
 		EXPT=EXPTS(aaa)
 		if(.not.any(masterExpt.eq.EXPT))then
-
-		print("WARNING: getExptInfo: EXPT '"+EXPT+"' not recognized. Assigning missing value.")
-
+			print("WARNING: getExptInfo: EXPT '"+EXPT+"' not recognized. Assigning missing value.")
 		else
-
-		exptind=str_match_ind(masterExpt,EXPT)
-		EXPTINFO(aaa)=str_squeeze(str_get_field(masterInfo(exptind),typeind,","))	
-		
+			;exptind=str_match_ind(masterExpt,EXPT)
+			exptind:=ind(masterExpt.eq.EXPT)
+			if(dimsizes(exptind).gt.1)then
+				print("ERROR: getExptInfo: More than one matching experiment found:")
+				print("ERROR: getExptInfo: "+masterInfo(exptind))
+				exit
+			end if
+			EXPTINFO(aaa)=str_squeeze(str_get_field(masterInfo(exptind),typeind,","))
 		end if
 	end do
+
 	return(EXPTINFO)
 end
 
