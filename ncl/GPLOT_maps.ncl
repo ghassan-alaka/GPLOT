@@ -754,7 +754,7 @@ if(ismissing(FHR_TEST))then
 	print("ERROR: Forecast hour list not found --> "+FHR_LIST)
 	print("ERROR: It is advised to submit this job via the shell wrapper scripts.")
 	print("ERROR: If you manually create this file, be certain that the list lines up with")
-	print("ERROR: the list of input files --> "+IFILES_LIST")
+	print("ERROR: the list of input files --> "+IFILES_LIST)
 	exit
 end if
 FHR=asciiread(FHR_LIST, -1, "integer")
