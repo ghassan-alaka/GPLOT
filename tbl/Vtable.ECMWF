@@ -1,0 +1,6 @@
+TMP_P0_L100_GLL0	101	"3D Air Temperature"
+HGT_P0_L100_GLL0	102	"3D Geopotential Height"
+UGRD_P0_L100_GLL0	103	"3D Zonal Wind"
+VGRD_P0_L100_GLL0	104	"3D Meridional Wind"
+UGRD_P0_L100_GLL0	105	"3D Total Wind"
+PRES_P0_L101_GLL0	401	"Mean Sea Level Pressure"

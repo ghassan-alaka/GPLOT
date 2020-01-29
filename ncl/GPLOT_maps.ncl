@@ -715,9 +715,8 @@ print("MSG: Get the list of input files for graphical production.")
 ;    by listing all files to be processed in a text file.
 IFILES_LIST=ODIR+"UnplottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
 IFILES_TEST=systemfunc("ls "+IFILES_LIST+" 2>/dev/null")
-if(ismissing(IFILES_TEST))then
-        print("ERROR: No files listed for graphical production.")
-        exit
+if(ismissing(IFILES_TEST))then		print("ERROR: No files listed for graphical production.")
+					exit
 end if
 iFiles = asciiread(IFILES_LIST, -1, "string")
 if(all(ismissing(iFiles)))then          print("ERROR:  No input files found. Something went wrong.")
@@ -752,47 +751,19 @@ end do
 FHR_LIST=ODIR+"AllForecastHours."+DOMAIN+"."+TIER+SIDtag+".log"
 FHR_TEST=systemfunc("ls "+FHR_LIST+" 2>/dev/null")
 if(ismissing(FHR_TEST))then
-        if(isStrSubset(str_lower(DSOURCE),"fvgfs"))then
-                FHR     := ispan(1,132,1)
-        else
-                FHR     = new(nFiles,"integer")
-                do fff = 0,nFiles-1
-                        ; Parse the path for each file
-                        fSplit  := str_split(iFiles(fff),"/")
-                        fSplit  := str_split(fSplit(dimsizes(fSplit)-1),".")
-        
-                        if(isStrSubset(DSOURCE,"HWRF"))then
-                                tmp     := fSplit(dimsizes(fSplit)-2)
-                                ;NameIDTag = fSplit(0)
-                        else if(DSOURCE.eq."NMMB")then
-                                tmp     := fSplit(dimsizes(fSplit)-1)
-                        else if(DSOURCE.eq."GFS")then
-                                tmp     := fSplit(dimsizes(fSplit)-2)
-                        else if(DSOURCE.eq."GEFS")then
-                                tmp     := fSplit(dimsizes(fSplit)-1)
-                        end if  end if  end if  end if
-        
-                        ; Get the forecast hour as an integer
-                        tmp     := str_split(tmp,"f")
-                        FHR(fff) = toint(tmp(dimsizes(tmp)-1))
-                end do
-                qsort(FHR)
-        end if
-else
-        FHR=asciiread(FHR_LIST, -1, "integer")
+	print("ERROR: Forecast hour list not found --> "+FHR_LIST)
+	print("ERROR: It is advised to submit this job via the shell wrapper scripts.")
+	print("ERROR: If you manually create this file, be certain that the list lines up with")
+	print("ERROR: the list of input files --> "+IFILES_LIST)
+	exit
 end if
+FHR=asciiread(FHR_LIST, -1, "integer")
 nFHR = dimsizes(FHR)
 FHR@format = "%0.1i"
 print("MSG: Found these forecast hours --> "+stringOut(FHR))
 
 
-; 5. Update the final forecast hour to produce graphics
-;MY_FNL_HR = max(FHR)
-;fnlStr = ".f"+sprinti("%0.3i",MY_FNL_HR)
-;print("MSG: The final forecast hour is "+sprinti("%0.3i",FNL_HR)+".")
-
-
-; 6. Define the status file. This will be updated throughout.
+; 5. Define the status file. This will be updated throughout.
 ;    If running the GPLOT wrappers, this must match.
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
@@ -840,7 +811,7 @@ if(ATCF_FILES(0).eq."NONE")then
 end if
 
         
-; 3. Determine how many ATCFs are neeced.
+; 3. Determine how many ATCFs are needed.
 ;    If this case is storm-centered, then only 1 ATCF is needed
 if(SC_DOMAIN)then       nAll            := 1
                         ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID))))
@@ -885,8 +856,6 @@ do sss = 0,nAll-1
                         
         ; c. Read the ATCF data
         data := atcfRead(ATCF_FILES(sss))
-	;print(data)
-	;exit
         
         ; d. Loop over all forecast hours (from input files)
         do fff = 0,nFHR-1               
@@ -1146,7 +1115,7 @@ do fff = 0,nFiles-1
                 
                 ;================================================================
                 ; d. Check if an ATCF entry exists for the current forecast hour.
-                ;    Required for "d03" graphics.
+                ;    Required for storm-centered graphics (e.g., DOMAIN=d03).
                 ;    Suggested for large-scale graphics.
                 ;================================================================
                 if(SC_DOMAIN .and. ONE_FILE)then

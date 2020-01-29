@@ -4,8 +4,10 @@
 #              ./parse_atcf.sh HAFS /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HAFSV0.B_Forecast/ /lfs3/projects/hur-aoml/rthr-aoml/hafstmp/HAFS_jet/com/ /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ /lfs3/projects/hwrf-data/hwrf-input/SYNDAT-PLUS/ 2
 #              ./parse_atcf.sh HAFS /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HAFSV0.B_Forecast/ /lfs3/projects/hur-aoml/rthr-aoml/noscrub/hafstrak/HAFS_jet/ /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ /lfs3/projects/hwrf-data/hwrf-input/SYNDAT-PLUS/ 2
 #
-# TYPE:  1 --> Parse from NHC A-Deck
-# TYPE:  2 --> Parse from combined A-Deck (e.g., HAFS)
+# TYPE:  1 --> Parse from NHC A-Deck (Time-Dependent; Good to exclude older ATCFs during real-time)
+# TYPE:  2 --> Parse from combined A-Deck (e.g., HAFS) (Time-Dependent; Good to exclude older ATCFs during real-time)
+# TYPE:  3 --> Parse from NHC A-Deck (Non-Time-Dependent; Good to include all ATCFs for research mode)
+# TYPE:  4 --> Parse from combined A-Deck (e.g., HAFS) (Non-Time-Dependent; Good to include all ATCFs for research mode)
 
 #set -aeu
 
@@ -45,8 +47,13 @@ if [ "$TYPE" == "1" ]; then
     ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f -mmin ${MMIN}` )
 elif [ "$TYPE" == "2" ]; then
     ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f -mmin ${MMIN}` )
+elif [ "$TYPE" == "3" ]; then
+    ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f` )
+elif [ "$TYPE" == "4" ]; then
+    ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f` )
 fi
 
+# Now, loop over the available A-DECKs
 for ADECK in ${ALL_ADECKS[@]}; do
 
     # Get some information from the A-Deck file name

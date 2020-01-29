@@ -15,6 +15,7 @@ export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 
 # Model Evaluation Tools (MET)
 module use /contrib/modulefiles
+module load contrib
 module load anaconda/anaconda2-4.4.0
 module load met/8.1
 
