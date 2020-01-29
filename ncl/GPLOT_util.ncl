@@ -1042,7 +1042,7 @@ begin
 
 	; Look for a matching catalog number in the model variable table	
 	MATCH = ind(VAR_LIST(1,:).eq.NCAT)
-	if(ismissing(match(0)))then	print("WARNING: findVarName: Variable '"+OLDVAR+"' not found in table for "+DSOURCE+".")
+	if(ismissing(MATCH(0)))then	print("WARNING: findVarName: Variable '"+OLDVAR+"' not found in table for "+DSOURCE+".")
 					NEWVAR = "missing"
 					return(NEWVAR)
 	else				NEWVAR	= VAR_LIST(0,MATCH)
