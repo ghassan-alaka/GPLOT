@@ -83,14 +83,14 @@ for d in "${EXPT[@]}"; do
 
     # Determine the components of GPLOT that should be submitted.
     # These options currently include:  Maps, Ships, Stats, Polar
-    DO_MAPS=`sed -n -e 's/^.*DO_MAPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_STATS=`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_POLAR=`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_POLAR=`sed -n -e 's/^DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
 
 
     # Get the submission mode from the namelist.
-    BATCH_MODE=`sed -n -e 's/^.*BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
+    BATCH_MODE=`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
     if [ -z "${BATCH_MODE}" ]; then
         BATCH_MODE="BACKGROUND"
     fi
@@ -98,8 +98,8 @@ for d in "${EXPT[@]}"; do
 
 
     # Get the system environment and project account for batch submissions ($BATCH_MODE="SBATCH")
-    SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLDIR}${NMLIST} | sed 's/^\t*//'`
-    CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NMLIST} | sed 's/^\t*//'`
+    SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
 
 
     # This part submits the spawn file for MAPS

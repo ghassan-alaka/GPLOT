@@ -97,6 +97,8 @@ BATCH_MODE = SBatch
 ;DO_CONVERTGIF; = False
 DO_CONVERTGIF = True
 
+; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
+CPU_ACCT = hur-aoml
 
 
 ;================================================================
