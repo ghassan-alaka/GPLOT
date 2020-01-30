@@ -83,26 +83,51 @@ for d in "${EXPT[@]}"; do
 
     # Determine the components of GPLOT that should be submitted.
     # These options currently include:  Maps, Ships, Stats, Polar
-    DO_MAPS=`sed -n -e 's/^.*DO_MAPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_STATS=`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_POLAR=`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_POLAR=`sed -n -e 's/^DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
 
-    BATCH_MODE=`sed -n -e 's/^.*BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
+
+    # Get the submission mode from the namelist.
+    BATCH_MODE=`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
+    if [ -z "${BATCH_MODE}" ]; then
+        BATCH_MODE="BACKGROUND"
+    fi
     echo "MSG: BATCH_MODE --> ${BATCH_MODE}."
+
+
+    # Get the system environment and project account for batch submissions ($BATCH_MODE="SBATCH")
+    SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
 
 
     # This part submits the spawn file for MAPS
     if [ "${DO_MAPS}" = "True" ]; then
         echo "MSG: MAPS submission is turned on."
-        SPAWNFILE="spawn_maps.sh"
+        SPAWNFILE1="spawn_maps.generic.sh"
+        SPAWNFILE2="spawn_maps.${d}.sh"
+        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
         SPAWNLOG="spawn_maps.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
+        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-	    ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        if [ "${BATCH_MODE}" == "SBATCH" ]; then
+            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_maps.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_maps.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_maps.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+            if [ "$SYS_ENV" == "JET" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
+            elif [ "$SYS_ENV" == "HERA" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
+            fi
+            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
-	    ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
         fi
     fi
 
@@ -110,14 +135,29 @@ for d in "${EXPT[@]}"; do
     # This part submits the spawn file for SHIPS
     if [ "${DO_SHIPS}" = "True" ]; then
         echo "MSG: SHIPS submission is turned on."
-        SPAWNFILE="spawn_ships.sh"
+        SPAWNFILE1="spawn_ships.generic.sh"
+        SPAWNFILE2="spawn_ships.${d}.sh"
+        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
         SPAWNLOG="spawn_ships.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
+        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        if [ "${BATCH_MODE}" == "SBATCH" ]; then
+            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_ships.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_ships.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_ships.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+            if [ "$SYS_ENV" == "JET" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
+            elif [ "$SYS_ENV" == "HERA" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
+            fi
+            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
-            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
         fi
     fi
 
@@ -125,14 +165,29 @@ for d in "${EXPT[@]}"; do
     # This part submits the spawn file for STATS
     if [ "${DO_STATS}" = "True" ]; then
         echo "MSG: STATS submission is turned on."
-        SPAWNFILE="spawn_stats.sh"
+        SPAWNFILE1="spawn_stats.generic.sh"
+        SPAWNFILE2="spawn_stats.${d}.sh"
+        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
         SPAWNLOG="spawn_stats.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
+        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        if [ "${BATCH_MODE}" == "SBATCH" ]; then
+            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_stats.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_stats.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_stats.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+            if [ "$SYS_ENV" == "JET" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
+            elif [ "$SYS_ENV" == "HERA" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
+            fi
+            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
-            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
         fi
     fi
 
@@ -140,14 +195,29 @@ for d in "${EXPT[@]}"; do
     # This part submits the spawn file for POLAR
     if [ "${DO_POLAR}" = "True" ]; then
         echo "MSG: POLAR submission is turned on."
-        SPAWNFILE="spawn_polar.sh"
+        SPAWNFILE1="spawn_polar.generic.sh"
+        SPAWNFILE2="spawn_polar.${d}.sh"
+        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
         SPAWNLOG="spawn_polar.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE}"
+        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG}
+        if [ "${BATCH_MODE}" == "SBATCH" ]; then
+            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_polar.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_polar.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_polar.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+            if [ "$SYS_ENV" == "JET" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
+            elif [ "$SYS_ENV" == "HERA" ]; then
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
+            fi
+            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
-            ${BATCHDIR}${SPAWNFILE} ${NML} > ${LOGDIR}${SPAWNLOG} &
+            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
         fi
     fi
 done
