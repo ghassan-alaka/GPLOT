@@ -1,0 +1,4 @@
+# Default batch information for RDHPCS Jet
+CPU_ACCT = hur-aoml
+QOS = batch
+PARTITION = tjet,ujet,sjet,vjet,xjet,kjet

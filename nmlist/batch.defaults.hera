@@ -1,0 +1,4 @@
+# Default batch information for RDHPCS Hera
+CPU_ACCT = aoml-hafs1
+QOS = batch
+PARTITION = hera

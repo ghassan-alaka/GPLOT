@@ -99,7 +99,22 @@ for d in "${EXPT[@]}"; do
 
     # Get the system environment and project account for batch submissions ($BATCH_MODE="SBATCH")
     SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    if [ "${BATCH_MODE}" == "SBATCH" ]; then
+        BATCH_DFLTS="batch.defaults.${SYS_ENV,,}"
+        AUTO_BATCH=`sed -n -e 's/^AUTO_BATCH =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        if [ -z ${CPU_ACCT} ] || [ "${AUTO_BATCH}" = "True" ]; then
+            CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
+        fi
+        QOS=`sed -n -e 's/^QOS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        if [ -z ${QOS} ] || [ "${AUTO_BATCH}" = "True" ]; then
+            QOS=`sed -n -e 's/^QOS =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
+        fi
+        PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        if [ -z ${PARTITION} ] || [ "${AUTO_BATCH}" = "True" ]; then
+            PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
+        fi
+    fi
 
 
     # This part submits the spawn file for MAPS
@@ -116,13 +131,8 @@ for d in "${EXPT[@]}"; do
             perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_maps.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_maps.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            if [ "$SYS_ENV" == "JET" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
-            elif [ "$SYS_ENV" == "HERA" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
-            fi
+            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
             sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
 	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
@@ -146,13 +156,8 @@ for d in "${EXPT[@]}"; do
             perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_ships.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_ships.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            if [ "$SYS_ENV" == "JET" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
-            elif [ "$SYS_ENV" == "HERA" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
-            fi
+            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
             sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
@@ -176,13 +181,8 @@ for d in "${EXPT[@]}"; do
             perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_stats.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_stats.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            if [ "$SYS_ENV" == "JET" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
-            elif [ "$SYS_ENV" == "HERA" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
-            fi
+            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
             sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
@@ -206,13 +206,8 @@ for d in "${EXPT[@]}"; do
             perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_polar.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_polar.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
             perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            if [ "$SYS_ENV" == "JET" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCHDIR}${SPAWNFILE2}
-            elif [ "$SYS_ENV" == "HERA" ]; then
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCHDIR}${SPAWNFILE2}
-            fi
+            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
             sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}

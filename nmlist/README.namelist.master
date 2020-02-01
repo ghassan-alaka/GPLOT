@@ -28,6 +28,7 @@ EXPT = HB18_v3_history
 ;	 DO_MAPS:		Produces 2D maps at preset levels.
 ;	 DO_STATS:		Produces multi-model guidance and verification
 ;	 DO_SHIPS:		Produces SHIPS-equivalent prodictors and other predictors
+;	 DO_POLAR:		Produces polar-cylindrical graphics.
 
 DO_MAPS = False
 DO_STATS = True
@@ -249,6 +250,29 @@ BATCH_MODE = SBatch
 ;                    --> do not convert
 
 DO_CONVERTGIF = False
+
+
+
+; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
+CPU_ACCT = hur-aoml
+
+
+
+; 1W. QUALITY OF SERVICE (for BATCH_MODE = SBatch)
+QOS = tjet,ujet,sjet,vjet,xjet,kjet
+
+
+
+; 1X. PARTITION(S) (for BATCH_MODE = SBatch)
+;    Description: The most common partition is batch. 
+PARTITION = batch
+
+
+
+; 1X. AUTOMATICALLY SETUP BATCH SUBMISSIONS BASED ON SYS_ENV (1E).
+;    Description: This only works if BATCH_MODE = SBatch. If True, default
+;                 values will be read from batch.defaults.${BATCH_MODE}
+AUTO_BATCH = True
 
 
 
