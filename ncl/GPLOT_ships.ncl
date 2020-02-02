@@ -915,15 +915,20 @@ do fff = 0,nFiles-1
 		; 1) Check if the file exists, and if the data
 		; for this particular forecast hours has been written.
 		if(fileexists(DAT_FILE))then
+			DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
+			if(DAT_SZ.eq.0)then	FHRDONE = False
+						break
+			end if
 			NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 			data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
 			if(any(toint(data(:,0)).eq.FHR(fff)))then   continue   end if
-			FHRDONE = False
-		else
-			FHRDONE = False
 		end if
+		FHRDONE = False
+		break
 	end if
 	end do
+print(""+FHRDONE)
+print("Made it!")
 
 	if(.not.FORCE)then
 	if(FHRDONE .and. FHR(fff).ne.max(FHR))then
