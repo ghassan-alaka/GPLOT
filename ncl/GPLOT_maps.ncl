@@ -1265,7 +1265,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ;nDims   := dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))))
                         ;dNames  := getfilevardims(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
-			nDim	:= dimsizes(getfilevardimsizes(f,BASEVAR))
+			nDims	:= dimsizes(getfilevardimsizes(f,BASEVAR))
 			dNames	:= getfilevardims(f,BASEVAR)
                         nDims@dNames = dNames
                 
@@ -2038,7 +2038,7 @@ do fff = 0,nFiles-1
                                 end do
                                 
                                 ; 3. If the variable was not found.
-                                if(.not.varStatus)then  print("ERROR: Variable "+G_OV2(0,ppp)+" not found.")
+                                if(.not.varStatus)then  print("ERROR: Overlay 2 Variable "+G_OV2(0,ppp)+" not found.")
                                                         print("WARNING: "+G_OV2(0,ppp)+" will be skipped, but will attempt to create the rest of the graphic.")
                                                         DO_OV2 = False
                                 end if
@@ -2176,7 +2176,7 @@ do fff = 0,nFiles-1
                                 end do
                                 
                                 ; 3. If the variable was not found. 
-                                if(.not.varStatus)then  print("ERROR: Variable "+G_OV25(0,ppp)+" not found.")
+                                if(.not.varStatus)then  print("ERROR: Overlay 2.5 Variable "+G_OV25(0,ppp)+" not found.")
                                                         print("WARNING: "+G_OV25(0,ppp)+" will be skipped, but will attempt to create the rest of the graphic.")
                                                         DO_OV25 = False
                                 end if
@@ -2456,7 +2456,7 @@ do fff = 0,nFiles-1
                                 end do
                                 
                                 ;3. If the variable can't be found.
-                                if(.not.varStatus)then  print("ERROR: Variable "+G_OV4(0,ppp)+" not found.")
+                                if(.not.varStatus)then  print("ERROR: Overlay 4 Variable "+G_OV4(0,ppp)+" not found.")
                                                         print("WARNING: "+G_OV4(0,ppp)+" will be skipped, but will attempt to create the rest of the graphic.")
                                                         DO_OV4 = False
                                 end if
