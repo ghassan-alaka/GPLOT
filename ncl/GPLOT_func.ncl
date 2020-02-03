@@ -10,14 +10,30 @@
 ; Written By:	  Ghassan Alaka, Jr.
 ;
 ; Created:	  September 2, 2015
-; Last Modified:  April 24, 2017
+; Last Modified:  February 3, 2020
 ;
 ; FUNCTION LIST
-; 1) atcfRead
-; 2) getTopo
-; 3) getVar2d
-; 4) getVar3d
-; 5) getVarXC
+;  1) add_disclaimer
+;  2) add_graphic_title
+;  3) add_model_title
+;  4) add_mslp_title
+;  5) add_sid_label
+;  6) add_storm_marker
+;  7) add_storm_title
+;  8) add_time_title
+;  9) add_vmax_label
+; 10) adeckRead
+; 11) atcfRead
+; 12) bdeckRead
+; 13) get_dim_lat
+; 14) get_dim_lon
+; 15) get_uniq_ind
+; 16) getInputFile
+; 17) getTopo
+; 18) getVar2d
+; 19) getVar3d
+; 20) getVarXC
+; 21) nml_read
 ;
 ;
 ;
@@ -350,7 +366,7 @@ end
 
 ;
 ;================================================================
-; add_time_title
+; add_vmax_label
 
 undef("add_vmax_label")
 procedure add_vmax_label (wks[1],VMAX[1]:float,XLOC[1]:float,YLOC[1]:float,TXHGT[1]:float,JUST[1]:string)
@@ -844,6 +860,61 @@ begin
 	
 
 	return(LON)
+
+end
+
+
+
+;
+;================================================================
+; get_uniq_ind
+;
+; e.g. list=(/x,x,a,a,b/) --> get_uniq_ind --> 0,2,4
+;
+
+undef("get_uniq_ind")
+function get_uniq_ind (lst)
+begin
+        strlist=tostring(lst)
+        index=new(100,integer) ; list max number is 100
+        dd=dimsizes(strlist)
+        index(0)=0
+        do ddd=1,dd-1
+                previous_values:=strlist(0:ddd-1)
+                if (ismissing(str_match(previous_values,strlist(ddd)))) then
+                index(ddd)=ddd
+                end if
+        end do
+        index:=index(ind(.not.ismissing(index)))
+        return(index)
+end
+
+
+
+;
+;================================================================
+; getInputFile
+
+undef("getInputFile")
+function getInputFile(IFILES[*]:string,N[*]:integer,VAR[1]:string)
+local SUCCESS,f
+begin
+
+	; Assume failure
+	SUCCESS = False
+
+	; Loop over all input files. Could be one.
+	do aaa = 0,N-1
+		f := addfile(IFILES(N(aaa)),"r")
+		if(isfilevar(f,VAR))then	SUCCESS = True
+						break
+		end if
+	end do
+
+	; If variable isn't found in any input files, then change f to string
+	if(.not.SUCCESS)then   f := "NONE"   end if
+
+	return(f)
 
 end
 
@@ -1874,28 +1945,6 @@ begin
 	return(var3)
 end
 
-;
-;================================================================
-; get_uniq_ind
-;
-; e.g. list=(/x,x,a,a,b/) --> get_uniq_ind --> 0,2,4
-;
-
-function get_uniq_ind (lst)
-begin
-	strlist=tostring(lst)
-	index=new(100,integer) ; list max number is 100
-	dd=dimsizes(strlist)
-	index(0)=0
-	do ddd=1,dd-1
-		previous_values:=strlist(0:ddd-1)
-		if (ismissing(str_match(previous_values,strlist(ddd)))) then
-		index(ddd)=ddd
-		end if
-	end do
-	index:=index(ind(.not.ismissing(index)))
-	return(index)
-end
 
 
 
