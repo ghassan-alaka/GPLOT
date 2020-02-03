@@ -67,7 +67,7 @@ ENSMEM = 0
 ;    Description:  Use hard-coded assumptions based on the
 ;                    system environment. Recommended to input via
 ;                    command line.
-;    Options:      "JET", "MAC"
+;    Options:      "JET", "MAC", "HERA"
 
 SYS_ENV = JET
 
@@ -153,7 +153,7 @@ BDECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
 
 
 ; 1L. FORECAST HOUR INFORMATION
-; Description:  Change this to choose the starting forecase hour and
+; Description:  Change this to choose the starting forecast hour and
 ;                 ending forecast hour. Except in rare circumstances:
 ;                 INIT_HR=0
 ;                 FNL_HR=126
@@ -268,7 +268,7 @@ PARTITION = tjet,ujet,sjet,vjet,xjet,kjet
 
 
 
-; 1X. AUTOMATICALLY SETUP BATCH SUBMISSIONS BASED ON SYS_ENV (1E).
+; 1Y. AUTOMATICALLY SETUP BATCH SUBMISSIONS BASED ON SYS_ENV (1E).
 ;    Description: This only works if BATCH_MODE = SBatch. If True, default
 ;                 values will be read from batch.defaults.${BATCH_MODE}
 AUTO_BATCH = True
