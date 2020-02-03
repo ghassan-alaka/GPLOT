@@ -1057,7 +1057,7 @@ do fff = 0,nFiles-1
                 if(aaa.eq.0)then        f1 = addfile(iFiles(myInd(aaa)),"r")
                 else if(aaa.eq.1)then   f2 = addfile(iFiles(myInd(aaa)),"r")
                 else if(aaa.eq.2)then   f3 = addfile(iFiles(myInd(aaa)),"r")
-                else if(aaa.eq.3)then   f4 = addfile(iFiles(myInd(aaa)),"r")
+		else if(aaa.eq.3)then	f4 = addfile(iFiles(myInd(aaa)),"r")
                 end if  end if  end if  end if
         end do
 
@@ -1068,7 +1068,8 @@ do fff = 0,nFiles-1
         ;    as the time coordinate
         ;================================================================
         if(ONE_FILE)then
-                ; Note that this is likely hard-coded for nexted FV3 work.
+                ; Note that this is likely hard-coded for HAFS work.
+		; This may be deprecated.
                 if(isfilevar(f1,"time"))then    FHR3 = toint(24.*f1->time)
                 else                            print("ERROR: Time dimension could not be identified.")
                 end if
@@ -1181,7 +1182,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                 
                         ; Choose the correct title & add the ensemble member ID (is applicable)
-                        List_Title      = getPlotTitle(FNAME(ppp))   ; MKnote - title added in util     
+                        List_Title = getPlotTitle(FNAME(ppp))
                         if(ENSID.ne."")then   List_Title=List_Title+" Member:"+ENSID   end if
                         
                         ; Define Out File String
@@ -1194,11 +1195,12 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ; iv. Delete the graphic has already been created. If the input 
                         ;     file has been included and the graphic exists, then it is
-                        ;     not old enough or production is being forced.
+                        ;     not old enough or production is being forced. Hard-coded to
+			;     look for *png and *gif graphics.
                         ;================================================================
-                        if(fileexists(OFILE+".png"))then        system("rm -f "+OFILE+".png")
-                                                                print("MSG: Overwriting graphic for "+FNAME(ppp))
-                        else                                    print("MSG: Creating graphic for "+FNAME(ppp))
+                        if(fileexists(OFILE+".png") .or. fileexists(OFILE+".gif"))then	system("rm -f "+OFILE+".png "+OFILE+".gif")
+											print("MSG: Overwriting graphic for "+FNAME(ppp))
+                        else								print("MSG: Creating graphic for "+FNAME(ppp))
                         end if
 
 
@@ -1231,7 +1233,9 @@ do fff = 0,nFiles-1
                         
                         ;================================================================
                         ; vi. Determine which file contains the G_BASE variable
+			;     Check if the variable was found. If not, we can't continue.
                         ;================================================================
+			BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))
                         varStatus = False
                         do aaa = 0,dimsizes(myInd)-1
                                 if(aaa.eq.0)then        f := f1
@@ -1240,7 +1244,7 @@ do fff = 0,nFiles-1
                                 else if(aaa.eq.3)then   f := f4
                                 end if  end if  end if  end if
                                 
-                                if(isfilevar(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))))then
+                                if(isfilevar(f,BASEVAR))then
                                         varStatus = True
                                         break
                                 end if
@@ -1251,18 +1255,18 @@ do fff = 0,nFiles-1
                         ;      can't continue.
                         ;================================================================
                         if(.not.varStatus)then  print("WARNING: Variable "+G_BASE(0,ppp)+" not found.")
-                                                print("WARNING: "+G_BASE(0,ppp)+" will be skipped, but this will prevent GPLOT from successfully completing.")
-                                                print("WARNING: Please update the Graphics Namelist or add the variable to GPLOT.")
-                                                continue
+	                                        print("WARNING: "+G_BASE(0,ppp)+" will be skipped, but this will prevent GPLOT from successfully completing.")
+	                                        print("WARNING: Please update the Graphics Namelist or add the variable to GPLOT.")
+	                                        continue
                         end if
                 
                         ;================================================================
                         ; viii. Find Dimension Info
                         ;================================================================
-                        nDims   := dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))))
-                        dNames  := getfilevardims(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
-                        ;MK note- might need to switch to this kine when using ncl V6.5.0 or later
-                        ;dNames := getfilevardimnames(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
+                        ;nDims   := dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))))
+                        ;dNames  := getfilevardims(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
+			nDim	:= dimsizes(getfilevardimsizes(f,BASEVAR))
+			dNames	:= getfilevardims(f,BASEVAR)
                         nDims@dNames = dNames
                 
                         ;================================================================
@@ -1270,7 +1274,10 @@ do fff = 0,nFiles-1
                         ;     the entire outer nest.
                         ;================================================================
                         if(any((/"d01","hwrf"/).eq.DOMAIN))then
-                                TEST := f->$findVarName(DSOURCE,"MSLP","")$
+				;BOCO := getNestBds(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
+
+                                ;TEST := f->$findVarName(DSOURCE,"MSLP","")$
+				TEST := f->$BASEVAR$
 				do ddd = 0,nDims-1
                                         ; LATITUDE
                                         if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
@@ -1422,11 +1429,6 @@ do fff = 0,nFiles-1
 			BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
 			BOCO2@PivotLon = PIV
 			
-			;print(lonF)
-			;print(BOCO)
-			;print(BOCO2)
-			
-                        
                         ;================================================================f
                         ;================================================================
                         ; END --> GET DIMENSION INFORMATION FOR THE BASE VARIABLE
@@ -1695,9 +1697,8 @@ do fff = 0,nFiles-1
                         if(G_BASE(0,ppp).eq."PRCP" .and. any((/"HWRF","HAFS","GFS"/).eq.DSOURCE))then
                                 
                                 ; 1. Check if we should process bulk precipitation rate
-                                if(ONE_FILE)then
-                                        print("WARNING: Bulk precip rate not yet supported for ONE_FILE. Skipping...")
-                                        continue
+                                if(ONE_FILE)then	print("WARNING: Bulk precip rate not yet supported for ONE_FILE. Skipping...")
+							continue
                                 end if
                                 if(FHR3(ttt).eq.0)then  print("WARNING: Can't compute bulk precip rate at 0-h. Skipping...")
                                                         continue
@@ -1954,30 +1955,28 @@ do fff = 0,nFiles-1
                         ;================================================================
                         if(DO_OV1)then
                                 
-                                ; 1. Extra resources for Wind Barbs
-                                if(any((/"RVO850_Z850_UV850", "RVO850_UV200"     , "RVO700_Z700_UV700"     ,\
-                                         "RH700_UV700_MSLP" , "RVO500_Z500_UV500", "RH700400_UV700400_MSLP",\
-                                         "RVO200_Z200_UV200", "HGT200_UV200_MSLP", "REFD_UV750",\
-					 "T850_UV850_MSLP"/).eq.FNAME(ppp)))then
-                                        resOv1 := GenPlotRes(5,True)
-                                        resOv1@vcLevelSelectionMode     = "ExplicitLevels"
-                                        resOv1@vcLevels                 = ispan(5,150,5)
-                                        if(FNAME(ppp).eq."RH700_UV700_MSLP")then
-                                                resOv1@vcWindBarbColor = "black"
-                                        end if
-                                        if (DOMAIN.eq."d03") then   ;MKedit - add if statement for d03 windbarb
-                                                resOv1@vcWindBarbLineThicknessF    = 5.0
-                                                resOv1@vcMinDistanceF = 0.03
-                                        end if
-                                end if
-                
-                                ; 2. Extra resources for Curley Vectors
-                                if(any((/"UV850_MSLP"/).eq.FNAME(ppp)))then
-                                        resOv1 := GenPlotRes(4,True)
-                                        resOv1@vcRefMagnitudeF  = 7.5
-                                        resOv1@vcRefLengthF     = 0.05
-                                end if
-                                
+                                ; 1. Check if the type of vector if attached to G_OV1
+				typeOv1 = tochar(G_OV1(1,ppp))
+				typeOv1 := tostring(typeOv1(dimsizes(typeOv1)-1))
+
+				; 2. Set the resources for Overlay #1
+				;    Curley Vectors
+				if(typeOv1.eq."c" .or. any((/"UV850_MSLP"/).eq.FNAME(ppp)))then
+					resOv1 := GenPlotRes(4,True)
+					resOv1@vcRefMagnitudeF  = 7.5
+					resOv1@vcRefLengthF     = 0.05
+
+				;    Wind Barbs (default)
+				else
+					resOv1 := GenPlotRes(5,True)
+					resOv1@vcLevelSelectionMode     = "ExplicitLevels"
+					resOv1@vcLevels                 = ispan(5,150,5)
+					if(FNAME(ppp).eq."RH700_UV700_MSLP")then	resOv1@vcWindBarbColor = "black"   end if
+					if(DOMAIN.eq."d03")then				resOv1@vcWindBarbLineThicknessF = 5.0
+											resOv1@vcMinDistanceF = 0.03
+					end if
+				end if
+
                                 ; 3. Extra resources
                                 resOv1@gsnLeftString = ""
                                 resOv1@gsnRightString = ""
@@ -2110,7 +2109,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         if(DO_OV2)then
                                 
-                                ; 1. Get Resources
+                                ; 1. Set graphical Resources
                                 resOv2 := GenPlotRes(6,True)
                                 if(any((/"SHDL","SHML","SHSL"/).eq.FNAME(ppp)))then   resOv2@stLineColor = "black"   end if
                                 if(DOMAIN.eq."d03")then   resOv2@stLineColor = "black"   end if
@@ -2119,7 +2118,6 @@ do fff = 0,nFiles-1
 
                                 ; 2. Change the streamline density here.
                                 zs = getStmThin(DSOURCE,DOMAIN)
-                                if(DSOURCE.eq."fvGFS_ATL")then  zs = zs*4   end if
                         end if
 
                         ;================================================================
@@ -2263,7 +2261,6 @@ do fff = 0,nFiles-1
                         
                                 ; 2. Change the streamline density here.
                                 zs = getStmThin(DSOURCE,DOMAIN)
-                                if(DSOURCE.eq."fvGFS_ATL")then  zs = zs*4   end if
                         end if
                         
                         ;================================================================
@@ -2388,16 +2385,12 @@ do fff = 0,nFiles-1
                                         resOv3@cnLevels                 = fspan(510.,588.,14)
                                         resOv3@cnLineLabelInterval      = 1
                                         resOv3@cnMonoLineColor          = False
-                                        resOv3@cnLineColors             = (/"blue3","blue3","blue3","blue3",\
-                                                                            "blue3","blue3", "firebrick", "firebrick",\
-                                                                             "firebrick", "firebrick", "firebrick", "firebrick",\
-                                                                             "firebrick", "firebrick"/)
+                                        resOv3@cnLineColors             = (/"blue3",     "blue3",     "blue3",     "blue3",    \
+                                                                            "blue3",     "blue3",     "firebrick", "firebrick",\
+                                                                            "firebrick", "firebrick", "firebrick", "firebrick",\
+                                                                            "firebrick", "firebrick"/)
                                         resOv3@cnMonoLineLabelFontColor = False
                                         resOv3@cnLineLabelFontColors    = resOv3@cnLineColors
-                                                                        ;(/"blue","blue","blue","blue",\
-                                                                         ;   "blue","blue", "red", "red",\
-                                                                          ;   "red", "red", "red", "red",\
-                                                                           ;  "red", "red"/)
                                         resOv3@cnMonoLineDashPattern    = True
                                         resOv3@cnLineDashPattern        = 5
                                         resOv3@cnLineThicknessF         = 3.0
@@ -2412,7 +2405,6 @@ do fff = 0,nFiles-1
                         ; liv. Enter here if Overlay #3 is still active.
                         ;================================================================
                         if(DO_OV3)then
-                                
                                 ; 1. DRAW PLOT HERE
                                 plot_Ov3= gsn_csm_contour(wks,VOv3,resOv3)
                                 overlay(plot,plot_Ov3)
@@ -2571,7 +2563,7 @@ do fff = 0,nFiles-1
                                         resOv4@cnLineColor      = "gray50"
                                         resOv4@cnLineThicknessF = 2.5
                                 end if
-                                if(G_BASE(0,ppp).eq."HGT")then ;MK
+                                if(G_BASE(0,ppp).eq."HGT")then
                                         resOv4@cnLineColor      = "blue3"
                                 end if
                         end if
@@ -2580,7 +2572,6 @@ do fff = 0,nFiles-1
                         ; lix. Enter Overlay #4 part four.
                         ;================================================================
                         if(DO_OV4)then
-                        
                                 ; 1. DRAW PLOT HERE
                                 plot_Ov4= gsn_csm_contour(wks,VOv4,resOv4)
                                 overlay(plot,plot_Ov4)
@@ -2617,7 +2608,7 @@ do fff = 0,nFiles-1
                                 ; 1. Check that the variable is MSLP.
 				if(G_OV5(0,ppp).ne."MSLP")then
 					print("ERROR: MSLP Markers must be created from MSLP.")
-					print("ERROR: Please change this in the variable namelist.")
+					print("ERROR: Please change this in the variable namelist or turn it off.")
 					exit
 				end if
 				
