@@ -258,13 +258,13 @@ CPU_ACCT = hur-aoml
 
 
 ; 1W. QUALITY OF SERVICE (for BATCH_MODE = SBatch)
-QOS = tjet,ujet,sjet,vjet,xjet,kjet
+QOS = batch
 
 
 
 ; 1X. PARTITION(S) (for BATCH_MODE = SBatch)
 ;    Description: The most common partition is batch. 
-PARTITION = batch
+PARTITION = tjet,ujet,sjet,vjet,xjet,kjet
 
 
 
