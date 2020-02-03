@@ -49,3 +49,7 @@ HB20,    HB20: 2020 HWRF-Basin,  7,               brown,                        
 HB0I,       HB0I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
 ECMO,          ECMO: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
 ECMI,       ECMI: Interp. ECMO,  8,               coral,      ECMWF Integrated Forecast System (Early)
+B20C,   B20C: 2020 HWRF-B Base,  7,               brown,                2020 Basin-Scale HWRF Baseline
+B20D, B20D: 2020 HWRF-B 18-6-2,  7,         deepskyblue,              2020 Basin-Scale HWRF (18-6-2km)
+H20C,     H20C: 2020 HWRF Base,  9,              purple,                            2020 HWRF Baseline
+S218,    S218: Oper. HWRF Base,  4,                 red,                     Operational HWRF Baseline
