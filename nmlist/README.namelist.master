@@ -41,7 +41,7 @@ DO_POLAR = False
 ;                    Recommended to input via command line.
 ;    Options:      "HWRF", "HWRF18", "GFS","fvGFS_ATL"
 
-DSOURCE = HWRF18
+DSOURCE = HWRF
 
 
 
@@ -85,7 +85,7 @@ SYS_ENV = JET
 
 IS_REAL = True
 
-; 1F. FORECAST DATE
+; 1F. FORECAST CYCLE
 ;    Description:  Forecast date in the format YYYYMMDDHH. Recommended
 ;                    to input via command line.
 ;    Real-Time:    Leave blank.
@@ -114,7 +114,7 @@ SID =
 ;    FOR HWRF:     Do not include "YYYYMMDDHH/SID/".
 ;                  This will be automatically searched in the script
 
-IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/com/
+IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/
 ITAG =
 EXT =
 
@@ -134,7 +134,7 @@ ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
 ;    ATCF1:        This is the temporary ATCF. If this doesn't exist, set to final ATCF location (same as ATCF2)
 ;    ATCF2:        This is the final ATCF.
 
-ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/com/
+ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/
 ATCF1_TAG = trak.hwrf.raw
 ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HB18_v3_history/
 ATCF2_TAG = atcfunix
@@ -148,8 +148,7 @@ ATCF3_TAG = trak.hwrf.raw
 ;					BDECK1 and BDECK2 may be set equal to one another
 
 ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
-BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
+BDECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
 
 
 
@@ -162,7 +161,7 @@ BDECK2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
 
 INIT_HR = 0
 FNL_HR = 126
-FMT_HR = %0.3i
+FMT_HR = 3
 
 
 
@@ -291,7 +290,7 @@ AUTO_BATCH = True
 ;    Options:		"basin", "atl", "wlant", "epac", "gom", "BoB",
 ;					"d03", "elant", "eus"
 
-DOMAIN = basin
+DOMAIN = basin d03
 
 
 ; 2B. MAP GRAPHICS TIER
@@ -304,12 +303,14 @@ DOMAIN = basin
 ;					 batch scripts.
 ;    Options:      "Tier1", "Tier2", "Tier3"
 
-TIER = Tier1
+TIER = Tier1 Tier2
 
 
 ; 2C. MAP ATCF REQUIREMENT
-ATCF_REQD = True
+ATCF_REQD = False
 
+; 2D. MAP PIVOT LONGITUDE
+PIV = 160
 
 
 
@@ -317,14 +318,14 @@ ATCF_REQD = True
 ; SECTION 3: GPLOT_Stats variables
 ;================================================================
 
-; 3A. MODEL NAMES.
+; 3A. MODEL NAMES
 ;	 Description: The name of the model
 ;	 MCODE:   Raw model name
 ;	 MCODEI:  Interpolated model name
-
-MCODE = HB18
-MCODEI = HB8I
-
+MORIG = HWRF
+MCODE = HB19
+MCODEI = HB9I
+MCODE12 = HB92
 
 
 ; 3B. FORECAST GUIDANCE MODELS
@@ -373,6 +374,15 @@ LTM = HWRF GFSO HMON NVGM CTCX
 LIM = HWRF HMON CTCX
 
 
+; 3D. VERIFICATION TIMES
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
+; 3F. INTERPOLATION
+DO_INTERP = True
+
 
 
 
@@ -381,14 +391,13 @@ LIM = HWRF HMON CTCX
 ;================================================================
 
 ;================================================================
-; TEMPDIR defines the temporary directory
-; SECTION 5: Polar Coordinates and Associated Plots
+; SECTION 5: GPLOT_Polar variables
 ; RESOLUTION defines the radial resolution to be used.
 ; RMAX is the maximum radius
 ; LEVS is the number of model levels
 ;
 ;================================================================
-TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
+
 RESOLUTION = 1.5
 RMAX = 600
 MODELTAG = hwrfprs.storm.0p015
