@@ -62,38 +62,40 @@ def gplot_check(gvar='GPLOT_DIR'):
     return(GPLOT_DIR);
 
 
-def spawn_prep(EXPT,BATCHDIR,SFILE,LOGDIR,CPU_ACCT,PARTITION,QOS):
+def spawn_prep(EXPT,SFILE,LOGDIR,CPU_ACCT,PARTITION,QOS):
     """Prepare the slurm header for a given spawn file
     @param EXPT:      the experiment name, typically from the master namelist file name
-    @param BATCHDIR:  the GPLOT batch directory
-    @param SFILE:     the spawn file specific to the current experiment
+    @param SFILE:     the spawn file path specific to the current experiment
     @param LOGDIR:    the GPLOT log directory
     @param CPU_ACCT:  the batch cpu account for the runs
     @param PARTITION: the batch partition(s) for the runs
     @param QOS:       the quality of service for the runs
     """
-    subprocess.call(["sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_ships."+EXPT+"\"/g' "+BATCHDIR+SFILE], shell=True)
-    subprocess.call(["sed -i 's%^#SBATCH --output=.*%#SBATCH --output=\""+LOGDIR+"spawn_ships."+EXPT+".out\"%g' "+BATCHDIR+SFILE], shell=True)
-    subprocess.call(["sed -i 's%^#SBATCH --error=.*%#SBATCH --error=\""+LOGDIR+"spawn_ships."+EXPT+".err\"%g' "+BATCHDIR+SFILE], shell=True)
-    subprocess.call(["sed -i 's/^#SBATCH --account=.*/#SBATCH --account="+CPU_ACCT+"/g' "+BATCHDIR+SFILE], shell=True)
-    subprocess.call(["sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition="+PARTITION+"/g' "+BATCHDIR+SFILE], shell=True)
-    subprocess.call(["sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos="+QOS+"/g' "+BATCHDIR+SFILE], shell=True)
+    subprocess.call(["sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_ships."+EXPT+"\"/g' "+SFILE], shell=True)
+    subprocess.call(["sed -i 's%^#SBATCH --output=.*%#SBATCH --output=\""+LOGDIR+"spawn_ships."+EXPT+".out\"%g' "+SFILE], shell=True)
+    subprocess.call(["sed -i 's%^#SBATCH --error=.*%#SBATCH --error=\""+LOGDIR+"spawn_ships."+EXPT+".err\"%g' "+SFILE], shell=True)
+    subprocess.call(["sed -i 's/^#SBATCH --account=.*/#SBATCH --account="+CPU_ACCT+"/g' "+SFILE], shell=True)
+    subprocess.call(["sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition="+PARTITION+"/g' "+SFILE], shell=True)
+    subprocess.call(["sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos="+QOS+"/g' "+SFILE], shell=True)
 
 
 def nml_get_opt(NML,OPT):
     """Read the namelist and search for a specific option.
-    @param NML: the namelist
-    @param OPT: the namelist option, must begin the line
+    @param NML:  the namelist
+    @param OPT:  the namelist option, must begin the line
+    @return VAR: the value of the namelist option, could be MISSING
     """
     VAR = "MISSING"
     with open(NML,"r") as f:
         for line in f.readlines():
-            if line.startswith(OPT):
+            if line.strip().startswith(OPT):
                 VAR = line.split("=")[1].strip()
                 break
     if VAR == "MISSING":
         print("WARNING: Could not find "+OPT+" in "+NML)
     return(VAR);
+
+
 
 def main():
 
@@ -164,6 +166,10 @@ def main():
             QOS = nml['system'].get('qos','batch')
             if QOS == "MISSING":
                 QOS = nml_get_opt(BATCH_DFLTS,'QOS')
+        else:
+            CPU_ACCT = ()
+            PARTITION = ()
+            QOS = ()
         
         
         
@@ -176,7 +182,7 @@ def main():
             
             #shutil.copy2(SPAWNFILE1,SPAWNFILE2)
             if BATCH_MODE.lower() == 'sbatch':
-                spawn_prep(EXPT,BATCHDIR,SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
+                spawn_prep(EXPT,BATCHDIR+SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
                 #subprocess.call(["sbatch "+BATCHDIR+SPAWNFILE2+" "+NML_FILE+" > "+LOGDIR+SPAWNLOG], shell=True)
             elif BATCH_MODE.lower() == 'foreground':
                 print("Foreground")
@@ -195,7 +201,7 @@ def main():
             
             #shutil.copy2(SPAWNFILE1,SPAWNFILE2)
             if BATCH_MODE.lower() == 'sbatch':
-                spawn_prep(EXPT,BATCHDIR,SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
+                spawn_prep(EXPT,BATCHDIR+SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
                 #subprocess.call(["sbatch "+BATCHDIR+SPAWNFILE2+" "+NML_FILE+" > "+LOGDIR+SPAWNLOG], shell=True)
             elif BATCH_MODE.lower() == 'foreground':
                 print("Foreground")
@@ -214,7 +220,7 @@ def main():
             
             #shutil.copy2(SPAWNFILE1,SPAWNFILE2)
             if BATCH_MODE.lower() == 'sbatch':
-                spawn_prep(EXPT,BATCHDIR,SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
+                spawn_prep(EXPT,BATCHDIR+SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
                 #subprocess.call(["sbatch "+BATCHDIR+SPAWNFILE2+" "+NML_FILE+" > "+LOGDIR+SPAWNLOG], shell=True)
             elif BATCH_MODE.lower() == 'foreground':
                 print("Foreground")
@@ -233,7 +239,7 @@ def main():
             
             #shutil.copy2(SPAWNFILE1,SPAWNFILE2)
             if BATCH_MODE.lower() == 'sbatch':
-                spawn_prep(EXPT,BATCHDIR,SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
+                spawn_prep(EXPT,BATCHDIR+SPAWNFILE2,LOGDIR,CPU_ACCT,PARTITION,QOS)
                 #subprocess.call(["sbatch "+BATCHDIR+SPAWNFILE2+" "+NML_FILE+" > "+LOGDIR+SPAWNLOG], shell=True)
             elif BATCH_MODE.lower() == 'foreground':
                 print("Foreground")
