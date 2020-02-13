@@ -87,30 +87,50 @@ def create_table(conn, create_tbl_sql):
 		print(e)
 
 
-def main():
-	database = r"/lfs1/projects/hur-aoml/Ghassan.Alaka/SCRATCH/pythonsqlite.db"
+def create_nml_table(CONN,DBFILE,KEY):
+    """This function creates a project entry based on the 
+       namelist.
+    @param dbfile: the database full file path
+    @param nml:    the Namelist_Basic object
+    """
+    #dbfile = r"/lfs1/projects/hur-aoml/Ghassan.Alaka/SCRATCH/pythonsqlite.db"
 
-	sql_test_table = """ CREATE TABLE IF NOT EXISTS projects (
-				id integer PRIMARY KEY,
-                                name text NOT NULL,
-                                begin_date text,
-                                end_date text
-                         ); """
+    # loop over all keys
+        
+    DBKEY = 'nml_'+str(KEY)
 
-	# create a database connection
-	conn = create_connection(database)
+    table = """CREATE TABLE IF NOT EXISTS """+DBKEY+""" (
+               entry text NOT NULL,
+               value text,
+            ); """
 
-	# create tables
-	if conn is not None:
-		create_table(conn, sql_test_table)
-	else:
-		print("ERROR: Cannot create the database connection.")
-
+     # create tables
+    if conn is not None:
+        create_table(conn, table)
+    else:
+        print("ERROR: Cannot create the database connection.")
 
 
-if __name__ == '__main__':
+def add_nml_table_row(CONN,DBKEY,ROW):
+    """This function adds a row to a table in the database
+       for namelist entries.
+    @param CONN: the connection object
+    @param DBKEY: The database table that we're adding to
+    @param ROW:   The row of data that will be appended to the table
+    """
+
+    table = """INSERT INTO """+DBKEY+"""(entry,value)
+               VALUES(?,?)"""
+
+    c = CONN.cursor()
+    c.execute(table,ROW)
+    return c.lastrowid
+
+
+
+#if __name__ == '__main__':
 	#create_connection_mem()
 	#create_connection(r"/lfs1/project/hur-aoml/Ghassan.Alaka/SCRATCH/test.db")
-	main()
+	#main()
 
 
