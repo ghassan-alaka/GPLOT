@@ -87,19 +87,19 @@ def create_table(conn, create_tbl_sql):
 		print(e)
 
 
-def create_nml_table(CONN,DBFILE,KEY):
+def create_nml_table(CONN,DFILE,TNAME,HNAME,HTYPE):
     """This function creates a project entry based on the 
        namelist.
-    @param dbfile: the database full file path
-    @param nml:    the Namelist_Basic object
+    @param CONN:  connection object
+    @param DFILE: the database full file path
+    @param TNAME: the name of the SQL table
+    @param HNAME: a list of table headers
+    @param HTYPE: the type of each table column
     """
     #dbfile = r"/lfs1/projects/hur-aoml/Ghassan.Alaka/SCRATCH/pythonsqlite.db"
 
-    # loop over all keys
         
-    DBKEY = 'nml_'+str(KEY)
-
-    table = """CREATE TABLE IF NOT EXISTS """+DBKEY+""" (
+    table = "CREATE TABLE IF NOT EXISTS "+TNAME+""" (
                entry text NOT NULL,
                value text,
             ); """

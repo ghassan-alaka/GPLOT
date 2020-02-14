@@ -60,12 +60,9 @@ class Namelist_Basic:
         self.KEYS = self.nml_get_keys(self.DICT)
         self.SUBKEYS = []
         for KEY in self.DICT.keys():
-            SUB = dict(self.DICT[KEY])
-            print(KEY)
-            VALUE = self.nml_get_keys(SUB)
+            SUBDICT = dict(self.DICT[KEY])
+            VALUE = self.nml_get_keys(SUBDICT)
             self.SUBKEYS.append(VALUE)
-        print(self.SUBKEYS)
-        sys.exit()
 
         # Determine what modules to run
         KEY1 = kwargs.get('MODULE_KEY',"modules")
