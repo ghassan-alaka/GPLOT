@@ -73,7 +73,18 @@ def main():
 
 
         # Save namelist to an SQLite database
-        #db_table(NML,EXPT)
+        NML.DB_ON=True
+        if NML.DB_ON:
+            DB_FILE = db.db_name(DIRS.GPLOT_DIR,EXPT)
+            HEADS = ("entry","section","value")
+            CONN = db.create_connection(DB_FILE)
+            db.create_table(DB_FILE,"namelist",HEADS,("text","text","text"),CONN=CONN)
+            for KEY in NML.KEYS:
+                print(KEY)
+                DATA = (list(NML.DICT[KEY].keys()),list(NML.DICT[KEY].values()))
+                print(DATA[:]+"  "+str(len(DATA)))
+                sys.exit(2)
+                db.add_table_row("namelist",HEADS,DATA,CONN=CONN)
         
         
         # Loop over all MOD_IDs and submit spawn jobs.
