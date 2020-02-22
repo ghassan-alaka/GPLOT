@@ -1,16 +1,18 @@
-#!python
+#!/usr/bin/env python
 
 # Import necessary modules
-import itertools as it
-import os
+import os, sys
 import sys
+import itertools as it
+import pandas as pd
 import sqlite3 as sq3
 from sqlite3 import Error
 
 """
-Package database: Python functionality for databases. This script is not
-                  meant to be called directly. Rather, it should be loaded
-                  in appropriate python code.
+GPLOT Package database
+Python functionality for databases. This script is not
+  meant to be called directly. Rather, it should be loaded
+  in appropriate python code.
 
 GPLOT is the Graphical Post-processed Locus for Output of Tropical cyclones.
 It consists of independent modules used to create graphics targeted toward
@@ -39,7 +41,8 @@ __version__ = '0.1.0';
 
 
 ###########################################################
-def add_table_row(TBL,HNAME,DATA,CONN=None,DFILE=None):
+#def add_table_row(TBL,HNAME,DATA,CONN=None,DFILE=None):
+def add_table_row(TBL,DATA,CONN=None,DFILE=None):
     """Add a row(s) to a table in the database
     @param TBL:   the database table
     @param HNAME: header names for this table
@@ -50,16 +53,14 @@ def add_table_row(TBL,HNAME,DATA,CONN=None,DFILE=None):
     """
 
     # Create the connection (if necessary)
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Define helpful variables
-    NROW = len(DATA)
-    VALS = ','.join(("?")*len(DATA[0]))
-
+    NROW = len(DATA[0])
+    VALS = ','.join(("?")*NROW)
     # Create the table entry based on function input
     #table = "INSERT INTO "+TBL+"("+','.join(HNAME)+") VALUES("+VALS+")"
-    sqlstr = "INSERT INTO "+TBL+" VALUES("+VALS+")"
-
+    sqlstr = "INSERT INTO "+str(TBL)+" VALUES ("+str(VALS)+")"
     # Add data to the table
     if CONN is not None:
         try:
@@ -75,23 +76,14 @@ def add_table_row(TBL,HNAME,DATA,CONN=None,DFILE=None):
     else:
         print("WARNING: Database connection was not found.")
         print("WARNING: Nothing added to table "+TBL)
-
+    
     # return the generated id for this transaction
     return(c.lastrowid);
 
 
 
 ###########################################################
-def close_connection(CONN)
-    """Close the connection to an sqlite database
-    @CONN: the connection object
-    """
-    CONN.close()
-
-
-
-###########################################################
-def conn_check(CONN=None,DFILE=None,report=False,destroy=False):
+def check_connection(CONN=None,DFILE=None,report=False,destroy=False):
     """Check on the connection object and create it if
        necessary.
     @kwarg CONN:    the connection object or None
@@ -138,6 +130,15 @@ def conn_check(CONN=None,DFILE=None,report=False,destroy=False):
 
 
 ###########################################################
+def close_connection(CONN):
+    """Close the connection to an sqlite database
+    @CONN: the connection object
+    """
+    CONN.close()
+
+
+
+###########################################################
 def create_connection(DBFILE,mem=False,close=False):
     """
     Create a connection to a SQLite database.
@@ -176,7 +177,7 @@ def create_table(TBL,HNAME,HTYPE,CONN=None,DFILE=None,HDEF=None,close=False):
     #dbfile = r"/lfs1/projects/hur-aoml/Ghassan.Alaka/SCRATCH/pythonsqlite.db"
 
     # Create the connection (if necessary)
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Correct size of HDEF if None
     if HDEF is None:
@@ -230,18 +231,28 @@ def create_table(TBL,HNAME,HTYPE,CONN=None,DFILE=None,HDEF=None,close=False):
 
     # Close the connection if requested
     if close:
-        CONN.close()
+        close_connection(CONN)
 
 
 
 ###########################################################
-def db_name(IDIR,EXPT):
+def db_name(DIR,EXPT,quiet=True):
     """Return the database file name.
-    @param IDIR: prefix of the complete directory
-    @param EXPT: the GPLOT experiment name
+    @param DIR:    prefix of the complete directory
+    @param EXPT:   the GPLOT experiment name
+    @kwarg quiet:  logical arg for printing information
     @return FNAME: the full path to the db file
     """
-    FNAME = IDIR+"/db/pysqlite."+EXPT+".db"
+    if os.path.isdir(DIR):
+        FNAME = DIR+"/db/pysqlite."+EXPT+".db"
+        try:
+            os.mkdir(DIR+"/db")
+        except FileExistsError:
+            if not quiet:
+                print("WARNING: "+DIR+"/db already exists.")
+    else:
+        print("ERROR: Database directory can't be created --> "+DIR)
+        sys.exit(2)
     return(FNAME);
 
 
@@ -256,7 +267,7 @@ def delete_all_rows(TBL,CONN=None,DBFILE=None):
     """
 
     # Create the connection (if necessary)
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Build the SQL execute statement
     sqlstr = "DELETE FROM "+TBL
@@ -286,7 +297,7 @@ def delete_table(TBL,CONN=None,DFILE=None):
     """
 
     # Create the connection (if necessary)
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Build the SQL execute statement
     sqlstr = "drop table if exists "+TBL
@@ -313,7 +324,7 @@ def list_tables(CONN=None,DFILE=None):
     """
 
     # Check or create the connection object
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Build the select statement
     sqlstr = 'SELECT name from sqlite_master where type= "table"'
@@ -329,27 +340,7 @@ def list_tables(CONN=None,DFILE=None):
 
 
 ###########################################################
-def select_all_rows(TBL,CONN=None,quiet=True,DFILE=None):
-    """Query all rows in the table
-    @param TBL:   the table name
-    @kwarg CONN:  the connection object
-    @kwarg quiet: logical verbosity option
-    @kwarg DFILE: full path to the db file
-    @return ROWS: a 2-d array of the data
-    """
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
-    c = CONN.cursor()
-    c.execute("SELECT * from "+TBL)
-    ROWS = c.fetchall()
-    if not quiet:
-        for (R,N) in zip(ROWS,range(len(ROWS))):
-            print(R)
-    return(ROWS);
-
-
-
-###########################################################
-def select_rows(TBL,COL1,CONN=None,DFILE=None,COL2=None,CRIT=None):
+def select_rows(TBL,COL1,CONN=None,DFILE=None,COL2=None,CRIT=None,quiet=True):
     """Query specific rows in the table based on criteria.
     @param TBL:   the table name(s), could be an array
     @param COL1:  the column to search, could be an array
@@ -357,51 +348,58 @@ def select_rows(TBL,COL1,CONN=None,DFILE=None,COL2=None,CRIT=None):
     @kwarg DFILE: full path to the db file
     @kwarg COL2:  the column to filter, could be an array
     @kwarg CRIT:  the criteria by which to filter, could be an array
-    @return ROWS: a 2-d array of the data
+    @kwarg quiet: Print some extra information if set to False
+    @return DATA: a 2-d array of the data
     """
     # Checks
-    if len(COL2) != len(CRIT):
-        print("ERROR: COLM and CRIT must match to build selection statements.")
-        sys.exit(2)
+    if COL2 is not None:
+        if len(COL2) != len(CRIT):
+            print("ERROR: COLM and CRIT must match to build selection statements.")
+            sys.exit(2)
 
     # Check or create the connection object
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Build the select statement, including what columns to return
     # To select all columns, COL1 = "*"
     sqlstr = "SELECT"
     for (C,N) in zip(COL1,range(len(COL1))):
-        if N < len(COL1):
+        if N < len(COL1)-1:
             sqlstr = sqlstr+" "+C+","
         else:
             sqlstr = sqlstr+" "+C
 
     # Add the table(s) from which to search
     sqlstr = sqlstr+" FROM"
-    for (T,N) in zip(TBL,range(len(TBL))):
+    for (N,T) in list(enumerate(TBL)):
         sqlstr = sqlstr+" "+T
 
     # Add in search criteria, if applicable
     if COL2 is not None:
         sqlstr = sqlstr+" WHERE"
         for (C,N) in zip(COL2,range(len(COL2))):
-            if N < len(COL2):
+            if N < len(COL2)-1:
                 sqlstr = sqlstr+" "+C+"=? AND"
             else:
                 sqlstr = sqlstr+" "+C+"=?"
 
+    print(sqlstr)
     # Actually execute the data query
-    c = CONN.cursor()
-    c.execute(sqlstr,(CRIT))
-    ROWS = c.fetchall()
+    #c = CONN.cursor()
+    #if CRIT is not None:
+    #    c.execute(sqlstr,(CRIT))
+    #else:
+    #    c.execute(sqlstr)
+    #DATA = c.fetchall()
+    DATA = pd.read_sql_query(sqlstr,CONN)
 
     # Report the rows if required
     if not quiet:
-        for (R,N) in zip(ROWS,range(len(ROWS))):
-            print(R)
+        for (D,N) in zip(DATA,range(len(DATA))):
+            print(D)
 
     # Return ROWS
-    return(ROWS);
+    return(DATA);
 
 
 
@@ -419,7 +417,7 @@ def update_table(TBL,HNAME,COLM,DATA,CONN=None,DFILE=None,close=False):
     #dbfile = r"/lfs1/projects/hur-aoml/Ghassan.Alaka/SCRATCH/pythonsqlite.db"
 
     # Create the connection (if necessary)
-    CONN = conn_check(CONN=CONN,DFILE=DFILE)
+    CONN = check_connection(CONN=CONN,DFILE=DFILE)
 
     # Build the table entry
     sqlstr = "UPDATE "+TBL+" "
@@ -433,18 +431,21 @@ def update_table(TBL,HNAME,COLM,DATA,CONN=None,DFILE=None,close=False):
         else:
             sqlstr = sqlstr+" "+H+" ?"
 
-        # Build the select statement, adding the columns that will be filtered
-        for (C,N) in zip(COLM,len(COLM)):
-            if N == 0:
-                sqlstr = sqlstr+" WHERE "+C+" = ?"
-            elif N > 0:
-                sqlstr = sqlstr+" AND "+C+" = ?"
+    # Build the select statement, adding the columns that will be filtered
+    for (C,N) in zip(COLM,len(COLM)):
+        if N == 0:
+            sqlstr = sqlstr+" WHERE "+C+" = ?"
+        elif N > 0:
+            sqlstr = sqlstr+" AND "+C+" = ?"
 
-        # Actually execute the data query
-        c = CONN.cursor()
-        c.execute(sqlstr,(DATA))
-        CONN.commit()
+    # Actually execute the data query
+    c = CONN.cursor()
+    c.execute(sqlstr,(DATA))
+    CONN.commit()
 
+    # Close the connection if requested
+    if close:
+        close_connection(CONN)
 
 
 

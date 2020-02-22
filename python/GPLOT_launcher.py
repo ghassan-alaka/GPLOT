@@ -1,8 +1,10 @@
-#!python
+#!/usr/bin/env python
 
 # Import necessary modules
-import f90nml
+#import f90nml
+import numpy as np
 import os
+import re
 import shutil
 import sys
 
@@ -12,11 +14,11 @@ import execute as xc
 import gputil
 import namelist as nm
 from gputil import Directories
-from namelist import Namelist_Basic
+from namelist import Namelist_Launch
 
 """
-GPLOT Wrapper: Main submission script for all GPLOT child processes for a
-               set of experiments.
+GPLOT Driver launcher
+Main driver to launch GPLOT child processes for one or more experiments.
 
 GPLOT is the Graphical Post-processed Locus for Output of Tropical cyclones.
 It consists of independent modules used to create graphics targeted toward
@@ -27,11 +29,12 @@ cyclones. To learn more, please download the code from GitHub:
 To learn more about the AOML/Hurricane Research Division, please visit:
   https://www.aoml.noaa.gov/our-research/hurricane-research-division/
 
-Created By:   Ghassan Alaka Jr.
-Assisted By:
-Date Created: Febrary 6, 2020
+Created By:    Ghassan Alaka Jr.
+Assisted By:   
+Date Created:  Febrary 6, 2020
+Date Modified: February 21, 2020
 
-Example call: python ./GPLOT_launcher.py
+Example call: python GPLOT_launcher.py <EXPT1> <EXPT2> ...
 
 Modification Log:
 
@@ -42,17 +45,63 @@ __version__ = '0.1.0';
 
 
 
-
-def db_create_table(NML,EXPT):
-    """Create a database table for the namelist.
-    @param NML: the namelist dictionary
-    @param EXPT: a string of the experiment name
+###########################################################
+def submit_spawn(N):
+    """This subroutine handles the GPLOT spawn script submission
+       for each module.
+    @param N: pyGPLOT Namelist_Launch object
     """
-    DB_FILE = NML.GPLOT_DIR+"/db/pysqlite."+EXPT+".db"
-    conn = db.create_connection(DB_FILE)
+
+    if len(N.MOD_ID) < 1:
+        print("ERROR: At least one GPLOT module should be loaded.")
+
+    # Loop over GPLOT modules
+    print("MSG: The number of GPLOT modules = "+str(len(N.MOD_ID)))
+    for MOD in N.MOD_ID:
+        print("MSG: Working on submission for GPLOT Module "+MOD.upper())
+
+        # Define some key file names
+        SPAWNFILE1 = N.BATCHDIR+"GPLOT_spawn.generic.py"
+        SPAWNFILE2 = N.BATCHDIR+"GPLOT_spawn."+MOD+"."+N.EXPT+".py"
+        SPAWNLOG = N.LOGDIR+"GPLOT_spawn."+MOD+"."+N.EXPT+".log"
+
+        # Copy the template spawn file to modify for this case
+        gputil.file_copy(SPAWNFILE1,SPAWNFILE2,execute=True)
+
+        # Decide what to run
+        N.BATCH_MODE = 'foreground'
+        PRE = xc.src_mods_pre(N.GPLOT_DIR)
+        CMD_BASE = SPAWNFILE2+" "+N.EXPT+" "+N.GPOUT+" "+MOD
+        if N.BATCH_MODE.lower() == 'sbatch':
+            xc.spawn_prep(MOD,N.EXPT,SPAWNFILE2,N.LOGDIR,N.CPU_ACCT,N.PARTITION,N.QOS,RM_LOGS=True)
+            id = xc.get_slurm_jobid('GPLOT_spawn.'+MOD+'.'+N.EXPT)
+            if id is not None:
+                print("MSG: Batch job(s) already exist(s) --> "+' '.join(id))
+                print("MSG: Not submitting anything for "+MOD.upper()+".")
+            else:
+                print("MSG: Submitting "+SPAWNFILE2+" to the slurm batch scheduler.")
+                print(PRE+"sbatch "+CMD_BASE+" > "+SPAWNLOG)
+                xc.exec_subprocess(PRE+"sbatch "+CMD_BASE, GDIR=N.GPLOT_DIR)
+
+        elif N.BATCH_MODE.lower() == 'foreground':
+            print("MSG: Submitting "+SPAWNFILE2+" to the foreground.")
+            print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG)
+            xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG, GDIR=N.GPLOT_DIR)
+
+        elif N.BATCH_MODE.lower() == 'background':
+            print("MSG: Submitting "+SPAWNFILE2+" to the background.")
+            print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
+            xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
+            #xc.exec_subprocess("echo $GPLOT_DIR ; python -V > "+SPAWNLOG)
+
+        else:
+            print("MSG: Defaulting to a background job. Submitting "+SPAWNFILE2+".")
+            print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
+            xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
 
 
 
+###########################################################
 def main():
 
     # Get directories
@@ -69,47 +118,19 @@ def main():
 
         # Get basic information about the namelist.
         # This class is imported from namelist.py
-        NML = Namelist_Basic(DIRS.NMLDIR,EXPT)
+        NML = Namelist_Launch(DIRS,EXPT)
 
+        # Create the output directory
+        gputil.dir_create(NML.GPOUT)
 
-        # Save namelist to an SQLite database
-        NML.DB_ON=True
-        if NML.DB_ON:
-            DB_FILE = db.db_name(DIRS.GPLOT_DIR,EXPT)
-            HEADS = ("entry","section","value")
-            CONN = db.create_connection(DB_FILE)
-            db.create_table(DB_FILE,"namelist",HEADS,("text","text","text"),CONN=CONN)
-            for KEY in NML.KEYS:
-                print(KEY)
-                DATA = (list(NML.DICT[KEY].keys()),list(NML.DICT[KEY].values()))
-                print(DATA[:]+"  "+str(len(DATA)))
-                sys.exit(2)
-                db.add_table_row("namelist",HEADS,DATA,CONN=CONN)
-        
-        
+        # Write namelist to an SQLite database table
+        NML.nml_db_initialize()
+
         # Loop over all MOD_IDs and submit spawn jobs.
-        for MOD in NML.MOD_ID:
-            print("MSG: Working on submission for GPLOT Module "+MOD.upper())
-            SPAWNFILE1 = DIRS.BATCHDIR+"spawn_"+MOD+".generic.sh"
-            SPAWNFILE2 = DIRS.BATCHDIR+"spawn_"+MOD+"."+EXPT+".sh"
-            SPAWNLOG = DIRS.LOGDIR+"spawn_"+MOD+"."+EXPT+".log"
-            #continue
-            gputil.file_copy(SPAWNFILE1,SPAWNFILE2)
-            if NML.BATCH_MODE.lower() == 'sbatch':
-                xc.spawn_prep(MOD,EXPT,SPAWNFILE2,DIRS.LOGDIR,NML.CPU_ACCT,NML.PARTITION,NML.QOS)
-                print("MSG: Submitting "+SPAWNFILE2+" to the slurm batch scheduler.")
-                print("sbatch "+SPAWNFILE2+" "+NML.FILE+" > "+SPAWNLOG)
-                xc.exec_subprocess(True,"sbatch "+SPAWNFILE2+" "+NML.FILE+" > "+SPAWNLOG)
-            elif BATCH_MODE.lower() == 'foreground':
-                print("MSG: Submitting "+SPAWNFILE2+" to the foreground.")
-                xc.exec_subprocess(True,SPAWNFILE2+" "+NML.FILE+" > "+SPAWNLOG)
-            else:
-                print("MSG: Submitting "+SPAWNFILE2+" to the background.")
-                xc.exec_subprocess(True,SPAWNFILE2+" "+NML.FILE+" > "+SPAWNLOG+" &")
-        
-        
+        submit_spawn(NML)
 
 
 
+###########################################################
 if __name__ == '__main__':
     main()

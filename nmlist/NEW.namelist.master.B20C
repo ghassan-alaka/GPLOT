@@ -1,0 +1,105 @@
+&modules
+  DO_MAPS = T
+  DO_STATS = F
+  DO_SHIPS = F
+  DO_POLAR = F
+/
+
+&config
+  ADECK_DIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
+  BDECK_DIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/"
+  ODIR = "/lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/"
+  INIT_HR = 0
+  FNL_HR = 126
+  FMT_HR = 3
+  DT = 3
+  DO_RMWHITE = T
+  DO_SRCLBL = T
+  DO_CONVERTGIF = T
+  FORCE = F
+/
+
+&case_main
+  EXPT = "B20C"
+  DSOURCE = "HWRF"
+  IS_MSTORM = T
+  ENSMEM = 0
+  IDATE =
+  SID =
+  IDIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/B20C/com/"
+  ITAG =
+  EXT =
+  ATCF1_DIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/B20C/com/"
+  ATCF1_TAG = "trak.hwrf.raw"
+  ATCF2_DIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/B20C/"
+  ATCF2_TAG = "atcfunix"
+/
+
+&case_diff
+  DO_DIFF = F
+  EXPT = ""
+  DSOURCE = "HWRF"
+  IS_MSTORM = T
+  ENSMEM = 0
+  IDATE =
+  SID =
+  IDIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/"
+  ITAG =
+  EXT =
+  ATCF1_DIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/HB18_v3_history/"
+  ATCF1_TAG = "trak.hwrf.raw"
+  ATCF2_DIR = "/lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/HB18_v3_history/"
+  ATCF2_TAG = "atcfunix"
+/
+
+&system
+  SYS_ENV = JET
+  BATCH_MODE = SBatch
+  CPU_ACCT = hur-aoml
+  QOS = batch
+  PARTITION = tjet,ujet,sjet,vjet,xjet,kjet
+  AUTO_BATCH = T
+/
+
+&maps
+  DOMAIN = basin d03
+  TIER = Tier1 Tier2
+  ATCF_REQD = F
+  PIV = 160
+/
+
+&stats
+  MORIG = HWRF
+  MCODE = B20C
+  MCODEI = B2CI
+  MCODE12 = B2C2
+  TRKM00 = HWRF AVNO HMON NVGM CTCX EGRR
+  TRKM06 = HWRF AVNO HMON NVGM CTCX
+  INTM = HWRF HMON DSHP LGEM CTCX
+  PRSM = HWRF AVNO HMON NVGM CTCX
+  TRKMI00 = HWFI AVNI HMNI EGRI CTCI TVCN OFCL
+  TRKMI06 = HWFI AVNI HMNI NVGI CTCI TVCN OFCL
+  INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+  TRKMT00 = HWRF HMON AVNO EGRR OFCL
+  TRKMT06 = HWRF HMON AVNO EGRR OFCL
+  INTMT = HWRF HMON DSHP OFCL
+  ETM = HWFI GFSI HMNI NVGI CTCI TVCN OFCL
+  EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+  LTM = HWRF GFSO HMON NVGM CTCX
+  LIM = HWRF HMON CTCX
+  LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+  NTREND = 6
+  DO_INTERP = T
+/
+
+&ships
+
+/
+
+&polar
+  RESOLUTION = 1.5
+  RMAX = 600
+  MODELTAG = hwrfprs.storm.0p015
+  LEVS = 46
+/
+

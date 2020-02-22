@@ -1,9 +1,8 @@
-#!python
+#!/usr/bin/env python
 
 # Import necessary modules
-import os
-import shutil
-import sys
+import os, shutil, stat, sys
+from random import randint
 #import sqlite3
 #from sqlite3 import Error
 
@@ -49,6 +48,9 @@ class Directories:
         self.NMLDIR=self.GPLOT_DIR+"/nmlist/"
         self.BATCHDIR=self.GPLOT_DIR+"/batch/"
         self.LOGDIR=self.GPLOT_DIR+"/log/"
+        self.TBLDIR=self.GPLOT_DIR+"/tbl/"
+        self.PYDIR=self.GPLOT_DIR+"/python/"
+        self.NCLDIR=self.GPLOT_DIR+"/ncl/"
 
 
     def gplot_check(self,gvar='GPLOT_DIR'):
@@ -73,13 +75,68 @@ class Directories:
 
 
 ###########################################################
-def file_copy(SRC,DEST,overwrite=True,quiet=True):
+def convert_boolean(V,quiet=True):
+    """Convert input to boolean values if it matches the list.
+    @param V:     the input value
+    @kwarg quiet: logical to determine print statements
+    @return V2:   the boolean, or the original input value
+    """
+
+    
+    if V.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+        V2 = True
+    elif V.lower() in ['false', '0', 'f', 'n', 'no', 'nah', 'nope']:
+        V2 = False
+    elif not quiet:
+        print("MSG: Did not convert to boolean because no match with acceptable values.")
+        V2 = V
+    return(V2);
+
+
+
+
+
+###########################################################
+def dir_create(DIR,quiet=True):
+    """Create a directory
+    @param DIR:   the directory to be created
+    @kwarg quiet: logical to determine print statements
+    """
+    if not os.path.exists(DIR):
+        os.mkdir(DIR)
+        if not quiet:
+            print("MSG: Successfully created directory --> "+DIR)
+    elif not quiet:
+         print("WARNING: Directory already exists --> "+DIR)
+    return;
+
+
+
+###########################################################
+def dir_remove(DIR,quiet=True):
+    """Create a directory
+    @param DIR:   the directory to be created
+    @kwarg quiet: logical to determine print statements
+    """
+    if os.path.exists(DIR):
+        shutil.rmtree(DIR)
+        if not quiet:
+            print("MSG: Successfully removed directory --> "+DIR)
+    elif not quiet:
+        print("WARNING: Directory does not exist --> "+DIR)
+    return;
+
+
+
+###########################################################
+def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False):
     """Ccopy a file in the system.
     @param SRC:       the source file path
     @param DEST:      the destination file path
-    @param overwrite: logical to determine if DEST is to be
+    @kwarg overwrite: logical to determine if DEST is to be
                       overwritten if it exists.
-    @param quiet:     logical to determine print statements
+    @kwarg quiet:     logical to determine print statements
+    @kwarg execute:   logical for giving copied file execute permissions
     """
 
     # Check if the destination file exists
@@ -96,9 +153,28 @@ def file_copy(SRC,DEST,overwrite=True,quiet=True):
     else:
         shutil.copy2(SRC,DEST)
 
+    if execute:
+        os.chmod(DEST,stat.S_IRWXU)
+
     if not quiet:
         print("MSG: Successfully copied "+SRC+" --> "+DEST)
+        if execute:
+            print("MSG: "+DEST+" now has execute permissions.")
 
+    return;
+
+
+
+###########################################################
+def file_remove(FILE,quiet=True):
+    """
+    @param FILE:  the file (full path) to be removed
+    @kwarg quiet: logical to determine print statements
+    """
+    if os.path.exists(FILE):
+        os.remove(FILE)
+    if not quiet:
+        print("MSG: Successfully removed "+FILE)
     return;
 
 
@@ -121,3 +197,16 @@ def parse_input_args(ARGS):
 
     # Return the truncated arguments list.
     return(ARGS2);
+
+
+
+###########################################################
+def random_N_digits(n):
+    """Generate a random number with at least n digits
+    From here: https://stackoverflow.com/questions/2673385/how-to-generate-random-number-with-the-specific-length-in-python
+    @param n: the number of digits
+    @return:  the random number
+    """
+    start = 10**(n-1)
+    finish = (10**n)-1
+    return randint(start,finish)
