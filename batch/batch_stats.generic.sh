@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=12
 #SBATCH --time=00:29:59
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
-#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
 #SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out

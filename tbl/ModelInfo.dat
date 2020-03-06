@@ -1,17 +1,34 @@
+HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
+HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
+H211,    H211: 2011 Oper. HWRF,  2,             magenta,                               2011 Oper. HWRF
+H11I,       H11I: Interp. H211,  2,             magenta,                       2011 Oper. HWRF (Early)
+H212,    H212: 2012 Oper. HWRF,  3,                 red,                               2012 Oper. HWRF
+H12I,       H12I: Interp. H212,  3,                 red,                       2012 Oper. HWRF (Early)
+H213,    H213: 2013 Oper. HWRF,  4,              orange,                               2013 Oper. HWRF
+H13I,       H13I: Interp. H213,  4,              orange,                       2013 Oper. HWRF (Early)
+H214,    H214: 2014 Oper. HWRF,  5,                gold,                               2014 Oper. HWRF
+H14I,       H14I: Interp. H214,  5,                gold,                       2014 Oper. HWRF (Early)
+H215,    H215: 2015 Oper. HWRF,  6,               green,                               2015 Oper. HWRF
+H15I,       H15I: Interp. H215,  6,               green,                       2015 Oper. HWRF (Early)
+H216,    H216: 2016 Oper. HWRF,  7,                blue,                               2016 Oper. HWRF
+H16I,       H16I: Interp. H216,  7,                blue,                       2016 Oper. HWRF (Early)
+H217,    H217: 2017 Oper. HWRF,  8,              purple,                               2017 Oper. HWRF
+H17I,       H17I: Interp. H217,  8,              purple,                       2017 Oper. HWRF (Early)
+H218,    H218: 2018 Oper. HWRF, 16,         deepskyblue,                               2018 Oper. HWRF
+H18I,       H18I: Interp. H218, 16,         deepskyblue,                       2018 Oper. HWRF (Early)
+H219,    H219: 2019 Oper. HWRF,  9,               brown,                               2019 Oper. HWRF
+H19I,       H19I: Interp. H219,  9,               brown,                       2019 Oper. HWRF (Early)
+H20C,     H20C: 2020 HWRF Base,  9,              purple,                            2020 HWRF Baseline
 HC18,    HC18: 2018 Ens. HWRFB,  7,               coral,                2018 Ensemble Basin-Scale HWRF
 HC8I,       HC8I: Interp. HC18,  7,               brown,            2018 Ens. Basin-Scale HWRF (Early)
 HB18,    HB18: 2018 HWRF-Basin,  7,               brown,                         2018 Basin-Scale HWRF
 HB8I,       HB8I: Interp. HB18,  7,               brown,                 2018 Basin-Scale HWRF (Early)
-H218,    H218: 2018 Oper. HWRF,  9,              purple,                               2018 Oper. HWRF
-H18I,       H18I: Interp. H218,  9,              purple,                       2018 Oper. HWRF (Early)
 HFV3,       HFV3: 2018 hfvGFS3,  7,          aquamarine,                                   2018 hfvGFS
 HF3I,       H18I: Interp. HFV3,  7,          aquamarine,                           2018 hfvGFS (Early)
 HB17,    HB17: 2017 HWRF-Basin,  7,               brown,                         2017 Basin-Scale HWRF
 HB7I,       HB7I: Interp. HB17,  7,               brown,                 2017 Basin-Scale HWRF (Early)
 HB16,    HB16: 2016 HWRF-Basin,  7,               coral,                         2016 Basin-Scale HWRF
 HB15,    HB15: 2015 HWRF-Basin,  7,         deepskyblue,                         2015 Basin-Scale HWRF
-HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
-HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
 AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
 AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
 GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
@@ -28,6 +45,9 @@ DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                        
 LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,         Logistic Growth Equation Model (LGEM)
 IVCN,      IVCN: NHC Consensus, 10,              tomato,                       NHC Intensity Consensus
 TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                           NHC Track Consensus
+OCD5,    OCD5: Combined CLIPER,  4,       darkslategray,             Combined Track & Intensity CLIPER
+CLP5,       CLP5: Track CLIPER,  4,       darkslategray,                                  Track CLIPER
+SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                              Intensity CLIPER
 FGFS,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
 EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
@@ -49,3 +69,6 @@ HB20,    HB20: 2020 HWRF-Basin,  7,               brown,                        
 HB0I,       HB0I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
 ECMO,          ECMO: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
 ECMI,       ECMI: Interp. ECMO,  8,               coral,      ECMWF Integrated Forecast System (Early)
+B20C,   B20C: 2020 HWRF-B Base,  7,               brown,                2020 Basin-Scale HWRF Baseline
+B20D, B20D: 2020 HWRF-B 18-6-2,  7,         deepskyblue,              2020 Basin-Scale HWRF (18-6-2km)
+S218,    S218: Oper. HWRF Base,  4,                 red,                     Operational HWRF Baseline

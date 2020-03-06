@@ -36,7 +36,7 @@ external CENTROID "$GPLOT_DIR/ncl/wrapit/centroid.so"
 undef("findCenter")
 function findCenter (f:file,dSource[1]:string,var[1]:string,LEV[*]:float,Bds[*]:float,type[1]:integer)
 local CNTR, levsz, masterList, kkk, kkk2, kkk3, V, levCode, mf, Vs, V1d, nDims, dNames, tmp, gcdist, \
-      MaxMin, Vmax, Vmin, N, b, flipFlag, A, flipLev, ICTR
+      MaxMin, Vmax, Vmin, N, b, flipFlag, A, flipLev, ICTR, V2
 begin
 	; 1) Perform checks!
 	; Check #1 --> Need units attribute
@@ -70,7 +70,7 @@ begin
 	else
 		levCode	= level_convert(LEV(0),LEV@units,"string","hPa")
 	end if
-	
+
 	; 3) Get info about dimensions
 	nDims	:= dimsizes(getfilevardimsizes(f,findVarName(dSource,var,levCode)))
 	dNames	:= getfilevardims(f,findVarName(dSource,var,levCode))
@@ -117,7 +117,7 @@ begin
 			nx	= dimsizes(LON)
 		end if
 	end do
-	
+
 	; 4) Set variables based on 'var'
 	;    b = centroid type
 	;    N = 1-2-1 filter iterations
@@ -131,10 +131,10 @@ begin
 						if(type.eq.0)then N = 51 end if
 						if(type.eq.1)then N = 25 end if
 	end if
-	
+
 	; 5) Actually read in the data
 	if(NZ.gt.1)then
-		V	:= getVar3d(f,dSource,(/var,levCode/),nDims,Bds,LEV@mf,flipFlag,LONF)
+		V	= getVar3d(f,dSource,(/var,levCode/),nDims,Bds,LEV@mf,flipFlag,LONF)
 		;V	:= V({totype(LEVPA,typeof(LEV))/k},:,:)
 		flipLev	= False
 		if(max(LEV).ne.LEV(0))then	LEV	= LEV(::-1)
@@ -149,7 +149,6 @@ begin
 		flipLev	= False
 	end if
 	
-	
 	; 6) Create the output variable "CNTR"
 	;	Structure:  CNTR(:,0) = (/lat,lon/)
 	; 	The 'use' attribute is important to determine if the center is associated the same vortex.
@@ -161,14 +160,12 @@ begin
 	CNTR@lim= new(NZ,"float")
 	CNTR@value=new(NZ,"float")
 	
-	
 	; 7) Filter the input data to remove any irregularities
 	V2	= V(:,{avg(Bds(:1))+2.:avg(Bds(:1))-2.},{avg(Bds(2:))+2.:avg(Bds(2:))-2.})
 	nx2	= dimsizes(V2(0,0,:))
 	ny2	= dimsizes(V2(0,:,0))
 	Vs	= V2
 	FILTER121::filter121(V2,Vs,nx2,ny2,NZ,N,False)
-	
 	
 	; 8) FIND THE TC CENTERS
 	; Type 0 --> Just use the smoothed field.
@@ -203,7 +200,6 @@ begin
 		end if
 			
 	end if  end if
-	
 	
 	; 9) Determine if CNTR at this level is within 1 km per 1 hPa of CNTR of two levels below
 	do kkk = 0,NZ-1
@@ -267,6 +263,8 @@ begin
 	end if
 
 	
-	; 11) Return the list of TC centers 
+	; 11) Return the list of TC centers
+	delete([/V,V2,Vs/])
+
 	return(CNTR)
 end

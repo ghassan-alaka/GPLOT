@@ -1045,9 +1045,8 @@ begin
 	if(ismissing(MATCH(0)))then	print("WARNING: findVarName: Variable '"+OLDVAR+"' not found in table for "+DSOURCE+".")
 					NEWVAR = "missing"
 					return(NEWVAR)
-	else				NEWVAR	= VAR_LIST(0,MATCH)
+	else				NEWVAR	= str_squeeze(VAR_LIST(0,MATCH))
 	end if
-	
 	
 	; This is a temp. fix for Precipitation variables that were updated to have time interval information.
 	; This should be integrated into the actual variable name, as with UV10, T2, etc.

@@ -127,13 +127,19 @@ for d in "${EXPT[@]}"; do
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_maps.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_maps.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_maps.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_maps.${d}"; then
+                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_maps.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
+                echo "MSG: Not submitting anything for MAPS."
+            else
+                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_maps.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_maps.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_maps.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
+                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            fi
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
 	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
@@ -152,13 +158,19 @@ for d in "${EXPT[@]}"; do
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_ships.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_ships.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_ships.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_ships.${d}"; then
+                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_ships.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
+                echo "MSG: Not submitting anything for SHIPS."
+            else
+                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_ships.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_ships.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_ships.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
+                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            fi
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
@@ -177,13 +189,19 @@ for d in "${EXPT[@]}"; do
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_stats.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_stats.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_stats.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_stats.${d}"; then
+                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_stats.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
+                echo "MSG: Not submitting anything for STATS."
+            else
+                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_stats.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_stats.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_stats.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
+                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            fi
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
@@ -202,13 +220,19 @@ for d in "${EXPT[@]}"; do
         echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_polar.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_polar.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_polar.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-            perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-            sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_polar.${d}"; then
+                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_polar.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
+                echo "MSG: Not submitting anything for POLAR."
+            else
+                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_polar.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_polar.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_polar.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
+                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
+                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            fi
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
         else
