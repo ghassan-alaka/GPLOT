@@ -9,12 +9,13 @@ import shutil
 import sys
 
 # Import GPLOT modules
-import database as db
-import execute as xc
-import gputil
-import namelist as nm
-from gputil import Directories
-from namelist import Namelist_Launch
+import gp_database as db
+import gp_execute as xc
+import gp_util as gpu
+import gp_namelist as nm
+from gp_util import Directories
+from gp_namelist import Namelist_Launch
+from gp_namelist import Namelist_Retrieve
 
 """
 GPLOT Driver launcher
@@ -66,7 +67,7 @@ def submit_spawn(N):
         SPAWNLOG = N.LOGDIR+"GPLOT_spawn."+MOD+"."+N.EXPT+".log"
 
         # Copy the template spawn file to modify for this case
-        gputil.file_copy(SPAWNFILE1,SPAWNFILE2,execute=True)
+        gpu.file_copy(SPAWNFILE1,SPAWNFILE2,execute=True)
 
         # Decide what to run
         N.BATCH_MODE = 'foreground'
@@ -104,30 +105,52 @@ def submit_spawn(N):
 ###########################################################
 def main():
 
+    # Parse inpurt arguments
+    LARGS = gpu.parse_launch_args()
+    EXPTS = LARGS.expt.split(',')
+    print("MSG: Found these experiments --> "+repr(EXPTS))
+    
     # Get directories
     DIRS = Directories()
-    
-
-    # Get the input arguments as independent experiments.    
-    EXPTS = gputil.parse_input_args(sys.argv)
-    print("MSG: Found these experiments --> "+repr(EXPTS))
-
 
     # Looping over all experiments. Could be one.
     for EXPT in EXPTS:
+        print("MSG: Working on this experiment --> "+EXPT)
 
-        # Get basic information about the namelist.
-        # This class is imported from namelist.py
-        NML = Namelist_Launch(DIRS,EXPT)
+        # Launch the master namelist and write it to an SQLite database table, if required.
+        if LARGS.delete_table:
+            # Launch the namelist. Read the master namelist from a text file.
+            NML = Namelist_Launch(DIRS,EXPT)
 
-        # Create the output directory
-        gputil.dir_create(NML.GPOUT)
+            # Create the output directory
+            gpu.dir_create(NML.GPOUT)
 
-        # Write namelist to an SQLite database table
-        NML.nml_db_initialize()
+            # Create (or re-create) the database table 'namelist'
+            NML.nml_db_initialize(destroy=True)
+
+        # Retrieve the namelist from the database
+        else:
+
+            # Cherry pick the GPLOT output directory from the text namelist.
+            # This is required to get the database file (DB_FILE), which is
+            # where the namelist table is stored. The database file is not
+            # stored in GPLOT_DIR because that directory could have limited
+            # disk space. May need to rethink this part.
+            NMLFILE = nm.nml_master_default(EXPT)
+            GPOUT = nm.nml_get_opt(DIRS.NMLDIR+NMLFILE,'ODIR')
+            DB_FILE = db.db_name(GPOUT,EXPT)
+
+            # Retrieve the master namelist from the database file
+            NML = Namelist_Retrieve(DIRS,EXPT,DB_FILE)
+
+        if LARGS.verbose:
+            print(db.select_rows('namelist_master','*',DFILE=NML.DB_FILE))
 
         # Loop over all MOD_IDs and submit spawn jobs.
-        submit_spawn(NML)
+        if LARGS.spawn:
+            submit_spawn(NML)
+
+        print("MSG: Done working on this experiment --> "+EXPT)
 
 
 

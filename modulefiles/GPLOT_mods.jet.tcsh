@@ -2,6 +2,8 @@
 
 # MODULEFILE for JET (tcsh)
 
+setenv GPLOT_DIR /lfs1/projects/hur-aoml/Ghassan.Alaka/pyGPLOT
+
 # Load modules
 module purge
 module load wgrib
@@ -22,5 +24,7 @@ module load met/8.1_beta2
 # Python 3 Anaconda
 setenv python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 setenv PATH "/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
+#setenv python /lfs1/projects/hur-aoml/Lew.Gramer/miniconda3/bin/python
+#setenv PATH "/lfs1/projects/hur-aoml/Lew.Gramer/miniconda3/bin:${PATH}"
 setenv PYTHONBUFFERED 1
 

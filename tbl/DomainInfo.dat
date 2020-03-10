@@ -1,17 +1,18 @@
-DOMAIN      NEST
-global      1
-basin       1
-atl         1
-eus         1
-elant       1
-wlant       1
-cpac        1
-epac        1
-gom         1
-d03         3
-d01         1
-bigd01      1
-bob         1
-hwrf        1
-ships       3
-polar       3
+DOMAIN      NEST    STORMCEN
+global      1       F
+basin       1       F
+atl         1       F
+eus         1       F
+elant       1       F
+wlant       1       F
+cpac        1       F
+epac        1       F
+gom         1       F
+d03         3       T
+d03         2       T
+d01         1       F
+bigd01      1       F
+bob         1       F
+hwrf        1       T
+ships       3       T
+polar       3       T
