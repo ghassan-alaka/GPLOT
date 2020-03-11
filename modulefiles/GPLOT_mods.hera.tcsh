@@ -1,5 +1,8 @@
 #!/bin/sh --login
 
+
+setenv GPLOT_DIR /lfs1/projects/hur-aoml/Ghassan.Alaka/pyGPLOT
+
 # MODULEFILE for HERA (tcsh)
 #
 # Load modules
@@ -19,6 +22,8 @@ module use /contrib/modulefiles
 module load met/8.1
 
 # Python 3 Anaconda
-setenv python /scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python
-setenv PATH /scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin:$PATH
+#setenv python /scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python
+#setenv PATH /scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin:$PATH
+setenv python /scratch2/NAGAPE/aoml-hafs1/Lew.Gramer/miniconda3/bin/python
+setenv PATH /scratch2/NAGAPE/aoml-hafs1/Lew.Gramer/miniconda3/bin:$PATH
 setenv PYTHONBUFFERED 1
