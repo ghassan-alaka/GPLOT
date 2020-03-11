@@ -38,11 +38,12 @@ Date Modified: February 21, 2020
 Example call: python GPLOT_launcher.py <EXPT1> <EXPT2> ...
 
 Modification Log:
-
+2020-03-11 -- GJA added configuration file parsing for namelist options.
+              GJA created a new GPLOT table file 'DBInfo.dat' to store the database file for each experiment.
 
 """
 
-__version__ = '0.1.0';
+__version__ = '0.2.0';
 
 
 
@@ -105,13 +106,13 @@ def submit_spawn(N):
 ###########################################################
 def main():
 
+    # Get directories
+    DIRS = Directories()
+
     # Parse inpurt arguments
     LARGS = gpu.parse_launch_args()
     EXPTS = LARGS.expt.split(',')
     print("MSG: Found these experiments --> "+repr(EXPTS))
-    
-    # Get directories
-    DIRS = Directories()
 
     # Looping over all experiments. Could be one.
     for EXPT in EXPTS:
@@ -120,7 +121,10 @@ def main():
         # Launch the master namelist and write it to an SQLite database table, if required.
         if LARGS.delete_table:
             # Launch the namelist. Read the master namelist from a text file.
-            NML = Namelist_Launch(DIRS,EXPT)
+            CONFS = ['gp_master_default.conf','gp_master_'+EXPT+'.conf']
+            if LARGS.config is not None:
+                CONFS = CONFS + LARGS.config.split(',')
+            NML = Namelist_Launch(DIRS,EXPT,CONFS)
 
             # Create the output directory
             gpu.dir_create(NML.GPOUT)
@@ -131,14 +135,8 @@ def main():
         # Retrieve the namelist from the database
         else:
 
-            # Cherry pick the GPLOT output directory from the text namelist.
-            # This is required to get the database file (DB_FILE), which is
-            # where the namelist table is stored. The database file is not
-            # stored in GPLOT_DIR because that directory could have limited
-            # disk space. May need to rethink this part.
-            NMLFILE = nm.nml_master_default(EXPT)
-            GPOUT = nm.nml_get_opt(DIRS.NMLDIR+NMLFILE,'ODIR')
-            DB_FILE = db.db_name(GPOUT,EXPT)
+            # Read the database file name from the GPLOT table
+            DB_FILE = db.db_retrieve(DIRS.TBLDIR+'/DBInfo.dat',EXPT)
 
             # Retrieve the master namelist from the database file
             NML = Namelist_Retrieve(DIRS,EXPT,DB_FILE)

@@ -3,6 +3,7 @@
 
 # Import necessary modules
 import os, sys
+import configparser as cparse
 import pandas as pd
 from pandas import DataFrame as df
 import f90nml
@@ -51,11 +52,12 @@ class Namelist_Launch:
     """
 
     ###########################################################
-    def __init__(self, DIR, EXPT, NO_FAIL=True, **kwargs):
+    def __init__(self, DIR, EXPT, CONFS, NO_FAIL=True, **kwargs):
         """This runs everytime Namelist_Launch is assigned.
         @param self:    the instance of the class (no need to pass this)
         @param DIR:     the directories object
         @param EXPT:    the experiment name
+        @param CONFS:   the list of namelist/configuration files
         @kwarg NO_FAIL: logical to not allow continuation if the namelist is not found.
         @kwargs:        other keyword arguments may be passed
         """
@@ -63,30 +65,15 @@ class Namelist_Launch:
         # Define basic information like paths, the namelist, and the experiment.
         self.EXPT = EXPT
         self.TBL = "namelist_master"
-        #self.NMLFILE = 'namelist.master.'+EXPT
-        self.NMLFILE = kwargs.get('NML_FILE','NEW.namelist.master.'+EXPT)
         self.NMLDIR = DIR.NMLDIR
-        self.NMLPATH = self.NMLDIR+self.NMLFILE
         self.GPLOT_DIR = DIR.GPLOT_DIR
         self.BATCHDIR = DIR.BATCHDIR
         self.LOGDIR = DIR.LOGDIR
+        self.TBLDIR = DIR.TBLDIR
 
-        # Check if the namelist actually exists
-        if os.path.exists(self.NMLPATH):
-            print("MSG: Found this namelist --> "+self.NMLPATH)
-        else:
-            print("ERROR: Namelist doesn't exist --> "+self.NMLPATH)
-            if NO_FAIL:
-                sys.exit(2)
 
-        # Read the namelist into a dictionary
-        self.DICT = self.nml_read_f90()
-        self.KEYS = self.nml_get_keys(self.DICT)
-        self.SUBKEYS = []
-        for K in self.DICT.keys():
-            SUBDICT = dict(self.DICT[K])
-            VALUE = self.nml_get_keys(SUBDICT)
-            self.SUBKEYS.append(VALUE)
+        # Define the namelist by parsing configuration files listed in CONFS
+        self.nml_parse_config(CONFS)
 
         # Determine what modules to run
         KEY = kwargs.get('MODULE_KEY',"modules")
@@ -111,17 +98,10 @@ class Namelist_Launch:
         self.BATCH_MODE = self.nml_get_value(KEY,'batch_mode','background')
         print("MSG: Batch submission mode --> "+self.BATCH_MODE)
         self.SYS_ENV = self.nml_get_value(KEY,'sys_env','jet')
-        self.BATCH_DFLTS = self.NMLDIR+"batch.defaults."+self.SYS_ENV.lower()
         if self.BATCH_MODE.lower() == 'sbatch':
             self.CPU_ACCT = self.nml_get_value(KEY,'cpu_acct','MISSING')
-            if self.CPU_ACCT == "MISSING":
-                self.CPU_ACCT = nml_get_opt(self.BATCH_DFLTS,'CPU_ACCT')
             self.PARTITION = ','.join(self.nml_get_value(KEY,'partition','MISSING'))
-            if self.PARTITION == "MISSING":
-                self.PARTITION = nml_get_opt(self.BATCH_DFLTS,'PARTITION')
             self.QOS = self.nml_get_value(KEY,'qos','batch')
-            if self.QOS == "MISSING":
-                self.QOS = nml_get_opt(self.BATCH_DFLTS,'QOS')
         else:
             self.CPU_ACCT, self.PARTITION, self.QOS = (), (), ()
 
@@ -158,10 +138,11 @@ class Namelist_Launch:
         @return VALUE: the specific value of a namelist entry
         """
 
-        if KEY in self.KEYS:
-            VALUE = self.DICT[KEY].get(VAL,DEF)
+        if KEY in self.CONF_KEYS:
+            VALUE = self.CONFIG[KEY].get(VAL,DEF)
         else:
             VALUE = DEF
+        VALUE = gpu.convert_boolean(VALUE)
         return(VALUE);
     
 
@@ -173,24 +154,34 @@ class Namelist_Launch:
         """
         VALUES = list(self.DICT[KEY])
         return(VALUES);
-    
+
 
     ###########################################################
-    #def nml_get_opt(self,NML,OPT):
-    #    """Read the namelist and search for a specific option.
-    #    @param NML:  the namelist
-    #    @param OPT:  the namelist option, must begin the line
-    #    @return VAR: the value of the namelist option, could be MISSING
-    #    """
-    #    VAR = "MISSING"
-    #    with open(NML,"r") as f:
-    #        for line in f.readlines():
-    #            if line.strip().startswith(OPT):
-    #                VAR = line.split("=")[1].strip()
-    #                break
-    #    if VAR == "MISSING":
-    #        print("WARNING: Could not find "+OPT+" in "+NML)
-    #    return(VAR);
+    def nml_parse_config(self,CONFS,NO_FAIL=True):
+        """Return a list of values for a specific namelist key.
+        @param CONFS: the list of configuration files
+        @kwargs NO_FAIL: logical to not allow continuation if the namelist is not found.
+        """
+    
+        self.CONFIG = cparse.ConfigParser()
+        FOUND_CONF = False
+        for C in CONFS:
+            if os.path.exists(self.NMLDIR+C):
+                print("MSG: Found this namelist --> "+self.NMLDIR+C)
+                self.CONFIG.read(self.NMLDIR+C)
+                FOUND_CONF = True
+            elif os.path.exists(C):
+                print("MSG: Found this namelist --> "+C)
+                self.CONFIG.read(C)
+                FOUND_CONF = True
+
+        if not FOUND_CONF and NO_FAIL:
+            print("ERROR: No namelists found --> "+CONFS)
+            sys.exit(2)
+
+        self.CONF_KEYS = self.nml_get_keys(self.CONFIG)
+
+        return;
 
 
     ###########################################################
@@ -217,22 +208,24 @@ class Namelist_Launch:
         # Add namelist table entries for each key seperately.
         # Also, add some manual entries
         N = 1
-        for K in self.KEYS:
+        for K in self.CONF_KEYS:
             # Check if this key has entries
-            if len(self.DICT[K].keys()) == 0:
+            if len(self.CONFIG[K].keys()) == 0:
                 continue
             print("MSG: Adding key '"+K+"' to the database.")
 
             # Add each row of data for this key to DATA
             DATA = [];
-            for (E,V) in zip(self.DICT[K].keys(),self.DICT[K].values()):
+            for (E,V) in zip(self.CONFIG[K].keys(),self.CONFIG[K].values()):
                 DATA.append((N,E,K,str(V)))
                 N+=1
 
             # Add custom namelist table entries
             if K == 'config':
-                MOREKEYS = ['gplot_dir','nml_dir','expt','master_nml','master_path']
-                MOREVALS = [self.GPLOT_DIR,self.NMLDIR,self.EXPT,self.NMLFILE,self.NMLPATH]
+                #MOREKEYS = ['gplot_dir','nml_dir','expt','master_nml','master_path']
+                #MOREVALS = [self.GPLOT_DIR,self.NMLDIR,self.EXPT,self.NMLFILE,self.NMLPATH]
+                MOREKEYS = ['gplot_dir','nml_dir','expt']
+                MOREVALS = [self.GPLOT_DIR,self.NMLDIR,self.EXPT]
                 for (E,V) in zip(MOREKEYS,MOREVALS):
                     DATA.append((N,E,K,V))
                     N+=1
@@ -242,6 +235,22 @@ class Namelist_Launch:
 
         # Close the database connection so it is available for other requests
         db.close_connection(self.CONN)
+
+        # Write the database file and experiment to a GPLOT table file
+        DB_TBL = self.TBLDIR+'/DBInfo.dat'
+        if os.path.exists(DB_TBL):
+            with open(DB_TBL, "r") as f:
+                lines = f.readlines()
+            with open(DB_TBL, "w") as f:
+                for line in lines:
+                    if self.EXPT not in line.strip("\n"):
+                        f.write(line)
+                f.write(self.EXPT+',     '+self.DB_FILE)
+                f.close()
+        else:
+            with open(DB_TBL, "w") as f:
+                f.write(self.EXPT+',     '+self.DB_FILE)
+                f.close()
 
 
 

@@ -2,7 +2,7 @@
 
 # Import necessary modules
 import os, re, shutil, stat, sys
-import argparse
+import configargparse
 import pandas as pd
 from random import randint
 #import sqlite3
@@ -431,13 +431,36 @@ def parse_input_args(ARGS,OPT=None):
 
 ###########################################################
 def parse_launch_args(args=sys.argv[1:]):
-    ap = argparse.ArgumentParser(description='GPLOT launch Parser')
+    """Parse the input arguments for the GPLOT launch
+    @return args: an object containing the input arguments.
+    """
+    ap = configargparse.ArgParser(description='GPLOT Launch Parser')
     ap.add_argument("-e", "--expt", required=True, help="Comma separated list of experiments (e.g., EXPT1 or EXPT1,EXPT2,EXPT3,...)")
+    ap.add_argument("-c", "--config", required=False, help="Comma separated list of configuration files (e.g., CONF1 or CONF1,CONF2,CONF3,...)")
     ap.add_argument("-d", "--delete_table", required=False, dest='delete_table', action='store_true', help="Force delete the namelist database table")
     ap.add_argument("--no-spawn", required=False, dest='spawn', action='store_false', help="Do not spawn child jobs. Useful for testing.")
-    ap.set_defaults(spawn=False)
+    ap.set_defaults(spawn=True)
     ap.add_argument("-v", "--verbose", required=False, dest='verbose', action='store_true', help="Verbose mode")
-    return(ap.parse_args());
+    args, unknown = ap.parse_known_args()
+    return(args);
+
+
+
+###########################################################
+def parse_spawn_args():
+    """Parse the input arguments for the GPLOT spawn
+    @return args: an object containing the input arguments.
+    """
+    ap.configargparse.ArgParser(description='GPLOT Spawn Parser')
+    ap.add_argument("-e", "--expt", required=True, help="The GPLOT experiment")
+    ap.add_argument("-o", "--gpout", required=True, help="The GPLOT output directory")
+    ap.add_argument("-m", "--module", required=True, help="The GPLOT module")
+    ap.add_argument("-v", "--verbose", required=False, dest='verbose', action='store_true', help="Verbose mode")
+    ap.add_argument("--no-submit", required=False, dest='submit', action='store_false', help="Do not spawn child jobs. Useful for testing.")
+    ap.set_defaults(submit=True)
+    args, unknown = ap.parse_known_args()
+    return(args);
+
 
 
 

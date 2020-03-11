@@ -268,6 +268,26 @@ def db_name(DIR,EXPT,quiet=True):
 
 
 
+
+###########################################################
+def db_retrieve(TBL,EXPT):
+    """Retrieve the database file name from a GPLOT table.
+    @param TBL:      the path to the GPLOT table
+    @param EXPT:     the GPLOT experiment name
+    @return DB_FILE: the database file name
+    """
+    DB_FILE = None
+    with open(TBL, "r") as f:
+        for line in f.readlines():
+            if EXPT in line:
+                DB_FILE = line.split(',')[1].strip()
+                break
+        f.close()
+    return(DB_FILE);
+
+
+
+
 ###########################################################
 def delete_all_rows(TBL,CONN=None,DBFILE=None):
     """Delete all rows in a given table. Return the number of rows deleted.
