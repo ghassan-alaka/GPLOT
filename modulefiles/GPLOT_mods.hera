@@ -2,6 +2,8 @@
 
 # MODULEFILE for HERA (bash)
 
+export GPLOT_DIR=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/pyGPLOT
+
 # Load modules
 module purge
 module load intel
@@ -21,6 +23,8 @@ module load met/8.1
 
 # Python 3 Anaconda
 #export python=/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python
-alias python="/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python"
-export PATH=/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/:$PATH
+#alias python="/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python"
+#export PATH=/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/:$PATH
+alias python="/scratch2/NAGAPE/aoml-hafs1/Lew.Gramer/miniconda3/bin/python"
+export PATH=/scratch2/NAGAPE/aoml-hafs1/Lew.Gramer/miniconda3/bin:$PATH
 export PYTHONBUFFERED=1

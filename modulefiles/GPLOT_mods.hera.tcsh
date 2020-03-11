@@ -1,7 +1,7 @@
 #!/bin/sh --login
 
 
-setenv GPLOT_DIR /lfs1/projects/hur-aoml/Ghassan.Alaka/pyGPLOT
+setenv GPLOT_DIR /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/pyGPLOT
 
 # MODULEFILE for HERA (tcsh)
 #
