@@ -1,26 +1,32 @@
-PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
-True      UV             10            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            UV10_MSLP
-True      RVO            850           HGT          850     N/A          N/A         UV           850         N/A          N/A     N/A         N/A           RVO850_Z850_UV850
-True      RVO            850           N/A          N/A     N/A          N/A         UV           200         N/A          N/A     N/A         N/A           RVO850_UV200
-True      RVO            700           HGT          700     N/A          N/A         UV           700         N/A          N/A     N/A         N/A           RVO700_Z700_UV700
-False     RVO            500           HGT          500     N/A          N/A         UV           500         N/A          N/A     N/A         N/A           RVO500_Z500_UV500
-False     RVO            200           HGT          200     N/A          N/A         UV           200         N/A          N/A     N/A         N/A           RVO200_Z200_UV200
-True      RH             700           MSLP         N/A     N/A          N/A         UV           700         MSLP         N/A     N/A         N/A           RH700_UV700_MSLP
-False     RH             07000400a     MSLP         N/A     N/A          N/A         UV           07000400a   MSLP         N/A     N/A         N/A           RH700400_UV700400_MSLP
-True      PRATE          N/A           MSLP         N/A     HGT          05001000d   N/A          N/A         MSLP         N/A     N/A         N/A           PRCP_MSLP_Z1000500
-False     PRATE          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           PRCP_MSLP
-True      HGT            500           MSLP         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           HGT500_MSLP
-True      TPW            N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPW_MSLP
-True      UV             850           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          850           UV850_MSLP
-True      UV             02000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          02000850d     SHDL
-False     UV             05000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          05000850d     SHML
-False     UV             07000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          07000850d     SHSL
-False     REFL           N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           REFL_MSLP
-False     CAPE           N/A           HLCY         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           CAPE_HLCY_MSLP
-False     TPRCP          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPRCP_MSLP
-True      MSLP           N/A           MSLP         N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           MSLP
-False     T              2             N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           T2
-False     PRCP           24            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           PRCP24_MSLP
-False     UV             02001000y     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           UV_NS
-False     UV             02001000x     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           UV_EW
-
+FILE_NAME                PLOT_ON   PRIO   BASE_CN   LEV1        OV_CN1   LEV2    OV_CN2  LEV3        OV_VEC   LEV4        OV_STRM   LEV6         OV_HILO   TITLE
+MSLP                     T         1      MSLP      N/A         MSLP     N/A     N/A     N/A         N/A      N/A         N/A       N/A          N/A       "Mean Sea-Level Pressure (mb; shaded, lines)"
+UV10_MSLP                T         1      UV        10          N/A      N/A     N/A     N/A         N/A      N/A         UV        10           MSLP      "10m Wind (kt; shaded, streamlines), MSLP (mb; centers)"
+UV850_MSLP               T         20     UV        850         N/A      N/A     N/A     N/A         N/A      N/A         UV        850          MSLP      "850mb Wind (kt; shaded, streamlines), MSLP (mb; centers)"
+SHDL                     T         1      UV        02000850d   N/A      N/A     N/A     N/A         N/A      N/A         UV        02000850d    N/A       "Deep-Layer (200-850mb) Wind Shear (kt; shaded, lines)"
+SHML                     T         20     UV        05000850d   N/A      N/A     N/A     N/A         N/A      N/A         UV        05000850d    N/A       "Mid-Layer (500-850mb) Wind Shear (kt; shaded, lines)"
+SHSL                     T         20     UV        07000850d   N/A      N/A     N/A     N/A         N/A      N/A         UV        07000850d    N/A       "Shallow-Layer (700-850mb) Wind Shear (kt; shaded, lines)"
+SFDL                     F         30     UV        02500850m   N/A      N/A     N/A     N/A         N/A      N/A         UV        02500850m    MSLP      "Deep-Layer (250-850mb) Steering Flow (kt; shaded, lines)"
+SFML                     F         30     UV        05000850m   N/A      N/A     N/A     N/A         N/A      N/A         UV        05000850m    MSLP      "Mid-Layer (500-850mb) Steering Flow (kt; shaded, lines)"
+SFSL                     F         30     UV        07000850m   N/A      N/A     N/A     N/A         N/A      N/A         UV        07000850m    MSLP      "Shallow-Layer (700-850mb) Steering Flow (kt; shaded, lines)"
+RVO850_Z850_UV850        T         1      RVO       850         HGT      850     N/A     N/A         UV       850         N/A       N/A          N/A       "850mb Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; lines), and Wind (kt; barbs)"
+RVO850_UV200             T         1      RVO       850         N/A      N/A     N/A     N/A         UV       200         N/A       N/A          N/A       "850mb Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), and 200mb Wind (kt; barbs)"
+RVO700_Z700_UV700        T         20     RVO       700         HGT      700     N/A     N/A         UV       700         N/A       N/A          N/A       "700mb  Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; contours), and Wind (kt; barbs)"
+RVO500_Z500_UV500        T         20     RVO       500         HGT      500     N/A     N/A         UV       500         N/A       N/A          N/A       "500mb Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; lines), and Wind (kt; barbs)"
+RVO200_Z200_UV200        T         20     RVO       200         HGT      200     N/A     N/A         UV       200         N/A       N/A          N/A       "200mb Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; lines), and Wind (kt; barbs)"
+HGT500_MSLP              T         1      HGT       500         MSLP     N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "500mb Geopotential Height (dam; shaded), and MSLP (mb; lines, centers)"
+HGT200_UV200_MSLP        T         20     HGT       200         N/A      N/A     N/A     N/A         UV       200         N/A       N/A          MSLP      "200mb Geopotential Height (dam; shaded), Wind (kt; barbs), and MSLP (mb; centers)"
+T2                       T         20     T         2           N/A      N/A     N/A     N/A         N/A      N/A         N/A       N/A          N/A       "2m Temperature (K; shaded)"
+T850_UV850_MSLP          T         1      T         850         N/A      N/A     N/A     N/A         UV       850         N/A       N/A          MSLP      "850mb Temperature (K; shaded), 850mb Wind (kt; barbs), and MSLP (mb; centers)"
+RH700_UV700_MSLP         T         1      RH        700         MSLP     N/A     N/A     N/A         UV       700         N/A       N/A          MSLP      "700mb Relative Humidity (%; shaded), Wind (kt), and MSLP (mb; lines and centers)"
+RH700400_UV700400_MSLP   T         20     RH        07000400a   MSLP     N/A     N/A     N/A         UV       07000400a   N/A       N/A          MSLP      "700-400mb Rel. Humidity (%; shaded), Wind (kt; barbs), and MSLP (mb; lines, centers)"
+TPW_MSLP                 T         1      TPW       N/A         N/A      N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "Total Precipitable Water (mm; shaded), MSLP (mb; centers)"
+CAPE_HLCY_MSLP           T         20     CAPE      N/A         HLCY     N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "CAPE (J/kg; shaded), Storm-Rel. Helicity (m~S~2~N~ s~S~-2~N~; lines), MSLP (mb; centers)"
+REFL_MSLP                T         1      REFL      N/A         N/A      N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "Composite Reflectivity (dBz; shaded), MSLP (mb; centers)"
+PRCP_MSLP                T         20     PRATE     N/A         N/A      N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
+PRCP_MSLP_Z1000500       T         1      PRATE     N/A         MSLP     N/A     HGT     05001000d   N/A      N/A         N/A       N/A          MSLP      "Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
+PRCP24_MSLP              F         50     PRCP      24          N/A      N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "24-h Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
+TPRCP_MSLP               T         1      TPRCP     N/A         N/A      N/A     N/A     N/A         N/A      N/A         N/A       N/A          MSLP      "Total Precip. (inches; shaded), MSLP (mb; centers)"
+SST_T2                   T         20     SST       N/A         T        2       N/A     N/A         N/A      N/A         UV        10           MSLP      "SST (K; shaded), 2m Temp. (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
+DPT2_SST                 T         20     DPT       2           SST      N/A     N/A     N/A         N/A      N/A         UV        10           MSLP      "2m DwPt. (K; shaded), SST (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
+LHFLX_MSLP               T         20     LHFLX     N/A         N/A      N/A     N/A     N/A         N/A      N/A         UV        10           MSLP      "Latent Ht. Flx (Wm~S~-2~N~; shaded), 10m Wind (kt; stmlines), MSLP (mb; centers)"
+SHFLX_MSLP               T         20     SHFLX     N/A         N/A      N/A     N/A     N/A         N/A      N/A         UV        10           MSLP      "Sensi. Ht. Flx (Wm~S~-2~N~; shaded), 10m Wind (kt; stmlines), MSLP (mb; centers)"
