@@ -30,20 +30,21 @@ cyclones. To learn more, please download the code from GitHub:
 To learn more about the AOML/Hurricane Research Division, please visit:
   https://www.aoml.noaa.gov/our-research/hurricane-research-division/
 
-Created By:    Ghassan Alaka Jr.
-Assisted By:   
+Created By:    Ghassan Alaka, Jr.
+Modified By:   Ghassan Alaka, Jr.
 Date Created:  Febrary 6, 2020
-Date Modified: February 21, 2020
+Last Modified: March 12, 2020
 
 Example call: python GPLOT_launcher.py <EXPT1> <EXPT2> ...
 
 Modification Log:
-2020-03-11 -- GJA added configuration file parsing for namelist options.
+2020-Mar-11 -- GJA added configuration file parsing for namelist options.
               GJA created a new GPLOT table file 'DBInfo.dat' to store the database file for each experiment.
-
+2020-Mar-12 -- GJA streamlined the submit_spawn() function. Now, the generic spawn file is used for 
+                background and foreground submissions.
 """
 
-__version__ = '0.2.0';
+__version__ = '0.2.1';
 
 
 
@@ -56,27 +57,44 @@ def submit_spawn(N):
 
     if len(N.MOD_ID) < 1:
         print("ERROR: At least one GPLOT module should be loaded.")
+        sys.exit(2)
 
     # Loop over GPLOT modules
     print("MSG: The number of GPLOT modules = "+str(len(N.MOD_ID)))
     for MOD in N.MOD_ID:
         print("MSG: Working on submission for GPLOT Module "+MOD.upper())
 
-        # Define some key file names
+        # Define spawn-specific variables:
+        #   SPAWNJOB   --> the job name, also used to create files
+        #   SPAWNFILE1 --> the generic GPLOT spawn file.
+        #   SPAWNLOG   --> the log file for this specific experiment & module
+        SPAWNJOB = "GPLOT_spawn."+MOD+"."+N.EXPT
         SPAWNFILE1 = N.BATCHDIR+"GPLOT_spawn.generic.py"
-        SPAWNFILE2 = N.BATCHDIR+"GPLOT_spawn."+MOD+"."+N.EXPT+".py"
-        SPAWNLOG = N.LOGDIR+"GPLOT_spawn."+MOD+"."+N.EXPT+".log"
+        SPAWNLOG = N.LOGDIR+SPAWNJOB+".log"
 
-        # Copy the template spawn file to modify for this case
-        gpu.file_copy(SPAWNFILE1,SPAWNFILE2,execute=True)
-
-        # Decide what to run
-        N.BATCH_MODE = 'foreground'
+        # Define the command prefix, typically the modulefile to source
+        N.BATCH_MODE = 'foreground'		# Testing
         PRE = xc.src_mods_pre(N.GPLOT_DIR)
-        CMD_BASE = SPAWNFILE2+" "+N.EXPT+" "+N.GPOUT+" "+MOD
+
+        # Build the base command with input arguments. The file name is appended later.
+        CMD_BASE = " -e "+N.EXPT+" -o "+N.GPOUT+" -m "+MOD
+
+        # DECIDE HOW TO SUBMIT, THEN SUBMIT!
         if N.BATCH_MODE.lower() == 'sbatch':
+
+            # Define a spawn file specifically for this case, and
+            # copy the template spawn file to modify for this case
+            SPAWNFILE2 = N.BATCHDIR+SPAWNJOB+".py"
+            gpu.file_copy(SPAWNFILE1,SPAWNFILE2,execute=True)
+            CMD_BASE = SPAWNFILE2+CMD_BASE
+
+            # Modify the SBATCH header
             xc.spawn_prep(MOD,N.EXPT,SPAWNFILE2,N.LOGDIR,N.CPU_ACCT,N.PARTITION,N.QOS,RM_LOGS=True)
-            id = xc.get_slurm_jobid('GPLOT_spawn.'+MOD+'.'+N.EXPT)
+
+            # Get the Slurm Job ID for any matching jobs
+            id = xc.get_slurm_jobid(SPAWNJOB)
+
+            # Submit the job unless a matching job was found.
             if id is not None:
                 print("MSG: Batch job(s) already exist(s) --> "+' '.join(id))
                 print("MSG: Not submitting anything for "+MOD.upper()+".")
@@ -86,18 +104,21 @@ def submit_spawn(N):
                 xc.exec_subprocess(PRE+"sbatch "+CMD_BASE, GDIR=N.GPLOT_DIR)
 
         elif N.BATCH_MODE.lower() == 'foreground':
-            print("MSG: Submitting "+SPAWNFILE2+" to the foreground.")
+            CMD_BASE = SPAWNFILE1+CMD_BASE
+            print("MSG: Submitting "+SPAWNFILE1+" to the foreground.")
             print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG)
             xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG, GDIR=N.GPLOT_DIR)
 
         elif N.BATCH_MODE.lower() == 'background':
-            print("MSG: Submitting "+SPAWNFILE2+" to the background.")
+            CMD_BASE = SPAWNFILE1+CMD_BASE
+            print("MSG: Submitting "+SPAWNFILE1+" to the background.")
             print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
             xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
             #xc.exec_subprocess("echo $GPLOT_DIR ; python -V > "+SPAWNLOG)
 
         else:
-            print("MSG: Defaulting to a background job. Submitting "+SPAWNFILE2+".")
+            CMD_BASE = SPAWNFILE1+CMD_BASE
+            print("MSG: Defaulting to a background job. Submitting "+SPAWNFILE1+".")
             print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
             xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
 
@@ -118,8 +139,12 @@ def main():
     for EXPT in EXPTS:
         print("MSG: Working on this experiment --> "+EXPT)
 
+        # Get the database file name from the GPLOT table
+        DB_FILE = db.db_retrieve(DIRS.TBLDIR+'/DBInfo.dat',EXPT)
+
         # Launch the master namelist and write it to an SQLite database table, if required.
-        if LARGS.delete_table:
+        if DB_FILE is None or LARGS.delete_table:
+
             # Launch the namelist. Read the master namelist from a text file.
             CONFS = ['gp_master_default.conf','gp_master_'+EXPT+'.conf']
             if LARGS.config is not None:
@@ -134,9 +159,6 @@ def main():
 
         # Retrieve the namelist from the database
         else:
-
-            # Read the database file name from the GPLOT table
-            DB_FILE = db.db_retrieve(DIRS.TBLDIR+'/DBInfo.dat',EXPT)
 
             # Retrieve the master namelist from the database file
             NML = Namelist_Retrieve(DIRS,EXPT,DB_FILE)
