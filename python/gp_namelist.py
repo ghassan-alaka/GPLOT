@@ -27,19 +27,19 @@ cyclones. To learn more, please download the code from GitHub:
 To learn more about the AOML/Hurricane Research Division, please visit:
   https://www.aoml.noaa.gov/our-research/hurricane-research-division/
 
-Created By:    Ghassan Alaka Jr.
-Modified By:
+Created By:    Ghassan Alaka, Jr.
+Modified By:   Ghassan Alaka, Jr.
 Date Created:  February 12, 2020
-Last Modified: February 27, 2020
+Last Modified: March 12, 2020
 
 Example call: For Internal Calls Only
 
 Modification Log:
-2020-Feb-27: GJA changed the file name from namelist.py to gp_namelist.py
-
+2020-Feb-27 -- GJA changed the file name from namelist.py to gp_namelist.py
+2020-Mar-12 -- GJA updated nml_pd_extract_value() to assign blank strings as None
 """
 
-__version__ = '0.2.0';
+__version__ = '0.2.1';
 
 
 
@@ -333,7 +333,7 @@ class Namelist_Retrieve:
         SEC = 'case_main'
         self.DSOURCE = self.nml_pd_extract_value(E='dsource',S=SEC,DEF='HWRF')
         self.IS_MSTORM = self.nml_pd_extract_value(E='is_mstorm',S=SEC,DEF=False)
-        self.ENSID = self.nml_pd_extract_value(E='ensmem',S=SEC)
+        self.ENSID = gpu.list_convert(self.nml_db_value_split(self.nml_pd_extract_value(E='ensmem',S=SEC)),int)
         if not isinstance(self.ENSID,list):
             self.ENSID = [self.ENSID]
         self.DATADIR = self.nml_pd_extract_value(E='idir',S=SEC)
@@ -357,7 +357,9 @@ class Namelist_Retrieve:
             self.EXPT2 = self.nml_pd_extract_value(E='expt',S=SEC)
             self.DSOURCE2 = self.nml_pd_extract_value(E='dsource',S=SEC,DEF='HWRF')
             self.IS_MS2 = self.nml_pd_extract_value(E='is_mstorm',S=SEC,DEF=False)
-            self.ENSID2 = self.nml_pd_extract_value(E='ensmem',S=SEC)
+            self.ENSID2 = gpu.list_convert(self.nml_db_value_split(self.nml_pd_extract_value(E='ensmem',S=SEC)),int)
+            if not isinstance(self.ENSID2,list):
+                self.ENSID2 = [self.ENSID2]
             self.DATADIR2 = self.nml_pd_extract_value(E='idir',S=SEC)
             self.DTAG2 = self.nml_pd_extract_value(E='itag',S=SEC)
             self.DEXT2 = self.nml_pd_extract_value(E='ext',S=SEC)
@@ -422,7 +424,7 @@ class Namelist_Retrieve:
                 #if not os.exists.isdir(self.DATADIR):
                 #    print("ERROR: Ensemble directory does not exist --> "+self.DATADIR)
                 #    sys.exit(2)
-                print("MSG: Working on ensemble member %d02"%EN)
+                print("MSG: Working on ensemble member {:02d}".format(EN))
         except TypeError as e:
             print(e)
         finally:
@@ -454,6 +456,8 @@ class Namelist_Retrieve:
         # Extract the actual value. If V is empty, assign default value
         if not EMPTY:
             V = V.value.iloc[0]
+            if not V:
+                V = DEF
         else:
             V = DEF
 
