@@ -24,16 +24,19 @@ To learn more about the AOML/Hurricane Research Division, please visit:
 Created By:    Ghassan Alaka Jr.
 Modified By:   
 Date Created:  February 14, 2020
-Last Modified: February 27, 2020
+Last Modified: March 12, 2020
 
 Example call: For Internal Calls Only
 
 Modification Log:
-2020-Feb-27:  GJA changed the file name from gputil.py to gp_util.py
-
+2020-Feb-27 -- GJA changed the file name from gputil.py to gp_util.py
+2020-Mar-12 -- GJA modified parse_launch_args() to use ConfigArgParse
+               GJA created parse_spawn_args() to parse arguments for GPLOT spawn jobs
+               GJA expanded the functionality of convert_boolean() so that it can
+                 convert strings and integers to boolean.
 """
 
-__version__ = '0.2.0';
+__version__ = '0.2.2';
 
 
 
@@ -202,40 +205,79 @@ def atcf_read(F,COLS=None,DT=None,FHR_S=None,FHR_E=None, \
 
 
 ###########################################################
-def convert_boolean(V,quiet=True):
+def convert_boolean(V,quiet=True,do_int=False):
     """Convert input to boolean values if it matches the list.
-    @param V:     the input value
-    @kwarg quiet: logical to determine print statements
-    @return V2:   the boolean, or the original input value
+    @param V:      the input value
+    @kwarg do_int: logical to allow integer conversions
+    @kwarg quiet:  logical to determine print statements
+    @return V2:    the boolean, or the original input value
+    Notes: BOOL_FAIL could become an attribute of V2. To do this,
+           V2 must become a class. I'm not sure that level of
+           complexity is warranted here.
     """
 
     BOOL_FAIL = False
     if V is not None:
+
+        # Create lists of acceptable strings to convert
+        str_true = ['true', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
+        str_false = ['false', 'f', 'n', 'no', 'nah', 'nope']
+
+        # Make sure V is a list
         if not isinstance(V,list):
-            if V.lower() in ['true', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
-                V2 = True
-            elif V.lower() in ['false', 'f', 'n', 'no', 'nah', 'nope']:
-                V2 = False
-            else:
-                BOOL_FAIL = True
-                V2 = V
+            VV = [V]
+            scalar = True
         else:
-            V2 = []
-            for v in V:
-                if v.lower() in ['true', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+            VV = V
+            scalar = False
+
+        # Loop over all values in VV (could be 1)
+        V2 = []
+        for v in VV:
+
+            # To convert string types
+            if type(v) == str:
+                if v.lower() in str_true:
                     V2.append(True)
-                elif v.lower() in ['false', 'f', 'n', 'no', 'nah', 'nope']:
+                elif v.lower() in str_false:
                     V2.append(False)
                 else:
                     BOOL_FAIL = True
                     V2.append(v)
+
+            # To convert integer types (do_int = True)
+            elif type(v) == int and do_int:
+                if v == 1:
+                    V2.append(True)
+                elif v == 0:
+                    V2.append(False)
+                else:
+                    BOOL_FAIL = True
+                    V2.append(v)
+
+            # To propagate a boolean input
+            elif type(v) == bool:
+                V2.append(v)
+ 
+            # For everything else, return the original value and set BOOL_FAIL=True
+            else:
+                BOOL_FAIL = True
+                V2.append(v)
+
+        # If scalar value, convert back from list
+        if scalar:
+            V2 = V2[0]
+
+    # If V is None, enter here.
     else:
         BOOL_FAIL = True
         V2 = None
 
+    # Print some information, if required
     if BOOL_FAIL and not quiet:
         print("WARNING: Did not convert at least 1 value to boolean because it was not an acceptable input.")
 
+    # Return the boolean value(s)
     return(V2);
 
 
@@ -390,6 +432,19 @@ def file_remove(FILE,quiet=True):
 
 
 ###########################################################
+def list_convert(L,dtype):
+    """Convert a list to a particular type.
+    @param L:     the list
+    @kwarg dtype: the type to convert to
+    @return:      the converted list
+    """
+    if isinstance(L, list):
+        return([list_convert(x,dtype) for x in L]);
+    return(dtype(L));
+
+
+
+###########################################################
 def list_find(LI,EXP):
     """Find a value within a list
     @param LI:  the input list
@@ -451,7 +506,7 @@ def parse_spawn_args():
     """Parse the input arguments for the GPLOT spawn
     @return args: an object containing the input arguments.
     """
-    ap.configargparse.ArgParser(description='GPLOT Spawn Parser')
+    ap = configargparse.ArgParser(description='GPLOT Spawn Parser')
     ap.add_argument("-e", "--expt", required=True, help="The GPLOT experiment")
     ap.add_argument("-o", "--gpout", required=True, help="The GPLOT output directory")
     ap.add_argument("-m", "--module", required=True, help="The GPLOT module")
