@@ -65,6 +65,7 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 		*Add alias for python:	alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
 		*Add python to path:	export PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
 		Build the centroid module:
+                                        mkdir -p python/modules
 					cd python/modules
 					python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
 
@@ -72,7 +73,8 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 		*Add alias for python:	alias python="/scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/python"
 		*Add python to path:	export PATH=/scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/:$PATH
 		Build the centroid module:
-					cd python/modules
+					mkdir -p python/modules
+                                        cd python/modules
 					python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
 
 
