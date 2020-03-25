@@ -11,7 +11,9 @@ import f90nml
 
 # Import GPLOT modules
 import gp_database as db
+import gp_log as log
 import gp_util as gpu
+from gp_log import Main_Logger
 
 
 """
@@ -37,9 +39,10 @@ Example call: For Internal Calls Only
 Modification Log:
 2020-Feb-27 -- GJA changed the file name from namelist.py to gp_namelist.py
 2020-Mar-12 -- GJA updated nml_pd_extract_value() to assign blank strings as None
+2020-Mar-19:   GJA added logging capabilities.
 """
 
-__version__ = '0.2.1';
+__version__ = '0.2.2';
 
 
 
@@ -61,6 +64,9 @@ class Namelist_Launch:
         @kwarg NO_FAIL: logical to not allow continuation if the namelist is not found.
         @kwargs:        other keyword arguments may be passed
         """
+
+        # Check for the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
 
         # Define basic information like paths, the namelist, and the experiment.
         self.EXPT = EXPT
@@ -84,19 +90,15 @@ class Namelist_Launch:
 
         # GPLOT Module submission check
         self.MOD_ID = []
-        if self.DO_MAPS:
-            self.MOD_ID.append("maps");
-        if self.DO_STATS:
-            self.MOD_ID.append("stats");
-        if self.DO_SHIPS:
-            self.MOD_ID.append("ships");
-        if self.DO_POLAR:
-            self.MOD_ID.append("polar");
+        if self.DO_MAPS:   self.MOD_ID.append("maps");
+        if self.DO_STATS:  self.MOD_ID.append("stats");
+        if self.DO_SHIPS:  self.MOD_ID.append("ships");
+        if self.DO_POLAR:  self.MOD_ID.append("polar");
 
         # Get system and project information for batch submission
         KEY = kwargs.get('BATCH_KEY',"system")
         self.BATCH_MODE = self.nml_get_value(KEY,'batch_mode','background')
-        print("MSG: Batch submission mode --> "+self.BATCH_MODE)
+        L.logger.info("Batch submission mode --> "+self.BATCH_MODE)
         self.SYS_ENV = self.nml_get_value(KEY,'sys_env','jet')
         if self.BATCH_MODE.lower() == 'sbatch':
             self.CPU_ACCT = self.nml_get_value(KEY,'cpu_acct','MISSING')
@@ -157,26 +159,30 @@ class Namelist_Launch:
 
 
     ###########################################################
-    def nml_parse_config(self,CONFS,NO_FAIL=True):
+    def nml_parse_config(self,CONFS,NO_FAIL=True,**kwargs):
         """Return a list of values for a specific namelist key.
         @param CONFS: the list of configuration files
         @kwargs NO_FAIL: logical to not allow continuation if the namelist is not found.
+        @kwargs:        extra keywords are allowed
         """
+
+        # Check for the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
     
         self.CONFIG = cparse.ConfigParser()
         FOUND_CONF = False
         for C in CONFS:
             if os.path.exists(self.NMLDIR+C):
-                print("MSG: Found this namelist --> "+self.NMLDIR+C)
+                L.logger.info("Found this namelist --> "+self.NMLDIR+C)
                 self.CONFIG.read(self.NMLDIR+C)
                 FOUND_CONF = True
             elif os.path.exists(C):
-                print("MSG: Found this namelist --> "+C)
+                L.logger.info("Found this namelist --> "+C)
                 self.CONFIG.read(C)
                 FOUND_CONF = True
 
         if not FOUND_CONF and NO_FAIL:
-            print("ERROR: No namelists found --> "+CONFS)
+            L.logger.error("No namelists found --> "+CONFS)
             sys.exit(2)
 
         self.CONF_KEYS = self.nml_get_keys(self.CONFIG)
@@ -185,10 +191,16 @@ class Namelist_Launch:
 
 
     ###########################################################
-    def nml_db_initialize(self,destroy=False):
+    def nml_db_initialize(self,destroy=False,**kwargs):
         """Initialize the namelist table in the database
+        @param self:    the instance of the class (no need to pass this)
         @kwarg destroy: logical argument to delete table if it exists
+        @kwargs:        extra keywords are allowed
         """
+
+        # Check for the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+
         # Define variables
         self.DB_FILE = db.db_name(self.GPOUT,self.EXPT)
         CNAME = nml_db_columns()[0]
@@ -200,7 +212,7 @@ class Namelist_Launch:
         # Delete the table if it already exists
         if destroy:
             db.delete_table(self.TBL,CONN=self.CONN,DFILE=self.DB_FILE,close=False)
-            print("MSG: Deleting database table --> "+self.TBL)
+            L.logger.info("Deleting database table --> "+self.TBL)
 
         # Create the table. Duplicate entries are automatically ignored
         db.create_table(self.TBL,CNAME,CTYPE,CONN=self.CONN,DFILE=self.DB_FILE,close=False)
@@ -210,9 +222,8 @@ class Namelist_Launch:
         N = 1
         for K in self.CONF_KEYS:
             # Check if this key has entries
-            if len(self.CONFIG[K].keys()) == 0:
-                continue
-            print("MSG: Adding key '"+K+"' to the database.")
+            if len(self.CONFIG[K].keys()) == 0:  continue
+            L.logger.info("Adding key '"+K+"' to the database.")
 
             # Add each row of data for this key to DATA
             DATA = [];
@@ -269,10 +280,14 @@ class Namelist_Retrieve:
         @param DIR:   the Directories class object
         @param EXPT:  the experiment name
         @param DFILE: the database file (full path)
+        @kwarg L:     the logger object
         @kwarg MOD:   the module nickname
         @kwargs:      other keyword arguments may be passed
         """
-        print("MSG: Construction zone for Class Namelist_Retrieve.")
+
+        # Try to log using the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+        L.logger.info("Construction zone for Class Namelist_Retrieve.")
 
         # Define basic information like paths, the namelist, and the experiment.
         self.EXPT = EXPT
@@ -293,9 +308,6 @@ class Namelist_Retrieve:
 
         # Retrieve the database as a DataFrame
         self.nml_db_retrieve()
-
-        #print(self.D['section'])
-        #print(self.D.loc[self.D.entry=='dsource'].value)
 
         # Define modules variables
         SEC = 'modules'
@@ -410,36 +422,42 @@ class Namelist_Retrieve:
 
 
     ###########################################################
-    def nml_enesmble_check(self,EN=0):
+    def nml_enesmble_check(self,EN=0,**kwargs):
         """Check if the namelist specifies an ensemble
         @param self: the instance of the class (no need to pass this)
         @kwarg EN:   the ensemble ID number. Set to 99 if no ensemble
+        @kwargs:     extra keywords are allowed
         """
+
+        # Check for the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+
         try:
-            if int(EN) == 99:
-                self.IS_ENSEMBLE = False
+            if int(EN) == 99:  self.IS_ENSEMBLE = False
             else:
                 self.IS_ENSEMBLE = True
-                #self.DATADIR = self.DATADIR+"/%02d/"%EN
-                #if not os.exists.isdir(self.DATADIR):
-                #    print("ERROR: Ensemble directory does not exist --> "+self.DATADIR)
-                #    sys.exit(2)
-                print("MSG: Working on ensemble member {:02d}".format(EN))
+                L.logger.info("Working on ensemble member {:02d}".format(EN))
         except TypeError as e:
-            print(e)
+            L.logger.error(e)
         finally:
             return;
 
 
     ###########################################################
-    def nml_pd_extract_value(self,E=None,S=None,DEF=None):
+    def nml_pd_extract_value(self,E=None,S=None,DEF=None,**kwargs):
         """Extract the first matching value from a pandas DateFrame
         @param self: the instance of the class (no need to pass this)
         @kwarg E:    the input entry
         @kwarg S:    the input section
         @kwarg DEF:  the default value if not entry is found
+        @kwargs:     extra keywords are allowed
         @return V:   the return value
         """
+
+        # Check for the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+
+        # Decide how to find the value
         if E is not None and S is not None:
             V =  self.D.loc[self.D.section==S].loc[self.D.entry==E]#.value.iloc[0]
         elif E is not None and S is None:
@@ -447,7 +465,7 @@ class Namelist_Retrieve:
         elif E is None and S is not None:
             V =  self.D.loc[self.D.section==S]
         else:
-            print("ERROR: Can't search for namelist value without section & entry.")
+            L.logger.error("Can't search for namelist value without section & entry.")
             sys.exit(2)
 
         # Check if the database returned nothing
@@ -473,17 +491,22 @@ class Namelist_Retrieve:
 
 
     ###########################################################
-    def nml_module_input(self,M):
+    def nml_module_input(self,M,**kwargs):
         """Extract the first matching balue from a pandas DateFrame
         @param self: the instance of the class (no need to pass this)
         @kwarg M:    the module nickname
+        @kwargs:     extra keywords are allowed
         """
+
+        # Check for the logging object
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+
         if M is not None:
             if M == 'maps':
                 self.DOMAIN = self.nml_db_value_split(self.nml_pd_extract_value(E='domain',S='maps'))
-                self.TIER = self.nml_db_value_split(self.nml_pd_extract_value(E='tier',S='maps'))
-                if not isinstance(self.TIER,list):
-                    self.TIER = [self.TIER]
+                #self.TIER = self.nml_db_value_split(self.nml_pd_extract_value(E='tier',S='maps'))
+                #if not isinstance(self.TIER,list):
+                #    self.TIER = [self.TIER]
                 self.ATCF_REQD = self.nml_pd_extract_value(E='atcf_reqd',S='maps')
     
             elif M == 'stats':
@@ -510,7 +533,7 @@ class Namelist_Retrieve:
                 self.DO_INTERP = self.nml_pd_extract_value(E='do_interp',S='stats',DEF=False)
     
             elif M == 'ships':
-                print("WARNING: No namelist options for GPLOT module 'ships'")
+                L.logger.warning("No namelist options for GPLOT module '"+M+"'")
     
             elif M == 'polar':
                 self.MORIG = self.nml_pd_extract_value(E='resolution',S='polar')
@@ -518,6 +541,135 @@ class Namelist_Retrieve:
                 self.MORIG = self.nml_pd_extract_value(E='levs',S='polar')
 
         return;
+
+
+    ###########################################################
+    def nml_setup_filename(self):
+        """Define information about the data file name
+        @param self: the instance of the class (no need to pass this)
+        """
+        # Get file prefix information from table or namelist
+        if self.DTAG is None:
+            self.FILE_PRE = gpu.data_table_read(self.TBLDIR+"/FilePrefix.dat",'D0'+str(self.NEST),'DSOURCE',self.DSOURCE)
+        else:
+            self.FILE_PRE = self.DTAG
+
+        # Get file hour string, format information from table or namelist
+        self.FILE_FHR = gpu.data_table_read(self.TBLDIR+"/FileTimeFormat.dat",'HRSTR','DSOURCE',self.DSOURCE)
+        if self.HR_FMT is None:
+            self.FILE_HFMT = gpu.data_table_read(self.TBLDIR+"/FileTimeFormat.dat",'HRFMT','DSOURCE',self.DSOURCE)
+        else:
+            self.FILE_HFMT = self.HR_FMT
+
+        # Get file suffix information from table or namelist
+        if self.DEXT is None:
+            self.FILE_SUF = gpu.data_table_read(self.TBLDIR+"/FileSuffix.dat",'SUFFIX','DSOURCE',self.DSOURCE)
+        else:
+            self.FILE_SUF = self.DEXT
+
+        # Now, do the same for the comparison dataset, if applicable
+        if self.DO_COMPARE:
+
+            # Get file prefix information from table or namelist
+            if self.DTAG2 is None:
+                self.FILE_PRE2 = gpu.data_table_read(self.TBLDIR+"/FilePrefix.dat",'D0'+str(self.NEST),'DSOURCE',self.DSOURCE2)
+            else:
+                self.FILE_PRE2 = self.DTAG2
+
+            # Get file hour string, format information from table or namelist
+            self.FILE_FHR2 = gpu.data_table_read(self.TBLDIR+"/FileTimeFormat.dat",'HRSTR','DSOURCE',self.DSOURCE2)
+            if self.HR_FMT2 is None:
+                self.FILE_HFMT2 = gpu.data_table_read(self.TBLDIR+"/FileTimeFormat.dat",'HRFMT','DSOURCE',self.DSOURCE2)
+            else:
+                self.FILE_HFMT2 = self.HR_FMT2
+    
+            # Get file suffix information from table or namelist
+            if self.DEXT2 is None:
+                self.FILE_SUF2 = gpu.data_table_read(self.TBLDIR+"/FileSuffix.dat",'SUFFIX','DSOURCE',self.DSOURCE2)
+            else:
+                self.FILE_SUF2 = self.DEXT2
+
+
+    ###########################################################
+    def nml_setup_nest(self,DM,**kwargs):
+        """Define the model nest for this particular domain
+        @param self: the instance of the class (no need to pass this)
+        @param DM:   the GPLOT domain
+        @kwargs:     extra keywords are allowed
+        """
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+
+        # Get nest information from data table
+        self.NEST = gpu.data_table_read(self.TBLDIR+"/DomainInfo.dat",'NEST','DOMAIN',DM)
+        if self.NEST is None:
+            L.logger.warning("Domain "+DM+" not found in "+self.TBLDIR+"/DomainInfo.dat. Assuming NEST=1.")
+            self.NEST=1
+
+
+    ###########################################################
+    def find_module_nml(self,E,M,DM,SORT_BY_PRIO=True,**kwargs):
+        """Find the module namelist by searching through preset namelist naming structure
+        @param self: the instance of the class (no need to pass this)
+        @param E:            the GPLOT experiment
+        @param M:            the GPLOT module
+        @param DM:           the GPLOT domain
+        @kwarg SORT_BY_PRIO: logical for sorting by prioity
+        @kwargs:             extra keywords are allowed
+        """
+        L = kwargs.get('logger',Main_Logger('Namelist'))
+
+        # The list of possible module namelist names, in order of priority
+        self.NMODLIST = ['namelist.'+M+'.'+E+'.'+DM,'namelist.'+M+'.'+DM,'namelist.'+M+'.default']
+
+        # Loop over the possible namelists until one is found.
+        for N in self.NMODLIST:
+            if os.path.exists(self.NMLDIR+N):
+                self.NMLMOD = gpu.df_create([gpu.data_table_read(self.NMLDIR+N,A='FILE_NAME'),gpu.data_table_read(self.NMLDIR+N,A='PLOT_ON',IS_BOOL=True),gpu.data_table_read(self.NMLDIR+N,A='PRIO')],['FILE_NAME','PLOT_ON','PRIO'])
+                L.logger.info("Found this module namelist --> "+self.NMLDIR+N)
+                break
+
+        # Perform checks on NMLMOD
+        if hasattr(self.NMLMOD,'empty'):  EMPTY = self.NMLMOD.empty
+        else:                             EMPTY = False
+
+        if EMPTY:
+            L.logger.error("Module namelist not found. Can't continue.")
+            sys.exit(2)
+
+        # Sort by PLOT_ON=True, then by priority, if requested
+        self.NMLMOD = self.NMLMOD[self.NMLMOD['PLOT_ON']]
+        if SORT_BY_PRIO:
+            self.NMLMOD = self.NMLMOD.sort_values(by=['PRIO']).sort_index()
+            self.NMLMOD = self.NMLMOD[self.NMLMOD['PRIO']<=self.PRIO_CUTOFF]
+
+
+
+    ###########################################################
+#    def find_full_input_dir(self,CY=None,TC=None,EN=None):
+#        """
+#        @param self: the instance of the class (no need to pass this)
+#        @kwarg CY:   the GPLOT cycle
+#        @kwarg TC:   the GPLOT tropical cyclone
+#        @kwarg EN:   the GPLOT ensemble member
+#        """
+#        if EN == 99:  EN = None
+#
+#        if CY is None and TC is None and EN is None:
+#
+#        elif CY is not None:
+#
+#        elif TC is not None:
+#
+#        elif EN is not None:
+#
+#        elif CY is not None and TC is not None:
+#
+#        elif CY is not None and TC is not None and EN is not None:
+#
+#        elif CY is not None and EN not in [None,99]:
+#
+#        elif TC is not None and EN not in [None,99]:
+
 
 
 
@@ -541,12 +693,17 @@ def nml_master_default(EXPT):
 
 
 ###########################################################
-def nml_get_opt(NML,OPT):
+def nml_get_opt(NML,OPT,**kwargs):
     """Read the namelist and search for a specific option.
     @param NML:  the namelist
     @param OPT:  the namelist option, must begin the line
+    @kwargs:     extra keywords are allowed
     @return VAR: the value of the namelist option, could be MISSING
     """
+
+    # Check for the logging object
+    L = kwargs.get('logger',Main_Logger('Namelist'))
+
     VAR = "MISSING"
     with open(NML,"r") as f:
         for line in f.readlines():
@@ -556,5 +713,5 @@ def nml_get_opt(NML,OPT):
     if type(VAR) == str:
         VAR = VAR.strip('"')
     if VAR == "MISSING":
-        print("WARNING: Could not find "+OPT+" in "+NML)
+        L.logger.warning("Could not find "+OPT+" in "+NML)
     return(VAR);

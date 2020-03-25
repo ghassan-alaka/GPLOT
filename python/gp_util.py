@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
 # Import necessary modules
-import os, re, shutil, stat, sys
+import os, re, shutil, stat, sys, time
 import configargparse
+import logging
 import pandas as pd
 from random import randint
 #import sqlite3
 #from sqlite3 import Error
+
+import gp_log
+from gp_log import Main_Logger
 
 """
 GPLOT Package util
@@ -22,9 +26,9 @@ To learn more about the AOML/Hurricane Research Division, please visit:
   https://www.aoml.noaa.gov/our-research/hurricane-research-division/
 
 Created By:    Ghassan Alaka Jr.
-Modified By:   
+Modified By:   Ghassan Alaka Jr.
 Date Created:  February 14, 2020
-Last Modified: March 12, 2020
+Last Modified: March 18, 2020
 
 Example call: For Internal Calls Only
 
@@ -34,9 +38,12 @@ Modification Log:
                GJA created parse_spawn_args() to parse arguments for GPLOT spawn jobs
                GJA expanded the functionality of convert_boolean() so that it can
                  convert strings and integers to boolean.
+2020-Mar-18 -- GJA created time_since_modified() to print the file/directory age
+                 in seconds. This was motivated by the need to track the age of
+                 ATCF Files
 """
 
-__version__ = '0.2.2';
+__version__ = '0.3.0';
 
 
 
@@ -46,7 +53,14 @@ class Directories:
        Most importantly, this class defined GPLOT_DIR.
     """
 
-    def __init__(self):
+    def __init__(self,L=None):
+
+        # Setup logging
+        if L is not None:
+            self.logger = L.logger
+        else:
+            self.logger = Main_Logger('Utilities').logger
+            #self.logger = self.logger.logger
 
         # GPLOT_DIR must be set in the environment
         self.GPLOT_DIR = self.gplot_check()
@@ -68,13 +82,13 @@ class Directories:
         GPLOT_DIR = os.environ[gvar]
         if not GPLOT_DIR:
             GPLOT_DIR = "/home/"+os.environ['USER']+"/GPLOT"
-            print("WARNING: Variable GPLOT_DIR not found in environment.")
-            print("MSG: Setting GPLOT_DIR --> "+GPLOT_DIR)
+            self.logger.warning("Variable GPLOT_DIR not found in environment.")
+            self.logger.info("Setting GPLOT_DIR --> "+GPLOT_DIR)
         else:
-            print("MSG: GPLOT_DIR found in environment --> "+GPLOT_DIR)
+            self.logger.info("GPLOT_DIR found in environment --> "+GPLOT_DIR)
 
         if not os.path.exists(GPLOT_DIR):
-            print("ERROR: GPLOT_DIR not found. Can't continue.")
+            self.logger.error("GPLOT_DIR not found. Can't continue.")
             sys.exit(2)
 
         return(GPLOT_DIR);
@@ -205,16 +219,20 @@ def atcf_read(F,COLS=None,DT=None,FHR_S=None,FHR_E=None, \
 
 
 ###########################################################
-def convert_boolean(V,quiet=True,do_int=False):
+def convert_boolean(V,quiet=True,do_int=False,**kwargs):
     """Convert input to boolean values if it matches the list.
     @param V:      the input value
     @kwarg do_int: logical to allow integer conversions
     @kwarg quiet:  logical to determine print statements
+    @kwargs:       extra keywords are allowed
     @return V2:    the boolean, or the original input value
     Notes: BOOL_FAIL could become an attribute of V2. To do this,
            V2 must become a class. I'm not sure that level of
            complexity is warranted here.
     """
+
+    # Create the logging object
+    L = kwargs.get('logger',Main_Logger('Utilities'))
 
     BOOL_FAIL = False
     if V is not None:
@@ -237,27 +255,22 @@ def convert_boolean(V,quiet=True,do_int=False):
 
             # To convert string types
             if type(v) == str:
-                if v.lower() in str_true:
-                    V2.append(True)
-                elif v.lower() in str_false:
-                    V2.append(False)
+                if v.lower() in str_true:     V2.append(True)
+                elif v.lower() in str_false:  V2.append(False)
                 else:
                     BOOL_FAIL = True
                     V2.append(v)
 
             # To convert integer types (do_int = True)
             elif type(v) == int and do_int:
-                if v == 1:
-                    V2.append(True)
-                elif v == 0:
-                    V2.append(False)
+                if v == 1:    V2.append(True)
+                elif v == 0:  V2.append(False)
                 else:
                     BOOL_FAIL = True
                     V2.append(v)
 
             # To propagate a boolean input
-            elif type(v) == bool:
-                V2.append(v)
+            elif type(v) == bool:  V2.append(v)
  
             # For everything else, return the original value and set BOOL_FAIL=True
             else:
@@ -265,8 +278,7 @@ def convert_boolean(V,quiet=True,do_int=False):
                 V2.append(v)
 
         # If scalar value, convert back from list
-        if scalar:
-            V2 = V2[0]
+        if scalar:  V2 = V2[0]
 
     # If V is None, enter here.
     else:
@@ -275,10 +287,32 @@ def convert_boolean(V,quiet=True,do_int=False):
 
     # Print some information, if required
     if BOOL_FAIL and not quiet:
-        print("WARNING: Did not convert at least 1 value to boolean because it was not an acceptable input.")
+        L.logger.warning("Did not convert at least 1 value to boolean because it was not an acceptable input.")
 
     # Return the boolean value(s)
     return(V2);
+
+
+
+###########################################################
+def df_create(D1,CN1):
+    """Create a pandas DataFrame
+    @param D1:  the input lists, each sublist corresponds to
+                  a column in the DataFrame
+    @param CN1: the column names in the DataFrame
+    @return:    the pandas DataFrame
+    """
+    # Make sure the inputs are lists
+    if type(D1) != list:  D1 = [D1]
+    if type(CN1) != list: CN1 = [CN1]
+
+    # Create a data dictionary to become the DataFrame
+    DATA = {}
+    for (D,C) in zip(D1,CN1):
+        DATA.update( {C : D} )
+
+    # Return the DataFrame
+    return(pd.DataFrame(DATA));
 
 
 
@@ -306,17 +340,19 @@ def data_table_read(F,A=None,C=None,R=None,IS_BOOL=False):
 
 
 ###########################################################
-def dir_create(DIR,quiet=True):
+def dir_create(DIR,quiet=True,**kwargs):
     """Create a directory
     @param DIR:   the directory to be created
     @kwarg quiet: logical to determine print statements
+    @kwargs:      extra keywords are allowed.
     """
+    L = kwargs.get('logger',Main_Logger('Utilities'))
     if not os.path.exists(DIR):
         os.mkdir(DIR)
         if not quiet:
-            print("MSG: Successfully created directory --> "+DIR)
+            L.logger.info("Successfully created directory --> "+DIR)
     elif not quiet:
-         print("WARNING: Directory already exists --> "+DIR)
+         L.logger.warning("Directory already exists --> "+DIR)
     return;
 
 
@@ -344,23 +380,25 @@ def dir_find(DIR,EXP,FULL=False):
 
 
 ###########################################################
-def dir_remove(DIR,quiet=True):
+def dir_remove(DIR,quiet=True,**kwargs):
     """Create a directory
     @param DIR:   the directory to be created
     @kwarg quiet: logical to determine print statements
+    @kwargs:      extra keywords are allowed
     """
+    L = kwargs.get('logger',Main_Logger('Utilities'))
     if os.path.exists(DIR):
         shutil.rmtree(DIR)
         if not quiet:
-            print("MSG: Successfully removed directory --> "+DIR)
+            L.logger.info("Successfully removed directory --> "+DIR)
     elif not quiet:
-        print("WARNING: Directory does not exist --> "+DIR)
+        L.logger.warning("Directory does not exist --> "+DIR)
     return;
 
 
 
 ###########################################################
-def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False):
+def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False,**kwargs):
     """Ccopy a file in the system.
     @param SRC:       the source file path
     @param DEST:      the destination file path
@@ -368,6 +406,7 @@ def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False):
                       overwritten if it exists.
     @kwarg quiet:     logical to determine print statements
     @kwarg execute:   logical for giving copied file execute permissions
+    @kwargs:          extra keywords are allowed
     """
 
     # Check if the destination file exists
@@ -376,9 +415,9 @@ def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False):
             os.remove(DEST)
             shutil.copy(SRC,DEST)
         else:
-            print("WARNING: Destination file already exists --> "+DEST)
-            print("WARNING: Please select overwrite=True to avoid this.")
-            print("WARNING: Will continue, but success is questionable.")
+            L.logger.warning("Destination file already exists --> "+DEST)
+            L.logger.warning("Please select overwrite=True to avoid this.")
+            L.logger.warning("Will continue, but success is questionable.")
             #sys.exit(2)
             return;
     else:
@@ -388,24 +427,30 @@ def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False):
         os.chmod(DEST,stat.S_IRWXU)
 
     if not quiet:
-        print("MSG: Successfully copied "+SRC+" --> "+DEST)
+        L.logger.info("Successfully copied "+SRC+" --> "+DEST)
         if execute:
-            print("MSG: "+DEST+" now has execute permissions.")
+            L.logger.info(DEST+" now has execute permissions.")
 
     return;
 
 
 
 ###########################################################
-def file_find(DIR,EXP,FULL=False):
+def file_find(DIR,EXP,FULL=False,FIRST_DIR=False):
     """Find directories
     @param DIR: find matching directories under this one
     @param EXP: the regular expression to find directories
+    @kwarg FULL: logical to return with the full path
+    @kwarg FIRST_DIR: logical to return the first directory only
     @return L:  the list of matching files
     """
     L = []
     rc = re.compile(EXP)
     for dpath, dnames, fnames in os.walk(DIR):
+        if FIRST_DIR:
+            if not L:  dpath1 = dpath
+            else:
+                if dpath != dpath1:  break
         if FULL:
             if dpath[-1] == '/':
                 L = L + [dpath+fn for fn in fnames if rc.match(fn)]
@@ -418,15 +463,16 @@ def file_find(DIR,EXP,FULL=False):
 
 
 ###########################################################
-def file_remove(FILE,quiet=True):
+def file_remove(FILE,quiet=True,**kwargs):
     """
     @param FILE:  the file (full path) to be removed
     @kwarg quiet: logical to determine print statements
     """
+    L = kwargs.get('logger',Main_Logger('Utilities'))
     if os.path.exists(FILE):
         os.remove(FILE)
     if not quiet:
-        print("MSG: Successfully removed "+FILE)
+        L.logger.info("Successfully removed "+FILE)
     return;
 
 
@@ -441,6 +487,16 @@ def list_convert(L,dtype):
     if isinstance(L, list):
         return([list_convert(x,dtype) for x in L]);
     return(dtype(L));
+
+
+
+###########################################################
+def list_filter_str(S,SUB):
+    """Filter a list based on a substring
+    @param S:   the list of strings
+    @param SUB: the substring to filter by
+    """
+    return([str for str in S if any(x in str for x in SUB)]);
 
 
 
@@ -529,3 +585,48 @@ def random_N_digits(n):
     start = 10**(n-1)
     finish = (10**n)-1
     return randint(start,finish)
+
+
+
+###########################################################
+def string_format_int(N):
+    """Returns string formatters for integers
+    @param N: the number of total padded digits
+    @return:  the format statement
+    """
+    if type(N) != int:  N = int(N)
+    if N == 2:    return("{0:0=2d}");
+    elif N == 3:  return("{0:0=3d}");
+    elif N == 4:  return("{0:0=4d}");
+
+
+
+###########################################################
+def time_since_modified(FD,VB=False,**kwargs):
+    """Get the time since last modified
+    @param FD: the file or directory, could be an array
+    @kwarg VB: logical that controls verbosity
+    @kwargs:   extra keyword arguments can be passed
+    @return T: the time since last modified (seconds)
+    """
+
+    L = kwargs.get('logger',Main_Logger('Utilities'))
+
+    # The type should be a list of strings
+    if type(FD) == str:
+        FD = [FD]
+
+    # Loop over all elements, could be one
+    T = []
+    for (F,N) in zip(FD,range(len(FD))):
+        try:
+            T.append(int(time.time() - os.path.getmtime(F)))
+        except FileNotFoundError as e:
+            L.logger.error(e)
+            T.append(None)
+
+        if VB:
+            L.logger.info(F+" is "+T[N]+"s old.")
+
+    # Return the list of file/directory ages
+    return(T);

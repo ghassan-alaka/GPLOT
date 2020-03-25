@@ -1,21 +1,19 @@
 #!/usr/bin/env python
 
 # Import necessary modules
-#import f90nml
+import os, re, shutil, sys
 import numpy as np
-import os
-import re
-import shutil
-import sys
 
 # Import GPLOT modules
 import gp_database as db
 import gp_execute as xc
-import gp_util as gpu
+import gp_log as log
 import gp_namelist as nm
-from gp_util import Directories
+import gp_util as gpu
 from gp_namelist import Namelist_Launch
 from gp_namelist import Namelist_Retrieve
+from gp_log import Main_Logger
+from gp_util import Directories
 
 """
 GPLOT Driver launcher
@@ -49,20 +47,21 @@ __version__ = '0.2.1';
 
 
 ###########################################################
-def submit_spawn(N):
+def submit_spawn(N,L):
     """This subroutine handles the GPLOT spawn script submission
        for each module.
-    @param N: pyGPLOT Namelist_Launch object
+    @param N: the Namelist_Launch object
+    @param L: the Main_Logger object
     """
 
     if len(N.MOD_ID) < 1:
-        print("ERROR: At least one GPLOT module should be loaded.")
+        L.logger.error("At least one GPLOT module should be loaded.")
         sys.exit(2)
 
     # Loop over GPLOT modules
-    print("MSG: The number of GPLOT modules = "+str(len(N.MOD_ID)))
+    L.logger.info("The number of GPLOT modules = "+str(len(N.MOD_ID)))
     for MOD in N.MOD_ID:
-        print("MSG: Working on submission for GPLOT Module "+MOD.upper())
+        L.logger.info("Working on submission for GPLOT Module "+MOD.upper())
 
         # Define spawn-specific variables:
         #   SPAWNJOB   --> the job name, also used to create files
@@ -96,30 +95,30 @@ def submit_spawn(N):
 
             # Submit the job unless a matching job was found.
             if id is not None:
-                print("MSG: Batch job(s) already exist(s) --> "+' '.join(id))
-                print("MSG: Not submitting anything for "+MOD.upper()+".")
+                L.logger.info("Batch job(s) already exist(s) --> "+' '.join(id))
+                L.logger.info("Not submitting anything for "+MOD.upper()+".")
             else:
-                print("MSG: Submitting "+SPAWNFILE2+" to the slurm batch scheduler.")
-                print(PRE+"sbatch "+CMD_BASE+" > "+SPAWNLOG)
+                L.logger.info("Submitting "+SPAWNFILE2+" to the slurm batch scheduler.")
+                L.logger.info("command:  "+PRE+"sbatch "+CMD_BASE+" > "+SPAWNLOG)
                 xc.exec_subprocess(PRE+"sbatch "+CMD_BASE, GDIR=N.GPLOT_DIR)
 
         elif N.BATCH_MODE.lower() == 'foreground':
             CMD_BASE = SPAWNFILE1+CMD_BASE
-            print("MSG: Submitting "+SPAWNFILE1+" to the foreground.")
-            print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG)
+            L.logger.info("Submitting "+SPAWNFILE1+" to the foreground.")
+            L.logger.info("command: "+PRE+CMD_BASE+" > "+SPAWNLOG)
             xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG, GDIR=N.GPLOT_DIR)
 
         elif N.BATCH_MODE.lower() == 'background':
             CMD_BASE = SPAWNFILE1+CMD_BASE
-            print("MSG: Submitting "+SPAWNFILE1+" to the background.")
-            print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
+            L.logger.info("Submitting "+SPAWNFILE1+" to the background.")
+            L.logger.info("command: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
             xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
             #xc.exec_subprocess("echo $GPLOT_DIR ; python -V > "+SPAWNLOG)
 
         else:
             CMD_BASE = SPAWNFILE1+CMD_BASE
-            print("MSG: Defaulting to a background job. Submitting "+SPAWNFILE1+".")
-            print("MSG: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
+            L.logger.info("Defaulting to a background job. Submitting "+SPAWNFILE1+".")
+            L.logger.info("command: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
             xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
 
 
@@ -127,17 +126,20 @@ def submit_spawn(N):
 ###########################################################
 def main():
 
+    # Set logging
+    L = Main_Logger('GPLOT_launcher')
+
     # Get directories
     DIRS = Directories()
 
     # Parse inpurt arguments
     LARGS = gpu.parse_launch_args()
     EXPTS = LARGS.expt.split(',')
-    print("MSG: Found these experiments --> "+repr(EXPTS))
+    L.logger.info("Found these experiments --> "+repr(EXPTS))
 
     # Looping over all experiments. Could be one.
     for EXPT in EXPTS:
-        print("MSG: Working on this experiment --> "+EXPT)
+        L.logger.info("Working on this experiment --> "+EXPT)
 
         # Get the database file name from the GPLOT table
         DB_FILE = db.db_retrieve(DIRS.TBLDIR+'/DBInfo.dat',EXPT)
@@ -164,13 +166,13 @@ def main():
             NML = Namelist_Retrieve(DIRS,EXPT,DB_FILE)
 
         if LARGS.verbose:
-            print(db.select_rows('namelist_master','*',DFILE=NML.DB_FILE))
+            L.logger.info(db.select_rows('namelist_master','*',DFILE=NML.DB_FILE))
 
         # Loop over all MOD_IDs and submit spawn jobs.
         if LARGS.spawn:
-            submit_spawn(NML)
+            submit_spawn(NML,L)
 
-        print("MSG: Done working on this experiment --> "+EXPT)
+        L.logger.info("Done working on this experiment --> "+EXPT)
 
 
 

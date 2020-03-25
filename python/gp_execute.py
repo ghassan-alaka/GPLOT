@@ -3,7 +3,9 @@
 # Import necessary modules
 import os, subprocess, sys
 import numpy as np
+import gp_log as log
 import gp_util as gpu
+from gp_log import Main_Logger
 
 """
 GPLOT Package execute
@@ -19,31 +21,36 @@ To learn more about the AOML/Hurricane Research Division, please visit:
   https://www.aoml.noaa.gov/our-research/hurricane-research-division/
 
 Created By:    Ghassan Alaka Jr.
-Modified By:
+Modified By:   Ghassan Alaka Jr.
 Date Created:  February 14, 2020
-Last Modified: February 27, 2020
+Last Modified: March 19, 2020
 
 Example call: For Internal Calls Only
 
 Modification Log:
-2020-Feb-27: GJA changed the file name from execute.py to gp_execute.py
-
+2020-Feb-27 -- GJA changed the file name from execute.py to gp_execute.py
+2020-Mar-19 -- GJA added logging capabilities
 """
 
-__version__ = '0.2.0';
+__version__ = '0.2.1';
 
 
 
 ###########################################################
-def exec_subprocess(*args,GDIR=None):
+def exec_subprocess(*args,GDIR=None,**kwargs):
     """Call a shell subprocess.
     @param args: at least 1 string containing information on what to run
     @kwarg GDIR: the GPLOT source directory,
                  if it is to be changed in the environment
+    @kwargs:     extra keywords are allowed
     """
+
+    # Get the logger object
+    L = kwargs.get('logger',Main_Logger('Execute'))
+
     # Check that at least 1 argument has been supplied.
     if len(args[:]) < 1:
-        print("ERROR: subprocess needs at least 1 argument")
+        L.logger.error("Subprocess needs at least 1 argument")
         sys.exit(2)
 
     # If necessary, assign the new GPLOT_DIR to the environment
@@ -64,17 +71,19 @@ def exec_subprocess(*args,GDIR=None):
 def exec_subprocess_check(*args):
     """Call a shell subprocess and capture the result
     @param args: at least 1 string containing information on what to run
+    @kwargs:     extra keywords are allowed
     @return R:   the output of the shell command
     """
+
+    # Get the logger object
+    L = kwargs.get('logger',Main_Logger('Execute'))
+
     # Check that at least 1 argument has been supplied.
     if len(args[:]) < 1:
-        print("ERROR: subprocess needs at least 1 argument")
+        L.logger.error("Subprocess needs at least 1 argument")
         sys.exit(2)
 
     # Run the shell process
-    #if args.count('squeue') >= 1:
-    #    update_exec_name('squeue')
-    #print(' '.join(args[:]))
     R = subprocess.check_output(args[0], shell=True).decode('utf-8')
 
     return(R);
@@ -108,7 +117,12 @@ def slurm_prep(MOD,EXPT,BFILE,LOGDIR,CPU_ACCT,PARTITION,QOS,NAME='spawn',RM_LOGS
     @param QOS:       the quality of service for the runs
     @kwarg NAME:      the name of the GPLOT driver (e.g., spawn, bundle)
     @kwarg RM_LOGS:   logical to remove the batch log files
+    @kwargs:          extra keywords are allowed
     """
+
+    # Get the logger object
+    L = kwargs.get('logger',Main_Logger('Execute'))
+
     # Define the log files
     JNAME = "GPLOT_"+NAME+"."+MOD+"."+EXPT
     LOUT = LOGDIR+JNAME+".log"
@@ -123,7 +137,7 @@ def slurm_prep(MOD,EXPT,BFILE,LOGDIR,CPU_ACCT,PARTITION,QOS,NAME='spawn',RM_LOGS
         exec_subprocess(["sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition="+PARTITION+"/g' "+BFILE])
         exec_subprocess(["sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos="+QOS+"/g' "+BFILE])
     else:
-        print("ERROR: Could not find any #SBATCH entries in "+BFILE)
+        L.logger.error("Could not find any #SBATCH entries in "+BFILE)
         sys.exit(2)
 
     # Remove logs, if required
