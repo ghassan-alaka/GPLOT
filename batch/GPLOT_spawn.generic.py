@@ -14,16 +14,21 @@
 
 
 # Import necessary modules
-import datetime, os, re, sys
+import datetime, os, re, sys, time
+import logging
+import numpy as np
 
 # Import custom GPLOT modules
 sys.path.insert(1, os.environ['GPLOT_DIR']+"/python")
 import gp_database as db
 import gp_execute as xc
-import gp_util as gpu
+import gp_log as log
 import gp_namelist as nm
-from gp_util import Directories
+import gp_util as gpu
+from gp_database import Database_Status
+from gp_log import Main_Logger
 from gp_namelist import Namelist_Retrieve
+from gp_util import Directories
 
 """
 GPLOT Spawn Driver
@@ -38,22 +43,31 @@ cyclones. To learn more, please download the code from GitHub:
 To learn more about the AOML/Hurricane Research Division, please visit:
   https://www.aoml.noaa.gov/our-research/hurricane-research-division/
 
-Created By:   Ghassan Alaka Jr.
-Modified By:
+Created By:    Ghassan Alaka Jr.
+Modified By:   Ghassan Alaka Jr.
 Date Created:  February 21, 2020
-Last Modified: February 27, 2020
+Last Modified: March 24, 2020
 
-Example call: python ./GPLOT_spawn.generic.py {EXPT} {GPOUT} {MODULE}
+Example call: python ./GPLOT_spawn.generic.py {-e EXPT} -o {GPOUT} -m {MODULE}
               EXPT: the experiment name (e.g., GFS_Forecast)
               GPOUT: the GPLOT top-level output directory (e.g., lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/)
               MODULE: the module name (e.g., maps)
 
 Modification Log:
-2020-Feb-27:  GJA updated the names of GLOT-specific modules, e.g., database --> gp_database
-
+2020-Feb-27 -- GJA updated the names of GLOT-specific modules, e.g., database --> gp_database
+2020-Mar-17 -- GJA developed functionality for the main status database table. Some of this functionality
+                 was moved to the Database_Status class in gp_database.py. This is important because completed
+                 tasks can be bypassed.
+            -- GJA developed functionality for the atcf status database table. Some of this functionality was
+                 moved to the Database_Status class in gp_database.py. This database keeps track of ATCF files
+                 and information about them.
+2020-Mar-19 -- GJA implemented functionality for logging.
+2020-Mar-24 -- GJA developed functionality for the graphic status database table. Some of this functionality
+                 was moved to the Databse_Status class in gp_database.py. This database table keeps track of
+                 each graphic that should be produced by GPLOT.
 """
 
-__version__ = '0.2.0';
+__version__ = '0.4.0';
 
 
 
@@ -108,9 +122,10 @@ def retrieve_storms(NML,CY='',ALIST=None,Stage1=True,Stage2=True,Stage3=True,FOR
 
 
 ###########################################################
-def get_atcf_list(ALIST):
+def get_atcf_list(ALIST,L):
     """ Build a list of unique ATCF files.
     @param ALIST: a list of ATCF information, including directory & extention
+    @param L:     the logging object
     @return AALL: a concatenated list of all ATCF files found. Duplicates
     """
     AALL = [];
@@ -143,7 +158,7 @@ def get_atcf_list(ALIST):
 
     # Check that AALL has entries
     if not AALL:
-        print("WARNING: No ATCF files were found. This might be OK.")
+        L.logger.warning("No ATCF files were found. This might be OK.")
 
     # return the ATCF list.
     return(AALL);
@@ -151,60 +166,268 @@ def get_atcf_list(ALIST):
 
 
 ###########################################################
-def spawn_atcf_list(N,quiet=True):
+def spawn_atcf_list(N,L,quiet=True):
     """Interface between main() and get_atcf_list() that
     accounts for a comparison dataset, if available.
     @param N:     the master namelist object
+    @param L:     the logging object
     @kwarg quiet: logical to determine print statements
     """
 
     # First, get the list of ATCF files for the primary dataset
     try:
-        A = get_atcf_list(N.ATCF_INFO)
+        A = get_atcf_list(N.ATCF_INFO,L)
     except TypeError as e:
-        print(e)
+        L.logger.error(e)
         sys.exit(2)
     except AttributeError as e:
-        print(e)
+        L.logger.error(e)
         sys.exit(2)
 
     # Second, get the list of ATCF files for the comparison dataset, if applicable.
     # If unavailable, take a list of the original list
     try:
         if N.DO_COMPARE:
-            A = [A,get_atcf_list(N.ATCF_INFO2)]
-    except:
+            A = [A,get_atcf_list(N.ATCF_INFO2,L)]
+        else:
+            A = [A]
+    except Exception as e:
+        L.logger.error(e)
         if not quiet:
-            print("WARNING: ATCF files for comparison datset not found.")
-    else:
-        A = [A]
+            L.logger.warning("ATCF files for comparison datset not found.")
 
     # Return A as a list of 1 or 2 lists of ATCF files.
     return(A);
 
 
 
+
 ###########################################################
-def spawn_cycles(NML,quiet=True):
+def spawn_cycle_atcf_list(N,AALL,CY):
+    """Retrieve the ATCF file list for thie particular forecast cycle
+    @param N:    the master namelist object
+    @param AALL: the list of all ATCF files
+    @param CY:   the forecast cycle
+    @return A:   the list of ATCF files for this cycle
+    """
+    A = [None]
+
+    # Create a list of ATCF files that match the requested cycle
+    if len(AALL[0]) > 0:
+        A = gpu.list_find(AALL[0],".*"+CY+".*")
+        if not A:  A = []
+
+    # Add another list for the comparison dataset, if necessary
+    if N.DO_COMPARE:
+        if len(AALL[1]) > 0:
+            A = [A,gpu.list_find(AALL[1],".*"+CY+".*")]
+    else:
+        A = [A]
+
+    return(A);
+
+
+
+
+###########################################################
+def spawn_cycles(NML,L,quiet=True):
     """Retrieve the available forecast cycles
-    @param N:     the master namelist object
+    @param NML:   the master namelist object
+    @param L:     the logging object
     @kwarg quiet: logical to determine print statements
     """
     CYC = gpu.dir_find(NML.DATADIR,".*\d{10}.*")
     for (C,N) in zip(CYC,range(len(CYC))):
         CYC[N] = ''.join(reversed(''.join(reversed(C)).split('.')[0]))
     CYC.sort()
-    print("MSG: Found these primary cycles --> "+' '.join(CYC))
+    L.logger.info("Found these primary cycles --> "+' '.join(CYC))
     if NML.DO_COMPARE:
         CYC = list(CYC,gpu.dir_find(NML.DATADIR2,".*\d{10}.*"))
         for (C,N) in zip(CYC[1],range(len(CYC[1]))):
             CYC[1][N] = ''.join(reversed(''.join(reversed(C)).split('.')[0]))
         CYC[1].sort()
-        print("MSG: Found these comparison cycles --> "+' '.join(CYC[1]))
+        L.logger.info("Found these comparison cycles --> "+' '.join(CYC[1]))
     else:
         CYC = [CYC]
 
     return(CYC);
+
+
+
+###########################################################
+def spawn_input_files(NML,CY,TC,L,EN=None,AHR=None):
+    """Retrieve the input data files.
+    @param NML: the master namelist object
+    @param CY:  the GPLOT cycle
+    @param TC:  the GPLOT tropical cyclone
+    @param L:   the logging object
+    @kwarg EN:  the ensemble ID
+    @kwarg AHR: list of ATCF lead times
+    """
+    # Initialize a blank list
+    FILES = []
+
+    # Make sure prefix and suffix lists match
+    if type(NML.FILE_PRE) != list:  NML.FILE_PRE = [NML.FILE_PRE]
+    if type(NML.FILE_SUF) != list:  NML.FILE_SUF = [NML.FILE_SUF]
+    if len(NML.FILE_SUF) == 1 and len(NML.FILE_PRE) > 1:  NML.FILE_SUF*len(NML.FILE_PRE)
+ 
+    for (P,S) in zip(NML.FILE_PRE,NML.FILE_SUF):
+        # Create the regular expression for this situation
+        RE = r'^.*('+TC.lower()+'|).*'+CY+'.*'+P+'.*\d{'+NML.FILE_HFMT+'}.*'+S+'$'
+ 
+        L.logger.debug("Searching this data directory --> "+NML.DATADIR)
+        L.logger.debug("Used this regular expression to search for files:  "+RE)
+ 
+        # Search for files using the regex.
+        # Return full paths and first directory only.
+        FFILE1 = gpu.file_find(NML.DATADIR,RE,FULL=True,FIRST_DIR=True)
+        if NML.IS_ENSEMBLE and EN is not None:
+            FFILE1 = gpu.list_find(FFILE1,"^.*/"+EN+"/.*$")
+        if not FFILE1:  continue
+        if NML.IS_STORMCEN and AHR is not None:
+            FFILE2 = []
+            for A in AHR[0]:
+                FMT = gpu.string_format_int(NML.FILE_HFMT)
+                FMT = FMT.format(A)
+                X = NML.FILE_FHR+FMT
+                VALS = [i for i, s in enumerate(FFILE1) if X in s]
+                if VALS is None:  continue
+                FFILE2.append(str(np.array(FFILE1,dtype=str)[VALS][0]))
+            if not FFILE2:  continue
+            FFILE1 = FFILE2
+        FFILE1.sort()
+        FILES.append(FFILE1)
+
+        if FILES:  NML.FILES_FOUND = True
+        else:
+            NML.FILES_FOUND = False
+            L.logger.warning("Could not find any input files in "+NML.DATADIR)
+
+    # Follow the same steps for the comparison dataset
+    if NML.DO_COMPARE:
+        FILES2 = []
+        if type(NML.FILE_PRE2) != list:  NML.FILE_PRE2 = [NML.FILE_PRE2]
+        if type(NML.FILE_SUF2) != list:  NML.FILE_SUF2 = [NML.FILE_SUF2]
+        if len(NML.FILE_SUF2) == 1 and len(NML.FILE_PRE2) > 1:  NML.FILE_SUF2*len(NML.FILE_PRE2)
+        for (P,S) in zip(NML.FILE_PRE2,NML.FILE_SUF2):
+            RE = r'^.*('+TC.lower()+'|).*'+CY+'.*'+P+'.*\d{'+NML.FILE_HFMT2+'}.*'+S+'$'
+            L.logger.debug("Searching this comparison data directory --> "+NML.DATADIR2)
+            L.logger.debug("Used this regular expression to search for files:  "+RE)
+            FFILE1 = gpu.file_find(NML.DATADIR2,RE,FULL=True,FIRST_DIR=True)
+            if not FFILE1:  continue
+            if NML.IS_STORMCEN and AHR is not None:
+                FFILE2 = []
+                for A in AHR[1]:
+                    FMT = gpu.string_format_int(NML.FILE_HFMT)
+                    FMT = FMT.format(A)
+                    X = NML.FILE_FHR+FMT
+                    VALS = [i for i, s in enumerate(FFILE1) if X in s]
+                    if VALS is None:  continue
+                    FFILE2.append(str(np.array(FFILE1,dtype=str)[VALS][0]))
+                if not FFILE2:  continue
+                FFILE1 = FFILE2
+            FFILE1.sort()
+            FILES2.append(FFILE1)
+
+        if FILES:  NML.FILES_FOUND = True
+        else:
+            NML.FILES_FOUND = False
+            L.logger.warning("Could not find any input files in "+NML.DATADIR2)
+
+        if FILES2:  FILES = [FILES,FILES2]
+        else:       FILES = [FILES,[]]
+    else:
+        FILES = [FILES]
+
+    # Return the list of list(s)
+    return(FILES);
+
+
+
+###########################################################
+def spawn_storms(N,CY,ATCF,L):
+    """Interface between main() and retrieve_storms() that
+    accounts for a comparison dataset, if available.
+    @param N:       the master namelist object
+    @param CY:      the forecast cycle
+    @param ATCF:    the list of ATCF files for this cycle
+    @param L:       the logging object
+    @return STORMS: the list of storms for this cycle
+    """
+    STORMS = retrieve_storms(N,CY=CY,ALIST=ATCF[0],Stage1=True,Stage2=True,Stage3=True,FORCE=False)
+    if STORMS[0] is None:
+        L.logger.warning("No Storms found for this forecast cycle.")
+    else:
+        L.logger.info("Found these storms --> "+', '.join(STORMS))
+
+    if N.DO_COMPARE:
+        STORMS = list(STORMS,retrieve_storms(N,CY=CY,ALIST=CYCLE_ATCF[1],Stage1=True,Stage2=True,Stage3=True,FORCE=False))
+    else:
+        STORMS = [STORMS]
+
+    return(STORMS);
+
+
+###########################################################
+def spawn_storm_atcf(N,A1,TC,L,DO_FHRS=False,DO_AGE=False,):
+    """Retrieve the TCF file for this storm, and, optionally,
+    the corresponding list of lead times.
+    @param N:       the master namelist object
+    @param A1:      the list of ATCF files for this cycle
+    @param TC:      the storm ID
+    @param L:       the logging object
+    @kwarg DO_FHRS: logical argument for finding lead times in this ATCF
+    @kwarg DO_AGE:  logical argument for finding file ages in this ATCF
+    """
+    # Create empty lists
+    A2 = [];
+    if DO_FHRS:  F = [];
+    if DO_AGE:   Z = [];
+
+    # Try to find an ATCF for this TC in the list of ATCF files found
+    # for this cycle.
+    A2 = gpu.list_find(A1[0],".*"+TC.lower()+".*")
+
+    # Determine if an ATCF was found. If found, then also find list of 
+    # forecast lead times (F), if applicable.
+    if not A2:
+        L.logger.warning("No ATCF found for "+TC+". This might be OK.")
+        A2 = [None]
+        if DO_FHRS:  F = [None]
+        if DO_AGE:   Z = [None]
+    else:
+        A2 = [A2[0]]
+        L.logger.info("ATCF found for "+TC+" --> "+A2[0])
+        if DO_FHRS:
+            F = list(gpu.atcf_read(A2[0],COLS='FHR',FHR_S=N.HR_INIT,FHR_E=N.HR_FNL,EXTRACT=True))
+        if DO_AGE:
+            Z = gpu.time_since_modified(A2[0])
+
+    # Follow the same steps for the comparison dataset, if applicable.
+    if N.DO_COMPARE:
+        A2 = [A2,gpu.list_find(A2[1],".*"+TC.lower()+".*")]
+        if not A2[1]:
+            A2[1] = [None]
+            if DO_FHRS:  F[1] = [None]
+            if DO_AGE:   Z[1] = [None]
+        else:
+            A2[1] = [A2[1][0]]
+            if DO_FHRS:
+                F = [F,list(gpu.atcf_read(A2[1][0],COLS='FHR',FHR_S=N.HR_INIT,FHR_E=N.HR_FNL,EXTRACT=True))]
+            if DO_AGE:
+                Z = [Z,gpu.time_since_modified(A2[1][0])]
+    else:
+        A2 = [A2]
+        if DO_FHRS:  F = [F]
+        if DO_AGE:   Z = [Z]
+
+    # Return A2 and possibly F,Z.
+    if DO_FHRS and DO_AGE:            return(A2,F,Z);
+    elif DO_FHRS and not DO_AGE:      return(A2,F);
+    elif DO_AGE and not DO_FHRS:      return(A2,Z);
+    elif not DO_FHRS and not DO_AGE:  return(A2);
+
 
 
 
@@ -214,39 +437,41 @@ def main():
         responsibilities of this driver are carried out through
         here.
     """
-    print("MSG: Spawn began at "+str(datetime.datetime.now()))
-    print("MSG: Under construction.")
 
-    # Get the experiment and GPLOT output directory as an input args
-    if len(sys.argv) < 4:
-        print("ERROR: At least 3 total arguments must be supplied.")
-        sys.exit(2)
-    EXPT = sys.argv[1]
-    GPOUT = sys.argv[2]
-    MOD = sys.argv[3]
-    print("MSG: Running GPLOT module '"+MOD+"' for experiment '"+EXPT+"'")
-    print("MSG: GPLOT graphics will eventually be placed in "+GPOUT)
+    # Start the logging
+    L = Main_Logger('GPLOT_spawn')
 
-    # Get the database name
-    DB_FILE = db.db_name(GPOUT,EXPT)
-    print("MSG: The database file --> "+DB_FILE)
+    # Log some important information
+    L.logger.info("Spawn began at "+str(datetime.datetime.now()))
+    L.logger.debug("Under construction.")
+
+    # Read input arguments: GPLOT experiment, GPLOT output directory, GPLOT module
+    SARGS = gpu.parse_spawn_args()
+    EXPT, GPOUT, MOD = SARGS.expt, SARGS.gpout, SARGS.module
+    L.logger.info("Running GPLOT module '"+MOD+"' for experiment '"+EXPT+"'")
+    L.logger.info("GPLOT graphics will eventually be placed in "+GPOUT)
 
     # Get important directories
-    D = Directories()
+    D = Directories(L=L)
+
+    # Get the database file name from a GPLOT table
+    DB = Database_Status(D,EXPT)
+    DB_FILE = DB.DB_FILE
+    DB.initiailize_tbl(logger=L)
+    L.logger.info("MSG: Found this database file --> "+DB.DB_FILE)
 
     # Read namelist from the database
     # Create a new class for this
-    NML = Namelist_Retrieve(D,EXPT,DB_FILE,MOD)
+    NML = Namelist_Retrieve(D,EXPT,DB_FILE,MOD,logger=L)
 
     # Define the generic bundle file
     BATCHFILE1 = NML.BATCHDIR+"GPLOT_bundle.generic.py"
 
     # Compile a list of ATCF files from the primary dataset
-    ATCF_ALL = spawn_atcf_list(NML)
+    ATCF_ALL = spawn_atcf_list(NML,L)
 
     # Start a counter to track how many tasks per bundle
     CC = 0
-
 
     # Loop over all ensemble IDs
     for EN in NML.ENSID:
@@ -255,37 +480,19 @@ def main():
         NML.nml_enesmble_check(EN)
 
         # Get the available forecast cycles
-        CYCLES = spawn_cycles(NML)
+        CYCLES = spawn_cycles(NML,L)
 
         # Loop over all forecast cycles
         for CY in CYCLES[0]:
 
-            print("MSG: Working on forecast cycle "+CY)
+            L.logger.info("Working on forecast cycle "+CY)
 
             # Find the ATCFs for the current CYCLE.
             # It will be blank if no ATCFs are found.
-            CYCLE_ATCF = [None]
-            if len(ATCF_ALL[0]) > 0:
-                CYCLE_ATCF = gpu.list_find(ATCF_ALL[0],".*"+CY+".*")#".*"+CY+".*")
-                if not CYCLE_ATCF:
-                    CYCLE_ATCF = []
-            if NML.DO_COMPARE:
-                if len(ATCF_ALL[1]) > 0:
-                    CYCLE_ATCF = [CYCLE_ATCF,gpu.list_find(ATCF_ALL[1],".*"+CY+".*")]
-            else:
-                CYCLE_ATCF = [CYCLE_ATCF]
-            #print(CYCLE_ATCF)
+            CYCLE_ATCF = spawn_cycle_atcf_list(NML,ATCF_ALL,CY)
 
             # Retrieve the list of Storm IDs
-            STORMS = retrieve_storms(NML,CY=CY,ALIST=CYCLE_ATCF[0],Stage1=True,Stage2=True,Stage3=True,FORCE=False)
-            if STORMS[0] is None:
-                print("WARNING: No Storms found for this forecast cycle.")
-            else:
-                print("MSG: Found these storms --> "+', '.join(STORMS))
-            if NML.DO_COMPARE:
-                STORMS = list(STORMS,retrieve_storms(NML,CY=CY,ALIST=CYCLE_ATCF[0],Stage1=True,Stage2=True,Stage3=True,FORCE=False))
-            else:
-                STORMS = [STORMS]
+            STORMS = spawn_storms(NML,CY,CYCLE_ATCF,L)
 
             # Set the storm counter. This is important because large-scale
             # output files may be duplicated for different storms. For example,
@@ -294,156 +501,136 @@ def main():
             NTC=0
 
             # Set a flag to determine whether or not files were found.
-            # By default, it is False. If it is set to
+            # By default, it is False. If it is set to True, then all
+            # non-storm-centered domains will use the same data. Storm-
+            # centered domains still must check for unique data.
             FOUND_FILES="False"
 
             # Loop over all tropical cyclones for the current cycle
             for TC in STORMS[0]:
  
                 # Skip to the next if no TC
-                if TC is None:
-                    continue
+                if TC is None:  continue
 
-                print("MSG: Working on storm "+TC)
+                L.logger.info("Working on storm "+TC)
                 
                 # If not the fake storm, increase the storm counter
-                if TC != '00L':
-                    NTC += 1
-                print("MSG: Storm number = "+str(NTC))
+                if TC != '00L':  NTC += 1
+                L.logger.info("Storm number = "+str(NTC))
 
                 # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF = []
-                ATCF_FHRS = [];
-                STORM_ATCF = gpu.list_find(CYCLE_ATCF[0],".*"+TC.lower()+".*")
-                if not STORM_ATCF:
-                    print("WARNING: No ATCF found for "+TC+". This might be OK.")
-                    STORM_ATCF = [None]
-                else:
-                    STORM_ATCF = STORM_ATCF[0]
-                    print("MSG: ATCF found for "+TC+" --> "+STORM_ATCF)
-                    ATCF_FHRS = list(gpu.atcf_read(STORM_ATCF,COLS='FHR',FHR_S=NML.HR_INIT,FHR_E=NML.HR_FNL,EXTRACT=True))
-                    #sys.exit(2)
-                if NML.DO_COMPARE:
-                    STORM_ATCF = [STORM_ATCF,gpu.list_find(CYCLE_ATCF[1],".*"+TC.lower()+".*")]
-                    if not STORM_ATCF[1]:
-                        STORM_ATCF[1] = [None]
-                    else:
-                        STORM_ATCF[1] = STORM_ATCF[1][0]
-                        ATCF_FHRS = [ATCF_FHRS,list(gpu.atcf_read(STORM_ATCF[1],COLS='FHR',FHR_S=NML.HR_INIT,FHR_E=NML.HR_FNL,EXTRACT=True))]
-                else:
-                    STORM_ATCF = [STORM_ATCF]
-                    ATCF_FHRS = [ATCF_FHRS]
+                STORM_ATCF, ATCF_FHRS, AGES = spawn_storm_atcf(NML,CYCLE_ATCF,TC,L,DO_FHRS=True,DO_AGE=True)
+                #print(CYCLE_ATCF)
+
+                # Check the database table "atcf_status"
+                #db.create_table(DB.A_TBL,DB.A_COL,DB.A_TYP,DFILE=DB_FILE,close=True,RM_TBL=False,logger=L)
+                DB.assign_atcf_data([CY],[TC],['active'],A1=CYCLE_ATCF,A2=STORM_ATCF,FHR_S=ATCF_FHRS[0][0],FHR_E=ATCF_FHRS[0][-1],AGE=AGES[0][0])
+                DB.update_tbl_by_age(logger=L)
+                DB.retrieve_atcf_status()
+                #print(DB.A_STATUS)
+                #continue
+                #sys.exit(2)
 
                 # Loop over all domains for the current TC
                 for DM in NML.DOMAIN:
 
                     # Determine if this domain is storm-centered (SC)
                     # For storm-centered domains, the Storm ID is appended
-                    # to most file names.
-                    IS_STORMCEN = gpu.data_table_read(NML.TBLDIR+"/DomainInfo.dat",'STORMCEN','DOMAIN',DM,IS_BOOL=True)
-                    if IS_STORMCEN:
-                        STORMTAG = '.'+TC.upper()
-                    else:
-                        STORMTAG = ''
+                    # to most file names. An ATCF is required for storm-
+                    # centered domains. For non-storm-centered domains,
+                    # use the namelist value for ATCF requirement.
+                    NML.IS_STORMCEN = gpu.data_table_read(NML.TBLDIR+"/DomainInfo.dat",A='STORMCEN',C='DOMAIN',R=DM,IS_BOOL=True)
+                    if NML.IS_STORMCEN:  STORMTAG,AREQ = '.'+TC.upper(), True
+                    else:                STORMTAG,AREQ = '', NML.ATCF_REQD
+                    L.logger.info("Is this storm-centric? "+str(NML.IS_STORMCEN))
 
                     # Skip storm-centered domains for the fake storm
-                    if TC == '00L' and IS_STORMCEN:
-                        continue
+                    if TC == '00L' and NML.IS_STORMCEN:  continue
 
-                    print("MSG: Working on domain "+DM)
+                    L.logger.info("Working on domain "+DM)
+
+                    # Check the database table 'main_status'
+                    #db.create_table(DB.M_TBL,DB.M_COL,DB.M_TYP,DFILE=DB_FILE,RM_TBL=True,close=True)
+                    DB.assign_main_data(MOD,CY,DM,'started',TC)
+                    DB.retrieve_main_status()
+                    L.logger.info("The main status = "+DB.M_STATUS)
+                    #continue
+                    #sys.exit(2)
+
+                    # Skip this cycle if its status is complete
+                    for MS in DB.M_STATUS:
+                        if MS in ['complete','working']:  continue
 
                     # Something with FORCE. Is it necessary?
 
                     # Create the full output path. This goes somewhere later.
-
-                    # Get ATCF_REQD to check if it is required.
-                    # This is optional for MAPS.
-                    if DM == 'd03':
-                        A_R = True
-                    else:
-                        A_R = NML.ATCF_REQD
+                    GPOUT_FULL = GPOUT+'/'+EXPT+'/'+CY+'/'+DM+'/'
 
                     # Get te nest information from GPLOT table
-                    NEST = gpu.data_table_read(NML.TBLDIR+"/DomainInfo.dat",'NEST','DOMAIN',DM)
-                    if NEST is None:
-                        print("WARNING: Domain "+DM+" not found in "+NML.TBLDIR+"/DomainInfo.dat. Assuming NEST=21.")
-                        NEST=1
-
-                    # Skip subsequent storms if the outer domain has been plotted
-                    if not IS_STORMCEN and NTC > 1 and FOUND_FILES:
-                        print("WARNING: Skipping this domain because it is not storm-centered and this is a least the second storm.")
-                        continue
-
-                    # Get file prefix information from table or namelist
-                    if NML.DTAG is None:
-                        FPRE = gpu.data_table_read(NML.TBLDIR+"/FilePrefix.dat",'D0'+str(NEST),'DSOURCE',NML.DSOURCE)
-                    else:
-                        FPRE = NML.DTAG
-
-                    # Get file hour string, format information from table or namelist
-                    FHRSTR = gpu.data_table_read(NML.TBLDIR+"/FileTimeFormat.dat",'HRSTR','DSOURCE',NML.DSOURCE)
-                    if NML.HR_FMT is None:
-                        FHRFMT = gpu.data_table_read(NML.TBLDIR+"/FileTimeFormat.dat",'HRFMT','DSOURCE',NML.DSOURCE)
-                    else:
-                        FHRFMT = NML.HR_FMT
-
-                    # Get file suffix information from table or namelist
-                    if NML.DEXT is None:
-                        FSUFFIX = gpu.data_table_read(NML.TBLDIR+"/FileSuffix.dat",'SUFFIX','DSOURCE',NML.DSOURCE)
-                    else:
-                        FSUFFIX = NML.DEXT
+                    NML.nml_setup_nest(DM,logger=L)
+                    NML.nml_setup_filename()
 
                     # Run some tests on the ATCF for thie storm.
                     # If domain is storm-centerd and ATCF is required, then ATCF must
                     # be present and contain forecast hours
-                    if IS_STORMCEN and NML.ATCF_REQD:
+                    if NML.IS_STORMCEN:# and NML.ATCF_REQD:
                         if not STORM_ATCF:
-                            print("ERROR: DOMAIN="+DM+"is storm-centered and ATCF files are required.")
-                            print("ERROR: But, found no matching ATCF files. So, nothing to do.")
+                            L.logger.error("DOMAIN="+DM+"is storm-centered and ATCF files are required.")
+                            L.logger.error("But, found no matching ATCF files. So, nothing to do.")
                             continue
                         elif not ATCF_FHRS:
-                            print("ERROR: DOMAIN="+DM+"is storm-centered and ATCF files are required.")
-                            print("ERROR: ATCF was foundfor this storm, but no forecast hours were found.")
+                            L.logger.error("DOMAIN="+DM+"is storm-centered and ATCF files are required.")
+                            L.logger.error("ATCF was found for this storm, but no forecast hours were found.")
                             continue
 
-                    # Get the module namelist for this EXPT,TR,DM
-                    NMODLIST = ['namelist.'+MOD+'.'+EXPT+'.'+DM,'namelist.'+MOD+'.'+DM,'namelist.'+MOD+'.'+DM,'namelist.'+MOD+'.default']
-                    for N in NMODLIST:
-                        if os.path.exists(NML.NMLDIR+N):
-                            NMLMOD = [gpu.data_table_read(NML.NMLDIR+N,A='FILE_NAME'),gpu.data_table_read(NML.NMLDIR+N,A='PLOT_ON',IS_BOOL=True),gpu.data_table_read(NML.NMLDIR+N,A='PRIO')]
-                            print("MSG: Found this module namelist --> "+NML.NMLDIR+N)
-                            break
-                    if hasattr(NMLMOD,'empty'):
-                        EMPTY = NMLMOD.empty
-                    else:
-                        EMPTY = False
-                    if EMPTY:
-                        print("ERROR: Module namelist not found. Can't continue.")
-                        sys.exit(2)
-                    print(NMLMOD)
-
-                    sys.exit(2)
-
-                    # How will ATCFs be stored for each cycle? Database table?
+                    # Get the module namelist for this MOD,EXPT,DM
+                    NML.PRIO_CUTOFF = 15
+                    NML.find_module_nml(EXPT,MOD,DM,logger=L)
+                    #print(NML.NMLMOD)
+                    #sys.exit(2)
 
                     # Find the full input directory. This could also be stored in the database.
+                    FILES = spawn_input_files(NML,CY,TC,L,EN=EN,AHR=ATCF_FHRS)
+                    if not NML.FILES_FOUND:
+                        L.logger.info("No files found. Moving on to the next option.")
+                        continue
+                    print(FILES)
+                    #print(len(FILES[0][0]))
+                    #continue
+                    #sys.exit(2)
 
                     # Then find all input files. Cross reference with and update a database table
+
+                    # Loop over the graphics
+                    for GR in NML.NMLMOD['FILE_NAME']:
+                        L.logger.info("Working on this graphic --> "+GR)
+                        DB.assign_graphic_data(MOD,EN,CY,TC,DM,GR,GPOUT_FULL)
+                        DB.retrieve_graphic_status(NML,FILES,logger=L)
+                        L.logger.debug("The status for this graphic is '"+','.join(DB.G_STATUS)+"'.")
+                        L.logger.debug("Is this graphic active? "+str(DB.G_ACTIVE))
+                        sys.exit(2)
+
+                    if DB.G_ACTIVE:
+                        L.logger.info("Adding "+GR+" to the current bundle.")
+                        CC = CC+1
+                        
+
 
                     # Then update the status of the current job (cycle, storm, tier, domain, ensid)
 
                     # Submit the job!
 
                     # Eventually, all conditions will be met and the job will have been bundled.
-                    CC = CC+1
-                    if CC%5 == 0 and CC is None:
+                    if CC%5 == 1 and CC is None:
                         # Define the unique bundle files
                         BATCHFILE2 = NML.BATCHDIR+"GPLOT_bundle."+str(gpu.random_N_digits(8))+".py"
-                        print("MSG: Copying "+BATCHFILE1+" --> "+BATCHFILE2)
+                        L.logger.info("Copying "+BATCHFILE1+" --> "+BATCHFILE2)
                         gpu.file_copy(BATCHFILE1,BATCHFILE2)
 
-    print(os.environ['GPLOT_DIR'])
-    print("MSG: Spawn completed at "+str(datetime.datetime.now()))
+                    # If it's the 
+
+    L.logger.debug("The GPLOT Directory --> "+os.environ['GPLOT_DIR'])
+    L.logger.info("Spawn completed at "+str(datetime.datetime.now()))
 
 
 
