@@ -1278,6 +1278,8 @@ do fff = 0,nFiles-1
 
                                 ;TEST := f->$findVarName(DSOURCE,"MSLP","")$
 				TEST := f->$BASEVAR$
+                                if(dimsizes(dimsizes(TEST)).eq.3)then	TEST := TEST(0,:,:)
+				end if
 				do ddd = 0,nDims-1
                                         ; LATITUDE
                                         if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
