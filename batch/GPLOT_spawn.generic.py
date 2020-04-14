@@ -32,7 +32,7 @@ from gp_util import Directories
 
 """
 GPLOT Spawn Driver
-Main driver for submitting individual GPLOT graphical production jobs.
+Main driver for organizing GPLOT graphical production jobs.
 
 GPLOT is the Graphical Post-processed Locus for Output of Tropical cyclones.
 It consists of independent modules used to create graphics targeted toward
@@ -198,6 +198,17 @@ def spawn_atcf_list(N,L,quiet=True):
 
     # Return A as a list of 1 or 2 lists of ATCF files.
     return(A);
+
+
+
+###########################################################
+def spawn_complete(L,n=0):
+    """Exit the spawner
+    @param L: the Main_Logger class object
+    @kwarg n: the exit code
+    """
+    L.logger.info("Spawn completed at "+str(datetime.datetime.now()))
+    sys.exit(n)
 
 
 
@@ -430,6 +441,75 @@ def spawn_storm_atcf(N,A1,TC,L,DO_FHRS=False,DO_AGE=False,):
 
 
 
+###########################################################
+def submit_bundle(NML,DB,L):
+    """Submit a bundle of production jobs
+    @param NML: the Namelist_Retrieve class object
+    @param DB:  the Database_Status class object
+    @param L:   the Main_Logger class object
+    """
+
+    # Define bundle-specific variables
+    BUNDLEJOB = "GPLOT_bundler."+NML.MOD+"."+NML.EXPT
+    BUNDLEFILE1 = NML.BATCHDIR+"GPLOT_bundler.generic.py"
+
+    # Define the command prefix, typically sourcing the modulefile
+    PRE_JOB = xc.find_pre_job(NML.GPLOT_DIR)
+    SRC_MODS = xc.src_mods_pre(NML.GPLOT_DIR)
+    #PRE = xc.src_mods_pre(NML.GPLOT_DIR)
+
+    # Build the base command with input arguments. The file name is appended later.
+    CMD_BASE = " -e "+NML.EXPT+" -o "+NML.GPOUT+" -m "+NML.MOD+" -g "+','.join(DB.G_PROD)+" -c "+DB.CY+" -s "+DB.TC+" -d "+DB.DM+" --ensid "+DB.EN
+
+    # DECIDE HOW TO SUBMIT, THEN SUBMIT!
+    if NML.BATCH_MODE.lower() == 'sbatch':
+
+        # Define a bundle file specifically for this case, and
+        # copy the remplate bundle file to modify for this case
+        BUNDLEID = gpu.random_N_digits(8)
+        BUNDLEJOB = BUNDLEJOB+"."+str(BUNDLEID)
+        BUNDLELOG = NML.LOGDIR+BUNDLEJOB+".log"
+        BUNDLEFILE2 = NML.BATCHDIR+"GPLOT_bundler."+NML.MOD+"."+NML.EXPT+"."+str(BUNDLEID)+".py"
+        L.logger.info("Copying "+BUNDLEFILE1+" --> "+BUNDLEFILE2)
+        gpu.file_copy(BUNDLEFILE1,BUNDLEFILE2)
+        CMD_BASE = BUNDLEFILE2+CMD_BASE
+
+        # Modify the SBATCH header
+        xc.slurm_prep(BUNDLEFILE2,NML.LOGDIR,MOD=NML.MOD,EXPT=NML.EXPT,CPU_ACCT=NML.CPU_ACCT,PARTITION=NML.PARTITION,\
+                      QOS=NML.QOS,JNAME=BUNDLEJOB,RM_LOGS=True,logger=L)
+
+        # Get the Slurm Job ID for any matching jobs
+        id = xc.get_slurm_jobid(BUNDLEJOB)
+
+        # Submit the job
+        L.logger.info("Submitting "+BUNDLEFILE2+" to the slurm batch scheduler.")
+        L.logger.info("command:  "+PRE+"sbatch "+CMD_BASE)
+        xc.exec_subprocess(PRE+"sbatch "+CMD_BASE, GDIR=NML.GPLOT_DIR)
+
+    elif NML.BATCH_MODE.lower() == 'foreground':
+        BUNDLELOG = NML.LOGDIR+BUNDLEJOB+".log"
+        CMD_BASE = BUNDLEFILE1+CMD_BASE
+        L.logger.info("Submitting "+BUNDLEFILE1+" to the foreground.")
+        L.logger.info("command:  "+PRE+CMD_BASE+" > "+BUNDLELOG)
+        xc.exec_subprocess(PRE+CMD_BASE+" > "+BUNDLELOG, GDIR=NML.GPLOT_DIR)
+
+    elif NML.BATCH_MODE.lower() == 'background':
+        BUNDLELOG = NML.LOGDIR+BUNDLEJOB+".log"
+        CMD_BASE = BUNDLEFILE1+CMD_BASE
+        L.logger.info("Submitting "+BUNDLEFILE1+" to the background.")
+        L.logger.info("command:  "+PRE+CMD_BASE+" > "+BUNDLELOG+" &")
+        xc.exec_subprocess(PRE+CMD_BASE+" > "+BUNDLELOG+" &", GDIR=NML.GPLOT_DIR)
+
+    else:
+        BUNDLELOG = NML.LOGDIR+BUNDLEJOB+".log"
+        CMD_BASE = BUNDLEFILE1+CMD_BASE
+        L.logger.info("Defaulting to a background job. Submitting "+BUNDLEFILE1+".")
+        L.logger.info("command:  "+PRE+CMD_BASE+" > "+BUNDLELOG+" &")
+        xc.exec_subprocess(PRE+CMD_BASE+" > "+BUNDLELOG+" &", GDIR=NML.GPLOT_DIR)
+
+    return;
+
+
 
 ###########################################################
 def main():
@@ -440,6 +520,7 @@ def main():
 
     # Start the logging
     L = Main_Logger('GPLOT_spawn')
+    #L.add_stream_handler(STDOUT=True,LEVEL='debug')
 
     # Log some important information
     L.logger.info("Spawn began at "+str(datetime.datetime.now()))
@@ -458,14 +539,10 @@ def main():
     DB = Database_Status(D,EXPT)
     DB_FILE = DB.DB_FILE
     DB.initiailize_tbl(logger=L)
-    L.logger.info("MSG: Found this database file --> "+DB.DB_FILE)
+    L.logger.info("Found this database file --> "+DB.DB_FILE)
 
-    # Read namelist from the database
-    # Create a new class for this
+    # Read namelist from the database using the Namelist_Retrieve class
     NML = Namelist_Retrieve(D,EXPT,DB_FILE,MOD,logger=L)
-
-    # Define the generic bundle file
-    BATCHFILE1 = NML.BATCHDIR+"GPLOT_bundle.generic.py"
 
     # Compile a list of ATCF files from the primary dataset
     ATCF_ALL = spawn_atcf_list(NML,L)
@@ -539,7 +616,7 @@ def main():
                     # to most file names. An ATCF is required for storm-
                     # centered domains. For non-storm-centered domains,
                     # use the namelist value for ATCF requirement.
-                    NML.IS_STORMCEN = gpu.data_table_read(NML.TBLDIR+"/DomainInfo.dat",A='STORMCEN',C='DOMAIN',R=DM,IS_BOOL=True)
+                    NML.IS_STORMCEN = gpu.data_table_read(NML.TBLDIR+"/DomainInfo.dat",C='STORMCEN',TEST=f'DOMAIN == "{DM}"',IS_BOOL=True,delim_whitespace=True)[0]
                     if NML.IS_STORMCEN:  STORMTAG,AREQ = '.'+TC.upper(), True
                     else:                STORMTAG,AREQ = '', NML.ATCF_REQD
                     L.logger.info("Is this storm-centric? "+str(NML.IS_STORMCEN))
@@ -564,7 +641,7 @@ def main():
                     # Something with FORCE. Is it necessary?
 
                     # Create the full output path. This goes somewhere later.
-                    GPOUT_FULL = GPOUT+'/'+EXPT+'/'+CY+'/'+DM+'/'
+                    NML.GPOUT_FULL = GPOUT+'/'+EXPT+'/'+CY+'/'+DM+'/'
 
                     # Get te nest information from GPLOT table
                     NML.nml_setup_nest(DM,logger=L)
@@ -584,7 +661,7 @@ def main():
                             continue
 
                     # Get the module namelist for this MOD,EXPT,DM
-                    NML.PRIO_CUTOFF = 15
+                    #NML.PRIO_CUTOFF = 15
                     NML.find_module_nml(EXPT,MOD,DM,logger=L)
                     #print(NML.NMLMOD)
                     #sys.exit(2)
@@ -594,43 +671,44 @@ def main():
                     if not NML.FILES_FOUND:
                         L.logger.info("No files found. Moving on to the next option.")
                         continue
-                    print(FILES)
+                    #print(FILES)
                     #print(len(FILES[0][0]))
                     #continue
                     #sys.exit(2)
 
                     # Then find all input files. Cross reference with and update a database table
 
+                    # Reset the graphic production list
+                    DB.G_PROD = []
+
                     # Loop over the graphics
-                    for GR in NML.NMLMOD['FILE_NAME']:
+                    for i,GR in enumerate(NML.NMLMOD['FILE_NAME']):
                         L.logger.info("Working on this graphic --> "+GR)
-                        DB.assign_graphic_data(MOD,EN,CY,TC,DM,GR,GPOUT_FULL)
+                        DB.assign_graphic_data(MOD,EN,CY,TC,DM,GR,NML.GPOUT_FULL)
                         DB.retrieve_graphic_status(NML,FILES,logger=L)
                         L.logger.debug("The status for this graphic is '"+','.join(DB.G_STATUS)+"'.")
                         L.logger.debug("Is this graphic active? "+str(DB.G_ACTIVE))
-                        sys.exit(2)
 
-                    if DB.G_ACTIVE:
-                        L.logger.info("Adding "+GR+" to the current bundle.")
-                        CC = CC+1
-                        
+                        if DB.G_ACTIVE:
+                            L.logger.info("Adding "+GR+" to the current bundle.")
+                            DB.G_PROD = DB.G_PROD+[GR]
+
+                        L.logger.debug(str(len(DB.G_PROD))+"/"+str(NML.MAX_BUNDLE))
+                        if len(DB.G_PROD) >= NML.MAX_BUNDLE or i == len(NML.NMLMOD['FILE_NAME']):
+                            L.logger.info("Submitting a bundle with these graphics: "+','.join(DB.G_PROD))
+                            if SARGS.submit:  submit_bundle(NML,DB,L)
+                            if NML.BATCH_MODE.lower() in ['foreground','background']:
+                                L.logger.info("Maximum number of bundles for background/foreground (1) has been reached. Exiting.")
+                                spawn_complete(L)
+                            DB.G_PROD = []
+                            CC = CC+1
+                            if CC > NML.MAX_JOBS:
+                                L.logger.info("Maximum number of bundles for sbatch ("+str(NML.MAX_JOBS)+") has been reached. Exiting.")
+                                spawn_complete(L)
 
 
-                    # Then update the status of the current job (cycle, storm, tier, domain, ensid)
-
-                    # Submit the job!
-
-                    # Eventually, all conditions will be met and the job will have been bundled.
-                    if CC%5 == 1 and CC is None:
-                        # Define the unique bundle files
-                        BATCHFILE2 = NML.BATCHDIR+"GPLOT_bundle."+str(gpu.random_N_digits(8))+".py"
-                        L.logger.info("Copying "+BATCHFILE1+" --> "+BATCHFILE2)
-                        gpu.file_copy(BATCHFILE1,BATCHFILE2)
-
-                    # If it's the 
-
-    L.logger.debug("The GPLOT Directory --> "+os.environ['GPLOT_DIR'])
-    L.logger.info("Spawn completed at "+str(datetime.datetime.now()))
+    # This is the end of the script
+    spawn_complete(L)
 
 
 

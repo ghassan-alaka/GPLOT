@@ -317,24 +317,74 @@ def df_create(D1,CN1):
 
 
 ###########################################################
-def data_table_read(F,A=None,C=None,R=None,IS_BOOL=False):
+def data_table_read(F,C=None,R=None,TEST=None,IS_BOOL=False,KEEP_DF=False,**kwargs):
     """ Read a data table file into a pandas dataframe.
     @param F:       the data file
-    @kwarg A:       the column of interest
-    @kwarg C:       the column to test
-    @kwarg R:       the value within column C to match
+    @kwarg C:       the column(s) of interest
+    @kwarg R:       the row(s) of interest
+    @kwarg TEST:    list with 3 items: column to test
+                                       operator for test
+                                       value to match for test
     @kwarg IS_BOOL: logical for converting to boolean
+    @kwargs:        extra keyword arguments are allowed
+                    delim_whitespace
+                    header
+    @return DATA:   the extracted data
     """
 
     # Read in the data as a pandas dataframe
-    DATA = pd.read_csv(F, delim_whitespace=True)
-    if A is not None and C is not None and R is not None:
-        DATA = DATA.loc[DATA[C] == R][A].values[0]
-    elif A is not None and C is None:
-        DATA = list(DATA[A].values)
-    if IS_BOOL:
-        DATA = convert_boolean(DATA)
-    return(DATA);
+    DF = pd.read_csv(F, **kwargs)
+
+    # First, try to filter by rows (R)
+    if R is not None:
+        try:
+            if isinstance(R,list):  DF = DF.loc[R]
+            else:                   DF = DF.loc[[R]]
+        except:
+            if isinstance(R,slice):  DF = DF.iloc[R]
+            else:                    DF = DF.iloc[list(R)]
+
+    # Next, try to filter by logical expression (TEST)
+    if TEST is not None:
+        try:
+            DF.query(TEST, inplace=True)
+        except:
+            print(f"Could not query '{TEST}'")
+
+    # Finally, try to filter by column (C)
+    print(C)
+    if C is not None:
+        print(C)
+        try:
+            if isinstance(C,list):  DF = DF[C]
+            else:                   DF = DF[[C]]
+        except:
+            if isinstance(C,slice):  DF = DF.iloc[:,C]
+            else:                    DF = DF.iloc[:,list(C)]
+            #if TEST[1] is in ['=','==','eq','equal to']:                 DF = DF.loc[DF[TEST[0]] == TEST[2],list(C)]
+            #elif TEST[1] is in ['>','gt','greater than']:                DF = DF.loc[DF[TEST[0]] > TEST[2],list(C)]
+            #elif TEST[1] is in ['<','lt','less than']:                   DF = DF.loc[DF[TEST[0]] < TEST[2],list(C)]
+            #elif TEST[1] is in ['!=','ne','not equal to']:               DF = DF.loc[DF[TEST[0]] != TEST[2],list(C)]
+            #elif TEST[1] is in ['>=','gte','greater than or equal to']:  DF = DF.loc[DF[TEST[0]] >= TEST[2],list(C)]
+            #elif TEST[1] is in ['<=','lte','less than or equal to']:     DF = DF.loc[DF[TEST[0]] <= TEST[2],list(C)]
+
+    #if A is not None and C is not None and R is not None:
+    #    try:
+    #        DATA = DATA.loc[DATA[C] == R][A].values[0]
+    #
+    #    if string_check(C):
+    #        DATA = DATA.loc[DATA[C] == R][A].values[0]
+    #    else:
+    #        DATA = DATA.iloc[:,C].values[0]
+    #elif A is not None and C is None:
+    #    DATA = list(DATA[A].values)
+
+    # Convert to boolean, if required.
+    if not KEEP_DF:
+        DF = DF.values.tolist()[0]
+        if IS_BOOL:  DF = convert_boolean(DF)
+
+    return(DF);
 
 
 
@@ -437,7 +487,7 @@ def file_copy(SRC,DEST,overwrite=True,quiet=True,execute=False,**kwargs):
 
 ###########################################################
 def file_find(DIR,EXP,FULL=False,FIRST_DIR=False):
-    """Find directories
+    """Find files.
     @param DIR: find matching directories under this one
     @param EXP: the regular expression to find directories
     @kwarg FULL: logical to return with the full path
@@ -464,7 +514,7 @@ def file_find(DIR,EXP,FULL=False,FIRST_DIR=False):
 
 ###########################################################
 def file_remove(FILE,quiet=True,**kwargs):
-    """
+    """Remove a file.
     @param FILE:  the file (full path) to be removed
     @kwarg quiet: logical to determine print statements
     """
@@ -563,9 +613,54 @@ def parse_spawn_args():
     @return args: an object containing the input arguments.
     """
     ap = configargparse.ArgParser(description='GPLOT Spawn Parser')
-    ap.add_argument("-e", "--expt", required=True, help="The GPLOT experiment")
+    ap.add_argument("-e", "--expt", required=True, help="The GPLOT experiment (e.g., GFS_Forecast)")
     ap.add_argument("-o", "--gpout", required=True, help="The GPLOT output directory")
-    ap.add_argument("-m", "--module", required=True, help="The GPLOT module")
+    ap.add_argument("-m", "--module", required=True, help="The GPLOT module (e.g., maps)")
+    ap.add_argument("-v", "--verbose", required=False, dest='verbose', action='store_true', help="Verbose mode")
+    ap.add_argument("--no-submit", required=False, dest='submit', action='store_false', help="Do not spawn child jobs. Useful for testing.")
+    ap.set_defaults(submit=True)
+    args, unknown = ap.parse_known_args()
+    return(args);
+
+
+
+###########################################################
+def parse_bundle_args():
+    """Parse the input arguments for the GPLOT bundler
+    @return args: an object containing the input arguments.
+    """
+    ap = configargparse.ArgParser(description='GPLOT Bundle Parser')
+    ap.add_argument("-e", "--expt", required=True, help="The GPLOT experiment (e.g., GFS_Forecast)")
+    ap.add_argument("-o", "--gpout", required=True, help="The GPLOT output directory")
+    ap.add_argument("-m", "--module", required=True, help="The GPLOT module (e.g., maps)")
+    ap.add_argument("-g", "--graphic", required=True, help="Comma separated list of GPLOT graphics (e.g., GRAPHIC1 or GRAPHIC1,GRAPHIC2,GRAPHIC3,...")
+    ap.add_argument("-c", "--cycle", required=True, help="The GPLOT cycle (e.g., 2020010100)")
+    ap.add_argument("-s", "--storm", required=True, help="The GPLOT storm ID (e.g., 01L)")
+    ap.add_argument("-d", "--domain", required=True, help="The GPLOT domain (e.g., atl)")
+    ap.add_argument("--ensid", required=False, help="The GPLOT ensemble ID (e.g., 01)")
+    ap.add_argument("-v", "--verbose", required=False, dest='verbose', action='store_true', help="Verbose mode")
+    ap.add_argument("--no-submit", required=False, dest='submit', action='store_false', help="Do not spawn child jobs. Useful for testing.")
+    ap.set_defaults(submit=True)
+    args, unknown = ap.parse_known_args()
+    return(args);
+
+
+
+###########################################################
+def parse_maps_args():
+    """Parse the input arguments for the GPLOT Maps module
+    @return args: an object containing the input arguments.
+    """
+    ap = configargparse.ArgParser(description='GPLOT Maps Parser')
+    ap.add_argument("-e", "--expt", required=True, help="The GPLOT experiment (e.g., GFS_Forecast)")
+    ap.add_argument("-o", "--gpout", required=True, help="The GPLOT output directory")
+    ap.add_argument("-m", "--module", required=True, help="The GPLOT module (e.g., maps)")
+    ap.add_argument("-g", "--graphic", required=True, help="Comma separated list of GPLOT graphics (e.g., GRAPHIC1 or GRAPHIC1,GRAPHIC2,GRAPHIC3,...")
+    ap.add_argument("-c", "--cycle", required=True, help="The GPLOT cycle (e.g., 2020010100)")
+    ap.add_argument("-s", "--storm", required=True, help="The GPLOT storm ID (e.g., 01L)")
+    ap.add_argument("-d", "--domain", required=True, help="The GPLOT domain (e.g., atl)")
+    ap.add_argument("-f", "--lead_time", required=True, help="The GPLOT forecast lead time in hours (e.g., 12)")
+    ap.add_argument("--ensid", required=False, help="The GPLOT ensemble ID (e.g., 01)")
     ap.add_argument("-v", "--verbose", required=False, dest='verbose', action='store_true', help="Verbose mode")
     ap.add_argument("--no-submit", required=False, dest='submit', action='store_false', help="Do not spawn child jobs. Useful for testing.")
     ap.set_defaults(submit=True)
@@ -585,6 +680,15 @@ def random_N_digits(n):
     start = 10**(n-1)
     finish = (10**n)-1
     return randint(start,finish)
+
+
+
+###########################################################
+def string_check(obj):
+    """Chck if an object is a string or list of strings.
+    @param obj: any object
+    """
+    return bool(obj) and all(isinstance(i, basestring) for i in obj)
 
 
 

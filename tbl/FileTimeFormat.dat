@@ -1,14 +1,15 @@
-DSOURCE       HRSTR    HRFMT
-HWRF          f        3
-HWRF15        f        3
-HWRF16        f        3
-HWRF17        f        3
-HWRF18        f        3
-HWRF19        f        3
-NMMB          f        3
-GFS           f        3
-HFVGFS        f        3
-fvGFS_ATL     f        3
-GEFS          f        2
-HAFS          f        3
-ECMWF         f        3
+DSOURCE       TYPE        HRSTR    HRFMT
+HWRF          forecast    f        3
+HWRF15        forecast    f        3
+HWRF16        forecast    f        3
+HWRF17        forecast    f        3
+HWRF18        forecast    f        3
+HWRF19        forecast    f        3
+NMMB          forecast    f        3
+GFS           forecast    f        3
+HFVGFS        forecast    f        3
+fvGFS_ATL     forecast    f        3
+GEFS          forecast    f        2
+HAFS          forecast    f        3
+ECMWF         forecast    f        3
+GFSA          analysis    ?        ?

@@ -95,22 +95,24 @@ class Main_Logger:
 
 
     ###########################################################
-    def add_stream_handler(self,FMT=None,LEVEL=None):
+    def add_stream_handler(self,FMT=None,LEVEL=None,STDOUT=False):
         """Create a stream handler object
         @param self:  the instance of the class (no need to pass this)
         @kwarg FMT:   the log statement format
         @kwarg LEVEL: the log level
         """
         # Create the file handler object
-        self.SHANDLER = logging.StreamHandler()
+        if STDOUT:  self.SHANDLER = logging.StreamHandler(sys.stdout)
+        else:       self.SHANDLER = logging.StreamHandler()
 
         # Set the logger level. Default is debug
         if LEVEL is not None:
             self.SHANDLER.setLevel(self.set_level(LEVEL))
 
         # Set formatting, if required
-        if FMT is not None:
-            self.SHANDLER.setFormatter(self.set_formatter(FMT))
+        if FMT is None:
+            FMT = '%(asctime)s %(name)s (%(filename)s:%(lineno)d) %(levelname)s:  %(message)s'
+        self.SHANDLER.setFormatter(self.set_formatter(FMT))
 
         # Add the stream handler to the logging object
         self.logger.addHandler(self.SHANDLER)

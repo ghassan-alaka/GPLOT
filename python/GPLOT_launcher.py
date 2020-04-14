@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Import necessary modules
-import os, re, shutil, sys
+import datetime, os, re, shutil, sys
 import numpy as np
 
 # Import GPLOT modules
@@ -70,10 +70,12 @@ def submit_spawn(N,L):
         SPAWNJOB = "GPLOT_spawn."+MOD+"."+N.EXPT
         SPAWNFILE1 = N.BATCHDIR+"GPLOT_spawn.generic.py"
         SPAWNLOG = N.LOGDIR+SPAWNJOB+".log"
+        #SPAWNLOG = N.GPOUT+'/log/'+SPAWNJOB+'.log'
 
         # Define the command prefix, typically the modulefile to source
-        N.BATCH_MODE = 'foreground'		# Testing
-        PRE = xc.src_mods_pre(N.GPLOT_DIR)
+        #N.BATCH_MODE = 'foreground'		# Testing
+        PRE_JOB = xc.find_pre_job(N.GPLOT_DIR)
+        SRC_MODS = xc.src_mods_pre(N.GPLOT_DIR)
 
         # Build the base command with input arguments. The file name is appended later.
         CMD_BASE = " -e "+N.EXPT+" -o "+N.GPOUT+" -m "+MOD
@@ -88,7 +90,7 @@ def submit_spawn(N,L):
             CMD_BASE = SPAWNFILE2+CMD_BASE
 
             # Modify the SBATCH header
-            xc.spawn_prep(MOD,N.EXPT,SPAWNFILE2,N.LOGDIR,N.CPU_ACCT,N.PARTITION,N.QOS,RM_LOGS=True)
+            xc.slurm_prep(SPAWNFILE2,N.LOGDIR,MOD=MOD,EXPT=N.EXPT,CPU_ACCT=N.CPU_ACCT,PARTITION=N.PARTITION,QOS=N.QOS,JNAME=SPAWNJOB,RM_LOGS=True)
 
             # Get the Slurm Job ID for any matching jobs
             id = xc.get_slurm_jobid(SPAWNJOB)
@@ -98,28 +100,28 @@ def submit_spawn(N,L):
                 L.logger.info("Batch job(s) already exist(s) --> "+' '.join(id))
                 L.logger.info("Not submitting anything for "+MOD.upper()+".")
             else:
-                L.logger.info("Submitting "+SPAWNFILE2+" to the slurm batch scheduler.")
-                L.logger.info("command:  "+PRE+"sbatch "+CMD_BASE+" > "+SPAWNLOG)
-                xc.exec_subprocess(PRE+"sbatch "+CMD_BASE, GDIR=N.GPLOT_DIR)
+                L.logger.info(f"Submitting {SPAWNFILE2} to the slurm batch scheduler.")
+                L.logger.debug(f"command:  sbatch {PRE_JOB} {SRC_MODS} {CMD_BASE}")
+                xc.exec_subprocess(f"sbatch {PRE_JOB} {SRC_MODS} {CMD_BASE}", GDIR=N.GPLOT_DIR)
 
         elif N.BATCH_MODE.lower() == 'foreground':
             CMD_BASE = SPAWNFILE1+CMD_BASE
-            L.logger.info("Submitting "+SPAWNFILE1+" to the foreground.")
-            L.logger.info("command: "+PRE+CMD_BASE+" > "+SPAWNLOG)
-            xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG, GDIR=N.GPLOT_DIR)
+            L.logger.info(f"Submitting {SPAWNFILE1} to the foreground.")
+            L.logger.debug(f"command:  {PRE_JOB} {SRC_MODS} {CMD_BASE} > {SPAWNLOG}")
+            xc.exec_subprocess(f"{PRE_JOB} {SRC_MODS} {CMD_BASE} > {SPAWNLOG}", GDIR=N.GPLOT_DIR)
 
         elif N.BATCH_MODE.lower() == 'background':
             CMD_BASE = SPAWNFILE1+CMD_BASE
-            L.logger.info("Submitting "+SPAWNFILE1+" to the background.")
-            L.logger.info("command: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
-            xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
+            L.logger.info(f"Submitting {SPAWNFILE1} to the background.")
+            L.logger.debug(f"command:  {PRE_JOB} {SRC_MODS} {CMD_BASE} > {SPAWNLOG} &")
+            xc.exec_subprocess(f"{PRE_JOB} {SRC_MODS} {CMD_BASE} > {SPAWNLOG} &", GDIR=N.GPLOT_DIR)
             #xc.exec_subprocess("echo $GPLOT_DIR ; python -V > "+SPAWNLOG)
 
         else:
             CMD_BASE = SPAWNFILE1+CMD_BASE
-            L.logger.info("Defaulting to a background job. Submitting "+SPAWNFILE1+".")
-            L.logger.info("command: "+PRE+CMD_BASE+" > "+SPAWNLOG+" &")
-            xc.exec_subprocess(PRE+CMD_BASE+" > "+SPAWNLOG+" &", GDIR=N.GPLOT_DIR)
+            L.logger.info(f"Defaulting to a background job. Submitting {SPAWNFILE1}.")
+            L.logger.debug("command:  {PRE_JOB} {SRC_MODS} {CMD_BASE} > {SPAWNLOG} &")
+            xc.exec_subprocess(f"{PRE_JOB} {SRC_MODS} {CMD_BASE} > {SPAWNLOG} &", GDIR=N.GPLOT_DIR)
 
 
 
@@ -128,6 +130,9 @@ def main():
 
     # Set logging
     L = Main_Logger('GPLOT_launcher')
+
+    # Log some important information
+    L.logger.info("GPLOT Launcher began at "+str(datetime.datetime.now()))
 
     # Get directories
     DIRS = Directories()
@@ -173,6 +178,9 @@ def main():
             submit_spawn(NML,L)
 
         L.logger.info("Done working on this experiment --> "+EXPT)
+
+    # Log some important information
+    L.logger.info("GPLOT Launcher completed at "+str(datetime.datetime.now()))
 
 
 

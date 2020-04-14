@@ -56,11 +56,11 @@ def exec_subprocess(*args,GDIR=None,**kwargs):
     # If necessary, assign the new GPLOT_DIR to the environment
     # to be passed to the shell subprocess
     MY_ENV = os.environ.copy()
-    if GDIR is not None:
-        MY_ENV["GPLOT_DIR"] = GDIR
+    if GDIR is not None:  MY_ENV["GPLOT_DIR"] = GDIR
 
     # Run the subprocess according to the shchk option.
     if len(args) == 1:
+        print(args[0])
         subprocess.call(args, shell=True, executable='/bin/bash', env=MY_ENV)
     else:
         subprocess.call(args, shell=False)
@@ -68,11 +68,11 @@ def exec_subprocess(*args,GDIR=None,**kwargs):
 
 
 ###########################################################
-def exec_subprocess_check(*args):
+def exec_subprocess_check(*args,**kwargs):
     """Call a shell subprocess and capture the result
-    @param args: at least 1 string containing information on what to run
-    @kwargs:     extra keywords are allowed
-    @return R:   the output of the shell command
+    @args:     at least 1 string containing information on what to run
+    @kwargs:   extra keyword arguments are allowed
+    @return R: the output of the shell command
     """
 
     # Get the logger object
@@ -91,6 +91,14 @@ def exec_subprocess_check(*args):
 
 
 ###########################################################
+def find_pre_job(GDIR):
+    """Return the pre job shell script.
+    @param GDIR: the GPLOT source directory
+    """
+    return(GDIR+'/shell/GPLOT_pre_job.sh');
+
+
+###########################################################
 def get_slurm_jobid(JOB):
     """Retrieve the slurm job identification
     @param JOB: the job id
@@ -106,16 +114,16 @@ def get_slurm_jobid(JOB):
 
 
 ###########################################################
-def slurm_prep(MOD,EXPT,BFILE,LOGDIR,CPU_ACCT,PARTITION,QOS,NAME='spawn',RM_LOGS=False):
+def slurm_prep(BFILE,LOGDIR,MOD=None,EXPT=None,CPU_ACCT=None,PARTITION=None,QOS=None,JNAME=None,RM_LOGS=False,**kwargs):
     """Prepare the slurm header for a given batch file
-    @param MOD:       the GPLOT module ID
-    @param EXPT:      the experiment name, typically from the master namelist file name
     @param BFILE:     the batch file full path specific to the current experiment
     @param LOGDIR:    the GPLOT log directory
-    @param CPU_ACCT:  the batch cpu account for the runs
-    @param PARTITION: the batch partition(s) for the runs
-    @param QOS:       the quality of service for the runs
-    @kwarg NAME:      the name of the GPLOT driver (e.g., spawn, bundle)
+    @kwarg MOD:       the GPLOT module ID
+    @kwarg EXPT:      the experiment name, typically from the master namelist file name
+    @kwarg CPU_ACCT:  the batch cpu account for the runs
+    @kwarg PARTITION: the batch partition(s) for the runs
+    @kwarg QOS:       the quality of service for the runs
+    @kwarg JNAME:      the name of the GPLOT driver (e.g., spawn, bundle)
     @kwarg RM_LOGS:   logical to remove the batch log files
     @kwargs:          extra keywords are allowed
     """
@@ -124,21 +132,32 @@ def slurm_prep(MOD,EXPT,BFILE,LOGDIR,CPU_ACCT,PARTITION,QOS,NAME='spawn',RM_LOGS
     L = kwargs.get('logger',Main_Logger('Execute'))
 
     # Define the log files
-    JNAME = "GPLOT_"+NAME+"."+MOD+"."+EXPT
-    LOUT = LOGDIR+JNAME+".log"
-    LERR = LOGDIR+JNAME+".err"
+    if JNAME is None:
+        try:
+            JNAME = "GPLOT_unknown."+MOD+"."+EXPT
+        except:
+            L.logger.error("MOD and EXPT can't be Nonetype is JNAME is Nonetype.")
+
+    # Check that LOGDIR exists
+    if os.path.isdir(LOGDIR):
+        LOUT = LOGDIR+JNAME+".log"
+        LERR = LOGDIR+JNAME+".log"
+    else:
+        L.logger.error("LOGDIR must be a real directory.")
+        sys.exit(2)
 
     # Make changes to the spawn batch header in a shell process
-    if exec_subprocess_check(["grep -q '#SBATCH' "+BFILE]):
-        exec_subprocess(["sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name=\""+JNAME+"\"/g' "+BFILE])
-        exec_subprocess(["sed -i 's%^#SBATCH --output=.*%#SBATCH --output=\""+LOUT+"\"%g' "+BFILE])
-        exec_subprocess(["sed -i 's%^#SBATCH --error=.*%#SBATCH --error=\""+LERR+"\"%g' "+BFILE])
-        exec_subprocess(["sed -i 's/^#SBATCH --account=.*/#SBATCH --account="+CPU_ACCT+"/g' "+BFILE])
-        exec_subprocess(["sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition="+PARTITION+"/g' "+BFILE])
-        exec_subprocess(["sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos="+QOS+"/g' "+BFILE])
-    else:
-        L.logger.error("Could not find any #SBATCH entries in "+BFILE)
-        sys.exit(2)
+    with open(BFILE) as f:
+        if '#SBATCH' in f.read():
+            exec_subprocess(f"sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name=\"{JNAME}\"/g' {BFILE}")
+            exec_subprocess(f"sed -i 's%^#SBATCH --output=.*%#SBATCH --output=\"{LOUT}\"%g' {BFILE}")
+            exec_subprocess(f"sed -i 's%^#SBATCH --error=.*%#SBATCH --error=\"{LERR}\"%g' {BFILE}")
+            if CPU_ACCT is not None:   exec_subprocess(f"sed -i 's/^#SBATCH --account=.*/#SBATCH --account={CPU_ACCT}/g' {BFILE}")
+            if PARTITION is not None:  exec_subprocess(f"sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition={PARTITION}/g' {BFILE}")
+            if QOS is not None:        exec_subprocess(f"sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos={QOS}/g' {BFILE}")
+        else:
+            L.logger.error(f"Could not find any #SBATCH entries in {BFILE}")
+            sys.exit(2)
 
     # Remove logs, if required
     if RM_LOGS:
@@ -155,5 +174,5 @@ def src_mods_pre(GDIR):
     @param GDIR: the GPLOT source directory
     @return PRE: the command statement string ready to be prepended
     """
-    PRE = ". "+GDIR+"/modulefiles/GPLOT_mods ; "
+    PRE = GDIR+"/modulefiles/GPLOT_mods"
     return(PRE);

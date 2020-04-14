@@ -80,7 +80,7 @@ class Database_Status:
 
         # Generic variables that apply to all tables
         self.COL_STATUS = 'status'
-        self.ACTIVE_STATUS = ['started','working','incomplete','failed']
+        self.ACTIVE_STATUS = ['started','incomplete','failed']
 
         # Variables for the main_status table
         self.M_TBL = "main_status"
@@ -114,6 +114,7 @@ class Database_Status:
         self.G_COL4 = ['main_file1','main_file2','main_file3','main_file4']
         self.G_COL5 = ['comp_file1','comp_file2','comp_file3','comp_file4']
         self.G_COL6 = ['module','ensid','cycle','sid','domain','name']
+        self.G_COL7 = ['module','ensid','cycle','sid','domain','lead_time']
 
 
     ###########################################################
@@ -301,7 +302,7 @@ class Database_Status:
         # Don't assign a Storm ID if the graphic is not storm-centered
         if not NML.IS_STORMCEN:  self.TC = 'null'
 
-        # Update the status of the current job (cycle, storm, tier, domain, ensid)
+        # Update the status of the current job (module, ensid, cycle, storm, domain, graphic)
         # Must loop over all forecast hours.
         self.G_STATUS = []
         self.G_ACTIVE = False
@@ -348,7 +349,7 @@ class Database_Status:
                             for (M,N) in zip(MATCH2,range(len(MATCH2))):
                                 update_table(self.G_TBL,[self.G_COL5[N]],[M],C2=self.G_COL3,V2=self.G_VAL1,DFILE=self.DB_FILE,logger=L)
             self.G_STATUS = self.G_STATUS+S[self.COL_STATUS].tolist()
-        print(select_rows(self.G_TBL,self.G_COL2,DFILE=self.DB_FILE,C2=self.G_COL6,V2=self.G_VAL2,logger=L))
+        #print(select_rows(self.G_TBL,self.G_COL2,DFILE=self.DB_FILE,C2=self.G_COL6,V2=self.G_VAL2,logger=L))
 
         # Check if any graphic statuses are not complete.
         if [i for i in self.G_STATUS if i in self.ACTIVE_STATUS]:  self.G_ACTIVE = True
@@ -605,7 +606,7 @@ def create_table(TBL,HNAME,HTYPE,CONN=None,DFILE=None,\
 
 
 ###########################################################
-def db_name(DIR,EXPT,quiet=True):
+def db_name(DIR,EXPT,quiet=True,**kwargs):
     """Return the database file name.
     @param DIR:    prefix of the complete directory
     @param EXPT:   the GPLOT experiment name
