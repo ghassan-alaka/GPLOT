@@ -19,6 +19,7 @@ ADECKDIR="$3"
 BDECKDIR="$4"
 TCVDIR="$5"
 TYPE="$6"
+AAA="$7"
 #ODIR="/lfs2/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/"
 #ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
 #BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
@@ -43,14 +44,18 @@ if [ ! -d "$TCVDIR" ]; then
 fi
 
 # Find all A-DECKs
-if [ "$TYPE" == "1" ]; then
-    ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f -mmin ${MMIN}` )
-elif [ "$TYPE" == "2" ]; then
-    ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f -mmin ${MMIN}` )
-elif [ "$TYPE" == "3" ]; then
-    ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f` )
-elif [ "$TYPE" == "4" ]; then
-    ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f` )
+if [ -z "${AAA}" ]; then
+    if [ "$TYPE" == "1" ]; then
+        ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f -mmin ${MMIN}` )
+    elif [ "$TYPE" == "2" ]; then
+        ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f -mmin ${MMIN}` )
+    elif [ "$TYPE" == "3" ]; then
+        ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f` )
+    elif [ "$TYPE" == "4" ]; then
+        ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f` )
+    fi
+else
+    ALL_ADECKS=( `find "${ADECKDIR}" -name ${AAA} -type f` )
 fi
 
 # Now, loop over the available A-DECKs
@@ -145,6 +150,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
             OFILE="${ODIR}${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
             OFILE2="${ODIR}${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
             TMPFILE="${ODIR}TMP.${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            echo "OFILE2 = ${OFILE2}"
             if [ -f ${OFILE2} ]; then
                 echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
                 rm -f ${OFILE}
