@@ -22,7 +22,7 @@ TYPE="$6"
 #ODIR="/lfs2/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/"
 #ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
 #BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
-MMIN="-43200"
+MMIN="-720"
 SID_FILE="${GPLOT_DIR}/tbl/SIDs_Old_New.dat"
 
 mkdir -p ${ODIR}
