@@ -13,6 +13,7 @@
 
 # Load modules
 module load intel
+module load ncl/6.5.0
 
 # 1. Get input arguments
 ODIR="$1"
