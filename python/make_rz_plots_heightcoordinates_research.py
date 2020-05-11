@@ -65,6 +65,10 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
+PYTHONDIR = sys.argv[11]
+if PYTHONDIR == '':
+	print("ERROR: Python Directory can't be MISSING.")
+	sys.exit()
 MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
 
 # Read the master namelist
@@ -651,6 +655,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				dbz5_p_w0[:,j] = amp0_dbz
 				dbz5_p_w1[:,j] = A1_dbz*np.cos(theta) + B1_dbz*np.sin(theta)
 				dbz5_p_w2[:,j] = A2_dbz*np.cos(2*theta) + B2_dbz*np.sin(2*theta)
+				dbz5_p_whigher[:,j] = 0
 				for h in range (2,np.int((np.shape(theta)[0]+1)/2)):
 					A = 2*np.real(fourier_dbz[h])
 					B = -2*np.imag(fourier_dbz[h])
@@ -677,6 +682,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				vt10_p_w0[:,j] = amp0_vt10
 				vt10_p_w1[:,j] = A1_vt10*np.cos(theta) + B1_vt10*np.sin(theta)
 				vt10_p_w2[:,j] = A2_vt10*np.cos(2*theta) + B2_vt10*np.sin(2*theta)
+				vt10_p_whigher[:,j] = 0
 				for h in range (2,np.int((np.shape(theta)[0]+1)/2)):
 					A = 2*np.real(fourier_vt10[h])
 					B = -2*np.imag(fourier_vt10[h])
@@ -809,19 +815,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			terms_vt_tendency_sum = term1_vt_tendency_mean_radial_flux+term2_vt_tendency_mean_vertical_advection+term3_vt_tendency_eddy_flux+term4_vt_tendency_vertical_eddy_advection
 
-			print('dvt/dt Term1 Mean = '+np.str(np.nanmean(np.nanmean(term1_vt_tendency_mean_radial_flux[0:17,4:20]))))
-			print('dvt/dt Term2 Mean = '+np.str(np.nanmean(np.nanmean(term2_vt_tendency_mean_vertical_advection[0:17,4:20]))))
-			print('dvt/dt Term3 Mean = '+np.str(np.nanmean(np.nanmean(term3_vt_tendency_eddy_flux[0:17,4:20]))))
-			print('dvt/dt Term4 Mean = '+np.str(np.nanmean(np.nanmean(term4_vt_tendency_vertical_eddy_advection[0:17,4:20]))))
-			print('dvt/dt Terms1-4 Sum = '+np.str(np.nanmean(np.nanmean(terms_vt_tendency_sum[0:17,4:20]))))
-
 			##################################################################################################################
 
 
 			##################################################################################################################
 			###Block of code to calculate vorticity budget terms
 			#First Calculate Storm Motion
-			print('TEST FHRIND-1 =',list(FHRIND)[0]-1)
 			centerlon_t0 = centerlon
 			centerlat_t0 = centerlat
 			if ( FHR > 0):
@@ -926,12 +925,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			terms_vort_tendency_sum = term1_vort_tendency_horizontal_advection+term2_vort_tendency_vertical_advection+term3_vort_tendency_stretching_convergence+term4_vort_tendency_tilting
 
-			print('dvort/dt Term1 Mean = '+np.str(np.nanmean(np.nanmean(term1_vort_tendency_horizontal_advection[0:17,4:20]))))
-			print('dvort/dt Term2 Mean = '+np.str(np.nanmean(np.nanmean(term2_vort_tendency_vertical_advection[0:17,4:20]))))
-			print('dvort/dt Term3 Mean = '+np.str(np.nanmean(np.nanmean(term3_vort_tendency_stretching_convergence[0:17,4:20]))))
-			print('dvort/dt Term4 Mean = '+np.str(np.nanmean(np.nanmean(term4_vort_tendency_tilting[0:17,4:20]))))
-			print('dvort/dt Terms1-4 Sum = '+np.str(np.nanmean(np.nanmean(terms_vort_tendency_sum[0:17,4:20]))))
-
 			##################################################################################################################
 					
 
@@ -994,7 +987,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			# Loop over all swaths:
 
 			for pi in range(1): # Loop over storm index
-				print('The current pass index is:',pi)
 				for yi in range(ptype.shape[1]): # Loop over latitudinal index
 							#print 'The current y-index is:',yi
 					for xi in range(ptype.shape[2]): # Loop over longitudinal index
@@ -1104,7 +1096,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				threshold_pressure = np.zeros((np.shape(pressure_centroid)[2]))
 				threshold_vort = np.zeros((np.shape(vort_centroid)[2]))
 				
-				print('ivd = ',ivd)
 
 				for k in range(ivd):
 					x1 = np.argmin(abs(-rmw_mean[k]-x_sr))
@@ -1131,7 +1122,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 					print(threshold_pressure[k],threshold_vort[k])
 		
 				centroid.centroid(pressure_centroid,center_indices_pressure,threshold_pressure,-1,np.shape(pressure_centroid)[0],np.shape(pressure_centroid)[1],np.shape(pressure_centroid)[2])
-				print('OK With Pressure')
 				centroid.centroid(vort_centroid,center_indices_vort,threshold_vort,1,np.shape(vort_centroid)[0],np.shape(vort_centroid)[1],np.shape(vort_centroid)[2])
 
 				center_x_vort = np.ones(zsize)*np.nan
@@ -1274,10 +1264,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				symmetry_all_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring+amp_vt10_p_whigher_ring)
 				if symmetry_w1_vt10_p < 0: symmetry_w1_vt10_p = 0
 				if symmetry_all_vt10_p < 0: symmetry_all_vt10_p = 0
-				
+			
+			vmax = float(maxwind)		
 			structurefile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
 			f = open(structurefile,'w')
-			f.write("%4s, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f" % (FHR,rmw_2km,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vort,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p))	
+			f.write("%4s, %4.0f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f" % (FHR,vmax,rmw_2km,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vort,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p))	
 			f.close()
 
 			#############################################################################################################################################
@@ -2263,5 +2254,16 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 
+print('DOING THE EXTRA STUFF')
+import subprocess
+combinedfile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.all.txt'
+pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f*.txt'+' >> '+combinedfile
+print('pastecmd = ',pastecmd)
+os.system(pastecmd)
+pythonexec = sys.executable
+runcmd = pythonexec+' '+PYTHONDIR+'/plot_structure_metrics.py'+' '+combinedfile+' '+EXPT.strip()+' '+ODIR+' '+forecastinit+' '+LONGSID
+print('runcmd = ',runcmd)
+subprocess.call(runcmd,shell=True)
 
+print('COMPLETING')
 os.system('echo "complete" > '+STATUS_FILE)
