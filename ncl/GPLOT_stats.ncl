@@ -1136,8 +1136,9 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	
 	; Check that1 vald ATCF is found. If not, exit.
 	if(dimsizes(val).gt.1)then
-		print("ERROR: Found more than 1 matching ATCF file found in "+ODIR+"ATCF_FILES.dat")
-		exit
+		print("WARNING: Found more than 1 matching ATCF file found in "+ODIR+"ATCF_FILES.dat")
+		print("WARNING: Will process only the first ATCF file.")
+		val := val(0)
 	end if
 	if(ismissing(val(0)))then
 		print("ERROR: Could not find matching ATCF in "+ODIR+"ATCF_FILES.dat")
