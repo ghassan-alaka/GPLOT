@@ -135,19 +135,24 @@ fi
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
+
+################################
+# PREPARE THE LIST OF ATCF FILES
+
 # Get all of the ATCF files so they can be searched later.
-# If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
-ATCF2_ALL=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
+# If duplicates exist, keep the final ATCF version (ATCF2).
+ATCF1_ALL=(`find -L ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2 -n -r | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
+ATCF2_ALL=(`find -L ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2 -n -r | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
 for ATCF in ${ATCF2_ALL[@]}; do
     ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
     ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
 done
 ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
-NATCF="${#ATCF_ALL[*]}"
-if [[ NATCF -gt NMAX ]]; then
-    C=$((NATCF - NMAX))
-    ATCF_ALL=("${ATCF_ALL[@]:$C}" "${ATCF_ALL[@]:0:$C}")
+if [ ! -z "$IDATE" ]; then
+    ATCF_ALL=(`echo ${ATCF_ALL[@]} | sed 's/ /\n/g' | grep ${IDATE}`)
+fi
+if [ ! -z "$SID" ]; then
+    ATCF_ALL=(`echo ${ATCF_ALL[@]} | sed 's/ /\n/g' | grep ${SID,,}`)
 fi
 
 
