@@ -57,6 +57,12 @@ SRW1 = data[:,29].astype('float')
 SRWA = data[:,30].astype('float')
 SWW1 = data[:,31].astype('float')
 SWWA = data[:,32].astype('float')
+SLMS = data[:,33].astype('float')
+SLDS = data[:,34].astype('float')
+SLMM = data[:,35].astype('float')
+SLDM = data[:,36].astype('float')
+SLMD = data[:,37].astype('float')
+SLDD = data[:,38].astype('float')
 
 print('Defining Figure Functions')
 
@@ -73,6 +79,7 @@ def lineplot1(x,y,ycolor,xmin,xmax,ymin,ymax,xticks,yticks,xaxislabel,yaxislabel
 	plt.ylabel(yaxislabel,fontsize=24,fontweight='bold')
 	plt.legend(loc='upper left',fontsize=20)
 	plt.title(EXPT.strip()+'\n'+'Time Series of '+varstring_long+'\n'+'Init: '+forecastinit,fontsize=24, weight = 'bold',loc='left')
+	plt.title(LONGSID.upper(),fontsize=24,color='brown',loc='right')
 	ax1 = plt.gca()
 	ax2 = ax1.twinx()
 	ax2.plot(x,ysecondary,color=ysecondarycolor,linewidth=4,linestyle='-',label=ysecondarylegendlabel)
@@ -99,6 +106,7 @@ def lineplot2(x,y1,ycolor1,y2,ycolor2,xmin,xmax,ymin,ymax,xticks,yticks,xaxislab
 	plt.ylabel(yaxislabel,fontsize=24,fontweight='bold')
 	plt.legend(loc='upper left',fontsize=20)
 	plt.title(EXPT.strip()+'\n'+'Time Series of '+varstring_long+'\n'+'Init: '+forecastinit,fontsize=24, weight = 'bold',loc='left')
+	plt.title(LONGSID.upper(),fontsize=24,color='brown',loc='right')
 	ax1 = plt.gca()
 	ax2 = ax1.twinx()
 	ax2.plot(x,ysecondary,color=ysecondarycolor,linewidth=4,linestyle='-',label=ysecondarylegendlabel)
@@ -126,6 +134,7 @@ def lineplot3(x,y1,ycolor1,y2,ycolor2,y3,ycolor3,xmin,xmax,ymin,ymax,xticks,ytic
 	plt.ylabel(yaxislabel,fontsize=24,fontweight='bold')
 	plt.legend(loc='upper left',fontsize=20)
 	plt.title(EXPT.strip()+'\n'+'Time Series of '+varstring_long+'\n'+'Init: '+forecastinit,fontsize=24, weight = 'bold',loc='left')
+	plt.title(LONGSID.upper(),fontsize=24,color='brown',loc='right')
 	ax1 = plt.gca()
 	ax2 = ax1.twinx()
 	ax2.plot(x,ysecondary,color=ysecondarycolor,linewidth=4,linestyle='-',label=ysecondarylegendlabel)
@@ -161,6 +170,7 @@ def lineplot4(x,y1,ycolor1,y2,ycolor2,y3,ycolor3,y4,ycolor4,xmin,xmax,ymin,ymax,
 	ax2.set_ylabel(ysecondaryaxislabel,fontsize=24,fontweight='bold',color=ysecondarycolor)
 	ax2.legend(loc='upper right',fontsize=20)
 	plt.title(EXPT.strip()+'\n'+'Time Series of '+varstring_long+'\n'+'Init: '+forecastinit,fontsize=24, weight = 'bold',loc='left')
+	plt.title(LONGSID.upper(),fontsize=24,color='brown',loc='right')
 	figfname = ODIR+'/'+LONGSID.lower()+'.'+varstring+'_time_series.'+forecastinit+'.polar'
 	plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 	plt.close()
@@ -183,6 +193,7 @@ def lineplot5(x,y1,ycolor1,y2,ycolor2,y3,ycolor3,y4,ycolor4,y5,ycolor5,xmin,xmax
 	plt.ylabel(yaxislabel,fontsize=24,fontweight='bold')
 	plt.legend(loc='upper left',fontsize=20)
 	plt.title(EXPT.strip()+'\n'+'Time Series of '+varstring_long+'\n'+'Init: '+forecastinit,fontsize=24, weight = 'bold',loc='left')
+	plt.title(LONGSID.upper(),fontsize=24,color='brown',loc='right')
 	ax1 = plt.gca()
 	ax2 = ax1.twinx()
 	ax2.plot(x,ysecondary,color=ysecondarycolor,linewidth=4,linestyle='-',label=ysecondarylegendlabel)
@@ -227,7 +238,7 @@ lineplot1(xline,VODV,'xkcd:wheat',xmin,xmax,0,18,xticks,np.linspace(0,18,10),xax
 lineplot4(xline,TMPM,'xkcd:tomato',TMVM,'xkcd:lightblue',TMPD,'xkcd:crimson',TMVD,'xkcd:darkblue',xmin,xmax,0,100,xticks,np.linspace(0,100,11),xaxislabel,'Vortex Tilt (km)','2-5km Pressure Tilt','2-5km Vorticity Tilt','2-10km Pressure Tilt','2-10km Vorticity Tilt','Mid-Level and Upper-Level Vortex Tilt Magnitude','vortextiltmag',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
 
 #Make plot of tilt direction (2-5 km and 2-10 km)
-lineplot4(xline,TDPM,'xkcd:tomato',TDVM,'xkcd:lightblue',TDPD,'xkcd:crimson',TDVD,'xkcd:darkblue',xmin,xmax,0,360,xticks,np.linspace(0,360,9),xaxislabel,'Vortex Tilt (km)','2-5km Pressure Tilt','2-5km Vorticity Tilt','2-10km Pressure Tilt','2-10km Vorticity Tilt','Mid-Level and Upper-Level Vortex Tilt Direction','vortextiltdir',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
+lineplot4(xline,TDPM,'xkcd:tomato',TDVM,'xkcd:lightblue',TDPD,'xkcd:crimson',TDVD,'xkcd:darkblue',xmin,xmax,0,360,xticks,np.linspace(0,360,9),xaxislabel,'Vortex Tilt Direction (degrees)','2-5km Pressure Tilt','2-5km Vorticity Tilt','2-10km Pressure Tilt','2-10km Vorticity Tilt','Mid-Level and Upper-Level Vortex Tilt Direction','vortextiltdir',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
 
 #Make plot of precipitation type percentages inside the eyewall
 lineplot5(xline,PWEI*100,'xkcd:grey',PSTI*100,'xkcd:green',PSHI*100,'xkcd:yellow',PMOI*100,'xkcd:orange',PDEI*100,'xkcd:red',xmin,xmax,0,100,xticks,np.linspace(0,100,11),xaxislabel,'Percentage of Eyewall Area','Weak','Stratiform','Shallow Convection','Moderate Convection','Deep Convection','Precipitation Type Percentages in the Inner Core','ptypepercentinner',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
@@ -243,3 +254,9 @@ lineplot2(xline,SRW1,'xkcd:lightgreen',SRWA,'xkcd:darkgreen',xmin,xmax,0,1,xtick
 
 #Make plot of wind symmetry
 lineplot2(xline,SWW1,'xkcd:pink',SWWA,'xkcd:magenta',xmin,xmax,0,1,xticks,np.linspace(0,1,11),xaxislabel,'10-m Wind Symmetry','Wavenumber 0 vs. Wavenumber 1','Wavenumber 0 vs. All Wavenumbers','Eyewall Wind Symmetry','symmetrywind',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
+
+#Make Plot of Local Shear Magnitude
+lineplot3(xline,SLMS*1.94,'xkcd:yellow',SLMM*1.94,'xkcd:orange',SLMD*1.94,'xkcd:red',xmin,xmax,0,40,xticks,np.linspace(0,40,9),xaxislabel,'Shear Magnitude (kt)','2-5 km','2-8 km','2-10 km','Local Shear Magnitude','shearlocalmag',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
+
+#Make Plot of Local Shear Direction
+lineplot3(xline,SLDS,'xkcd:yellow',SLDM,'xkcd:orange',SLDD,'xkcd:red',xmin,xmax,0,360,xticks,np.linspace(0,360,9),xaxislabel,'Shear Direction (Degrees)','2-5 km','2-8 km','2-10 km','Local Shear Direction','shearlocaldir',ysecondary,ysecondarycolor,ysecondarymin,ysecondarymax,ysecondaryticks,ysecondaryaxislabel,ysecondarylegendlabel)
