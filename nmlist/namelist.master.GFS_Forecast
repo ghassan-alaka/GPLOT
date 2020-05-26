@@ -42,25 +42,24 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/
+IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/
 ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/
-;ODIR; = /lfs1/projects/hur-aoml/Lew.Gramer/GPLOT/
+ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
 ATCF1_TAG = trak.hwrf.raw
-ATCF2_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
 ATCF2_TAG = atcfunix
-ATCF3_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF3_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/
 ATCF3_TAG = trak.hwrf.raw
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK_DIR = /lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/
+ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC/
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
@@ -165,7 +164,7 @@ DO_INTERP = False
 ;================================================================
 
 PYTHONFILE = make_rz_plots.nodbz.py
-TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
+;TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
 ;TEMPDIR; = /lfs1/projects/hur-aoml/rthr-aoml/GPLOT_Lew/HB18_v3_history/tempdir
 RESOLUTION = 1.5
 RMAX = 600
