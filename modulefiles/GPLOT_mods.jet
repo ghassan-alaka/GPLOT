@@ -17,8 +17,8 @@ module load grads/2.0.2
 export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 
 # Python 3 Anaconda
-#export python=/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
-alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
-export PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
+#export python=/lfs3/HFIP/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+alias python="/lfs3/HFIP/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
+export PATH="/lfs3/HFIP/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
 export PYTHONBUFFERED=1
 
