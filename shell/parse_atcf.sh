@@ -116,7 +116,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Second, try to get the TC name from the Best Track entry in the B-Deck
             if [ -z "$TCNAME" ]; then
                 # Check that the B-Deck is available
-                BDECK=${BDECKDIR}b${BASIN,,}${SNUM}${YEAR}.dat
+                BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
                 if [ -f ${BDECK} ]; then
                     echo "MSG: B-Deck file found --> ${BDECK}"
                     TCNAME=`cat ${BDECK} | awk -v CYCLE="${CYCLE}" '$3==CYCLE' | head -1 | cut -d "," -f28`
@@ -128,7 +128,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
 
             # Third, try to get the TC name from the TCVItals entry
             if [ -z "$TCNAME" ]; then
-                SYNDAT="${TCVDIR}syndat_tcvitals.${YEAR}"
+                SYNDAT="${TCVDIR}/syndat_tcvitals.${YEAR}"
                 if [ -f ${SYNDAT} ]; then
                     echo "MSG: TCVitals found --> ${SYNDAT}"
                     TCNAME=`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`
@@ -147,9 +147,9 @@ for ADECK in ${ALL_ADECKS[@]}; do
             echo "MSG: TCNAME=$TCNAME"
 
             # Copy this entry to the new parsed ATCF
-            OFILE="${ODIR}${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            OFILE2="${ODIR}${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            TMPFILE="${ODIR}TMP.${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            OFILE="${ODIR}/${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            OFILE2="${ODIR}/${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            TMPFILE="${ODIR}/TMP.${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
             echo "OFILE2 = ${OFILE2}"
             if [ -f ${OFILE2} ]; then
                 echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
