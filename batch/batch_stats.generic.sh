@@ -15,12 +15,7 @@
 set -x
 
 # Source GPLOT_mods to optimize the environment
-source ${GPLOT_DIR}/modulefiles/GPLOT_mods
-
-# Define critical environmental variables (based on NOAA's Jet)
-#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
-#export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
-#export OMP_NUM_THREADS=1
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
 
 # 1. Get command line variables
 NCLDIR=
