@@ -44,6 +44,7 @@ if [ ! -d "$TCVDIR" ]; then
 fi
 
 # Find all A-DECKs
+echo "${ADECKDIR}"
 if [ -z "${AAA}" ]; then
     if [ "$TYPE" == "1" ]; then
         ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f -mmin ${MMIN}` )
