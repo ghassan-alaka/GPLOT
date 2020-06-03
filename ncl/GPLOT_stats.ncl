@@ -302,8 +302,8 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 			ODIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ODIR =")))
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
-			ODIR_ADECK = ODIR+"adeck/"
-			ODIR	= ODIR+EXPT+"/"+IDATE+"/multi_model/"
+			ODIR_ADECK = ODIR+"/adeck/"
+			ODIR	= ODIR+"/guidance_ver/"
 	
 			ATCF1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_DIR =")))
 			ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))

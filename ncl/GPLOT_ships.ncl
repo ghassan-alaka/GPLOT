@@ -332,7 +332,7 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 			ODIR	= data(ind(isStrSubset2(data,"ODIR =")))
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
-			ODIR	= ODIR+EXPT+"/"+IDATE+"/"+DOMAIN+"/"
+			ODIR	= ODIR+"/"+DOMAIN+"/"
 	
 			ATCF1_DIR	= data(ind(isStrSubset2(data,"ATCF1_DIR =")))
 			ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))
