@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #
 # This is a wrapper script that calls a single script
 # for one or more experiments (EXPT). The purpose of this
@@ -50,32 +50,30 @@ LOGDIR="${GPLOT_DIR}/log/"
 # Some old/inactive experiments:  H18W HP2H HB17_v1_history GFS_Forecast
 #                                 fvGFS_ATL HB18_v2_forecast"
 if [ $# -eq 0 ]; then
-    echo "MSG: No experiments found via the command line."
-    EXPT=( "HB18_v3_history" "GFS_Forecast" )
-else
-    echo "MSG: Experiment found via the command line."
-    EXPT=( "$@" )
-fi
-if [ -z "$EXPT" ]; then
-    echo "ERROR: No experiments found. Something went wrong."
+    echo "ERROR: No experiment namelists found via the command line."
     exit
+else
+    echo "MSG: Experiment namelist(s) found via the command line."
+    NML_LIST=( "$@" )
 fi
-echo "MSG: Found these experiments --> ${EXPT[*]}"
+echo "MSG: Found these experiment namelists:"
+echo "${NML_LIST[@]}"
 
 
-# Loop over all experiments
-for d in "${EXPT[@]}"; do
-    echo "MSG: GPLOT is working on this experiment --> $d"
+# Loop over all experiment namelists.
+for NML in "${NML_LIST[@]}"; do
+    echo "MSG: GPLOT is working on this experiment namelist --> ${NML}"
 
 
     # Define the master namelist file name.
     # If this namelist is not found in $GPLOT_DIR/nmlist/,
     # the submission will fail.
-    NML="namelist.master.${d}"
-    echo "MSG: Master namelist --> ${NMLDIR}${NML}"
-    if [ -z "${NMLDIR}${NML}" ]; then
-        echo "ERROR: Master namelist could not be found."
-        echo "ERROR: Can't submit anything for this experiment."
+    #NML="namelist.master.${d}"
+    echo "MSG: Master namelist --> ${NML}"
+    if [ ! -f "${NML}" ]; then
+        echo "WARNING: Master namelist file could not be found."
+        echo "WARNING: Can't submit anything for this experiment."
+        echo "WARNING: Skipping to next experiment namelist."
         continue
     fi
     echo "MSG: Master namelist found. Hooray!"
@@ -83,14 +81,14 @@ for d in "${EXPT[@]}"; do
 
     # Determine the components of GPLOT that should be submitted.
     # These options currently include:  Maps, Ships, Stats, Polar
-    DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_POLAR=`sed -n -e 's/^DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NML} | sed 's/^\t*//'`
+    DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NML} | sed 's/^\t*//'`
+    DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NML} | sed 's/^\t*//'`
+    DO_POLAR=`sed -n -e 's/^DO_POLAR =\s//p' ${NML} | sed 's/^\t*//'`
 
 
     # Get the submission mode from the namelist.
-    BATCH_MODE=`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
+    BATCH_MODE=`sed -n -e 's/^BATCH_MODE =\s//p' ${NML} | sed 's/^\t*//' | tr a-z A-Z`
     if [ -z "${BATCH_MODE}" ]; then
         BATCH_MODE="BACKGROUND"
     fi
@@ -98,19 +96,19 @@ for d in "${EXPT[@]}"; do
 
 
     # Get the system environment and project account for batch submissions ($BATCH_MODE="SBATCH")
-    SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NML} | sed 's/^\t*//'`
     if [ "${BATCH_MODE}" == "SBATCH" ]; then
         BATCH_DFLTS="batch.defaults.${SYS_ENV,,}"
-        AUTO_BATCH=`sed -n -e 's/^AUTO_BATCH =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-        CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        AUTO_BATCH=`sed -n -e 's/^AUTO_BATCH =\s//p' ${NML} | sed 's/^\t*//'`
+        CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NML} | sed 's/^\t*//'`
         if [ -z ${CPU_ACCT} ] || [ "${AUTO_BATCH}" = "True" ]; then
             CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
         fi
-        QOS=`sed -n -e 's/^QOS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        QOS=`sed -n -e 's/^QOS =\s//p' ${NML} | sed 's/^\t*//'`
         if [ -z ${QOS} ] || [ "${AUTO_BATCH}" = "True" ]; then
             QOS=`sed -n -e 's/^QOS =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
         fi
-        PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NML} | sed 's/^\t*//'`
         if [ -z ${PARTITION} ] || [ "${AUTO_BATCH}" = "True" ]; then
             PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
         fi
@@ -120,30 +118,33 @@ for d in "${EXPT[@]}"; do
     # This part submits the spawn file for MAPS
     if [ "${DO_MAPS}" = "True" ]; then
         echo "MSG: MAPS submission is turned on."
-        SPAWNFILE1="spawn_maps.generic.sh"
-        SPAWNFILE2="spawn_maps.${d}.sh"
-        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
-        SPAWNLOG="spawn_maps.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
-        echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
+        SPAWNFILE1="${BATCHDIR}spawn_maps.generic.sh"
+        SPAWNFILE2="spawn_maps.${EXPTname}.sh"
+        /bin/cp ${SPAWNFILE1} ${SPAWNFILE2}
+        SPAWNLOG="GPLOT.spawn_maps.log"
+        echo "MSG: Spawn file --> ${SPAWNFILE2}"
+        echo "MSG: Spawn log --> ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_maps.${d}"; then
-                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_maps.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_maps.${EXPTname}"; then
+                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_maps.${EXPTname}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
                 echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
                 echo "MSG: Not submitting anything for MAPS."
             else
-                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_maps.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_maps.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_maps.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+                sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.spawn_maps.'"${EXPTname}"'/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --output=.*/#SBATCH --output="GPLOT.spawn_maps.out/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --error=.*/#SBATCH --error="GPLOT.spawn_maps.err/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${SPAWNFILE2}
+                exit
+                sbatch ${SPAWNFILE2} ${NML} &> ${SPAWNLOG}
             fi
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+            pwd
+            ls
+	    `pwd`/${SPAWNFILE2} ${NML} &> `pwd`/${SPAWNLOG}
         else
-	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
+	    ${SPAWNFILE2} ${NML} > ${SPAWNLOG} &
         fi
     fi
 
