@@ -20,63 +20,63 @@ echo "MSG: Submitting jobs for STATS."
 
 
 # Define important GPLOT directories
-NMLIST_DIR="${GPLOT_DIR}/nmlist/"
-BATCH_DIR="${GPLOT_DIR}/batch/"
-NCL_DIR="${GPLOT_DIR}/ncl/"
-TBL_DIR="${GPLOT_DIR}/tbl/"
+NMLIST_DIR="${GPLOT_DIR}/nmlist"
+BATCH_DIR="${GPLOT_DIR}/batch"
+NCL_DIR="${GPLOT_DIR}/ncl"
+TBL_DIR="${GPLOT_DIR}/tbl"
 
 # Get the namelist, could be from command line
 if [ ! -z "$1" ];then
     NMLIST="$1"
 else
-    NMLIST="namelist.input.default"
+    NMLIST="${NMLIST_DIR}/namelist.input.default"
 fi
 
 # Check if the namelist exists. If not, exit.
-if [ ! -f ${NMLIST_DIR}${NMLIST} ]; then
+if [ ! -f ${NMLIST} ]; then
     echo "ERROR: Namelist does not exist."
     exit
 else
-    echo "MSG: Found this namelist --> ${NMLIST_DIR}${NMLIST}."
+    echo "MSG: Found this namelist --> ${NMLIST}."
 fi
 
 
 
 # Pull important variables from the namelist
-DO_MAPS=`sed -n -e 's/^.*DO_MAPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DO_STATS=`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_MAPS=`sed -n -e 's/^.*DO_MAPS =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DO_STATS=`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`
+BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST} | sed 's/^\t*//'`
+CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
 
-#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+#FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
 
 # Fallback option for BDECK_DIR
 if [ -z "$BDECK_DIR" ]; then
-    BDECK_DIR=`sed -n -e 's/^.*BDECK2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+    BDECK_DIR=`sed -n -e 's/^.*BDECK2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
 fi
 
 # Print information
@@ -123,7 +123,7 @@ fi
 NMAX=25
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
-BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
+BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
 if [ -z "$BATCH_MODE" ]; then
     BATCH_MODE="SBATCH"
     echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE[*]}"
@@ -162,13 +162,12 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_stats.generic.sh"
-BATCHFILE2="batch_stats.${EXPT}.sh"
+BATCHFILE1="${BATCH_DIR}/batch_stats.generic.sh"
+BATCHFILE2="${WORKhafs}/graphics/batch_stats.${EXPT}.sh"
 
 # Some housekeeping
-#mkdir -p ${LOG_DIR}
-cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
-chmod +x ${BATCH_DIR}${BATCHFILE2}
+cp ${BATCHFILE1} ${BATCHFILE2}
+chmod +x ${BATCHFILE2}
 
 
 # Find output files from which graphics should be created
@@ -211,7 +210,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # If FORCE is undefined, set it to False.
         # FORCE may be automatically changed to 'True' later on,
         # so it is critical to redefine it here.
-        FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+        FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
         if [ -z "$FORCE" ]; then
             FORCE="False"
         fi
@@ -268,7 +267,7 @@ if [ "${DO_STATS}" = "True" ]; then
         CYCLE2="${YYYY}-${MM}-${DD} ${HH}:00:00"
 
         # Create the B-Deck file name
-        BDECK="${BDECK_DIR}b${BASIN2}${SNUM}${YYYY}.dat"
+        BDECK="${BDECK_DIR}/b${BASIN2}${SNUM}${YYYY}.dat"
 
         # Computes dates in YYYYMMDDHH format. This will be used to determine if
         # production for the current cycle should be forced.
@@ -322,13 +321,13 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Create full output path.
         # Make the directory in case it doesn't already exist.
-        ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/multi_model/"
+        ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/multi_model/"
         echo "MSG: Output directory --> $ODIR_FULL"
         mkdir -p ${ODIR_FULL}
 
 
         # Get the status for this case
-        STATUS_FILE="${ODIR_FULL}status.${SIDLONG}.log"
+        STATUS_FILE="${ODIR_FULL}/status.${SIDLONG}.log"
         CASE_STATUS=`cat ${STATUS_FILE} 2>/dev/null`
 
 
@@ -400,19 +399,19 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Create full output path.
         # Make the directory in case it doesn't already exist.
-        ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/multi_model/"
+        ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/multi_model/"
         echo "MSG: Output directory --> $ODIR_FULL"
         mkdir -p ${ODIR_FULL}
 
         # Write the ATCF file name to a text file to be accessed later.
         # Be sure to delete duplicate entries.
-        if [ ! -z "$(cat ${ODIR_FULL}ATCF_FILES.dat)" ]; then
-            grep -v "${ATCF_BASE}" ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}TMP.dat
-            mv ${ODIR_FULL}TMP.dat ${ODIR_FULL}ATCF_FILES.dat
+        if [ ! -z "$(cat ${ODIR_FULL}/ATCF_FILES.dat)" ]; then
+            grep -v "${ATCF_BASE}" ${ODIR_FULL}/ATCF_FILES.dat > ${ODIR_FULL}/TMP.dat
+            mv ${ODIR_FULL}/TMP.dat ${ODIR_FULL}/ATCF_FILES.dat
         fi
-        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
-        sort -u ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}ATCF_FILES.dat.TMP
-        mv ${ODIR_FULL}ATCF_FILES.dat.TMP ${ODIR_FULL}ATCF_FILES.dat
+        echo "$ATCF" >> ${ODIR_FULL}/ATCF_FILES.dat
+        sort -u ${ODIR_FULL}/ATCF_FILES.dat > ${ODIR_FULL}/ATCF_FILES.dat.TMP
+        mv ${ODIR_FULL}/ATCF_FILES.dat.TMP ${ODIR_FULL}/ATCF_FILES.dat
 
 
         # Check if a similar job is already submitted
@@ -430,38 +429,41 @@ if [ "${DO_STATS}" = "True" ]; then
         if [ -z "$JOB_TEST" ]; then
             LOG_DIR="$ODIR_FULL"
             LOGFILE="GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.log"
-            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^LOGFILE=.*/LOGFILE=\"${LOGFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^NMLIST=.*/NMLIST=\"${NMLIST}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
-            perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-
-            if [ "$SYS_ENV" == "JET" ]; then
-                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
-                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
-            elif [ "$SYS_ENV" == "HERA" ]; then
-                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
-                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
-            fi
+            sed -i 's@^NCLDIR=.*@NCLDIR='"${NCL_DIR}"'@g' ${BATCHFILE2}
+            sed -i 's@^NCLFILE=.*@NCLFILE='"${NCLFILE}"'@g' ${BATCHFILE2}
+            sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
+            sed -i 's@^LOGFILE=.*@LOGFILE='"${LOGFILE}"'@g' ${BATCHFILE2}
+            sed -i 's/^NMLIST=.*/NMLIST='"${NMLIST}"'/g' ${BATCHFILE2}
+            sed -i 's/^IDATE=.*/IDATE='"${CYCLE}"'/g' ${BATCHFILE2}
+            sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
+            sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}
 
             # Call the batch job
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
             if [ "$BATCH_MODE" == "FOREGROUND" ]; then
-                ${BATCH_DIR}${BATCHFILE2}
+                ${BATCHFILE2}
             elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
-                ${BATCH_DIR}${BATCHFILE2} &
+                ${BATCHFILE2} &
             else
-                sbatch ${BATCH_DIR}${BATCHFILE2}
+                sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${BATCHFILE2}
+                sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.'"${EXPT}"'.'"${CYCLE}${ENSIDTAG}"'.'"${DMN}${STORMTAG}"'.'"${TR}"'"/g' ${BATCHFILE2}
+                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${LOG_DIR}"'GPLOT_Ships.'"${EXPT}"'.'"${CYCLE}${ENSIDTAG}"'.'"${DMN}${STORMTAG}"'.'"${TR}"'.out"/g' ${BATCHFILE2}
+                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${LOG_DIR}"'GPLOT_Ships.'"${EXPT}"'.'"${CYCLE}${ENSIDTAG}"'.'"${DMN}${STORMTAG}"'.'"${TR}"'.err"/g' ${BATCHFILE2}
+                sed -i 's/^#SBATCH --nodes=.*/#SBATCH --nodes=1/g' ${BATCHFILE2}
+                sed -i 's/^#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g' ${BATCHFILE2}
+                sed -i 's/^#SBATCH --mem=.*/#SBATCH --mem=48G/g' ${BATCHFILE2}
+                sed -i 's/^#SBATCH --time=.*/#SBATCH --time='"${RUNTIME}"'/g' ${BATCHFILE2}
+                sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${BATCHFILE2}    
+                if [ -z "${PARTITION}" ]; then
+                    if [ "$SYS_ENV" == "JET" ]; then
+                        sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g' ${BATCHFILE2}
+                    elif [ "$SYS_ENV" == "HERA" ]; then
+                        sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=hera/g' ${BATCHFILE2}
+                    fi
+                else
+                    sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${BATCHFILE2}
+                fi
+                sbatch ${BATCHFILE2}
             fi
 
             # If the job was submitted, then increase the counter.

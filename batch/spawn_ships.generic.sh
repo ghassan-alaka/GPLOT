@@ -17,54 +17,54 @@
 
 
 # Define important GPLOT directories
-NMLIST_DIR="${GPLOT_DIR}/nmlist/"
-BATCH_DIR="${GPLOT_DIR}/batch/"
-NCL_DIR="${GPLOT_DIR}/ncl/"
-TBL_DIR="${GPLOT_DIR}/tbl/"
+NMLIST_DIR="${GPLOT_DIR}/nmlist"
+BATCH_DIR="${GPLOT_DIR}/batch"
+NCL_DIR="${GPLOT_DIR}/ncl"
+TBL_DIR="${GPLOT_DIR}/tbl"
 
 # Get the namelist, could be from command line
 if [ ! -z "$1" ];then
     NMLIST="$1"
 else
-    NMLIST="namelist.input.default"
+    NMLIST="${NMLIST_DIR}/namelist.input.default"
 fi
 
 # Check if the namelist exists. If not, exit.
-if [ ! -f ${NMLIST_DIR}${NMLIST} ]; then
+if [ ! -f ${NMLIST} ]; then
     echo "ERROR: Namelist does not exist."
     exit
 else
-    echo "MSG: Found this namelist --> ${NMLIST_DIR}${NMLIST}."
+    echo "MSG: Found this namelist --> ${NMLIST}."
 fi
 
 
 
 # Pull important variables from the namelist
-DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_SHIPS=`sed -n -e 's/^.*DO_SHIPS =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST} | sed 's/^\t*//'`
+CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
 
 # Print information
 echo "MSG: Found this data source in the namelist      --> $DSOURCE"
@@ -107,7 +107,7 @@ if [ -z "$FORCE" ]; then
 fi
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
-BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
+BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
 if [ -z "$BATCH_MODE" ]; then
     BATCH_MODE="SBATCH"
     echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE[*]}"
@@ -141,15 +141,14 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_ships.generic.sh"
-BATCHFILE2="batch_ships.${EXPT}.sh"
+BATCHFILE1="${BATCH_DIR}/batch_ships.generic.sh"
+BATCHFILE2="${WORKhafs}/graphics/batch_ships.${EXPT}.sh"
 CTIME=`date +"%Y%m%d%H_%M"`
-#LOG_DIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`"${EXPT}/log/${CTIME}/"
 
 # Some housekeeping
 #mkdir -p ${LOG_DIR}
-cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
-chmod +x ${BATCH_DIR}${BATCHFILE2}
+cp ${BATCHFILE1} ${BATCHFILE2}
+chmod +x ${BATCHFILE2}
 
 
 # Find output files from which graphics should be created
@@ -203,7 +202,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
         # Get the cycle prefix from a table and define CYCLE_STR
         # CYCLE_STR should be used in file paths.
         if [ -z "$CPREFIX" ]; then
-            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
+            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/CyclePrefix.dat`
         fi
         CYCLE_STR="${CPREFIX}${CYCLE}"
 
@@ -229,8 +228,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
         # Third, try to get STORMS from the HWRF file path.
         # This is hard-coded and might not work.
         if [ -z "$STORMS" ]; then
-            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
-                STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+            if [ ! -z $(ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
+                STORMS+=(`ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
             fi
         fi
 
@@ -286,68 +285,68 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                 # Create full output path
                 # Make the directory in case it doesn't already exist
-                ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
+                ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${DMN}/"
                 echo "MSG: Output directory --> $ODIR_FULL"
                 mkdir -p ${ODIR_FULL}
 
 
                 # Get nest information from GPLOT table
-                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
+                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
                 if [ -z "$NEST" ]; then
-                    echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
+                    echo "MSG: Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
                     echo "MSG: Assuming NEST=1."
                     NEST=1
                 fi
 
                 # Get file prefix information from table or namelist
                 if [ -z "$ITAG" ]; then
-                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}FilePrefix.dat`
+                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}/FilePrefix.dat`
                 else
                     FPREFIX="$ITAG"
                 fi
                 if [ -z "$FPREFIX" ]; then
                     echo "ERROR: File prefix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FilePrefix.dat."
                     echo "ERROR: Or define ITAG in the namelist."
                     exit
                 fi
 
                 # Get file hour string information from table or namelist
                 if [ -z "$FHRSTR" ]; then
-                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileTimeFormat.dat`
+                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileTimeFormat.dat`
                 else
                     FHRSTR="$FHRSTR"
                 fi
                 if [ -z "$FHRSTR" ]; then
                     echo "ERROR: File hour string not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                     echo "ERROR: Or define FHRSTR in the namelist."
                     exit
                 fi
 
                 # Get file hour format information from table or namelist
-                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
                 if [ -z "$FHRFMT" ]; then
-                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
+                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}/FileTimeFormat.dat`d"
                 else
                     FHRFMT="%0${FHRFMT}d"
                 fi
                 if [ -z "$FHRFMT" ]; then
                     echo "ERROR: File hour format not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                     echo "ERROR: Or define FHRFMT in the namelist."
                     exit
                 fi
 
                 # Get file extension information from table or namelist
                 if [ -z "$EXT" ]; then
-                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileSuffix.dat`
+                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileSuffix.dat`
                 else
                     FSUFFIX="$EXT"
                 fi
                 if [ -z "$FSUFFIX" ]; then
                     echo "ERROR: File suffix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileSuffix.dat."
                     echo "ERROR: Or define EXT in the namelist."
                     exit
                 fi
@@ -372,13 +371,13 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                 # Create a text file with ATCFs for this cycle in the output directory
                 if [ -z "${CYCLE_ATCF}" ]; then
-                    echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
+                    echo "NONE" > ${ODIR_FULL}/ATCF_FILES.dat
                 else
-                    if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
-                        rm -f ${ODIR_FULL}ATCF_FILES.dat
+                    if [ -f "${ODIR_FULL}/ATCF_FILES.dat" ]; then
+                        rm -f ${ODIR_FULL}/ATCF_FILES.dat
                     fi
                     for ATCF in ${CYCLE_ATCF}; do
-                        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
+                        echo "$ATCF" >> ${ODIR_FULL}/ATCF_FILES.dat
                     done
                 fi
 
@@ -407,15 +406,15 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         fi
 
                         # Create a list of IDIR subdirectory options
-                        IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
-                                   "${EXPT}/" "${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/" "${STORM}/" "${EXPT}/${CYCLE_STR}/${STORM}/" \
-                                   "${EXPT}/${CYCLE_STR}/" "${EXPT}/com/${CYCLE_STR}/${STORM}/${ENSID}/" "${EXPT}/com/${CYCLE_STR}/${ENSID}/" \
-                                   "${EXPT}/com/${ENSID}/" "${EXPT}/${ENSID}/" "${CYCLE_STR}/${STORM}/${ENSID}/" \
-                                   "${ENSID}/${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/${ENSID}/${STORM}/" "${CYCLE_STR}/${ENSID}/" \
-                                   "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
-                                   "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
-                                   "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L")
+                        IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}" "${EXPT}/com/${CYCLE_STR}" "${EXPT}/com" \
+                                   "${EXPT}" "${CYCLE_STR}/${STORM}" "${CYCLE_STR}" "${STORM}" "${EXPT}/${CYCLE_STR}/${STORM}" \
+                                   "${EXPT}/${CYCLE_STR}" "${EXPT}/com/${CYCLE_STR}/${STORM}/${ENSID}" "${EXPT}/com/${CYCLE_STR}/${ENSID}" \
+                                   "${EXPT}/com/${ENSID}" "${EXPT}/${ENSID}" "${CYCLE_STR}/${STORM}/${ENSID}" \
+                                   "${ENSID}/${CYCLE_STR}/${STORM}" "${CYCLE_STR}/${ENSID}/${STORM}" "${CYCLE_STR}/${ENSID}" \
+                                   "${ENSID}/${CYCLE_STR}" "${STORM_STR}/${ENSID}" "${ENSID}/${STORM}" "${EXPT}/com/${ENSID}/${CYCLE_STR}" \
+                                   "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}" "${EXPT}/${ENSID}/com/${CYCLE_STR}" "${EXPT}/${ENSID}/com" \
+                                   "${ENSID}/com/${CYCLE_STR}/${STORM}" "com/${CYCLE_STR}/${STORM}" "${ENSID}" "${CYCLE_STR}/00L" \
+                                   "com/${CYCLE_STR}/00L" "${EXPT}/com/${CYCLE_STR}/00L")
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                         # If a match is found, write lead time to a data file "AllForecastHours"
@@ -423,7 +422,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         F=0
                         IFHRS=()
                         while [ -z "$IFILES" ]; do
-                            IDIR_FULL="${IDIR}${IDIR_OPTS[$F]}"
+                            IDIR_FULL="${IDIR}/${IDIR_OPTS[$F]}"
 
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
@@ -441,9 +440,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
                                 if [ -z "$FSUFFIX" ]; then
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 else
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
+                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
                                 fi
                                 if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
                                     IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
@@ -471,8 +470,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)
                         # Define the file that contains the status (STATUS_FILE)
-                        PLOTTED_FILE="${ODIR_FULL}PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                        STATUS_FILE="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
+                        PLOTTED_FILE="${ODIR_FULL}/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        STATUS_FILE="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
 
 
                         # Get the list of plotted files for this case
@@ -629,8 +628,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
 
                         # Write existing IFILES out to UNPLOTTED_FNAME log for use in plotting scripts
-                        UNPLOTTED_FILE="${ODIR_FULL}UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                        FHR_FILE="${ODIR_FULL}AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
+                        UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        FHR_FILE="${ODIR_FULL}/AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
                         if [ -f "${UNPLOTTED_FILE}" ]; then
                             rm -f "${UNPLOTTED_FILE}"
                         fi
@@ -672,57 +671,58 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
 
                         # Check if a similar job is already submitted
-                        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
+                        echo "MSG: The batch file --> ${BATCH_DIR}/${BATCHFILE2}"
                         if [ "$BATCH_MODE" == "FOREGROUND" ]; then
                             JOB_TEST=""
                         elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
                             JOB_TEST=""
                         else
                             JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+                            JOB_TEST=`squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
                         fi
 
                         # Change options in the batch submission script.
                         if [ -z "$JOB_TEST" ]; then
                             LOG_DIR="$ODIR_FULL"
                             LOGFILE="GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
-                            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Ships.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=48G/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^NCLDIR=.*/NCLDIR=\"${NCL_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^NCLFILE=.*/NCLFILE=\"${NCLFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^LOGFILE=.*/LOGFILE=\"${LOGFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^NMLIST=.*/NMLIST=\"${NMLIST}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^DOMAIN=.*/DOMAIN=\"${DMN}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^TIER=.*/TIER=\"${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^ENSID=.*/ENSID=\"${ENSID}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            sed -i 's@^NCLDIR=.*@NCLDIR='"${NCL_DIR}"'@g' ${BATCHFILE2}
+                            sed -i 's@^NCLFILE=.*@NCLFILE='"${NCLFILE}"'@g' ${BATCHFILE2}
+                            sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
+                            sed -i 's@^LOGFILE=.*@LOGFILE='"${LOGFILE}"'@g' ${BATCHFILE2}
+                            sed -i 's/^NMLIST=.*/NMLIST='"${NMLIST}"'/g' ${BATCHFILE2}
+                            sed -i 's/^DOMAIN=.*/DOMAIN='"${DMN}"'/g' ${BATCHFILE2}
+                            sed -i 's/^TIER=.*/TIER='"${TR}"'/g' ${BATCHFILE2}
+                            sed -i 's/^ENSID=.*/ENSID='"${ENSID}"'/g' ${BATCHFILE2}
+                            sed -i 's/^IDATE=.*/IDATE='"${CYCLE}"'/g' ${BATCHFILE2}
+                            sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
+                            sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}
 
-                            if [ "$SYS_ENV" == "JET" ]; then
-                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
-                                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
-                            elif [ "$SYS_ENV" == "HERA" ]; then
-                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
-                                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
-                            fi
-        
                             # Submit the batch job.
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
                             if [ "$BATCH_MODE" == "FOREGROUND" ]; then
-                                ${BATCH_DIR}${BATCHFILE2}
+                                ${BATCHFILE2}
                             elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
-                                ${BATCH_DIR}${BATCHFILE2} &
+                                ${BATCHFILE2} &
                             else
-                                sbatch ${BATCH_DIR}${BATCHFILE2}
+                                sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${BATCHFILE2}
+                                sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.'"${EXPT}"'.'"${CYCLE}${ENSIDTAG}"'.'"${DMN}${STORMTAG}"'.'"${TR}"'"/g' ${BATCHFILE2}
+                                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${LOG_DIR}"'GPLOT_Ships.'"${EXPT}"'.'"${CYCLE}${ENSIDTAG}"'.'"${DMN}${STORMTAG}"'.'"${TR}"'.out"/g' ${BATCHFILE2}
+                                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${LOG_DIR}"'GPLOT_Ships.'"${EXPT}"'.'"${CYCLE}${ENSIDTAG}"'.'"${DMN}${STORMTAG}"'.'"${TR}"'.err"/g' ${BATCHFILE2}
+                                sed -i 's/^#SBATCH --nodes=.*/#SBATCH --nodes=1/g' ${BATCHFILE2}
+                                sed -i 's/^#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g' ${BATCHFILE2}
+                                sed -i 's/^#SBATCH --mem=.*/#SBATCH --mem=48G/g' ${BATCHFILE2}
+                                sed -i 's/^#SBATCH --time=.*/#SBATCH --time='"${RUNTIME}"'/g' ${BATCHFILE2}
+                                sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${BATCHFILE2}
+                                if [ -z "${PARTITION}" ]; then
+                                    if [ "$SYS_ENV" == "JET" ]; then
+                                        sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g' ${BATCHFILE2}
+                                    elif [ "$SYS_ENV" == "HERA" ]; then
+                                        sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=hera/g' ${BATCHFILE2}
+                                    fi
+                                else
+                                   sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${BATCHFILE2} 
+                                fi
+                                sbatch ${BATCHFILE2}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.
