@@ -139,7 +139,7 @@ MOD_FILE = GPLOT_DIR+"/modulefiles/GPLOT_mods"
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
 if(.not.isvar("MASTER_NML_IN"))then	MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
-else					MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+else					MASTER_NML = MASTER_NML_IN
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
 

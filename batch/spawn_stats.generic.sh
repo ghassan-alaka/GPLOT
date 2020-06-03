@@ -433,7 +433,7 @@ if [ "${DO_STATS}" = "True" ]; then
             sed -i 's@^NCLFILE=.*@NCLFILE='"${NCLFILE}"'@g' ${BATCHFILE2}
             sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
             sed -i 's@^LOGFILE=.*@LOGFILE='"${LOGFILE}"'@g' ${BATCHFILE2}
-            sed -i 's/^NMLIST=.*/NMLIST='"${NMLIST}"'/g' ${BATCHFILE2}
+            sed -i 's@^NMLIST=.*@NMLIST='"${NMLIST}"'@g' ${BATCHFILE2}
             sed -i 's/^IDATE=.*/IDATE='"${CYCLE}"'/g' ${BATCHFILE2}
             sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
             sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}

@@ -697,7 +697,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                             sed -i 's/^PYTHONFILE=.*/PYTHONFILE='"${PYTHONFILE}"'/g' ${BATCHFILE2}
                             sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
                             sed -i 's/^LOGFILE=.*/LOGFILE='"${LOGFILE}"'/g' ${BATCHFILE2}
-                            sed -i 's/^NMLIST=.*/NMLIST='"${NMLIST}"'/g' ${BATCHFILE2}
+                            sed -i 's@^NMLIST=.*@NMLIST='"${NMLIST}"'@g' ${BATCHFILE2}
                             sed -i 's/^DOMAIN=.*/DOMAIN='"${DMN}"'/g' ${BATCHFILE2}
                             sed -i 's/^TIER=.*/TIER='"${TR}"'/g' ${BATCHFILE2}
                             sed -i 's/^ENSID=.*/ENSID='"${ENSID}"'/g' ${BATCHFILE2}
