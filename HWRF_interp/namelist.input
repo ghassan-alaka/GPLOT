@@ -1,9 +1,0 @@
-  &tier1
-   fst_tech = "HB18",
-   tech_06 = "HB8I",
-   tech_12 = "HB82",
-   strmid = "al062018",
-   output_ext = "interp",
-   stm_path = "/lfs3/projects/hur-aoml/Ghassan.Alaka/GPLOT/HB18_v3_history/2018091200/multi_model/atcf/interp/",
-   adeck_ext = "_new"
-  / 
