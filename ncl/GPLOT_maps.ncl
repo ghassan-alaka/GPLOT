@@ -1267,8 +1267,8 @@ do fff = 0,nFiles-1
                         if(any((/"d01","hwrf"/).eq.DOMAIN))then
 				;BOCO := getNestBds(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
 
-                                ;TEST := f->$findVarName(DSOURCE,"MSLP","")$
-				TEST := f->$BASEVAR$
+                                TEST := f->$findVarName(DSOURCE,"MSLP","")$
+				;TEST := f->$BASEVAR$
                                 if(dimsizes(dimsizes(TEST)).eq.3)then	TEST := TEST(0,:,:)
 				end if
 				do ddd = 0,nDims-1
@@ -1315,6 +1315,7 @@ do fff = 0,nFiles-1
                                         end if
                                 end do
                         end if
+print(BOCO)
 			
 			
 
@@ -2676,6 +2677,8 @@ do fff = 0,nFiles-1
 							dNames_PSFC     := getfilevardims(f,findVarName(DSOURCE,"PSFC",""))
 							nDims_PSFC@dNames= dNames_PSFC
 							PSFC    := getVar2d(f,DSOURCE,(/"PSFC","",tostring(ttt)/),nDims_PSFC,BOCO2,mf,flipFlag,lonF)
+							printVarSummary(PSFC)
+							printVarSummary(VOv5B)
 							copy_VarMeta(VOv5B,PSFC)
 							; Do not mark H/L above .9 sigma surface
 							VOv5B   = where(PSFC/VOv5.le.0.90,fval3,VOv5B)
