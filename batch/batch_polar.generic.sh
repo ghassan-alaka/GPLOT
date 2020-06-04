@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -18,7 +18,7 @@ set -x
 #limit stacksize unlimited
 
 # Source the .profile to optimize the environment
-source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
+#source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
 
 # 1. Get command line variables
 PYTHONDIR=
@@ -91,8 +91,7 @@ fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-#${PYTHONEXE} ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
-python ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
+python ${PYTHONDIR}/${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}/${LOGFILE}
 
 wait
 

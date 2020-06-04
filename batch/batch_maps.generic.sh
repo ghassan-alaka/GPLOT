@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -17,7 +17,7 @@ set -x
 echo "`date`"
 
 # Source GPLOT_mods to optimize the environment
-source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
+#source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
 
 # 1. Get command line variables
 NCLDIR=
@@ -58,7 +58,7 @@ fi
 
 # 2. Submit the NCL job
 echo "${NCL_ARGS[*]}"
-ncl "${NCL_ARGS[@]}" ${NCLDIR}${NCLFILE} >> ${LOGDIR}${LOGFILE}
+ncl "${NCL_ARGS[@]}" ${NCLDIR}/${NCLFILE} >> ${LOGDIR}/${LOGFILE}
 
 wait
 

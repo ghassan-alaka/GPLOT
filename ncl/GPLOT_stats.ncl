@@ -303,7 +303,7 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
 			ODIR_ADECK = ODIR+"/adeck/"
-			ODIR	= ODIR+"/guidance_ver/"
+			ODIR	= ODIR+"/guidance/"
 	
 			ATCF1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_DIR =")))
 			ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))

@@ -49,7 +49,7 @@ if [ -z "${AAA}" ]; then
     if [ "$TYPE" == "1" ]; then
         ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f -mmin ${MMIN}` )
     elif [ "$TYPE" == "2" ]; then
-        ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f -mmin ${MMIN}` )
+        ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all' -type f -mmin ${MMIN}` )
     elif [ "$TYPE" == "3" ]; then
         ALL_ADECKS=( `find "${ADECKDIR}" -name '*a[a-z][a-z][0-9][0-9][1-2][0-9][0-9][0-9]*.dat' -type f` )
     elif [ "$TYPE" == "4" ]; then

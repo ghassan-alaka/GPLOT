@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -321,7 +321,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Create full output path.
         # Make the directory in case it doesn't already exist.
-        ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/multi_model/"
+        ODIR_FULL="${ODIR}/guidance"
         echo "MSG: Output directory --> $ODIR_FULL"
         mkdir -p ${ODIR_FULL}
 
