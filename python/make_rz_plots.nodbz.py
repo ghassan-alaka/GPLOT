@@ -66,12 +66,9 @@ if NMLIST == 'MISSING':
 MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
 
 # Read the master namelist
-#NML_DATA = np.genfromtxt(MASTER_NML_IN,dtype='str')
-#NML_DATE = np.loadtxt(MASTER_NML_IN)
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
-print(ODIR)
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -125,12 +122,13 @@ ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in 
 # Get the list of unplotted files
 UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
-#FHR_LIST = [ int(x) for x in [np.genfromtxt(ALLFHR_FILE,dtype='str')] ]
 FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
 if (FHR_LIST.size == 1):
 	FHR_LIST = np.append(FHR_LIST,"999")
 	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
+# Define executables
+X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
@@ -170,28 +168,18 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		centerlat = float(latstr1)/10
 	else:
 		centerlat = -1*float(latstr1)/10
-	#centerlon = 360-(np.char.strip(lonstr,'W').astype(np.float)/10)
-	#centerlat = np.char.strip(latstr,'N').astype(np.float)/10
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
-	print(str(centerlon)+'  '+str(centerlat))
-	exit
 
-	#figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}.png")])[0]
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
 		print('None of These Yet!')
 		print(figuretest)
 		print('h = ',list(FHRIND))
 
-		#Make GrADS control file and index file
-		
-		#gribfile = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#gribfile2 = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#print(gribfile)
-		lscommand = 'ls '+FILE
-		gribfiletest = os.system(lscommand)
+		# Make sure the data file 'FILE' is available
+		gribfiletest = os.system('ls '+FILE)
 
 		if (gribfiletest < 1):
 			# Create the GrADs control file, if is hasn't already been created.
