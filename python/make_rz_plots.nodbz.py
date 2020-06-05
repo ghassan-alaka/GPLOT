@@ -303,7 +303,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			y_sr = lat_sr*111.1e3
 
 			#Define the polar coordinates needed
-			r = np.linspace(0,rmax,(rmax/resolution+1))
+			r = np.linspace(0,rmax,(np.int(rmax//resolution)+1))
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)
