@@ -399,7 +399,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Create full output path.
         # Make the directory in case it doesn't already exist.
-        ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/multi_model/"
+        ODIR_FULL="${ODIR}/guidance"
         echo "MSG: Output directory --> $ODIR_FULL"
         mkdir -p ${ODIR_FULL}
 
