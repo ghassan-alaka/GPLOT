@@ -65,12 +65,9 @@ if NMLIST == 'MISSING':
 MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
 
 # Read the master namelist
-#NML_DATA = np.genfromtxt(MASTER_NML_IN,dtype='str')
-#NML_DATE = np.loadtxt(MASTER_NML_IN)
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
-#print(ODIR)
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -100,7 +97,6 @@ zsize = np.int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-#print(str(ATCF_LIST))
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
 	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
@@ -124,7 +120,7 @@ ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in 
 # Get the list of unplotted files
 UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
-#FHR_LIST = [ int(x) for x in [np.genfromtxt(ALLFHR_FILE,dtype='str')] ]
+# Get the forecast lead time list.
 FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
 if (FHR_LIST.size == 1):
 	FHR_LIST = np.append(FHR_LIST,"999")
@@ -133,8 +129,7 @@ if (FHR_LIST.size == 1):
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
-	if (FILE == 'MISSING'):
-		continue
+	if (FILE == 'MISSING'):  continue
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
@@ -169,41 +164,31 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		centerlat = float(latstr1)/10
 	else:
 		centerlat = -1*float(latstr1)/10
-	#centerlon = 360-(np.char.strip(lonstr,'W').astype(np.float)/10)
-	#centerlat = np.char.strip(latstr,'N').astype(np.float)/10
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
 
-	#figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}.png")])[0]
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
 		print('None of These Yet!')
 		print(figuretest)
 		print('h = ',list(FHRIND))
 
-		#Make GrADS control file and index file
-		
-		#gribfile = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#gribfile2 = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#print(gribfile)
-		lscommand = 'ls '+FILE
-		gribfiletest = os.system(lscommand)
+		# Make sure the data file 'FILE' exists.
+		gribfiletest = os.system('ls '+FILE)
 
 		if (gribfiletest < 1):
-			#command = '/home/rthr-aoml/GPLOT/grads/g2ctl.pl'+' '+gribfile+' '+gribfile+'.2.idx'+' > '+gribfile+'.ctl'
-			command = GPLOT_DIR+'/grads/g2ctl.pl'+' '+FILE+' '+TMPDIR+FILE_BASE+'.2.idx'+' > '+TMPDIR+FILE_BASE+'.ctl'
-			os.system(command)
-			#command2 = 'gribmap -i '+gribfile+'.ctl'
-			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl -big'
-			os.system(command2)
+			# Create the GrADs control file, if is hasn't already been created.
+			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
+			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
+			if not os.path.exists(CTL_FILE):
+			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
+			        os.system(command)
+			        command2 = 'gribmap -i '+CTL_FILE+' -big'
+			        os.system(command2)
 			
 			#Open data file
-			#datafile = gribfile+'.ctl'
-			datafile = TMPDIR+FILE_BASE+'.ctl'
-
-			#Open data file
-			ga('open '+datafile)
+			ga('open '+CTL_FILE)
 			env = ga.env()
 
 			#Define how big of a box you want, based on lat distance
@@ -301,9 +286,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			#Define the polar coordinates needed
 			r = np.linspace(0,rmax,(np.int(rmax//resolution)+1))
-			#r = np.linspace(0,600,201)
-			#print(r)
-			#sys.exit()
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)

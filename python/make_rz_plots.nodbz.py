@@ -194,19 +194,17 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		gribfiletest = os.system(lscommand)
 
 		if (gribfiletest < 1):
-			#command = '/home/rthr-aoml/GPLOT/grads/g2ctl.pl'+' '+gribfile+' '+gribfile+'.2.idx'+' > '+gribfile+'.ctl'
-			command = GPLOT_DIR+'/grads/g2ctl.pl'+' '+FILE+' '+TMPDIR+FILE_BASE+'.2.idx'+' > '+TMPDIR+FILE_BASE+'.ctl'
-			os.system(command)
-			#command2 = 'gribmap -i '+gribfile+'.ctl'
-			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl -big'
-			os.system(command2)
+			# Create the GrADs control file, if is hasn't already been created.
+			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
+			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
+			if not os.path.exists(CTL_FILE):
+			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
+			        os.system(command)
+			        command2 = 'gribmap -i '+CTL_FILE+' -big'
+			        os.system(command2)
 			
 			#Open data file
-			#datafile = gribfile+'.ctl'
-			datafile = TMPDIR+FILE_BASE+'.ctl'
-
-			#Open data file
-			ga('open '+datafile)
+			ga('open '+CTL_FILE)
 			env = ga.env()
 
 			#Define how big of a box you want, based on lat distance
