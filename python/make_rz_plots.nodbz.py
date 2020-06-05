@@ -1295,9 +1295,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 #			figfname = ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
 #			plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 #			plt.close()
-#			ga('close 1')
-#			if ( DO_CONVERTGIF ):
-#				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+
+			# Close the GrADs control file
+			ga('close 1')
+
+			# Convert the figure to GIF format, if required.
+			if ( DO_CONVERTGIF ):
+				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
 			
 	# Write the input file to a log to mark that it has ben processed
