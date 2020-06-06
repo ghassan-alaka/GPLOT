@@ -64,14 +64,14 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
+MASTER_NML_IN = NMLIST
 
 # Read the master namelist
 #NML_DATA = np.genfromtxt(MASTER_NML_IN,dtype='str')
 #NML_DATE = np.loadtxt(MASTER_NML_IN)
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/polar/'
 #print(ODIR)
 
 try:
@@ -311,10 +311,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			y_sr = lat_sr*111.1e3
 
 			#Define the polar coordinates needed
-			r = np.linspace(0,rmax,(rmax//resolution+1))
-			#r = np.linspace(0,600,201)
-			#print(r)
-			#sys.exit()
+			r = np.linspace(0,rmax,np.int(rmax/resolution)+1)
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)

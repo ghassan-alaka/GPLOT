@@ -63,14 +63,12 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
+MASTER_NML_IN = NMLIST
 
 # Read the master namelist
-#NML_DATA = np.genfromtxt(MASTER_NML_IN,dtype='str')
-#NML_DATE = np.loadtxt(MASTER_NML_IN)
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/polar/'
 print(ODIR)
 
 try:
@@ -125,17 +123,18 @@ ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in 
 # Get the list of unplotted files
 UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
-#FHR_LIST = [ int(x) for x in [np.genfromtxt(ALLFHR_FILE,dtype='str')] ]
 FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
 if (FHR_LIST.size == 1):
 	FHR_LIST = np.append(FHR_LIST,"999")
 	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
+# Define executables
+X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
+
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
-	if (FILE == 'MISSING'):
-		continue
+	if (FILE == 'MISSING'):  continue
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
@@ -170,43 +169,32 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		centerlat = float(latstr1)/10
 	else:
 		centerlat = -1*float(latstr1)/10
-	#centerlon = 360-(np.char.strip(lonstr,'W').astype(np.float)/10)
-	#centerlat = np.char.strip(latstr,'N').astype(np.float)/10
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
-	print(str(centerlon)+'  '+str(centerlat))
-	exit
 
-	#figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}.png")])[0]
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
 		print('None of These Yet!')
 		print(figuretest)
 		print('h = ',list(FHRIND))
 
-		#Make GrADS control file and index file
-		
-		#gribfile = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#gribfile2 = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#print(gribfile)
-		lscommand = 'ls '+FILE
-		gribfiletest = os.system(lscommand)
+		# Make sure the data file 'FILE' exists.
+		gribfiletest = os.system('ls '+FILE)
 
 		if (gribfiletest < 1):
-			#command = '/home/rthr-aoml/GPLOT/grads/g2ctl.pl'+' '+gribfile+' '+gribfile+'.2.idx'+' > '+gribfile+'.ctl'
-			command = GPLOT_DIR+'/grads/g2ctl.pl'+' '+FILE+' '+TMPDIR+FILE_BASE+'.2.idx'+' > '+TMPDIR+FILE_BASE+'.ctl'
-			os.system(command)
-			#command2 = 'gribmap -i '+gribfile+'.ctl'
-			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl -big'
-			os.system(command2)
+
+			# Create the GrADs control file, if is hasn't already been created.
+			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
+			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
+			if not os.path.exists(CTL_FILE):
+			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
+			        os.system(command)
+			        command2 = 'gribmap -i '+CTL_FILE+' -big'
+			        os.system(command2)
 			
 			#Open data file
-			#datafile = gribfile+'.ctl'
-			datafile = TMPDIR+FILE_BASE+'.ctl'
-
-			#Open data file
-			ga('open '+datafile)
+			ga('open '+CTL_FILE)
 			env = ga.env()
 
 			#Define how big of a box you want, based on lat distance
@@ -303,7 +291,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			y_sr = lat_sr*111.1e3
 
 			#Define the polar coordinates needed
-			r = np.linspace(0,rmax,(rmax/resolution+1))
+			r = np.linspace(0,rmax,np.int(rmax/resolution)+1)
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)
@@ -573,9 +561,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			threshold2 = np.ones(zsize)*np.nan
 			for k in range(zsize):
 				threshold2[k] = np.nanmax(wind[:,:,k])-0.05*(np.nanmax(wind[:,:,k])-np.nanmin(wind[:,:,k]))
-
-			center_z = centroid.centroid(hgt,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
-			center_z_2 = centroid.centroid(wind,threshold2,1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
+			center_z = np.ones((np.shape(hgt)[2],2),order='F').astype(np.int32)
+			center_z_2 = np.ones((np.shape(wind)[2],2),order='F').astype(np.int32)
+			centroid.centroid(hgt,center_z,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
+			centroid.centroid(hgt,center_z_2,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
 
 
 			#Calculate 750-hPa RMW and Average Vmax
@@ -624,7 +613,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
 
 
-			color_data_wind = np.genfromtxt('/home/rthr-aoml/GPLOT/python/colormaps/colormap_wind.txt')
+			color_data_wind = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
 			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 			norm_wind = colors.BoundaryNorm(levs_wind,256)
@@ -633,11 +622,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(ur_p_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -660,11 +649,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(vt_p_mean,1)),levs_vt,cmap=colormap_vt,norm=norm_vt,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -687,11 +676,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(w_p_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -741,11 +730,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.figure()
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(rh_p_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='max')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(0,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -799,11 +788,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(ur_p_downshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -829,11 +818,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(w_p_downshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(w_p_upshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -859,11 +848,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(rh_p_downshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(rh_p_upshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -919,11 +908,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(ur_p_rightshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(ur_p_leftshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -949,11 +938,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(w_p_rightshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(w_p_leftshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -979,11 +968,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			plt.gcf().set_size_inches(20.5, 10.5)
 			plt.contourf(r,zlevs,np.flipud(np.rot90(rh_p_rightshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
 			plt.contourf(-r,zlevs,np.flipud(np.rot90(rh_p_leftshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-			plt.gca().invert_yaxis()
 			plt.yscale('log')
 			plt.grid()
 			plt.xlim(-rmax,rmax)
-			plt.ylim(1000,100)
+			plt.ylim(100,1000)
+			plt.gca().invert_yaxis()
 			cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 			cbar.ax.tick_params(labelsize=24)
 			ax1 = plt.axes()
@@ -1297,9 +1286,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 #			figfname = ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
 #			plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 #			plt.close()
-#			ga('close 1')
-#			if ( DO_CONVERTGIF ):
-#				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+
+			# Close the GrADs control file
+			ga('close 1')
+
+			# Convert the figure to GIF format, if required.
+			if ( DO_CONVERTGIF ):
+				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
 			
 	# Write the input file to a log to mark that it has ben processed
