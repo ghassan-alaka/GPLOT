@@ -388,12 +388,6 @@ DT      = data(ind(isStrSubset2(data,"DT =")))
 DT      := str_squeeze(str_split(DT," = "))
 DT      := toint(tofloat(DT(1)))
 
-; e. This variable determines if the case is real-time.
-;    (may be deprecated)
-;IS_REAL     = data(ind(isStrSubset2(data,"IS_REAL =")))
-;IS_REAL    := str_squeeze(str_split(IS_REAL," = "))
-;IS_REAL    := where(IS_REAL(1).eq."True",True,False)
-
 ; f. This variable determines if the case is from Basin-Scale HWRF.
 ;    It is important because that means multiple high-res domains
 ;    could exist. Domains that are not storm-centered should be not
@@ -446,9 +440,6 @@ DO_CONVERTGIF      := where(DO_CONVERTGIF(1).eq."True",True,False)
 ;================================================================
 
 print("MSG: Running GPLOT with these settings:")
-;if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
-;else                    print("MSG:   Real-Time Forecast: OFF")
-;end if
 if(IS_MSTORM)then        print("MSG:   Basin-Scale HWRF:   ON")
 else                    print("MSG:   Basin-Scale HWRF:   OFF")
 end if
@@ -1276,8 +1267,8 @@ do fff = 0,nFiles-1
                         if(any((/"d01","hwrf"/).eq.DOMAIN))then
 				;BOCO := getNestBds(f,findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp)))
 
-                                ;TEST := f->$findVarName(DSOURCE,"MSLP","")$
-				TEST := f->$BASEVAR$
+                                TEST := f->$findVarName(DSOURCE,"MSLP","")$
+				;TEST := f->$BASEVAR$
                                 if(dimsizes(dimsizes(TEST)).eq.3)then	TEST := TEST(0,:,:)
 				end if
 				do ddd = 0,nDims-1
@@ -3267,9 +3258,6 @@ end if  end if  end if
 print("")
 print("MSG: Ran GPLOT with these settings:")
 print("********************")
-;if(IS_REAL)then         print("MSG:   Real-Time Forecast: ON")
-;else                    print("MSG:   Real-Time Forecast: OFF")
-;end if
 if(IS_MSTORM)then        print("MSG:   Basin-Scale HWRF:   ON")
 else                    print("MSG:   Basin-Scale HWRF:   OFF")
 end if
