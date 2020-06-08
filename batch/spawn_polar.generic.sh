@@ -261,6 +261,12 @@ if [ "${DO_POLAR}" = "True" ]; then
         # LOOP OVER STORMS #
         ####################
         for STORM in ${STORMS[@]}; do
+            # Don't do anything for the fake storm (00L).
+            if [ "${STORM^^}" == "00L" ]; then
+                echo "WARNING: Fake storm (${STORM}) detected. Skipping."
+                continue
+            fi
+
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
@@ -747,6 +753,9 @@ if [ "${DO_POLAR}" = "True" ]; then
                         else
                             echo "MSG: Found matching GPLOT batch job. Skipping submission."
                         fi #if [ -z "$JOB_TEST" ]; then else
+
+                        # Sleep to allow the current job to get started
+                        sleep 10
 
                     done #end of ID loop
                 done #end of TR loop

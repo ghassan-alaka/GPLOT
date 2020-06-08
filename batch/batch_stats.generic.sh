@@ -15,7 +15,7 @@
 set -x
 
 # Source GPLOT_mods to optimize the environment
-#source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
 
 # 1. Get command line variables
 NCLDIR=

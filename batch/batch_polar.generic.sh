@@ -18,7 +18,7 @@ set -x
 #limit stacksize unlimited
 
 # Source the .profile to optimize the environment
-#source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${machine,,}
 
 # 1. Get command line variables
 PYTHONDIR=
