@@ -154,8 +154,8 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-RESOLUTION = 1.5
+PYTHONFILE = make_rz_plots.nodbz.py
+RESOLUTION = 3.0
 RMAX = 600
-MODELTAG = hwrfprs.storm.0p015
 LEVS = 46
 
