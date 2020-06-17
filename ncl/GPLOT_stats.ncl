@@ -130,7 +130,6 @@ MOD_FILE = GPLOT_DIR+"/modulefiles/GPLOT_mods"
 
 
 
-
 ;================================================================
 ; PART III. Read Master Namelist and Assign Variables 
 ;================================================================
@@ -302,7 +301,7 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 			ODIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ODIR =")))
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
-			ODIR_ADECK = ODIR+"adeck/"
+			ODIR_ADECK = ODIR+"/adeck/"
 			ODIR	= ODIR+EXPT+"/"+IDATE+"/multi_model/"
 	
 			ATCF1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_DIR =")))
@@ -770,6 +769,11 @@ print("===========================================")
 ;         and/or namelist options.
 ;================================================================
 
+; 1. Setup variables to achieve an optimal environment
+MACHINE = systemfunc("echo $machine")
+if(MACHINE.eq."")then   MACHINE = SYS_ENV   end if
+MOD_FILE = GPLOT_DIR+"/modulefiles/modulefile.gplot."+str_lower(MACHINE)
+
 ; 2. Make the Output Directory (ODIR)
 ;    It should already exist, so this is a safety check.
 system("mkdir -p "+ODIR)
@@ -1136,7 +1140,7 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	
 	; Check that1 vald ATCF is found. If not, exit.
 	if(dimsizes(val).gt.1)then
-		print("WARNING: Found more than 1 matching ATCF file found in "+ODIR+"ATCF_FILES.dat")
+		print("WARNING: Found more than 1 matching ATCF file found in "+ODIR+"/ATCF_FILES.dat")
 		print("WARNING: Will process only the first ATCF file.")
 		val := val(0)
 	end if
@@ -1342,7 +1346,7 @@ print("MSG: Get the latest A-DECK and B-DECK.")
 ;================================================================
 
 print("MSG: Create new A-DECK")
-system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
+system("echo 'working' > "+ODIR+"/status."+LONGSID+".log")
 
 ; Create a new ADECK file that includes the HWRF-B forecast
 ADIR	= ODIR+"atcf/"
@@ -1368,9 +1372,9 @@ if(MORIG.ne.MCODE)then   system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M
 
 
 ; Merge the NHC ADECK file, if available
-if(fileexists(ADECK_DIR+ADECK))then
-	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+ADECK)
-	system("cp "+ADECK_DIR+ADECK+" "+ADIR+ADECK)
+if(fileexists(ADECK_DIR+"/"+ADECK))then
+	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK)
+	system("cp "+ADECK_DIR+"/"+ADECK+" "+ADIR+ADECK)
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
 else if(fileexists(ADIR+ADECK))then
 	print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK)
@@ -1378,7 +1382,7 @@ else if(fileexists(ADIR+ADECK))then
 	system("mv "+ADIR+"TMP."+ADECK+" > "+ADIR+ADECK)
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
 else
-	print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+ADECK)
+	print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+"/"+ADECK)
 	print("WARNING: This is OK, but graphics will be incomplete.")
 	system("cp "+ADIR+ADECK_M+" "+ADIR+ADECK_N)
 end if  end if
@@ -1397,9 +1401,9 @@ if(.not.ismissing(SID_OLD))then
 	if(MORIG.ne.MCODE)then   system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M_OLD)   end if
 	
 	; Merge the NHC ADECK file, if available
-	if(fileexists(ADECK_DIR+ADECK_OLD))then
-		print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+ADECK_OLD)
-		system("cp "+ADECK_DIR+ADECK_OLD+" "+ADIR+ADECK_OLD)
+	if(fileexists(ADECK_DIR+"/"+ADECK_OLD))then
+		print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK_OLD)
+		system("cp "+ADECK_DIR+"/"+ADECK_OLD+" "+ADIR+ADECK_OLD)
 		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
 	else if(fileexists(ADIR+ADECK_OLD))then
 		print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK_OLD)
@@ -1407,7 +1411,7 @@ if(.not.ismissing(SID_OLD))then
 		system("mv "+ADIR+"TMP."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
 		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
 	else
-		print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+ADECK_OLD)
+		print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+"/"+ADECK_OLD)
 		print("WARNING: This is OK, but graphics will be incomplete.")
 		system("cp "+ADIR+ADECK_M_OLD+" "+ADIR+ADECK_N_OLD)
 	end if  end if
@@ -1479,9 +1483,9 @@ system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 
 
 print("MSG: Copy latest B-DECK")
-if(fileexists(BDECK_DIR+BDECK))then
-	print("MSG: NHC B-DECK found --> "+BDECK_DIR+BDECK)
-	system("cp "+BDECK_DIR+BDECK+" "+ADIR+BDECK)
+if(fileexists(BDECK_DIR+"/"+BDECK))then
+	print("MSG: NHC B-DECK found --> "+BDECK_DIR+"/"+BDECK)
+	system("cp "+BDECK_DIR+"/"+BDECK+" "+ADIR+BDECK)
 	sleep(5)
 else if(fileexists(ADIR+BDECK))then
 	print("MSG: NHC B-DECK found in working directory --> "+ADIR+BDECK)
@@ -1685,7 +1689,7 @@ tcInit	:= str_squeeze(str_get_field(data(vals),3,","))
 vals	:= ind(tcModel.eq.MCODE .and. tcFHR%6.eq.0 .and. toint(tcInit).le.toint(IDATE))
 if(ismissing(vals(0)))then
 	print("ERROR: No cycles in the A-Deck match "+MCODE+". Can't continue.")
-	system("echo  'failed' > "+ODIR+"status."+LONGSID+".log")
+	system("echo  'failed' > "+ODIR+"/status."+LONGSID+".log")
 	exit
 end if
 allDates := remove_duplicates(toint(tcInit(vals)))
@@ -2408,7 +2412,10 @@ if(DO_LT_GUIDE)then
 		plres1@gsLineColor	= "black"
 		vals  := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
 		vals2 := ind(toint(bHrs)%12.eq.0 .and. bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
-		vals3 := vals2(ind(.not.ismissing(bTRK(0,vals2))))
+		if(all(ismissing(bTRK(0,:))))then	vals3 := fval2
+							vals3@_FillValue = fval2
+		else					vals3 := vals2(ind(.not.ismissing(bTRK(0,vals2))))
+		end if
 
 		if(.not.ismissing(vals(0)) .and. .not.all(ismissing(bTRK(:,vals))) .and. .not.all(ismissing(bTRK(:,vals2))))then
 			dum1(dimsizes(TRKmodels))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
@@ -2416,7 +2423,10 @@ if(DO_LT_GUIDE)then
 			;dum3(dimsizes(TRKmodels),vals2)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),\
 			;							bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,\
 			;							txres3)
-			dum3(dimsizes(TRKmodels),vals3)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
+			if(.not.ismissing(vals3(0)))then
+				dum3(dimsizes(TRKmodels),vals3)	= gsn_add_text(wks,plot,tostring(toint(bHrs(vals2))),\
+									       bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
+			end if
 		end if
 
 
@@ -2440,7 +2450,10 @@ if(DO_LT_GUIDE)then
 			tmp	:= toint(where(ismissing(aTRK(ppp2,2,:)), fval2, aTRK(ppp2,2,:)))
 			vals	:= ind(tmp.le.tofloat(MAX_FHR))
 			vals2	:= ind(tmp%12.eq.0 .and. tmp.le.tofloat(MAX_FHR))
-			vals3	:= vals2(ind(.not.ismissing(aTRK(ppp2,0,vals2))))
+			if(all(ismissing(aTRK(ppp2,0,:))))then	vals3 = fval2
+								vals@_FillValue = fval2
+			else					vals3	:= vals2(ind(.not.ismissing(aTRK(ppp2,0,vals2))))
+			end if
 		
 			plres2@gsLineColor   = TRKcolors(ppp2)
 			plres3@gsLineColor   = TRKcolors(ppp2)
@@ -2455,9 +2468,10 @@ if(DO_LT_GUIDE)then
 			end if
 	
 			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)))then
-				;dum3(ppp,:dimsizes(vals2)-1) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
-				;					    aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
-				dum3(ppp,vals3) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
+				if(.not.ismissing(vals3(0)))then
+					dum3(ppp,vals3) = gsn_add_text(wks,plot,tostring(toint(aTRK(ppp2,2,vals2))),\
+								       aTRK(ppp2,1,vals2)+0.3,aTRK(ppp2,0,vals2)+0.3,txres3)
+				end if
 			end if		
 	
 			; Add legend info for each model
@@ -4550,14 +4564,14 @@ if(DO_VERIFICATION)then
 	liM_exp	= liM_exp+"];"
 
 	; 7. Setup other critical elements of the MET-TC configuration.
-	initEnd		= "\"+str_get_dq()+changeTimeFmt(IDATE,"YYYYMMDDHH","YYYYMMDD_HH",0.)+"\"+str_get_dq()+";"
-	summJob		= "jobs = [\"+str_get_dq()+"-job summary -column TRACK -column WIND -column TI -column AMAX_WIND-BMAX_WIND -by AMODEL\"+str_get_dq()+"];"
-	NHCStrName	= "[\"+str_get_dq()+"LEVEL\"+str_get_dq()+",\"+str_get_dq()+"LEVEL\"+str_get_dq()+"," \
-			 +"\"+str_get_dq()+"LEVEL\"+str_get_dq()+",\"+str_get_dq()+"LEVEL\"+str_get_dq()+"," \
-			 +"\"+str_get_dq()+"LEVEL\"+str_get_dq()+"];"
-	NHCStrVal	= "[\"+str_get_dq()+"HU\"+str_get_dq()+",\"+str_get_dq()+"TS\"+str_get_dq()+"," \
-			 +"\"+str_get_dq()+"TD\"+str_get_dq()+",\"+str_get_dq()+"SS\"+str_get_dq()+"," \
-			 +"\"+str_get_dq()+"SD\"+str_get_dq()+"];"
+	initEnd		= str_get_dq()+changeTimeFmt(IDATE,"YYYYMMDDHH","YYYYMMDD_HH",0.)+str_get_dq()+";"
+	summJob		= "jobs = ["+str_get_dq()+"-job summary -column TRACK -column WIND -column TI -column AMAX_WIND-BMAX_WIND -by AMODEL"+str_get_dq()+"];"
+	NHCStrName	= "["+str_get_dq()+"LEVEL"+str_get_dq()+","+str_get_dq()+"LEVEL"+str_get_dq()+"," \
+			 +""+str_get_dq()+"LEVEL"+str_get_dq()+","+str_get_dq()+"LEVEL"+str_get_dq()+"," \
+			 +""+str_get_dq()+"LEVEL"+str_get_dq()+"];"
+	NHCStrVal	= "["+str_get_dq()+"HU"+str_get_dq()+","+str_get_dq()+"TS"+str_get_dq()+"," \
+			 +""+str_get_dq()+"TD"+str_get_dq()+","+str_get_dq()+"SS"+str_get_dq()+"," \
+			 +""+str_get_dq()+"SD"+str_get_dq()+"];"
 
 
 	; 8. Set basic plotting resources
@@ -4626,50 +4640,50 @@ if(DO_VERIFICATION)then
 		
 		; a. Run the MET-TC program 'tc_pairs'
 		print("MSG: Running TC_PAIRS for late track models.")
-		system("perl -pi -e 's/model = .*/model = "+ltM_exp+"/g' "+TCPconf)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
+		system("sed -i -e 's/^model =.*/model = "+ltM_exp+"/g' "+TCPconf)
+		system("sed -i 's/^init_end =.*/init_end = "+initEnd+"/g' "+TCPconf)
 		
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-		;       ODIR+"mettc/tc_pairs_wrapper.sh")
+		;       ODIR+"/mettc/tc_pairs_wrapper.sh")
 		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-		;       " >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		;       " >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
-		       " -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		       " -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for late track models.")
-		filtJob	= "jobs = [\"+str_get_dq()+"-job filter -dump_row "+str_sub_str(TCSfout3,"/","\/")+".tcst\"+str_get_dq()+"];"
-		system("perl -pi -e 's/amodel = .*/amodel = "+ltM_exp+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/jobs = .*/"+filtJob+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		filtJob	= "jobs = ["+str_get_dq()+"-job filter -dump_row "+TCSfout3+".tcst"+str_get_dq()+"];"
+		system("sed -i 's/^amodel =.*/amodel = "+ltM_exp+"/g' "+TCSconf_f)
+		system("sed -i 's@^jobs = .*@"+filtJob+"@g' "+TCSconf_f)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_STAT with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-		;       ODIR+"mettc/tc_statf_wrapper.sh")
+		;       ODIR+"/mettc/tc_statf_wrapper.sh")
 		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-		;       " >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		;       " >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout3+".tcst -config "+TCSconf_f+str_get_dq()+\
-		       " >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		       " >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for late track models. Will loop over all lead times.")
-		system("perl -pi -e 's/amodel = .*/amodel = "+ltM_exp+"/g' "+TCSconf_s)
-		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
+		system("sed -i 's/^amodel =.*/amodel = "+ltM_exp+"/g' "+TCSconf_s)
+		system("sed -i 's/^jobs =.*/"+summJob+"/g' "+TCSconf_s)
 		TK_ERR		:= new((/dimsizes(ltModels),dimsizes(XYHrs)/),"float",fval3)
 		ALTK_ERR	:= TK_ERR
 		CRTK_ERR	:= TK_ERR
@@ -4680,18 +4694,18 @@ if(DO_VERIFICATION)then
 			; Set critical parameters for the MET-TC configuration
 			tmp	:= TCSsout3+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
 			tmp2	:= TCSsout3+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			system("sed -i 's/lead       =.*/lead       = ["+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create shell script to run TC_STAT with shell options (better)
-			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-			;       ODIR+"mettc/tc_stats_wrapper.sh")
+			;       ODIR+"/mettc/tc_stats_wrapper.sh")
 			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-			;       " >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;       " >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout3+".tcst -config "+TCSconf_s+\
-			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
 	
@@ -4743,7 +4757,7 @@ if(DO_VERIFICATION)then
 			print("MSG: Producing graphics for late track model verifications.")
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".late"
+			oFile	:= ODIR+"/Verification.TK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
 	                setvalues NhlGetWorkspaceObjectId()
@@ -4808,7 +4822,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.ALTK_ERR."+LONGSID+"."+IDATE+".late"
+			oFile	:= ODIR+"/Verification.ALTK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
 	                setvalues NhlGetWorkspaceObjectId()
@@ -4867,7 +4881,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.CRTK_ERR."+LONGSID+"."+IDATE+".late"
+			oFile	:= ODIR+"/Verification.CRTK_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
 	                setvalues NhlGetWorkspaceObjectId()
@@ -4924,42 +4938,45 @@ if(DO_VERIFICATION)then
 
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for late intensity models.")
-		system("perl -pi -e 's/model = .*/model = "+liM_exp+"/g' "+TCPconf)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
+		system("sed -i 's/^model = .*/model = "+liM_exp+"/g' "+TCPconf)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout4+" -log "+TCPout4+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
+		       " -out "+TCPout4+" -log "+TCPout4+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for late intensity models.")
-		filtJob	= "jobs = [\"+str_get_dq()+"-job filter -dump_row "+str_sub_str(TCSfout4,"/","\/")+".tcst\"+str_get_dq()+"];"
-		system("perl -pi -e 's/amodel = .*/amodel = "+liM_exp+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/jobs = .*/"+filtJob+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		filtJob	= "jobs = ["+str_get_dq()+"-job filter -dump_row "+TCSfout4+".tcst"+str_get_dq()+"];"
+		system("sed -i 's/^amodel = .*/amodel = "+liM_exp+"/g' "+TCSconf_f)
+		system("sed -i 's@^jobs = .*@"+filtJob+"@g' "+TCSconf_f)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout4+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout4+".tcst -config "+TCSconf_f+\
+		       str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for late intensity models.")
-		system("perl -pi -e 's/amodel = .*/amodel = "+liM_exp+"/g' "+TCSconf_s)
-		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
+		system("sed -i 's/^amodel = .*/amodel = "+liM_exp+"/g' "+TCSconf_s)
+		system("sed -i 's/^jobs = .*/"+summJob+"/g' "+TCSconf_s)
 		WIND_ERR	:= new((/dimsizes(liModels),dimsizes(XYHrs)/),"float",fval3)
 		ABS_WIND_ERR	:= WIND_ERR
 		N_ERR		:= WIND_ERR
@@ -4969,14 +4986,16 @@ if(DO_VERIFICATION)then
 			; Set critical parameters for the MET-TC configuration.
 			tmp	:= TCSsout4+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
 			tmp2	:= TCSsout4+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			system("sed -i 's/lead       = .*/lead       = ["+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 			
 			; Create a shell script to run TC_STAT with shell options.
-			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout4+".tcst -config "+TCSconf_s+" -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+			;        str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout4+".tcst -config "+TCSconf_s+\
+			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
 	
@@ -5020,7 +5039,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".late"
+			oFile	:= ODIR+"/Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
 	                setvalues NhlGetWorkspaceObjectId()
@@ -5087,7 +5106,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.WIND_ERR."+LONGSID+"."+IDATE+".late"
+			oFile	:= ODIR+"/Verification.WIND_ERR."+LONGSID+"."+IDATE+".late"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
                         setvalues NhlGetWorkspaceObjectId()
@@ -5144,42 +5163,46 @@ if(DO_VERIFICATION)then
 		
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for early track models.")
-		system("perl -pi -e 's/model = .*/model = "+etM_exp+"/g' "+TCPconf)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
+		system("sed -i 's/^model = .*/model = "+etM_exp+"/g' "+TCPconf)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout1+" -log "+TCPout1+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+		;        str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+\
+		       TCPconf+" -out "+TCPout1+" -log "+TCPout1+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for early track models.")
-		filtJob	= "jobs = [\"+str_get_dq()+"-job filter -dump_row "+str_sub_str(TCSfout1,"/","\/")+".tcst\"+str_get_dq()+"];"
-		system("perl -pi -e 's/amodel = .*/amodel = "+etM_exp+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/jobs = .*/"+filtJob+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		filtJob	= "jobs = ["+str_get_dq()+"-job filter -dump_row "+TCSfout1+".tcst"+str_get_dq()+"];"
+		system("sed -i 's/^amodel = .*/amodel = "+etM_exp+"/g' "+TCSconf_f)
+		system("sed -i 's@^jobs = .*@"+filtJob+"@g' "+TCSconf_f)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout1+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout1+".tcst -config "+TCSconf_f+\
+		       str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for early track models.")
-		system("perl -pi -e 's/amodel = .*/amodel = "+etM_exp+"/g' "+TCSconf_s)
-		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
+		system("sed -i 's/^amodel = .*/amodel = "+etM_exp+"/g' "+TCSconf_s)
+		system("sed -i 's/^jobs = .*/"+summJob+"/g' "+TCSconf_s)
 		TK_ERR		:= new((/dimsizes(etModels),dimsizes(XYHrs)/),"float",fval3)
 		ALTK_ERR	:= TK_ERR
 		CRTK_ERR	:= TK_ERR
@@ -5190,14 +5213,16 @@ if(DO_VERIFICATION)then
 			; Set critical parameters for the MET-TC configuration.
 			tmp	:= TCSsout1+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
 			tmp2	:= TCSsout1+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.3i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			system("sed -i 's/^lead       = .*/lead       = ["+str_get_dq()+sprinti("%0.3i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create a shell script to run TC_STAT with shell options.
-			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout1+".tcst -config "+TCSconf_s+" -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+			;        str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout1+".tcst -config "+TCSconf_s+" -out "+\
+			       tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
 	
@@ -5245,7 +5270,7 @@ if(DO_VERIFICATION)then
 		end if  end if  end if
 		if(DO_THIS)then	
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.TK_ERR."+LONGSID+"."+IDATE+".early"
+			oFile	:= ODIR+"/Verification.TK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
                         setvalues NhlGetWorkspaceObjectId()
@@ -5310,7 +5335,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.ALTK_ERR."+LONGSID+"."+IDATE+".early"
+			oFile	:= ODIR+"/Verification.ALTK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
                         setvalues NhlGetWorkspaceObjectId()
@@ -5368,7 +5393,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.CRTK_ERR."+LONGSID+"."+IDATE+".early"
+			oFile	:= ODIR+"/Verification.CRTK_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
                         setvalues NhlGetWorkspaceObjectId()
@@ -5427,42 +5452,46 @@ if(DO_VERIFICATION)then
 
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for early intensity models.")
-		system("perl -pi -e 's/model = .*/model = "+eiM_exp+"/g' "+TCPconf)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
+		system("sed -i 's/^model = .*/model = "+eiM_exp+"/g' "+TCPconf)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+" -out "+TCPout2+" -log "+TCPout2+".log"+str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+\
+		       TCPconf+" -out "+TCPout2+" -log "+TCPout2+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for early intensity models.")
-		filtJob	= "jobs = [\"+str_get_dq()+"-job filter -dump_row "+str_sub_str(TCSfout2,"/","\/")+".tcst\"+str_get_dq()+"];"
-		system("perl -pi -e 's/amodel = .*/amodel = "+eiM_exp+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/jobs = .*/"+filtJob+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
-		system("perl -pi -e 's/init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		filtJob	= "jobs = ["+str_get_dq()+"-job filter -dump_row "+TCSfout2+".tcst"+str_get_dq()+"];"
+		system("sed -i 's/^amodel = .*/amodel = "+eiM_exp+"/g' "+TCSconf_f)
+		system("sed -i 's@^jobs = .*@"+filtJob+"@g' "+TCSconf_f)
+		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_name =.*/column_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^column_str_val  =.*/column_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_name =.*/init_str_name = "+NHCStrName+"/g' "+TCSconf_f)
+		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout2+".tcst -config "+TCSconf_f+str_get_dq()+" >> "+ODIR+"mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
+		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout2+".tcst -config "+\
+		       TCSconf_f+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for early intensity models.")
-		system("perl -pi -e 's/amodel = .*/amodel = "+eiM_exp+"/g' "+TCSconf_s)
-		system("perl -pi -e 's/jobs = .*/"+summJob+"/g' "+TCSconf_s)
+		system("sed -i 's/^amodel = .*/amodel = "+eiM_exp+"/g' "+TCSconf_s)
+		system("sed -i 's/^jobs = .*/"+summJob+"/g' "+TCSconf_s)
 		WIND_ERR	:= new((/dimsizes(eiModels),dimsizes(XYHrs)/),"float",fval3)
 		ABS_WIND_ERR	:= WIND_ERR
 		N_ERR		:= WIND_ERR
@@ -5472,17 +5501,17 @@ if(DO_VERIFICATION)then
 			; Set critical parameters for the MET-TC configuration.
 			tmp	:= TCSsout2+".f"+sprinti("%0.3i",XYHrs(fff))+".tcst"
 			tmp2	:= TCSsout2+".f"+sprinti("%0.3i",XYHrs(fff))+".log"
-			system("perl -pi -e 's/lead       = .*/lead       = [\"+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000\"+str_get_dq()+"];/g' "+TCSconf_s)
+			system("sed -i 's/^lead       = .*/lead       = ["+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create a shell script to run TC_STAT with shell options.
-			system("echo "+str_get_dq()+"#!/bin/sh --login"+str_get_dq()+" > "+ODIR+"mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
 			;       ODIR+"mettc/tc_stats_wrapper.sh")
 			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-			;       " >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			;       " >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout2+".tcst -config "+TCSconf_s+\
-			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"mettc/tc_stats_wrapper.sh")
+			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
 	
@@ -5527,7 +5556,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".early"
+			oFile	:= ODIR+"/Verification.ABS_WIND_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
                         setvalues NhlGetWorkspaceObjectId()
@@ -5591,7 +5620,7 @@ if(DO_VERIFICATION)then
 		if(DO_THIS)then
 
 			; Setup the file, open the workstation, and update resources.
-			oFile	:= ODIR+"Verification.WIND_ERR."+LONGSID+"."+IDATE+".early"
+			oFile	:= ODIR+"/Verification.WIND_ERR."+LONGSID+"."+IDATE+".early"
 			if(fileexists(oFile))then   system("rm -f "+oFile)   end if
 			wks = gsn_open_wks(wtype,oFile)
                         setvalues NhlGetWorkspaceObjectId()
@@ -5655,70 +5684,70 @@ end if ;DO_VERIFICATION
 print("")
 print("MSG: *************STEP SIX************")
 print("MSG: Check on the graphical production.")
-system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
+system("echo 'working' > "+ODIR+"/status."+LONGSID+".log")
 
 if(DO_GUIDANCE)then
 	if(DO_LT_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"TrackGuidance*"+IDATE+".late.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/TrackGuidance*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Track Guidance graphic not produced.")
 						exit
 		end if
 	else if(DO_ET_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Guidance graphic ot produced.")
 						exit
 		end if
 	else if(DO_LI_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"IntensityGuidance*"+IDATE+".late.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/IntensityGuidance*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Intensity Guidance graphic not produced.")
 						exit
 		end if
 	else if(DO_EI_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Guidance graphic not produced.")
 						exit
 		end if
 	else if(DO_LP_GUIDE)then
-		chk := systemfunc("ls "+ODIR+"PressureGuidance*"+IDATE+".late.* 2>/dev/null")
-		if(ismissing(chk(0)))then	print("ERROR: LAte Pressure Guidance graphic not produced.")
+		chk := systemfunc("ls "+ODIR+"/PressureGuidance*"+IDATE+".late.* 2>/dev/null")
+		if(ismissing(chk(0)))then	print("ERROR: Late Pressure Guidance graphic not produced.")
 						exit
 		end if
 	end if  end if  end if  end if  end if
 else if(DO_TRENDS)then
 	if(DO_LT_TREND)then
-		chk := systemfunc("ls "+ODIR+"TrackTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/TrackTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: "+MCODE+" Late Track Trend graphic not produced.")
 						exit
 		end if
 	else if(DO_LI_TREND)then
-		chk := systemfunc("ls "+ODIR+"IntensityTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/IntensityTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: "+MCODE+" Late Intensity Trend graphic not produced.")
 						exit
 		end if
 	else if(DO_LP_TREND)then
-		chk := systemfunc("ls "+ODIR+"PressureTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/PressureTrend."+MCODE+"*"+IDATE+".* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: "+MCODE+" Late Pressure Trend graphic not produced.")
 						exit
 		end if
 	end if  end if  end if
 else if(DO_VERIFICATION)then
 	if(DO_ET_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*TK_ERR*"+IDATE+".early.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/Verification*TK_ERR*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Model Verification did not plot.")
 						exit
 		end if
 	else if(DO_EI_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*WIND_ERR*"+IDATE+".early.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/Verification*WIND_ERR*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Model Verification did not plot.")
 						exit
 		end if
 	else if(DO_LT_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*TK_ERR*"+IDATE+".late.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/Verification*TK_ERR*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Track Model Verification did not plot.")
 						exit
 		end if
 	else if(DO_LI_VER)then
-		chk := systemfunc("ls "+ODIR+"Verification*WIND_ERR*"+IDATE+".late.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/Verification*WIND_ERR*"+IDATE+".late.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Late Intensity Model Verification did not plot.")
 						exit
 		end if
@@ -5731,8 +5760,8 @@ end if  end if  end if
 ; Write final message to status file.
 ;================================================================
 
-if(FNL_ATCF)then	system("echo 'complete' > "+ODIR+"status."+LONGSID+".log")
-else			system("echo 'incomplete' > "+ODIR+"status."+LONGSID+".log")
+if(FNL_ATCF)then	system("echo 'complete' > "+ODIR+"/status."+LONGSID+".log")
+else			system("echo 'incomplete' > "+ODIR+"/status."+LONGSID+".log")
 end if
 
 
