@@ -645,9 +645,14 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
                                 CFILE=`echo $TMP | cut -d' ' -f1`
                                 NATCF=`echo $TMP | cut -d' ' -f2`
+                                if [ $SC == "True" ]; then
+                                    ATCF_EXP=1
+                                else
+                                    ATCF_EXP=${#CYCLE_ATCF[@]}
+                                fi
                                 if [[ -n "$CFILE" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
-                                    if [[ -n ${test} ]] && [ "${#CYCLE_ATCF[@]}" -eq ${NATCF} ]; then
+                                    if [[ -n ${test} ]] && [ "${ATCF_EXP}" -eq ${NATCF} ]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
                                     fi
