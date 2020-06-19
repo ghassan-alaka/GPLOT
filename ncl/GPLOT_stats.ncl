@@ -1086,7 +1086,7 @@ utc_base@units = tunits
 utc	= utc_base+6
 utc@units = tunits
 IDATE06 := tostring(toint(cd_calendar(utc,3)))
-system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+#system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
 
 
 ; Hours for XY Graphics (e.g., intensity, pressure)
@@ -2337,7 +2337,7 @@ if(DO_LT_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE+".late"
+		OFILE	= ODIR+"/TrackGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
 		setvalues NhlGetWorkspaceObjectId()
@@ -2564,7 +2564,8 @@ if(DO_ET_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		;OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		OFILE	= ODIR+"/TrackGuidance."+LONGSID+"."+IDATE06+".early"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2756,7 +2757,7 @@ if(DO_LI_GUIDE)then
 
 
 		; Setup the output file & workstation
-		OFILE	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE+".late"
+		OFILE	= ODIR+"/IntensityGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2942,7 +2943,8 @@ if(DO_EI_GUIDE)then
 
 
 		; Setup the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		;OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		OFILE	= ODIR+"/IntensityGuidance."+LONGSID+"."+IDATE06+".early"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -3127,7 +3129,7 @@ if(DO_LP_GUIDE)then
 
 
 		; Setup the output file
-		OFILE	= ODIR+"PressureGuidance."+LONGSID+"."+IDATE+".late"
+		OFILE	= ODIR+"/PressureGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -5688,7 +5690,7 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_ET_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Guidance graphic ot produced.")
 						exit
 		end if
@@ -5698,7 +5700,7 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_EI_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		chk := systemfunc("ls "+ODIR+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Guidance graphic not produced.")
 						exit
 		end if
