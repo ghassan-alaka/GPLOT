@@ -2966,9 +2966,10 @@ print("Made it!")
 		;if(ATCF_REQD .and. ALL_ATCF)then
 		if(FHR(fff).le.FNL_HR)then
 			if(fileexists(PLOTTED_FILES))then
-				system("echo "+iFiles(myInd(0))+" >> "+PLOTTED_FILES)
+				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
 			else
-				system("echo "+iFiles(myInd(0))+" > "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
 			end if
 		end if
 		system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")

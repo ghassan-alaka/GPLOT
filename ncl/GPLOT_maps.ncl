@@ -804,30 +804,30 @@ end if
         
 ; 3. Determine how many ATCFs are needed.
 ;    If this case is storm-centered, then only 1 ATCF is needed
-if(SC_DOMAIN)then       nAll            := 1
+if(SC_DOMAIN)then       NATCF            := 1
                         ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID))))
-else                    nAll            := dimsizes(ATCF_FILES)
+else                    NATCF            := dimsizes(ATCF_FILES)
 end if
 
 
 ; 4. Setup a number of variables that will be filled
 ;    by the loop below.
-tcLats  := new((/nAll,nFHR/),float)
-tcLons  := new((/nAll,nFHR/),float)
-tcFHR   := new((/nAll,nFHR/),integer)
-tcINT   := new((/nAll,nFHR/),integer)
-FNL_ATCF:= new(nAll,logical)
-tcMAXHR := new(nAll,integer)
-ALL_LONGSID := new(nAll,string)
-ALL_SID := new(nAll,string)
-ALL_SNUM:= new(nAll,integer)
+tcLats  := new((/NATCF,nFHR/),float)
+tcLons  := new((/NATCF,nFHR/),float)
+tcFHR   := new((/NATCF,nFHR/),integer)
+tcINT   := new((/NATCF,nFHR/),integer)
+FNL_ATCF:= new(NATCF,logical)
+tcMAXHR := new(NATCF,integer)
+ALL_LONGSID := new(NATCF,string)
+ALL_SID := new(NATCF,string)
+ALL_SNUM:= new(NATCF,integer)
 
                 
 ; 5. Loop over all of the storms
 LONGSID_LIST = ""
 FNL_ATCF = False
 ;ALL_ATCF  = True       ; assume True, but we will set this to False if necessary
-do sss = 0,nAll-1
+do sss = 0,NATCF-1
                         
         ; a. Skip this part if no ATCF files were found.
         ;    The scrip would have already exited if this is not OK.
@@ -3024,7 +3024,7 @@ print(BOCO)
 	                ;if(isStrSubset(DSOURCE,"HWRF") .or. DSOURCE.eq."GFS" .or. isStrSubset(str_lower(DSOURCE),"fvgfs"))then
                         
 				; Loop over all available storms
-	                        do sss = 0,nAll-1
+	                        do sss = 0,NATCF-1
 	                                ; Get TC Info for current time
 	                                myInd2  = ind(tcFHR(sss,:).eq.toint(str_sub_str(sprinti(FMT_HR,FHR3(ttt)),"f","")))
 	                                if(ismissing(myInd2(0)))then   continue   end if
@@ -3192,16 +3192,18 @@ print(BOCO)
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
-                                system("echo "+iFiles(myInd(0))+" >> "+PLOTTED_FILES)
+				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+iFiles(myInd(0))+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
-                                system("echo "+iFiles(myInd(0))+" >> "+PLOTTED_FILES)
+				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+iFiles(myInd(0))+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
