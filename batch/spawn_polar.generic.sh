@@ -498,19 +498,19 @@ if [ "${DO_POLAR}" = "True" ]; then
 
 
                         # Print some information
-                        if [ "$FORCE" == "False" ]; then
-                            echo "MSG: Using this file of processed files --> ${PLOTTED_FILE}"
-                            echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
-                            echo "MSG: To manually force reprocessing of all files, delete this file."
-                        else
-                            echo "MSG: Graphic production will be forced."
-                            echo "MSG: Deleting this file of processed files --> ${PLOTTED_FILE}"
-                            rm -f ${PLOTTED_FILE}
-                            CASE_PLOTTED=()
-                            CASE_STATUS="force"
-                        fi
-                        echo "MSG: Using this status file --> ${STATUS_FILE}"
-                        echo "MSG: Found this status --> ${CASE_STATUS}"
+                        #if [ "$FORCE" == "False" ]; then
+                        #    echo "MSG: Using this file of processed files --> ${PLOTTED_FILE}"
+                        #    echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
+                        #    echo "MSG: To manually force reprocessing of all files, delete this file."
+                        #else
+                        #    echo "MSG: Graphic production will be forced."
+                        #    echo "MSG: Deleting this file of processed files --> ${PLOTTED_FILE}"
+                        #    rm -f ${PLOTTED_FILE}
+                        #    CASE_PLOTTED=()
+                        #    CASE_STATUS="force"
+                        #fi
+                        #echo "MSG: Using this status file --> ${STATUS_FILE}"
+                        #echo "MSG: Found this status --> ${CASE_STATUS}"
 
 
                         # Loop through IFILES and retain only valid entries
@@ -531,10 +531,12 @@ if [ "${DO_POLAR}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                CFILE=`echo $TMP | cut -d' ' -f1`
+                                NATCF=`echo $TMP | cut -d' ' -f2`
                                 if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
-                                    if [[ -n ${test} ]]; then
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
+                                    if [[ -n ${test} ]] && [ "${#CYCLE_ATCF[@]}" -eq ${NATCF} ]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
                                     fi

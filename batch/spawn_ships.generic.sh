@@ -516,10 +516,12 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                CFILE=`echo $TMP | cut -d' ' -f1`
+                                NATCF=`echo $TMP | cut -d' ' -f2`
                                 if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
-                                    if [[ -n ${test} ]]; then
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
+                                    if [[ -n ${test} ]] && [ "${#CYCLE_ATCF[@]}" -eq ${NATCF} ]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
                                     fi

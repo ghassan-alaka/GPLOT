@@ -595,30 +595,33 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Get the list of plotted files for this case
                         CASE_PLOTTED=(`cat ${PLOTTED_FILE} 2>/dev/null`)
+                        #CASE_ATCF=(`awk '{print $2}'  ${PLOTTED_FILE} 2>/dev/null`)
 
 
                         # Get the status for this case
                         CASE_STATUS=`cat "${STATUS_FILE}" 2>/dev/null`
 
 
+                        # THIS IS NOT NEESSARY FOR THE HAFS WORKFLOW.
+                        # 'FORCE' might be obselete.
                         # Print some information
                         # This depends on whether or not forcing is turned on.
-                        if [ "$FORCE" == "False" ]; then
-                            echo "MSG: Processed files     --> ${PLOTTED_FILE}"
-                            echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
-                            echo "MSG: To manually force reprocessing of all files, delete this file."
-                        else
-                            # Don't do this if the status is working.
-                            if [ "$CASE_STATUS" != "working" ]; then
-                                echo "MSG: Graphic production will be forced."
-                                echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
-                                rm -f ${PLOTTED_FILE}
-                                CASE_PLOTTED=()
-                                CASE_STATUS="force"
-                            fi
-                        fi
-                        echo "MSG: Status file         --> ${STATUS_FILE}"
-                        echo "MSG: Found this status   --> ${CASE_STATUS}"
+                        #if [ "$FORCE" == "False" ]; then
+                        #    echo "MSG: Processed files     --> ${PLOTTED_FILE}"
+                        #    echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
+                        #    echo "MSG: To manually force reprocessing of all files, delete this file."
+                        #else
+                        #    # Don't do this if the status is working.
+                        #    if [ "$CASE_STATUS" != "working" ]; then
+                        #        echo "MSG: Graphic production will be forced."
+                        #        echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
+                        #        rm -f ${PLOTTED_FILE}
+                        #        CASE_PLOTTED=()
+                        #        CASE_STATUS="force"
+                        #    fi
+                        #fi
+                        #echo "MSG: Status file         --> ${STATUS_FILE}"
+                        #echo "MSG: Found this status   --> ${CASE_STATUS}"
 
 
                         # Loop through IFILES and retain only valid entries
@@ -639,10 +642,12 @@ if [ "${DO_MAPS}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                CFILE=`echo $TMP | cut -d' ' -f1`
+                                NATCF=`echo $TMP | cut -d' ' -f2`
                                 if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
-                                    if [[ -n ${test} ]]; then
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
+                                    if [[ -n ${test} ]] && [ "${#CYCLE_ATCF[@]}" -eq ${NATCF} ]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
                                     fi
@@ -678,6 +683,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # Check the status and update it if necessary.
                         # This logic will allow work to start on this case
                         # or will move on to the next case.
+                        echo "MSG: The status file --> ${STATUS_FILE}"
                         if [ "$CASE_STATUS" == "force" ]; then
                             echo "MSG: Forcing production. Ignoring status file."
                             echo "start" > ${STATUS_FILE}
@@ -787,13 +793,15 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Check if a similar job is already submitted
                         echo "MSG: The batch file --> ${BATCHFILE2}"
-                        if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+                        if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                             JOB_TEST=""
-                        elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+                        elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
                             JOB_TEST=""
-                        else
+                        elif [ "${BATCH_MODE^^}" == "SBATCH" ]; then
                             JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
                             JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+                        else
+                            JOB_TEST=""
                         fi
 
                         # Change options in the batch submission script.
