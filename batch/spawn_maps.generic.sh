@@ -168,7 +168,7 @@ if [ -z "$IDATE" ]; then
 else
     CYCLES=( "${IDATE[@]}" )
 fi
-echo "MSG: Found these cycles -->${CYCLES[*]}"
+echo "MSG: Found these cycles --> ${CYCLES[*]}"
 
 
 # Define the maximum number of batch submissions.
@@ -241,9 +241,9 @@ if [ "${DO_MAPS}" = "True" ]; then
             # Third, try to get STORMS from the HWRF file path.
             # This is hard-coded and might not work.
             if [ -z "$STORMS" ]; then
-                if [ ! -z "$(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
+                if [ ! -z "$(ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
                     #ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename
-                    STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+                    STORMS+=(`ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
                 fi
             fi
 
@@ -645,6 +645,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
                                 CFILE=`echo $TMP | cut -d' ' -f1`
                                 NATCF=`echo $TMP | cut -d' ' -f2`
+				ATCFDONE=`echo $TMP | cut -d' ' -f3`
                                 if [ $SC == "True" ]; then
                                     ATCF_EXP=1
                                 else
@@ -652,9 +653,11 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 fi
                                 if [[ -n "$CFILE" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
-                                    if [[ -n ${test} ]] && [ "${ATCF_EXP}" -eq ${NATCF} ]; then
-                                        unset 'IFILES[$i]'
-                                        unset 'IFHRS[$i]'
+                                    if [[ -n ${test} ]]; then
+                                       if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                            unset 'IFILES[$i]'
+                                            unset 'IFHRS[$i]'
+                                       fi
                                     fi
                                 fi
                             fi
