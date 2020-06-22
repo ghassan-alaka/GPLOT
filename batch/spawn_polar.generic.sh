@@ -531,12 +531,13 @@ if [ "${DO_POLAR}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                #TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(grep "$FILE" ${PLOTTED_FILE})
                                 CFILE=`echo $TMP | cut -d' ' -f1`
                                 NATCF=`echo $TMP | cut -d' ' -f2`
                                 if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
-                                    if [[ -n ${test} ]] && [ "${#CYCLE_ATCF[@]}" -eq ${NATCF} ]; then
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +15 2>/dev/null)
+                                    if [[ -n ${test} ]]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
                                     fi

@@ -377,6 +377,12 @@ if [ "${DO_MAPS}" = "True" ]; then
                         echo "MSG: Skipping this domain because it is not storm-centered and this is at least the 2nd storm."
                         continue
                     fi
+
+                    # Skip the fake storm (00L) for storm-centered domains
+                    if [ "$SC" == "True" ] && [ "${STORM^^}" == "00L" ]; then
+                        echo "MSG: Skipping this domain because it is storm-centered and this is the fake storm (00L)."
+                        continue
+                    fi
     
                     # Get file prefix information from table or namelist
                     if [ -z "$ITAG" ]; then
@@ -642,17 +648,18 @@ if [ "${DO_MAPS}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
-                                CFILE=`echo $TMP | cut -d' ' -f1`
-                                NATCF=`echo $TMP | cut -d' ' -f2`
-				ATCFDONE=`echo $TMP | cut -d' ' -f3`
+                                #TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(grep "$FILE" ${PLOTTED_FILE})
+                                CFILE=`echo "$TMP" | cut -d' ' -f1`
+                                NATCF=`echo "$TMP" | cut -d' ' -f2`
+				ATCFDONE=`echo "$TMP" | cut -d' ' -f3`
                                 if [ $SC == "True" ]; then
                                     ATCF_EXP=1
                                 else
                                     ATCF_EXP=${#CYCLE_ATCF[@]}
                                 fi
                                 if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +10 2>/dev/null)
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +15 2>/dev/null)
                                     if [[ -n ${test} ]]; then
                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
@@ -710,12 +717,12 @@ if [ "${DO_MAPS}" = "True" ]; then
                             echo "MSG: Changing the status to 'update request 1'."
                             echo "update request 1" > ${STATUS_FILE}
                             continue
-                        elif [ "$CASE_STATUS" == "update request 1" ]; then
-                            echo "MSG: Status suggests this case needs to be updated."
-                            echo "MSG: Changing the status to 'update request 2'."
-                            echo "update request 2" > ${STATUS_FILE}
-                            continue
-                        elif [ "$CASE_STATUS" == "update request 2" ] || [ "$CASE_STATUS" == "failed" ]; then
+                        #elif [ "$CASE_STATUS" == "update request 1" ]; then
+                        #    echo "MSG: Status suggests this case needs to be updated."
+                        #    echo "MSG: Changing the status to 'update request 2'."
+                        #    echo "update request 2" > ${STATUS_FILE}
+                        #    continue
+                        elif [ "$CASE_STATUS" == "update request 1" ] || [ "$CASE_STATUS" == "failed" ]; then
                             echo "MSG: Status suggests this case has stalled/failed."
                             echo "MSG: Deleting the status for a restart."
                             echo "start" > ${STATUS_FILE}
