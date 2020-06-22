@@ -3191,10 +3191,10 @@ print(BOCO)
                 
 		NATCF_NOW = 0
 		if(.not.all(ismissing(tcFHR(0,:))))then
-			vals1 = ind(tcFHR(0,:).eq.FHR3(ttt))
+			vals1 = ind(tcFHR(0,:).eq.FHR(fff))
 			if(.not.ismissing(vals1(0)))then	NATCF_NOW = dimsizes(ind(.not.ismissing(tcLats(:,vals1)) .or. FNL_ATCF(:)))
 			end if
-		else
+		end if
 			
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
