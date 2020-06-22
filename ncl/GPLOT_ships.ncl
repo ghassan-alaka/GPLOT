@@ -893,39 +893,40 @@ do fff = 0,nFiles-1
 	; Double-check the logic here.
 	FHRDONE = True
 	do ppp = 0,nData-1
-	if(DATA_ON(ppp))then
-		DAT_FILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
-		;DAT_FILE2	= ODIR+str_lower(LONGSID)+".TC_CenterFix."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))+".dat"
-
-		; Get the TC centers based on the geopotential height centroid
-		if(FNAME(ppp).eq."TCCEN")then		NCOL = 5
-		else if(FNAME(ppp).eq."TCHODO")then	NCOL = 4
-		else					NCOL = 2
-		end if  end if
-			
-		; 1) Check if the file exists, and if the data
-		; for this particular forecast hours has been written.
-		if(fileexists(DAT_FILE))then
-			DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
-			if(DAT_SZ.eq.0)then	FHRDONE = False
-						break
+		if(DATA_ON(ppp))then
+			DAT_FILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
+			;DAT_FILE2	= ODIR+str_lower(LONGSID)+".TC_CenterFix."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))+".dat"
+	
+			; Get the TC centers based on the geopotential height centroid
+			if(FNAME(ppp).eq."TCCEN")then		NCOL = 5
+			else if(FNAME(ppp).eq."TCHODO")then	NCOL = 4
+			else					NCOL = 2
+			end if  end if
+				
+			; 1) Check if the file exists, and if the data
+			; for this particular forecast hours has been written.
+			if(fileexists(DAT_FILE))then
+				DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
+				if(ismissing(DAT_SZ(0)))then	FHRDONE = False
+								break
+				else if(DAT_SZ.eq.0)then	FHRDONE = False
+								break
+				end if  end if
+				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
+				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
+				if(any(toint(data(:,0)).eq.FHR(fff)))then   continue   end if
 			end if
-			NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
-			data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
-			if(any(toint(data(:,0)).eq.FHR(fff)))then   continue   end if
+			FHRDONE = False
+			break
 		end if
-		FHRDONE = False
-		break
-	end if
 	end do
-print(""+FHRDONE)
-print("Made it!")
+	print("MSG: Made it! Does at least one graphic type requires more processing? "+FHRDONE)
 
 	if(.not.FORCE)then
-	if(FHRDONE .and. FHR(fff).ne.max(FHR))then
-		print("MSG: Data already completed for this forecast hour.")
-		continue
-	end if
+		if(FHRDONE .and. FHR(fff).ne.max(FHR))then
+			print("MSG: Data already completed for this forecast hour.")
+			continue
+		end if
 	end if
 	
 

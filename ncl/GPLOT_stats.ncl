@@ -1086,7 +1086,7 @@ utc_base@units = tunits
 utc	= utc_base+6
 utc@units = tunits
 IDATE06 := tostring(toint(cd_calendar(utc,3)))
-#system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+;system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
 
 
 ; Hours for XY Graphics (e.g., intensity, pressure)

@@ -724,7 +724,7 @@ nFiles  := dimsizes(iFiles)
 ;    If any files meet this criteria, then final status can't be "complete".
 FNL_IFILES = new(nFiles,logical)
 do fff = 0,nFiles-1
-        IFILES_MOD := systemfunc("find "+iFiles(fff)+" -mmin +30")
+        IFILES_MOD := systemfunc("find "+iFiles(fff)+" -mmin +10")
         if(ismissing(IFILES_MOD(0)))then        FNL_IFILES(fff) = False
         else                                    FNL_IFILES(fff) = True
         end if
@@ -825,7 +825,7 @@ ALL_SNUM:= new(NATCF,integer)
                 
 ; 5. Loop over all of the storms
 LONGSID_LIST = ""
-FNL_ATCF = False
+FNL_ATCF = True		; Assume True, but we will set this to False if neessary.
 ;ALL_ATCF  = True       ; assume True, but we will set this to False if necessary
 do sss = 0,NATCF-1
                         
@@ -896,7 +896,7 @@ do sss = 0,NATCF-1
         ;    storm-centered graphics because they are not necessarily 
         ;    tied to a particular storm. So, graphics may still be
         ;    produced even if there is no ATCF entry.
-        ATCF_MOD := systemfunc("find "+ATCF_FILES(sss)+" -mmin +120")
+        ATCF_MOD := systemfunc("find "+ATCF_FILES(sss)+" -mmin +10")
         if(ismissing(ATCF_MOD(0)))then  FNL_ATCF(sss) = False
         else                            FNL_ATCF(sss) = True
         end if
@@ -3189,21 +3189,28 @@ print(BOCO)
         if(FILE_DONE(fff))then
                 print("MSG: All graphics found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
                 
+		NATCF_NOW = 0
+		if(.not.all(ismissing(tcFHR(0,:))))then
+			vals1 = ind(tcFHR(0,:).eq.FHR3(ttt))
+			if(.not.ismissing(vals1(0)))then	NATCF_NOW = dimsizes(ind(.not.ismissing(tcLats(:,vals1)) .or. FNL_ATCF(:)))
+			end if
+		else
+			
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
 				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
 				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF+str_get_dq()+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
