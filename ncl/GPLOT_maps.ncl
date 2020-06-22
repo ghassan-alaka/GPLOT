@@ -3199,7 +3199,7 @@ print(BOCO)
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
-				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+				system("sed -i 's@"+iFiles(myInd(0))+"@d' "+PLOTTED_FILES)
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
@@ -3207,7 +3207,7 @@ print(BOCO)
                 end if
                 if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
-				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+				system("sed -i 's@"+iFiles(myInd(0))+"@d' "+PLOTTED_FILES)
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
