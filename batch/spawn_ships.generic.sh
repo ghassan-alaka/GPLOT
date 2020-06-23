@@ -252,6 +252,12 @@ if [ "${DO_SHIPS}" = "True" ]; then
         # LOOP OVER STORMS #
         ####################
         for STORM in ${STORMS[@]}; do
+
+            # Skip the fake storm (00L)
+            if [ "${STORM^^}" == "00L" ]; then
+                continue
+            fi
+
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
