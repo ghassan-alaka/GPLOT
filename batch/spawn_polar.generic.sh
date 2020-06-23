@@ -426,7 +426,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L")
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}" "${YYYY}${MM}${DD}/${HH}")
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                         # If a match is found, write lead time to a data file "AllForecastHours"
