@@ -135,136 +135,97 @@ data = asciiread(MASTER_NML,-1,"string")
 ; 3. Get basic variables from the master namelist:
 ;    DOMAIN, TIER, DSOURCE, SYS_ENV, IDATE, SID, ATCF_REQD
 ;    First, check if basic variables should be automatically defined (AUTO_VAR).
-;    Any of these variables can be overwritten by command line arguments.
-AUTO_VAR	= data(ind(isStrSubset2(data,"AUTO_VAR =")))
-AUTO_VAR	:= str_squeeze(str_split(AUTO_VAR," = "))
-AUTO_VAR	:= where(AUTO_VAR(1).eq."True",True,False)
-if(AUTO_VAR)then	print("MSG: Auto-Variable functionality is ON. Ignoring basic settings in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			if(isvar("DOMAIN"))then		print("MSG: Detected command line variable: DOMAIN")
-			else				DOMAIN  = "basin"
-			end if
-			if(isvar("TIER"))then		print("MSG: Detected command line variable: TIER")
-			else				TIER    = "Tier1"
-			end if
-			if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
-			else				DSOURCE = "HWRF"
-			end if
-			if(isvar("SYS_ENV"))then	print("MSG: Detected command line variable: SYS_ENV")
-			else				SYS_ENV = "JET"
-			end if
-			if(isvar("IDATE"))then		print("MSG: Detected command line variable: IDATE")
-			else				IDATE   = ""
-			end if
-			if(isvar("SID"))then		print("MSG: Detected command line variable: SID")
-			else				SID     = "NONE"
-			end if
-			if(isvar("ATCF_REQD"))then	print("MSG: Detected command line variable: ATCF_REQD")
-			else				ATCF_REQD = True
-			end if
-			if(isvar("FORCE"))then		print("MSG: Detected command line variable: FORCE")
-			else				FORCE = False
-			end if
-
-else			print("MSG: Auto-Variable functionality is OFF. Using basic settings in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			if(isvar("DOMAIN"))then		print("MSG: Detected command line variable: DOMAIN")
-			else				DOMAIN	= data(ind(isStrSubset2(data,"DOMAIN =")))
-							DOMAIN	:= str_squeeze(str_split(DOMAIN," = "))
-							DOMAIN	:= DOMAIN(1)
-			end if
-				
-			if(isvar("TIER"))then		print("MSG: Detected command line variable: TIER")
-			else				TIER	= data(ind(isStrSubset2(data,"TIER =")))
-							TIER	:= str_squeeze(str_split(TIER," = "))
-							TIER	:= TIER(1)
-			end if
-				
-			if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
-			else				DSOURCE	= data(ind(isStrSubset2(data,"DSOURCE =")))
-							DSOURCE	:= str_squeeze(str_split(DSOURCE," = "))
-							DSOURCE	:= DSOURCE(1)
-			end if
-			
-			if(isvar("SYS_ENV"))then	print("MSG: Detected command line variable: SYS_ENV")
-			else				SYS_ENV	= data(ind(isStrSubset2(data,"SYS_ENV =")))
-							SYS_ENV	:= str_squeeze(str_split(SYS_ENV," = "))
-							SYS_ENV	:= SYS_ENV(1)
-			end if
-			
-			if(isvar("IDATE"))then		print("MSG: Detected command line variable: IDATE")
-			else				IDATE	= data(ind(isStrSubset2(data,"IDATE =")))
-							IDATE	:= str_squeeze(str_split(IDATE," = "))
-							if(dimsizes(IDATE).eq.2)then	IDATE := IDATE(1)
-							else				IDATE := ""
-							end if
-			end if
-			
-			if(isvar("SID"))then		print("MSG: Detected command line variable: SID")
-			else				SID	= data(ind(isStrSubset2(data,"SID =")))
-							SID	:= str_squeeze(str_split(SID," = "))
-							if(dimsizes(SID).eq.2)then	SID := SID(1)
-							else				SID := ""
-							end if
-			end if
-			
-			if(isvar("ATCF_REQD"))then	print("MSG: Detected command line variable: ATCF_REQD")
-			else				val := ind(isStrSubset2(data,"ATCF_REQD ="))
-							if(.not.ismissing(val(0)))then	ATCF_REQD	= data(val)
-											ATCF_REQD	:= str_squeeze(str_split(ATCF_REQD," = "))
-											ATCF_REQD	:= where(ATCF_REQD(1).eq."True",True,False)
-							else				ATCF_REQD	:= True
-							end if
-			end if
-			if(isvar("FORCE"))then		print("MSG: Detected command line variable: FORCE")
-			else				val := ind(isStrSubset2(data,"FORCE ="))
-							if(.not.ismissing(val(0)))then	FORCE	= data(val)
-											FORCE	:= str_squeeze(str_split(FORCE," = "))
-											FORCE	:= where(FORCE(1).eq."True",True,False)
-							else				FORCE	:= False
-							end if
-			end if
+print("MSG: Read basic settings from the master namelist.")
+if(isvar("DOMAIN"))then		print("MSG: Detected command line variable: DOMAIN")
+else				DOMAIN	= data(ind(isStrSubset2(data,"DOMAIN =")))
+				DOMAIN	:= str_squeeze(str_split(DOMAIN," = "))
+				DOMAIN	:= DOMAIN(1)
+end if
+if(DOMAIN.eq."")then    print("ERROR: DOMAIN must be set in the namelist or as a command line arg.")
+                        exit
+end if
+	
+if(isvar("TIER"))then		print("MSG: Detected command line variable: TIER")
+else				TIER	= data(ind(isStrSubset2(data,"TIER =")))
+				TIER	:= str_squeeze(str_split(TIER," = "))
+				TIER	:= TIER(1)
+end if
+if(TIER.eq."")then      print("ERROR: TIER must be set in the namelist or as a command line arg.")
+                        exit
+end if
+	
+if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
+else				DSOURCE	= data(ind(isStrSubset2(data,"DSOURCE =")))
+				DSOURCE	:= str_squeeze(str_split(DSOURCE," = "))
+				DSOURCE	:= DSOURCE(1)
+end if
+if(DSOURCE.eq."")then   print("ERROR: DSOURCE must be set in the namelist or as a command line arg.")
+                        exit
 end if
 
-
-; 4. These variables must be defined. Otherwise, exit.
-if(DSOURCE.eq."")then	print("ERROR: DSOURCE must be set in the namelist or as a command line arg.")
-			exit
+if(isvar("SYS_ENV"))then	print("MSG: Detected command line variable: SYS_ENV")
+else				SYS_ENV	= data(ind(isStrSubset2(data,"SYS_ENV =")))
+				SYS_ENV	:= str_squeeze(str_split(SYS_ENV," = "))
+				SYS_ENV	:= SYS_ENV(1)
 end if
-if(IDATE.eq."")then	print("ERROR: IDATE must be set in the namelist or as a command line arg.")
-			exit
-end if
-if(DOMAIN.eq."")then	print("ERROR: DOMAIN must be set in the namelist or as a command line arg.")
-			exit
-end if
-if(TIER.eq."")then	print("ERROR: TIER must be set in the namelist or as a command line arg.")
-			exit
+if(SYS_ENV.eq."")then   print("WARNING: SYS_ENV not found. Setting it SID=NONE.")
+                        SYS_ENV = "JET"
 end if
 
+if(isvar("IDATE"))then		print("MSG: Detected command line variable: IDATE")
+else				IDATE	= data(ind(isStrSubset2(data,"IDATE =")))
+				IDATE	:= str_squeeze(str_split(IDATE," = "))
+				if(dimsizes(IDATE).eq.2)then	IDATE := IDATE(1)
+				else				IDATE := ""
+				end if
+end if
+if(IDATE.eq."")then     print("ERROR: IDATE must be set in the namelist or as a command line arg.")
+                        exit
+end if
 
-; 5. Set these variables if still undefined.
-;    Also, fix the type, if necessary.
-;    The script can proceed, but perhaps not as intended.
-if(SID.eq."")then	print("WARNING: SID not found. Setting it SID=NONE.")
-			SID = "NONE"
+if(isvar("SID"))then		print("MSG: Detected command line variable: SID")
+else				SID	= data(ind(isStrSubset2(data,"SID =")))
+				SID	:= str_squeeze(str_split(SID," = "))
+				if(dimsizes(SID).eq.2)then	SID := SID(1)
+				else				SID := ""
+				end if
 end if
-if(SYS_ENV.eq."")then	print("WARNING: SYS_ENV not found. Setting it SID=NONE.")
-			SYS_ENV = "JET"
+if(SID.eq."")then       print("WARNING: SID not found. Setting it SID=NONE.")
+                        SID = "NONE"
 end if
-if(.not.isvar("ATCF_REQD"))then		ATCF_REQD = True
+
+if(isvar("ATCF_REQD"))then	print("MSG: Detected command line variable: ATCF_REQD")
+else				val := ind(isStrSubset2(data,"ATCF_REQD ="))
+				if(.not.ismissing(val(0)))then	ATCF_REQD	= data(val)
+								ATCF_REQD	:= str_squeeze(str_split(ATCF_REQD," = "))
+								ATCF_REQD	:= where(ATCF_REQD(1).eq."True",True,False)
+				else				ATCF_REQD	:= True
+				end if
+end if
+if(.not.isvar("ATCF_REQD"))then         ATCF_REQD = True
 else
-	if(ATCF_REQD.eq."")then		ATCF_REQD := True
-	else if(typeof(ATCF_REQD).eq."string")then
-					ATCF_REQD := where(ATCF_REQD.eq."True",True,False)
-	end if  end if
+        if(ATCF_REQD.eq."")then         ATCF_REQD := True
+        else if(typeof(ATCF_REQD).eq."string")then
+                                        ATCF_REQD := where(ATCF_REQD.eq."True",True,False)
+        end if  end if
 end if
-if(.not.isvar("FORCE"))then		FORCE = False
+
+if(isvar("FORCE"))then		print("MSG: Detected command line variable: FORCE")
+else				val := ind(isStrSubset2(data,"FORCE ="))
+				if(.not.ismissing(val(0)))then	FORCE	= data(val)
+								FORCE	:= str_squeeze(str_split(FORCE," = "))
+								FORCE	:= where(FORCE(1).eq."True",True,False)
+				else				FORCE	:= False
+				end if
+end if
+if(.not.isvar("FORCE"))then             FORCE = False
 else
-	if(FORCE.eq."")then		FORCE := False
-	else if(typeof(FORCE).eq."string")then
-					FORCE := where(FORCE.eq."True",True,False)
-	end if  end if
+        if(FORCE.eq."")then             FORCE := False
+        else if(typeof(FORCE).eq."string")then
+                                        FORCE := where(FORCE.eq."True",True,False)
+        end if  end if
 end if
+
 
 
 ; 6. Update DOMAIN to d03 (if DSOURCE=d03)
@@ -278,78 +239,49 @@ if(isStrSubset(DSOURCE,"d03"))then   DOMAIN = "d03"   end if
 
 ; 7. Get path variables from the master namelist:
 ;    EXPT, IDIR, ATCF1_DIR, ATCF1_TAG, ATCF2_DIR, ATCF2_TAG, ITAG, IDIR
-;    First, check if paths should be automatically defined (AUTO_DIR)
-AUTO_DIR	= data(ind(isStrSubset2(data,"AUTO_DIR =")))
-AUTO_DIR	:= str_squeeze(str_split(AUTO_DIR," = "))
-AUTO_DIR	:= where(AUTO_DIR(1).eq."True",True,False)
-if(AUTO_DIR)then	print("MSG: Auto-Directory functionality is ON. Ignoring paths defined in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			EXPT	= getAutoDir(SYS_ENV,DSOURCE,"EXPT")
-			IDIR	= getAutoDir(SYS_ENV,DSOURCE,"IDIR")
-			ATCF2_DIR	= getAutoDir(SYS_ENV,DSOURCE,"ATCFDIR")
-			ATCF2_TAG	= ".atcfunix"
-			if(isStrSubset(DSOURCE,"HWRF"))then
-				if(DOMAIN.eq."d03")then		ITAG	= "hwrfprs.storm"
-				else if(DOMAIN.eq."d02")then	ITAG	= "hwrfprs.synoptic"
-				else				ITAG	= "hwrfprs.global"
-								;ITAG	= (/"hwrfprs.global","hwrfsat.global"/)
-				end if  end if
-			else if(isStrSubset(str_lower(DSOURCE),"fvgfs"))then
-				ITAG = (/"atmos_sos.nest02_nested_ltd","nggps2d.nest02_nested_ltd"/)
-			else if(str_lower(DSROUCE).eq."gfs")then
-				ITAG = (/"pgrb2.0p25"/)
-			else
-				ITAG = ""
-			end if  end if  end if
-			EXT = ".grb2"
-			ATCF1_DIR	= IDIR
-			ATCF1_TAG	= ".trak.hwrf.raw"
-			ODIR		= "/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/"+EXPT+"/"+IDATE+"/"+DOMAIN+"/"	
-else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			EXPT	= data(ind(isStrSubset2(data,"EXPT =")))
-			EXPT	:= str_squeeze(str_split(EXPT," = "))
-			EXPT	:= EXPT(1)
+print("MSG: Retrieving paths from master namelist.")
+EXPT	= data(ind(isStrSubset2(data,"EXPT =")))
+EXPT	:= str_squeeze(str_split(EXPT," = "))
+EXPT	:= EXPT(1)
 
-			IDIR	= data(ind(isStrSubset2(data,"IDIR =")))
-			IDIR	:= str_squeeze(str_split(IDIR," = "))
-			IDIR	:= IDIR(1)
-	
-			ITAG	= data(ind(isStrSubset2(data,"ITAG =")))
-			ITAG	:= str_squeeze(str_split(ITAG," = "))
-			if(dimsizes(ITAG).eq.1)then	ITAG = ""
-			else				ITAG := ITAG(1)
-							ITAG := str_squeeze(str_split(ITAG," "))
-			end if
-				
-			EXT	= data(ind(isStrSubset2(data,"EXT =")))
-			EXT	:= str_squeeze(str_split(EXT," = "))
-			if(dimsizes(EXT).eq.1)then	EXT = ""
-			else				EXT := EXT(1)
-							EXT := str_squeeze(str_split(EXT," "))
-			end if
+IDIR	= data(ind(isStrSubset2(data,"IDIR =")))
+IDIR	:= str_squeeze(str_split(IDIR," = "))
+IDIR	:= IDIR(1)
 
-			ODIR	= data(ind(isStrSubset2(data,"ODIR =")))
-			ODIR	:= str_squeeze(str_split(ODIR," = "))
-			ODIR	:= ODIR(1)
-			ODIR	= ODIR+"/"+DOMAIN+"/"
-	
-			ATCF1_DIR	= data(ind(isStrSubset2(data,"ATCF1_DIR =")))
-			ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))
-			ATCF1_DIR	:= ATCF1_DIR(1)
-
-			ATCF1_TAG	= data(ind(isStrSubset2(data,"ATCF1_TAG =")))
-			ATCF1_TAG	:= str_squeeze(str_split(ATCF1_TAG," = "))
-			ATCF1_TAG	:= ATCF1_TAG(1)
-				
-			ATCF2_DIR	= data(ind(isStrSubset2(data,"ATCF2_DIR =")))
-			ATCF2_DIR	:= str_squeeze(str_split(ATCF2_DIR," = "))
-			ATCF2_DIR	:= ATCF2_DIR(1)
-
-			ATCF2_TAG	= data(ind(isStrSubset2(data,"ATCF2_TAG =")))
-			ATCF2_TAG	:= str_squeeze(str_split(ATCF2_TAG," = "))
-			ATCF2_TAG	:= ATCF2_TAG(1)
+ITAG	= data(ind(isStrSubset2(data,"ITAG =")))
+ITAG	:= str_squeeze(str_split(ITAG," = "))
+if(dimsizes(ITAG).eq.1)then	ITAG = ""
+else				ITAG := ITAG(1)
+				ITAG := str_squeeze(str_split(ITAG," "))
 end if
+	
+EXT	= data(ind(isStrSubset2(data,"EXT =")))
+EXT	:= str_squeeze(str_split(EXT," = "))
+if(dimsizes(EXT).eq.1)then	EXT = ""
+else				EXT := EXT(1)
+				EXT := str_squeeze(str_split(EXT," "))
+end if
+
+ODIR	= data(ind(isStrSubset2(data,"ODIR =")))
+ODIR	:= str_squeeze(str_split(ODIR," = "))
+ODIR	:= ODIR(1)
+ODIR	= ODIR+"/"+DOMAIN+"/"
+
+ATCF1_DIR	= data(ind(isStrSubset2(data,"ATCF1_DIR =")))
+ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))
+ATCF1_DIR	:= ATCF1_DIR(1)
+
+ATCF1_TAG	= data(ind(isStrSubset2(data,"ATCF1_TAG =")))
+ATCF1_TAG	:= str_squeeze(str_split(ATCF1_TAG," = "))
+ATCF1_TAG	:= ATCF1_TAG(1)
+	
+ATCF2_DIR	= data(ind(isStrSubset2(data,"ATCF2_DIR =")))
+ATCF2_DIR	:= str_squeeze(str_split(ATCF2_DIR," = "))
+ATCF2_DIR	:= ATCF2_DIR(1)
+
+ATCF2_TAG	= data(ind(isStrSubset2(data,"ATCF2_TAG =")))
+ATCF2_TAG	:= str_squeeze(str_split(ATCF2_TAG," = "))
+ATCF2_TAG	:= ATCF2_TAG(1)
 
 
 ; 8. Get non-automated variables from master namelist
@@ -374,16 +306,6 @@ DT	= data(ind(isStrSubset2(data,"DT =")))
 DT	:= str_squeeze(str_split(DT," = "))
 DT	:= toint(tofloat(DT(1)))
 
-; f. This variable determines if the case is from Basin-Scale HWRF.
-;    It is important because that means multiple high-res domains
-;    could exist. Domains that are not storm-centered should be not
-;    be linked to a specific storm. The Operational HWRF is storm-
-;    centered, so it is always linked to a specific storm.
-if(.not.isvar("IS_MSTORM"))then	IS_MSTORM = data(ind(isStrSubset2(data,"IS_MSTORM =")))
-				IS_MSTORM := str_squeeze(str_split(IS_MSTORM," = "))
-				IS_MSTORM := where(IS_MSTORM(1).eq."True",True,False)
-end if
-
 ; g. If True, trim the white space from graphics.
 DO_RMWHITE	= data(ind(isStrSubset2(data,"DO_RMWHITE =")))
 DO_RMWHITE	:= str_squeeze(str_split(DO_RMWHITE," = "))
@@ -407,9 +329,6 @@ DO_CONVERTGIF	:= where(DO_CONVERTGIF(1).eq."True",True,False)
 ;================================================================
 
 print("MSG: Running GPLOT with these settings:")
-if(IS_MSTORM)then	print("MSG:   Basin-Scale HWRF:   ON")
-else			print("MSG:   Basin-Scale HWRF:   OFF")
-end if
 print("MSG:   Experiment Name:    "+EXPT)
 print("MSG:   Data Source:        "+DSOURCE)
 print("MSG:   Forecast Cycle:     "+IDATE)
@@ -3013,9 +2932,6 @@ end if  end if
 print("")
 print("MSG: Ran GPLOT with these settings:")
 print("********************")
-if(IS_MSTORM)then	print("MSG:   Basin-Scale HWRF:   ON")
-else			print("MSG:   Basin-Scale HWRF:   OFF")
-end if
 print("MSG:   Experiment Name:    "+EXPT)
 print("MSG:   Data Source:        "+DSOURCE)
 print("MSG:   Forecast Cycle:     "+IDATE)
@@ -3045,8 +2961,6 @@ end if
 if(DO_SRCLBL)then	print("MSG:   Source Labels:      ON")
 else			print("MSG:   Source Labels:      OFF")
 end if
-;if(DO_TOPOMASK)then	print("MSG:   Topography mask:    ON")
-;else			print("MSG:   Topography mask:    OFF")
 if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
 else			print("MSG:   Convert to GIF:     OFF")
 end if

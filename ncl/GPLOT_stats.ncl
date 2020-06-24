@@ -142,177 +142,116 @@ NML_DATA = asciiread(MASTER_NML,-1,"string")
 
 ; 3. Get basic variables from the master namelist:
 ;    DOMAIN, TIER, DSOURCE, SYS_ENV, IDATE, SID, ATCF_REQD
-;    First, check if basic variables should be automatically defined (AUTO_VAR).
 ;    Any of these variables can be overwritten by command line arguments.
-AUTO_VAR	= NML_DATA(ind(isStrSubset2(NML_DATA,"AUTO_VAR =")))
-AUTO_VAR	:= str_squeeze(str_split(AUTO_VAR," = "))
-AUTO_VAR	:= where(AUTO_VAR(1).eq."True",True,False)
-if(AUTO_VAR)then	print("MSG: Auto-Variable functionality is ON. Ignoring basic settings in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
-			else				DSOURCE = "HWRF"
-			end if
-			if(isvar("SYS_ENV"))then	print("MSG: Detected command line variable: SYS_ENV")
-			else				SYS_ENV = "JET"
-			end if
-			if(isvar("IDATE"))then		print("MSG: Detected command line variable: IDATE")
-			else				IDATE   = ""
-			end if
-			if(isvar("SID"))then		print("MSG: Detected command line variable: SID")
-			else				SID     = "NONE"
-			end if
-			if(isvar("FORCE"))then		print("MSG: Detected command line variable: FORCE")
-			else				FORCE = False
-			end if
-
-else			print("MSG: Auto-Variable functionality is OFF. Using basic settings in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-				
-			if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
-			else				DSOURCE	= NML_DATA(ind(isStrSubset2(NML_DATA,"DSOURCE =")))
-							DSOURCE	:= str_squeeze(str_split(DSOURCE," = "))
-							DSOURCE	:= DSOURCE(1)
-			end if
-			
-			if(isvar("SYS_ENV"))then	print("MSG: Detected command line variable: SYS_ENV")
-			else				SYS_ENV	= NML_DATA(ind(isStrSubset2(NML_DATA,"SYS_ENV =")))
-							SYS_ENV	:= str_squeeze(str_split(SYS_ENV," = "))
-							SYS_ENV	:= SYS_ENV(1)
-			end if
-			
-			if(isvar("IDATE"))then		print("MSG: Detected command line variable: IDATE")
-			else				IDATE	= NML_DATA(ind(isStrSubset2(NML_DATA,"IDATE =")))
-							IDATE	:= str_squeeze(str_split(IDATE," = "))
-							if(dimsizes(IDATE).eq.2)then	IDATE := IDATE(1)
-							else				IDATE := ""
-							end if
-			end if
-			
-			if(isvar("SID"))then		print("MSG: Detected command line variable: SID")
-			else				SID	= NML_DATA(ind(isStrSubset2(NML_DATA,"SID =")))
-							SID	:= str_squeeze(str_split(SID," = "))
-							if(dimsizes(SID).eq.2)then	SID := SID(1)
-							else				SID := ""
-							end if
-			end if
-
-			if(isvar("FORCE"))then		print("MSG: Detected command line variable: FORCE")
-			else				val := ind(isStrSubset2(NML_DATA,"FORCE ="))
-							if(.not.ismissing(val(0)))then	FORCE	= NML_DATA(val)
-											FORCE	:= str_squeeze(str_split(FORCE," = "))
-											FORCE	:= where(FORCE(1).eq."True",True,False)
-							else				FORCE	:= False
-							end if
-			end if
+print("MSG: Retrieving basic settings from the master namelist.")
+	
+if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
+else				DSOURCE	= NML_DATA(ind(isStrSubset2(NML_DATA,"DSOURCE =")))
+				DSOURCE	:= str_squeeze(str_split(DSOURCE," = "))
+				DSOURCE	:= DSOURCE(1)
+end if
+if(DSOURCE.eq."")then   print("ERROR: DSOURCE must be set in the namelist or as a command line arg.")
+                        exit
 end if
 
-
-; 4. These variables must be defined. Otherwise, exit.
-if(DSOURCE.eq."")then	print("ERROR: DSOURCE must be set in the namelist or as a command line arg.")
-			exit
+if(isvar("SYS_ENV"))then	print("MSG: Detected command line variable: SYS_ENV")
+else				SYS_ENV	= NML_DATA(ind(isStrSubset2(NML_DATA,"SYS_ENV =")))
+				SYS_ENV	:= str_squeeze(str_split(SYS_ENV," = "))
+				SYS_ENV	:= SYS_ENV(1)
 end if
-if(IDATE.eq."")then	print("ERROR: IDATE must be set in the namelist or as a command line arg.")
-			exit
-end if
-if(SID.eq."")then	print("ERROR: SID must be set in the namelist or as a command line arg.")
-			exit
+if(SYS_ENV.eq."")then   print("WARNING: SYS_ENV not found. Setting it SID=NONE.")
+                        SYS_ENV = "JET"
 end if
 
+if(isvar("IDATE"))then		print("MSG: Detected command line variable: IDATE")
+else				IDATE	= NML_DATA(ind(isStrSubset2(NML_DATA,"IDATE =")))
+				IDATE	:= str_squeeze(str_split(IDATE," = "))
+				if(dimsizes(IDATE).eq.2)then	IDATE := IDATE(1)
+				else				IDATE := ""
+				end if
+end if
+if(IDATE.eq."")then     print("ERROR: IDATE must be set in the namelist or as a command line arg.")
+                        exit
+end if
 
-; 5. Set these variables if still undefined.
-;    Also, fix the type, if necessary.
-;    The script can proceed, but perhaps not as intended.
-if(SID.eq."")then	print("WARNING: SID not found. Setting it SID=NONE.")
-			SID = "NONE"
+if(isvar("SID"))then		print("MSG: Detected command line variable: SID")
+else				SID	= NML_DATA(ind(isStrSubset2(NML_DATA,"SID =")))
+				SID	:= str_squeeze(str_split(SID," = "))
+				if(dimsizes(SID).eq.2)then	SID := SID(1)
+				else				SID := ""
+				end if
 end if
-if(SYS_ENV.eq."")then	print("WARNING: SYS_ENV not found. Setting it SID=NONE.")
-			SYS_ENV = "JET"
+if(SID.eq."")then       print("ERROR: SID must be set in the namelist or as a command line arg.")
+                        exit
 end if
-if(.not.isvar("ATCF_REQD"))then   ATCF_REQD = True   end if
-if(.not.isvar("FORCE"))then		FORCE = False
+
+ATCF_REQD = True
+
+if(isvar("FORCE"))then		print("MSG: Detected command line variable: FORCE")
+else				val := ind(isStrSubset2(NML_DATA,"FORCE ="))
+				if(.not.ismissing(val(0)))then	FORCE	= NML_DATA(val)
+								FORCE	:= str_squeeze(str_split(FORCE," = "))
+								FORCE	:= where(FORCE(1).eq."True",True,False)
+				else				FORCE	:= False
+				end if
+end if
+if(.not.isvar("FORCE"))then             FORCE = False
 else
-	if(FORCE.eq."")then		FORCE := False
-	else if(typeof(FORCE).eq."string")then
-					FORCE := where(FORCE.eq."True",True,False)
-	end if  end if
+        if(FORCE.eq."")then             FORCE := False
+        else if(typeof(FORCE).eq."string")then
+                                        FORCE := where(FORCE.eq."True",True,False)
+        end if  end if
 end if
+
+
 
 
 ; 7. Get path variables from the master namelist:
 ;    EXPT, IDIR, ATCF1_DIR, ATCF1_TAG, ATCF2_DIR, ATCF2_TAG, ITAG, IDIR
-;    First, check if paths should be automatically defined (AUTO_DIR)
-AUTO_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"AUTO_DIR =")))
-AUTO_DIR	:= str_squeeze(str_split(AUTO_DIR," = "))
-AUTO_DIR	:= where(AUTO_DIR(1).eq."True",True,False)
-if(AUTO_DIR)then	print("MSG: Auto-Directory functionality is ON. Ignoring paths defined in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			EXPT	= getAutoDir(SYS_ENV,DSOURCE,"EXPT")
-			IDIR	= getAutoDir(SYS_ENV,DSOURCE,"IDIR")
-			ATCF2_DIR	= getAutoDir(SYS_ENV,DSOURCE,"ATCFDIR")
-			ATCF2_TAG	= ".atcfunix"
-			if(isStrSubset(DSOURCE,"HWRF"))then
-				if(DOMAIN.eq."d03")then		ITAG	= "hwrfprs.storm"
-				else if(DOMAIN.eq."d02")then	ITAG	= "hwrfprs.synoptic"
-				else				ITAG	= "hwrfprs.global"
-								;ITAG	= (/"hwrfprs.global","hwrfsat.global"/)
-				end if  end if
-			else if(isStrSubset(str_lower(DSOURCE),"fvgfs"))then
-				ITAG = (/"atmos_sos.nest02_nested_ltd","nggps2d.nest02_nested_ltd"/)
-			else if(str_lower(DSROUCE).eq."gfs")then
-				ITAG = (/"pgrb2.0p25"/)
-			else
-				ITAG = ""
-			end if  end if  end if
-			EXT = ".grb2"
-			ATCF1_DIR	= IDIR
-			ATCF1_TAG	= ".trak.hwrf.raw"
-			ODIR		= "/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/"+EXPT+"/"+IDATE+"/multi_model/"	
-else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in namelist.")
-			print("MSG: Please change namelist if this is not desired.")
-			EXPT	= NML_DATA(ind(isStrSubset2(NML_DATA,"EXPT =")))
-			EXPT	:= str_squeeze(str_split(EXPT," = "))
-			EXPT	:= EXPT(1)
+print("MSG: Retrieving paths from the master namelist.")
+EXPT	= NML_DATA(ind(isStrSubset2(NML_DATA,"EXPT =")))
+EXPT	:= str_squeeze(str_split(EXPT," = "))
+EXPT	:= EXPT(1)
 
-			IDIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"IDIR =")))
-			IDIR	:= str_squeeze(str_split(IDIR," = "))
-			IDIR	:= IDIR(1)
-	
-			ITAG	= NML_DATA(ind(isStrSubset2(NML_DATA,"ITAG =")))
-			ITAG	:= str_squeeze(str_split(ITAG," = "))
-			if(dimsizes(ITAG).eq.1)then	ITAG = ""
-			else				ITAG := ITAG(1)
-							ITAG := str_squeeze(str_split(ITAG," "))
-			end if
-				
-			EXT	= NML_DATA(ind(isStrSubset2(NML_DATA,"EXT =")))
-			EXT	:= str_squeeze(str_split(EXT," = "))
-			if(dimsizes(EXT).eq.1)then	EXT = ""
-			else				EXT := EXT(1)
-							EXT := str_squeeze(str_split(EXT," "))
-			end if
+IDIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"IDIR =")))
+IDIR	:= str_squeeze(str_split(IDIR," = "))
+IDIR	:= IDIR(1)
 
-			ODIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ODIR =")))
-			ODIR	:= str_squeeze(str_split(ODIR," = "))
-			ODIR	:= ODIR(1)
-			ODIR_ADECK = ODIR+"/adeck/"
-			ODIR	= ODIR+"/guidance/"
-	
-			ATCF1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_DIR =")))
-			ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))
-			ATCF1_DIR	:= ATCF1_DIR(1)
-
-			ATCF1_TAG	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_TAG =")))
-			ATCF1_TAG	:= str_squeeze(str_split(ATCF1_TAG," = "))
-			ATCF1_TAG	:= ATCF1_TAG(1)
-				
-			ATCF2_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF2_DIR =")))
-			ATCF2_DIR	:= str_squeeze(str_split(ATCF2_DIR," = "))
-			ATCF2_DIR	:= ATCF2_DIR(1)
-
-			ATCF2_TAG	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF2_TAG =")))
-			ATCF2_TAG	:= str_squeeze(str_split(ATCF2_TAG," = "))
-			ATCF2_TAG	:= ATCF2_TAG(1)
+ITAG	= NML_DATA(ind(isStrSubset2(NML_DATA,"ITAG =")))
+ITAG	:= str_squeeze(str_split(ITAG," = "))
+if(dimsizes(ITAG).eq.1)then	ITAG = ""
+else				ITAG := ITAG(1)
+				ITAG := str_squeeze(str_split(ITAG," "))
 end if
+	
+EXT	= NML_DATA(ind(isStrSubset2(NML_DATA,"EXT =")))
+EXT	:= str_squeeze(str_split(EXT," = "))
+if(dimsizes(EXT).eq.1)then	EXT = ""
+else				EXT := EXT(1)
+				EXT := str_squeeze(str_split(EXT," "))
+end if
+
+ODIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ODIR =")))
+ODIR	:= str_squeeze(str_split(ODIR," = "))
+ODIR	:= ODIR(1)
+ODIR_ADECK = ODIR+"/adeck/"
+ODIR	= ODIR+"/guidance/"
+
+ATCF1_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_DIR =")))
+ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))
+ATCF1_DIR	:= ATCF1_DIR(1)
+
+ATCF1_TAG	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF1_TAG =")))
+ATCF1_TAG	:= str_squeeze(str_split(ATCF1_TAG," = "))
+ATCF1_TAG	:= ATCF1_TAG(1)
+	
+ATCF2_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF2_DIR =")))
+ATCF2_DIR	:= str_squeeze(str_split(ATCF2_DIR," = "))
+ATCF2_DIR	:= ATCF2_DIR(1)
+
+ATCF2_TAG	= NML_DATA(ind(isStrSubset2(NML_DATA,"ATCF2_TAG =")))
+ATCF2_TAG	:= str_squeeze(str_split(ATCF2_TAG," = "))
+ATCF2_TAG	:= ATCF2_TAG(1)
 
 
 ; 8. Get non-automated variables from master namelist
@@ -340,16 +279,6 @@ else
 	FNL_HR	:= str_squeeze(str_split(FNL_HR," = "))
 	FNL_HR	:= toint(tofloat(FNL_HR(1)))
 end if
-
-; c. This is the format code for the forecast hour used in the input file name
-;FMT_HR	= NML_DATA(ind(isStrSubset2(NML_DATA,"FMT_HR =")))
-;FMT_HR	:= str_squeeze(str_split(FMT_HR," = "))
-;FMT_HR	:= FMT_HR(1)
-
-; d. This is the time step between forecast hours
-;DT	= NML_DATA(ind(isStrSubset2(NML_DATA,"DT =")))
-;DT	:= str_squeeze(str_split(DT," = "))
-;DT	:= toint(tofloat(DT(1)))
 
 ; g. If True, trim the white space from graphics.
 val := ind(isStrSubset2(NML_DATA,"DO_RMWHITE ="))
@@ -715,8 +644,6 @@ else			print("MSG:   Interpolation:      OFF")
 end if
 print("MSG:   System Environment: "+SYS_ENV)
 print("MSG:   Initial/Final Hour: "+INIT_HR+"/"+FNL_HR)
-;print("MSG:   Hour Format:        "+FMT_HR)
-;print("MSG:   Time Step [h]:      "+DT)
 print("MSG:   Final ATCF Path:    "+ATCF2_DIR)
 print("MSG:   Final ATCF Tag:     "+ATCF2_TAG)
 if(ATCF1_DIR.ne.ATCF2_DIR .and. ATCF1_TAG.ne.ATCF2_TAG)then
