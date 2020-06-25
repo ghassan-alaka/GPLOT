@@ -728,7 +728,7 @@ end if
 ; 3. Determine how many ATCFs are needed.
 ;    If this case is storm-centered, then only 1 ATCF is needed
 if(SC_DOMAIN)then       NATCF            := 1
-                        ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID))))
+                        ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)+".")))
 else                    NATCF            := dimsizes(ATCF_FILES)
 end if
 
@@ -1212,8 +1212,6 @@ do fff = 0,nFiles-1
 												LONTMP := lonPivot(LONTMP,PIV)
 												LONTMP := where(LONTMP.ge.PIV,LONTMP-360.,LONTMP)
 												TEST := lonPivot(TEST,PIV)
-												;printMaxMin(LONTMP,0)
-												;printMaxMin(TEST@$dNames(ddd)$,0)
 												if(max(LONTMP).ne.max(TEST&$dNames(ddd)$) \
 												   .or. min(LONTMP).ne.min(TEST&$dNames(ddd)$))then
 													TEST&$dNames(ddd)$ = LONTMP
@@ -1238,7 +1236,6 @@ do fff = 0,nFiles-1
                                         end if
                                 end do
                         end if
-print(BOCO)
 			
 			
 
@@ -2600,8 +2597,6 @@ print(BOCO)
 							dNames_PSFC     := getfilevardims(f,findVarName(DSOURCE,"PSFC",""))
 							nDims_PSFC@dNames= dNames_PSFC
 							PSFC    := getVar2d(f,DSOURCE,(/"PSFC","",tostring(ttt)/),nDims_PSFC,BOCO2,mf,flipFlag,lonF)
-							printVarSummary(PSFC)
-							printVarSummary(VOv5B)
 							copy_VarMeta(VOv5B,PSFC)
 							; Do not mark H/L above .9 sigma surface
 							VOv5B   = where(PSFC/VOv5.le.0.90,fval3,VOv5B)
@@ -3225,8 +3220,6 @@ end if
 if(DO_SRCLBL)then       print("MSG:   Source Labels:      ON")
 else                    print("MSG:   Source Labels:      OFF")
 end if
-;if(DO_TOPOMASK)then    print("MSG:   Topography mask:    ON")
-;else                   print("MSG:   Topography mask:    OFF")
 if(DO_CONVERTGIF)then   print("MSG:   Convert to GIF:     ON")
 else                    print("MSG:   Convert to GIF:     OFF")
 end if
