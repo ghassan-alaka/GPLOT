@@ -285,7 +285,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                 echo "MSG: Storm number=${NSTORM}"
 
                 # Find the forecast hours from the ATCF for thie particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}"` )
+                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}.${CYCLE}"` )
                 if [ -z "${STORM_ATCF[*]}" ]; then
                     echo ""
                     echo "WARNING: No ATCF found for ${STORM}. This might be OK."

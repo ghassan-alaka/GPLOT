@@ -270,7 +270,7 @@ if [ "${DO_POLAR}" = "True" ]; then
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}"` )
+            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}"` )
             echo "MSG: The ATCF for this storm --> $STORM_ATCF"
             if [ -z "${STORM_ATCF[*]}" ]; then
                 echo "WARNING: No ATCF found for this storm. This might be OK."
@@ -594,13 +594,13 @@ if [ "${DO_POLAR}" = "True" ]; then
                             echo ""
                             echo "update request 1" > ${STATUS_FILE}
                             continue
-                        elif [ "$CASE_STATUS" == "update request 1" ]; then
-                            echo "MSG: Status suggests this case needs to be updated."
-                            echo "MSG: Changing the status to 'update request 2'."
-                            echo ""
-                            echo "update request 2" > ${STATUS_FILE}
-                            continue
-                        elif [ "$CASE_STATUS" == "update request 2" ] || [ "$CASE_STATUS" == "failed" ]; then
+                        #elif [ "$CASE_STATUS" == "update request 1" ]; then
+                        #    echo "MSG: Status suggests this case needs to be updated."
+                        #    echo "MSG: Changing the status to 'update request 2'."
+                        #    echo ""
+                        #    echo "update request 2" > ${STATUS_FILE}
+                        #    continue
+                        elif [ "$CASE_STATUS" == "update request 1" ] || [ "$CASE_STATUS" == "failed" ]; then
                             echo "MSG: Status suggests this case has stalled/failed."
                             echo "MSG: Deleting the status for a restart."
                             echo "start" > ${STATUS_FILE}
