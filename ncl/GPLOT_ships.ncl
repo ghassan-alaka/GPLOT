@@ -239,7 +239,7 @@ if(isStrSubset(DSOURCE,"d03"))then   DOMAIN = "d03"   end if
 
 ; 7. Get path variables from the master namelist:
 ;    EXPT, IDIR, ATCF1_DIR, ATCF1_TAG, ATCF2_DIR, ATCF2_TAG, ITAG, IDIR
-print("MSG: Retrieving paths from master namelist.")
+print("MSG: Retrieving paths from the master namelist.")
 EXPT	= data(ind(isStrSubset2(data,"EXPT =")))
 EXPT	:= str_squeeze(str_split(EXPT," = "))
 EXPT	:= EXPT(1)
@@ -312,14 +312,14 @@ DO_RMWHITE	:= str_squeeze(str_split(DO_RMWHITE," = "))
 DO_RMWHITE	:= where(DO_RMWHITE(1).eq."True",True,False)
 
 ; h. If True, add the data source to the graphic title.
-DO_SRCLBL	= data(ind(isStrSubset2(data,"DO_SRCLBL =")))
-DO_SRCLBL	:= str_squeeze(str_split(DO_SRCLBL," = "))
-DO_SRCLBL	:= where(DO_SRCLBL(1).eq."True",True,False)
+DO_SRCLBL       = data(ind(isStrSubset2(data,"DO_SRCLBL =")))
+DO_SRCLBL       := str_squeeze(str_split(DO_SRCLBL," = "))
+DO_SRCLBL       := where(DO_SRCLBL(1).eq."True",True,False)
 
 ; i. If True, convert PNG files to GIF and remove PNG files.
-DO_CONVERTGIF	= data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
-DO_CONVERTGIF	:= str_squeeze(str_split(DO_CONVERTGIF," = "))
-DO_CONVERTGIF	:= where(DO_CONVERTGIF(1).eq."True",True,False)
+DO_CONVERTGIF   = data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
+DO_CONVERTGIF   := str_squeeze(str_split(DO_CONVERTGIF," = "))
+DO_CONVERTGIF   := where(DO_CONVERTGIF(1).eq."True",True,False)
 
 
 
@@ -335,7 +335,7 @@ print("MSG:   Forecast Cycle:     "+IDATE)
 print("MSG:   Storm ID:           "+SID)
 print("MSG:   Domain/Region:      "+DOMAIN)
 print("MSG:   Graphics Tier:      "+TIER)
-if(ENSID.ne."")then	print("MSG:   Ensemble Member:    "+ENSID)	end if
+if(ENSID.ne."")then     print("MSG:   Ensemble Member:    "+ENSID)      end if
 print("MSG:   Input Directory:    "+IDIR)
 print("MSG:   Output Directory:   "+ODIR)
 print("MSG:   System Environment: "+SYS_ENV)
@@ -346,17 +346,17 @@ print("MSG:   Time Step [h]:      "+DT)
 print("MSG:   Final ATCF Path:    "+ATCF2_DIR)
 print("MSG:   Final ATCF Tag:     "+ATCF2_TAG)
 if(ATCF1_DIR.ne.ATCF2_DIR .and. ATCF1_TAG.ne.ATCF2_TAG)then
-	print("MSG:   Temp. ATCF Path:     "+ATCF1_DIR)
-	print("MSG:   Temp. ATCF Tag:      "+ATCF1_TAG)
+        print("MSG:   Temp. ATCF Path:     "+ATCF1_DIR)
+        print("MSG:   Temp. ATCF Tag:      "+ATCF1_TAG)
 end if
-if(DO_RMWHITE)then	print("MSG:   Trim graphics:      ON")
-else			print("MSG:   Trim graphics:      OFF")
+if(DO_RMWHITE)then      print("MSG:   Trim graphics:      ON")
+else                    print("MSG:   Trim graphics:      OFF")
 end if
-if(DO_SRCLBL)then	print("MSG:   Source Labels:      ON")
-else			print("MSG:   Source Labels:      OFF")
+if(DO_SRCLBL)then       print("MSG:   Source Labels:      ON")
+else                    print("MSG:   Source Labels:      OFF")
 end if
-if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
-else			print("MSG:   Convert to GIF:     OFF")
+if(DO_CONVERTGIF)then   print("MSG:   Convert to GIF:     ON")
+else                    print("MSG:   Convert to GIF:     OFF")
 end if
 
 
@@ -370,8 +370,8 @@ end if
 
 ; 1. We require DOMAIN="ships"
 ;    This should be identical to "d03"
-if(DOMAIN.ne."ships")then	print("MSG: Updating DOMAIN to 'ships'. Might not work.")
-				DOMAIN = "ships"
+if(DOMAIN.ne."ships")then       print("MSG: Updating DOMAIN to 'ships'. Might not work.")
+                                DOMAIN = "ships"
 end if
 
 
@@ -384,12 +384,12 @@ system("mkdir -p "+ODIR)
 ;    Ex: (/lat_north, lat_south, lon_west, lon_east/)
 ;    To add a new domain, please add it to GPLOT_func.ncl
 ;    BOCO will be updated for storm-centered domains.
-;BOCO	= (/0.,0.,0.,0./)
-BOCO	= getDmnBds(DOMAIN,DSOURCE)
+;BOCO   = (/0.,0.,0.,0./)
+BOCO    = getDmnBds(DOMAIN,DSOURCE)
 
 
 ; 4. Forecast hour information
-;initStr         = ".f"+sprinti("%0.3i",INIT_HR)		; might be deprecated
+;initStr         = ".f"+sprinti("%0.3i",INIT_HR)        ; might be deprecated
 ;fnlStr          = ".f"+sprinti("%0.3i",FNL_HR)		; might be deprecated
 ;totFiles        = (FNL_HR-INIT_HR)/DT+1 ;MK - change for ensemnle: expect fh0-fh180 (61 in total) *original: 43
 ;if(SYS_ENV.eq."MAC")then   yesterday = systemfunc("date -v-24H '+%Y%m%d%H'")  
@@ -641,12 +641,12 @@ end if
 	
 ; Find the ATCF that corresponds to this case.
 ; ATCF is required, so script will fail if it is missing.
-val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)))
+val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)+"."))
 if(ismissing(val(0)))then
 	print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
 	exit
 end if
-ATCF_FILES := ATCF_FILES(val)
+ATCF_FILES := ATCF_FILES(val(0))
 print("MSG: Working on this ATCF file: "+ATCF_FILES)
 	
 	
@@ -732,27 +732,9 @@ end if
 ; Update the final forecast hour to match the final ATCF hour
 FNL_HR = max(tcFHR)
 	
-	
-
-
-
-
-
-
-
-
-
-;fnlStr	= ".f"+sprinti("%0.3i",max(FHR))
-;print("MSG: "+fnlStr+" is the final forecast hour found.")
-;print("MSG: Graphics directory is: "+tmpDir)
-;print("MSG: GPLOT Status file is "+tmpDir+status_STR+IDtag+".log")
 
 if(.not.isvar("NameIDTag"))then   NameIDTag = "NONAME"+SID   end if
 if(.not.isvar("TCNAME"))then   TCNAME = "NONAME"   end if
-
-
-
-
 
 
 
@@ -778,7 +760,7 @@ do fff = 0,nFiles-1
 	;printVarSummary(iFiles)
 
 	system("echo 'working' > "+STATUS_FILE)
-	myInd	:= ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff))+"."))
+	myInd	:= ind(isStrSubset2(iFiles,".f"+sprinti(FMT_HR,FHR(fff))))
     	if(ismissing(myInd))then
 	        myInd   := ind(isStrSubset2(iFiles,"."+sprinti(FMT_HR,FHR(fff))+"."))
 	end if
@@ -2981,3 +2963,4 @@ print("MSG: GPLOT_ships.ncl succeeded at "+systemfunc("date"))
 exit
 
 end
+
