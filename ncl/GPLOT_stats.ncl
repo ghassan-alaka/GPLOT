@@ -1032,6 +1032,10 @@ INTERP_NML = "intrfcst.input"
 SID_OLD = getInvestSID(YYYY,SID)
 
 
+; Set a flag for graphic production failures
+GRAPHIC_FAIL = False
+
+
 
 ;================================================================;
 ;============================STEP ONE============================;
@@ -2439,6 +2443,12 @@ print(bHrs)
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
 
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Late Track Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
+
 	end if ;DO_THIS
 
 end if ;DO_LT_GUIDE
@@ -2643,6 +2653,11 @@ if(DO_ET_GUIDE)then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
 
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Early Track Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end if ;DO_THIS
 
@@ -2831,6 +2846,12 @@ if(DO_LI_GUIDE)then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
 
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Late Intensity Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
+
 
 	end if ;DO_THIS
 
@@ -3017,6 +3038,12 @@ if(DO_EI_GUIDE)then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
 
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Early Intensity Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
+
 	end if ;DO_THIS
 
 end if ;DO_EI_GUIDE
@@ -3200,6 +3227,12 @@ if(DO_LP_GUIDE)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Late Pressure Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end if ;DO_THIS
 
@@ -3444,6 +3477,12 @@ if(DO_LT_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Track Trend graphic for "+thisModel+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 		
 		
 		; Mark that a trend graphic has been produced
@@ -3658,6 +3697,12 @@ if(DO_LT_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Lifetime Tracks graphic for "+TRKmodelsT(mmm)+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end do ;mmm
 
@@ -3926,6 +3971,12 @@ if(DO_LI_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Intensity Trend  graphic for "+thisModel+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 		
 		; Mark that a trend graphic has been produced
 		DO_LI_TREND = True
@@ -4150,7 +4201,12 @@ if(DO_LI_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
-	
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Lifetime Intensity graphic for "+INTmodelsT(mmm)+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 	
 	end do ;mmm
 
@@ -4374,6 +4430,12 @@ if(DO_LP_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Pressure Trend graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end if ;DO_THIS
 
@@ -4732,6 +4794,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;TK_ERR
 
 		; g. Produce the graphic for late along-track models.
@@ -4791,6 +4859,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Along Track Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;ALTK_ERR
 
 		; h. Produce graphic for late cross-track models.
@@ -4849,6 +4923,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Cross Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if
 
@@ -5016,6 +5096,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Intensity Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;ABS_WIND_ERR
 
 
@@ -5074,6 +5160,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Intensity Bias Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if ;WIND_ERR
 
@@ -5246,6 +5338,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;TK_ERR
 
 		; g. Produce graphic for early along-track errors.
@@ -5303,6 +5401,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Along Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if ;ALTK_ERR
 
@@ -5363,6 +5467,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Cross Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if ;CRTK_ERR
 
@@ -5530,6 +5640,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Intensity Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;ABS_WIND_ERR
 
 
@@ -5590,6 +5706,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+			; Check that the graphic was produced.
+			chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+			if(ismissing(chk(0)))then	print("ERROR: Early Intensity Bias Verification graphic not produced.")
+							GRAPHIC_FAIL = True
+			end if
+
 		end if ;WIND_ERR
 
 	end if ;DO_EI_VER
@@ -5604,6 +5726,8 @@ end if ;DO_VERIFICATION
 ;================================================================;
 ;                   CHECK GRAPHICAL PRODUCTION                   ;
 ;================================================================;
+
+if(False)then
 
 print("")
 print("MSG: *************STEP SIX************")
@@ -5678,15 +5802,17 @@ else if(DO_VERIFICATION)then
 	end if  end if  end if  end if
 end if  end if  end if
 
+end if
 
 
 ;================================================================
 ; Write final message to status file.
 ;================================================================
 
-if(FNL_ATCF)then	system("echo 'complete' > "+ODIR+"/status."+LONGSID+".log")
+if(GRAPHIC_FAIL)then	system("echo 'incomplete' > "+ODIR+"/status."+LONGSID+".log")
+else if(FNL_ATCF)then	system("echo 'complete' > "+ODIR+"/status."+LONGSID+".log")
 else			system("echo 'incomplete' > "+ODIR+"/status."+LONGSID+".log")
-end if
+end if  end if
 
 
 
