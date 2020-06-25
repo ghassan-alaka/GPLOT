@@ -1,7 +1,7 @@
 ###!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 
 # Check that GPLOT_DIR is defined in the environment.
-import os
+import os, time
 GPLOT_DIR = os.environ['GPLOT_DIR']
 print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
 
@@ -99,7 +99,7 @@ zsize = np.int(LEVS)
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
-	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
+	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID+'.').lower() in s][:]][0]
 else:
 	ATCF = ATCF_LIST
 print('MSG: Found this ATCF --> '+str(ATCF))
@@ -185,13 +185,29 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			# Create the GrADs control file, if is hasn't already been created.
 			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
+			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
+			while os.path.exists(LOCK_FILE):
+				print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
+                                time.sleep(5)
+				LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
+				if LOCK_TEST:
+					os.system('rm -f '+LOCK_FILE)
+ 
 			if not os.path.exists(CTL_FILE):
+                                print('MSG: GrADs control file not found. Creating it now.')
+				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
 				command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
 				os.system(command)
 				command2 = 'gribmap -i '+CTL_FILE+' -big'
 				os.system(command2)
+				os.system('rm -f '+LOCK_FILE)
+
+			while not os.path.exists(IDX_FILE):
+				print('MSG: GrADs index file not found. Sleeping for 5 seconds.'
+				time.sleep(5)
 			
-			#Open data file
+			# Open GrADs data file
+			print('MSG: GrADs control and index files should be available.')
 			ga('open '+CTL_FILE)
 			env = ga.env()
 
