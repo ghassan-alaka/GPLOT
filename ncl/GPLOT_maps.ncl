@@ -807,10 +807,10 @@ do sss = 0,NATCF-1
                         end if
                 else
                         ; This is the most common extraction of ATCF data.
-                        tcLats(sss,fff) = data(0,val)
-                        tcLons(sss,fff) = data(1,val)
-                        tcFHR(sss,fff)  = toint(data(2,val))
-                        tcINT(sss,fff)  = toint(data(3,val))
+                        tcLats(sss,fff) = data(0,val(0))
+                        tcLons(sss,fff) = data(1,val(0))
+                        tcFHR(sss,fff)  = toint(data(2,val(0)))
+                        tcINT(sss,fff)  = toint(data(3,val(0)))
                 end if
         end do ;fff                     
 
