@@ -537,7 +537,7 @@ nFiles	:= dimsizes(iFiles)
 ;    If any files meet this criteria, then final status can't be "complete".
 FNL_IFILES = new(nFiles,logical)
 do fff = 0,nFiles-1
-	IFILES_MOD := systemfunc("find "+iFiles(fff)+" -mmin +30")
+	IFILES_MOD := systemfunc("find "+iFiles(fff)+" -mmin +10")
 	if(ismissing(IFILES_MOD(0)))then	FNL_IFILES(fff) = False
 	else					FNL_IFILES(fff) = True
 	end if
@@ -723,7 +723,7 @@ end do ;fff
 ; storm-centered graphics because they are not necessarily 
 ; tied to a particular storm. So, graphics may still be
 ; produced even if there is no ATCF entry.
-ATCF_MOD := systemfunc("find "+ATCF_FILES+" -mmin +120")
+ATCF_MOD := systemfunc("find "+ATCF_FILES+" -mmin +20")
 if(ismissing(ATCF_MOD(0)))then	FNL_ATCF = False
 else				FNL_ATCF = True
 end if
