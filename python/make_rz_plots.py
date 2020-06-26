@@ -188,13 +188,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
 			while os.path.exists(LOCK_FILE):
 				print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
-                                time.sleep(5)
+				time.sleep(5)
 				LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
 				if LOCK_TEST:
 					os.system('rm -f '+LOCK_FILE)
  
 			if not os.path.exists(CTL_FILE):
-                                print('MSG: GrADs control file not found. Creating it now.')
+				print('MSG: GrADs control file not found. Creating it now.')
 				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
 				command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
 				os.system(command)
@@ -203,7 +203,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				os.system('rm -f '+LOCK_FILE)
 
 			while not os.path.exists(IDX_FILE):
-				print('MSG: GrADs index file not found. Sleeping for 5 seconds.'
+				print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
 				time.sleep(5)
 			
 			# Open GrADs data file
