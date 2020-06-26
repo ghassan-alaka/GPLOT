@@ -701,10 +701,10 @@ do fff = 0,nFHR-1
 			continue
 		end if
 	else
-		tcLats(fff) = data(0,val)
-		tcLons(fff) = data(1,val)
-		tcFHR(fff)  = toint(data(2,val))
-		tcINT(fff)  = toint(data(3,val))
+		tcLats(fff) = data(0,val(0))
+		tcLons(fff) = data(1,val(0))
+		tcFHR(fff)  = toint(data(2,val(0)))
+		tcINT(fff)  = toint(data(3,val(0)))
 	end if
 		
 	vals	:= ind(.not.ismissing(tcFHR(:)))
