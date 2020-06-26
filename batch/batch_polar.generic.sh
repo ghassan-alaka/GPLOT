@@ -90,7 +90,8 @@ else
 fi
 
 # 2. Submit the Python job
-echo "${PYTHON_ARGS[*]}"
+which python
+echo "python ${PYTHONDIR}/${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}/${LOGFILE}"
 python ${PYTHONDIR}/${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}/${LOGFILE}
 
 wait
