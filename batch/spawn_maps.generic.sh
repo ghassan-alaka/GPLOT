@@ -257,8 +257,16 @@ if [ "${DO_MAPS}" = "True" ]; then
             # Fifth, append Fake Storm (00L) if IS_MSTORM=True and if other storms
             # were found, i.e., STORMS != NONE
             if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
-                STORMS+=("00L")
+                NEW_STORMS=()
                 STORMS=(`echo "${STORMS[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
+                i=0
+                for S in ${STORMS[@]}; do
+                    if [ "${S^^}" != "00L" ]; then
+                        NEW_STORMS+=( $S )
+                    fi
+                done
+                STORMS=( ${NEW_STORMS[*]}  "00L")
+                unset NEW_STORMS
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -382,6 +390,11 @@ if [ "${DO_MAPS}" = "True" ]; then
                     if [ "$SC" == "True" ] && [ "${STORM^^}" == "00L" ]; then
                         echo "MSG: Skipping this domain because it is storm-centered and this is the fake storm (00L)."
                         continue
+                    fi
+
+                    # If not a storm-centered domain, set FOUND_FILES=False
+                    if [ "${SC}" == "True" ]; then
+                        FOUND_FILES="False"
                     fi
     
                     # Get file prefix information from table or namelist
@@ -901,10 +914,10 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                     # If input files were not found in the ID loop, then also skip all remaining domains
                     # Might need to optimize this if 'd03' graphics use a different file (e.g., HWRF).
-                    if [ -z "${IFILES[*]}" ]; then
-                        echo "WARNING: No input files found. Skipping the rest of the domains."
-                        break
-                    fi
+                    #if [ -z "${IFILES[*]}" ]; then
+                    #    echo "WARNING: No input files found. Skipping the rest of the domains."
+                    #    break
+                    #fi
 
                 done #end of DMN loop
             done #end of STORM loop
