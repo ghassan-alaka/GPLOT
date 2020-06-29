@@ -13,13 +13,13 @@ echo "MSG: Maintain links to GFS data for last 1-10 days."
 DSOURCE=$1
 
 if [[ $DSOURCE == "HWRF" ]]; then
-	gfsdir="/mnt/lfs3/projects/hwrf-data/hwrf-input/FORECAST/"
+	gfsdir="/lfs4/HFIP/hwrf-data/hwrf-input/FORECAST/"
 elif [[ $DSOURCE == "PUB" ]]; then
-	gfsdir="/lfs1/projects/public/data/grids/gfs/0p25deg/grib2/"
-	gfsdir2="/lfs1/projects/public/data/grib/ftp/7/0/81/0_1038240_0/"
+	gfsdir="/lfs4/BMC/public/data/grids/gfs/0p25deg/grib2/"
+	gfsdir2="/lfs4/BMC/public/data/grib/ftp/7/0/81/0_1038240_0/"
 fi
 #pdir="/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/GFSdata/"
-odir="/lfs1/projects/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/"
+odir="/lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/GFS_Forecast/"
 
 allFcst=`ls $gfsdir | xargs -n 1 basename`
 

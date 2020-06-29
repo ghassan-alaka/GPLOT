@@ -215,6 +215,12 @@ if [ "${DO_MAPS}" = "True" ]; then
                 continue
             fi
 
+            # Parse the cycle into year, month, day, hour
+            YYYY=`echo "$CYCLE" | cut -c1-4`
+            MM=`echo "$CYCLE" | cut -c5-6`
+            DD=`echo "$CYCLE" | cut -c7-8`
+            HH=`echo "$CYCLE" | cut -c9-10`
+
             # Get the cycle prefix from a table and define CYCLE_STR
             # CYCLE_STR should be used in file paths.
             if [ -z "$CPREFIX" ]; then
@@ -530,7 +536,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L")
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L" \
+                                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}" "${YYYY}${MM}${DD}/${HH}")
 
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX

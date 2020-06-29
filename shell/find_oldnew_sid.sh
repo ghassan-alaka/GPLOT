@@ -133,8 +133,9 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
         # Get the storm number
         SNUM1="`echo "$SID1" | cut -c1-2`"
-        if [[ ${SNUM} -gt 50 ]]; then
-            echo "MSG: Skipping because Storm Number > 50."
+        if [[ ${SNUM1} -gt 50 ]]; then
+            echo "WARNING: The first Storm Number must be from a designated tropical cyclone."
+            echo "WARNING: Skipping because Storm Number (${SNUM1}) > 50."
             continue
         fi
 
@@ -202,6 +203,11 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
             # Define Storm Number
             SNUM2="`echo "$SID2" | cut -c1-2`"
+            if [[ ${SNUM2} -gt 50 ]] && [[ ${SNUM2} -lt 90 ]]; then
+                echo "WARNING: The first Storm Number must be from a designated tropical cyclone or invest."
+                echo "WARNING: Skipping because 50 < Storm Number (${SNUM2}) < 90."
+                continue
+            fi 
 
             # Determine which storm number applies to the tropical cyclone.
             # Do the same for the Storm ID.
@@ -293,6 +299,11 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
             # Define Storm Number
             SNUM2="`echo "$SID2" | cut -c1-2`"
+            if [[ ${SNUM2} -gt 50 ]] && [[ ${SNUM2} -lt 90 ]]; then
+                echo "WARNING: The first Storm Number must be from a designated tropical cyclone or invest."
+                echo "WARNING: Skipping because 50 < Storm Number (${SNUM2}) < 90."
+                continue
+            fi
 
             # Determine which storm number applies to the named tropical cyclone.
             # Do the same for the Storm ID.
@@ -352,9 +363,9 @@ done
 
 
 # Sort the output file
-sort -u ${TMPDIR}${OFILE} | sort -k2,2 -k1,1 > ${TMPDIR}${OFILE}.TMP
-mv ${TMPDIR}${OFILE}.TMP ${TMPDIR}${OFILE}
-cp ${TMPDIR}${OFILE} ${OPATH}
+#sort -u ${TMPDIR}${OFILE} | sort -k2,2 -k1,1 > ${TMPDIR}${OFILE}.TMP
+cat ${TMPDIR}${OFILE} ${OPATH} > ${TMPDIR}${OFILE}.TMP
+sort -u ${TMPDIR}${OFILE}.TMP | sort -k2,2 -k1,1 > ${OPATH}
 
 
 # Clean up the temporary TCVitals file and directory
