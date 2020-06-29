@@ -165,14 +165,16 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-echo ${IDIR}
-ls -rd ${IDIR}*/ | xargs -n 1 basename
-    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*/ | xargs -n 1 basename | tr "\n" " "` )
+    echo ${IDIR}
+    #ls -rd ${IDIR}*/ | xargs -n 1 basename
+    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/ 2>/dev/null | xargs -n 1 basename 2>/dev/null | tr "\n" " " 2>/dev/null` )
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+    fi
 else
     CYCLES=( "${IDATE[@]}" )
 fi
 echo "MSG: Found these cycles -->${CYCLES[*]}"
-
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
@@ -383,6 +385,12 @@ if [ "${DO_MAPS}" = "True" ]; then
                         echo "MSG: Skipping this domain because it is not storm-centered and this is at least the 2nd storm."
                         continue
                     fi
+
+                    # Never process the fake storm (00L) for storm-centered domains
+                    if [ "${STORM^^}" == "00L" ]; then
+                        echo "MSG: Fake storm detected. Skipping."
+                        continue
+                    fi
     
                     # Get file prefix information from table or namelist
                     if [ -z "$ITAG" ]; then
@@ -526,7 +534,6 @@ if [ "${DO_MAPS}" = "True" ]; then
                             echo "MSG: Current Ensemble ID --> $ENSID"
                         fi
 
-
                         # Create a list of IDIR subdirectory options
                         IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
                                    "${EXPT}/" "${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/" "${STORM}/" "${EXPT}/${CYCLE_STR}/${STORM}/" \
@@ -536,8 +543,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L" \
-                                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}" "${YYYY}${MM}${DD}/${HH}")
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L/" \
+                                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/")
 
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
