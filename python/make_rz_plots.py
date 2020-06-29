@@ -1,4 +1,4 @@
-#!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+#!/usr/bin/env python
 
 # Check that GPLOT_DIR is defined in the environment.
 import os, time
