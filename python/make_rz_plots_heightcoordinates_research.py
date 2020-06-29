@@ -66,10 +66,10 @@ if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
 PYTHONDIR = sys.argv[11]
-if PYTHONDIR == '':
-	print("ERROR: Python Directory can't be MISSING.")
-	sys.exit()
-MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
+if PYTHONDIR == '':  PYTHONDIR = GPLOT_DIR+'/python'
+
+NMLDIR = GPLOT_DIR+'/nmlist'
+MASTER_NML_IN = NMLDIR+'/'+NMLIST
 
 # Read the master namelist
 #NML_DATA = np.genfromtxt(MASTER_NML_IN,dtype='str')
@@ -1393,7 +1393,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			
 			#Make Plots
 			print('Doing Plots Now')
-			namelist_structure_vars = np.genfromtxt(PYTHONDIR+'/namelist_structure',delimiter=',',dtype='str')
+			namelist_structure_vars = np.genfromtxt(NMLDIR+'/namelist.polar.structure',delimiter=',',dtype='str')
 			do_ur_mean = namelist_structure_vars[0,1]
 			do_vt_mean = namelist_structure_vars[1,1]
 			do_w_mean = namelist_structure_vars[2,1]
