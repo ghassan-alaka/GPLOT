@@ -161,7 +161,10 @@ chmod +x ${BATCH_DIR}${BATCHFILE2}
 
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*/ | xargs -n 1 basename | tr "\n" " "` )
+    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/ 2>/dev/null | xargs -n 1 basename 2>/dev/null | tr "\n" " " 2>/dev/null` )
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 2>/dev/null | rev | tr "\n" " " 2>/dev/null` )
+    fi
 else
     CYCLES=( "${IDATE[@]}" )
 fi
@@ -210,6 +213,12 @@ if [ "${DO_POLAR}" = "True" ]; then
         CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
 
         echo "MSG: Current cycle --> $CYCLE"
+
+        # Parse the cycle into year, month, day, hour
+        YYYY=`echo "$CYCLE" | cut -c1-4`
+        MM=`echo "$CYCLE" | cut -c5-6`
+        DD=`echo "$CYCLE" | cut -c7-8`
+        HH=`echo "$CYCLE" | cut -c9-10`
 
         # Get the cycle prefix from a table and define CYCLE_STR
         # CYCLE_STR should be used in file paths.
@@ -264,6 +273,12 @@ if [ "${DO_POLAR}" = "True" ]; then
         # LOOP OVER STORMS #
         ####################
         for STORM in ${STORMS[@]}; do
+
+            # Never process the fake storm (00L)
+            if [ "${STORM^^}" == "00L" ]; then
+                echo "MSG: Fake storm detected. Skipping."
+            fi
+
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
@@ -426,7 +441,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}" "${YYYY}${MM}${DD}/${HH}")
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/")
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                         # If a match is found, write lead time to a data file "AllForecastHours"
