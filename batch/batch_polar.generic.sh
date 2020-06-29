@@ -110,6 +110,11 @@ if [ ! -z "$NMLIST" ]; then
 else
     PYTHON_ARGS+=("MISSING")
 fi
+if [ ! -z "${PYTHONDIR}" ]; then
+    PYTHON_ARGS+=("${PYTHONDIR}")
+else
+    PYTHON_ARGS+=("MISSING")
+fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
