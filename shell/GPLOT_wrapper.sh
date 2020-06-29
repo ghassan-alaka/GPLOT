@@ -88,6 +88,12 @@ for d in "${EXPT[@]}"; do
     DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
     DO_POLAR=`sed -n -e 's/^DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
 
+    # Get the output directory for proper logging
+    ODIR=`sed -n -e 's/^ODIR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    if [ -d ${ODIR} ]; then
+        LOGDIR="${ODIR}/log/"
+    fi
+
 
     # Get the submission mode from the namelist.
     BATCH_MODE=`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
