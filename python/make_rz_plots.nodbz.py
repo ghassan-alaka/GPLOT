@@ -1,7 +1,7 @@
 #!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 
 # Check that GPLOT_DIR is defined in the environment.
-import os
+import os, time
 GPLOT_DIR = os.environ['GPLOT_DIR']
 print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
 
@@ -19,7 +19,6 @@ from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis tic
 import sys #To change the path 
 sys.path.append(GPLOT_DIR+'/python/modules')
 import centroid
-#import os
 import glob
 import cmath
 import subprocess
@@ -69,7 +68,6 @@ MASTER_NML_IN = NMLIST
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/polar/'
-print(ODIR)
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -99,10 +97,9 @@ zsize = np.int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-print(str(ATCF_LIST))
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
-	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
+	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID+'.').lower() in s][:]][0]
 else:
 	ATCF = ATCF_LIST
 print('MSG: Found this ATCF --> '+str(ATCF))
@@ -123,6 +120,7 @@ ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in 
 # Get the list of unplotted files
 UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
+# Get the list of forecast lead time in hours
 FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
 if (FHR_LIST.size == 1):
 	FHR_LIST = np.append(FHR_LIST,"999")
@@ -130,7 +128,6 @@ if (FHR_LIST.size == 1):
 
 # Define executables
 X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
-
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
@@ -179,7 +176,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		print(figuretest)
 		print('h = ',list(FHRIND))
 
-		# Make sure the data file 'FILE' exists.
+		# Check that the data file 'FILE' exists
 		gribfiletest = os.system('ls '+FILE)
 
 		if (gribfiletest < 1):
@@ -187,13 +184,29 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			# Create the GrADs control file, if is hasn't already been created.
 			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
+			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
+			while os.path.exists(LOCK_FILE):
+				print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
+				time.sleep(5)
+				LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
+				if LOCK_TEST:
+					os.system('rm -f '+LOCK_FILE)
+
 			if not os.path.exists(CTL_FILE):
-			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
-			        os.system(command)
-			        command2 = 'gribmap -i '+CTL_FILE+' -big'
-			        os.system(command2)
+				print('MSG: GrADs control file not found. Creating it now.')
+				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
+				command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
+				os.system(command)
+				command2 = 'gribmap -i '+CTL_FILE+' -big'
+				os.system(command2)
+				os.system('rm -f '+LOCK_FILE)
+
+			while not os.path.exists(IDX_FILE):
+				print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
+				time.sleep(5)
 			
-			#Open data file
+			# Open GrADs data file
+			print('MSG: GrADs control and index files should be available.')
 			ga('open '+CTL_FILE)
 			env = ga.env()
 
@@ -1297,7 +1310,8 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-	os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+	os.system("sed -i 's@"+np.str(FILE)+"@d' "+PLOTTED_FILES)
+	os.system('echo "'+np.str(FILE)+' 1" >> '+PLOTTED_FILES)
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 

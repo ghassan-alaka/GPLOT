@@ -1,4 +1,4 @@
-###!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+#!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
 
 # Check that GPLOT_DIR is defined in the environment.
 import os, time
@@ -131,8 +131,7 @@ X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
-	if (FILE == 'MISSING'):
-		continue
+	if (FILE == 'MISSING'):  continue
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
@@ -192,7 +191,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
 				if LOCK_TEST:
 					os.system('rm -f '+LOCK_FILE)
- 
+
 			if not os.path.exists(CTL_FILE):
 				print('MSG: GrADs control file not found. Creating it now.')
 				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
@@ -1304,7 +1303,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			figfname = ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
 			plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 			plt.close()
+
+			# Close the GrADs control file
 			ga('close 1')
+
+			# Convert the figure to GIF format, if required.
 			if ( DO_CONVERTGIF ):
 				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
