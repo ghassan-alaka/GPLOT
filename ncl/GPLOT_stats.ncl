@@ -2566,23 +2566,28 @@ if(DO_ET_GUIDE)then
 		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
-		vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
-		if(.not.all(ismissing(bTRK(:,vals))))then
+		if(.not.ismissing(vals2(0)))then
+			vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
+		else
+			vals3	:= fval2
+			vals3@_FillValue = fval2
+		end if
+		if(.not.all(ismissing(bTRK(:,vals))) .and. .not.ismissing(vals3(0)))then
+			; Add the best track line
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
 			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
 			dum3(dimsizes(TRKmodelsI),vals3) = gsn_add_text(wks,plot,tostring(toint(bHrsI(vals2))),\
-									bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
+
+			; Add best track legend
+			mkres2@gsMarkerColor = "black"
+			mkres2@gsMarkerIndex = tc_marker
+			txres4@txFontColor   = "black"
+			plres2@gsLineColor   = "black"
+			gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
+			gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
+			gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
+
 		end if
-
-
-		; Add best track legend
-		mkres2@gsMarkerColor = "black"
-		mkres2@gsMarkerIndex = tc_marker
-		txres4@txFontColor   = "black"
-		plres2@gsLineColor   = "black"
-		gsn_polymarker_ndc(wks,vpLFT+0.02,vpTOP+vpHEAD+0.02,mkres2)
-		gsn_polyline_ndc(wks,(/vpLFT,vpLFT+0.04/),(/vpTOP+vpHEAD+0.02,vpTOP+vpHEAD+0.02/),plres2)
-		gsn_text_ndc(wks,"BEST: Best Track",vpLFT+0.045,vpTOP+vpHEAD+0.02,txres4)
 
 
 		; Add model tracks
