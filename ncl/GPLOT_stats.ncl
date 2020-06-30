@@ -2577,6 +2577,7 @@ if(DO_ET_GUIDE)then
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
 			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
 			dum3(dimsizes(TRKmodelsI),vals3) = gsn_add_text(wks,plot,tostring(toint(bHrsI(vals2))),\
+									bTRK(1,vals2)+0.3,bTRK(0,vals2)+0.3,txres3)
 
 			; Add best track legend
 			mkres2@gsMarkerColor = "black"
