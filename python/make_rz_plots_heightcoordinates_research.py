@@ -720,7 +720,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			if rmax/rmw_2km < np.max(rnorm): #Quick Fix For Big RMWs
 				rnorm_max = np.round(rmax/rmw_2km,2)-math.fmod(np.round(rmax/rmw_2km,2),0.05)
-				rnorm = np.linspace(0,rnorm_max,(rnorm_max/0.05)+1)
+				rnorm = np.linspace(0,rnorm_max,(np.int(rnorm_max/0.05))+1)
 				Rnorm, THETAnorm = np.meshgrid(rnorm,theta)
 				XInorm = Rnorm * np.cos(THETAnorm)
 				YInorm = Rnorm * np.sin(THETAnorm)
@@ -1303,7 +1303,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				
 				#Calculate Local Shear
 				rmaxlocal = 102
-				rlocal = np.linspace(0,rmaxlocal,(rmaxlocal//resolution+1))
+				rlocal = np.linspace(0,rmaxlocal,(np.int(rmaxlocal//resolution)+1))
 				Rlocal, THETAlocal = np.meshgrid(rlocal, theta)
 				XIlocal = Rlocal * np.cos(THETAlocal)
 				YIlocal = Rlocal * np.sin(THETAlocal)
@@ -2479,7 +2479,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-	os.system("sed -i ':"+np.str(FILE)+":d' "+PLOTTED_FILES)
+	os.system("sed -i 's@"+np.str(FILE)+"@d' "+PLOTTED_FILES)
 	os.system('echo "'+np.str(FILE)+' 1" >> '+PLOTTED_FILES)
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
