@@ -1310,7 +1310,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-	os.system("sed -i ':"+np.str(FILE)+":d' "+PLOTTED_FILES)
+	os.system("sed -i '/"+np.str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
 	os.system('echo "'+np.str(FILE)+' 1" >> '+PLOTTED_FILES)
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)

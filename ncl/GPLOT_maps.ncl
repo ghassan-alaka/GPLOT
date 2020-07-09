@@ -3121,6 +3121,10 @@ do fff = 0,nFiles-1
         if(FILE_DONE(fff))then
                 print("MSG: All graphics found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
                 
+		; Get the Input File base name
+		IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+		IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+
 		NATCF_NOW = 0
 		if(.not.all(ismissing(tcFHR(0,:))))then
 			vals1 = ind(tcFHR(0,:).eq.FHR(fff))
@@ -3131,18 +3135,18 @@ do fff = 0,nFiles-1
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
-				system("sed -i ':"+iFiles(myInd(0))+":d' "+PLOTTED_FILES)
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
-				system("sed -i ':"+iFiles(myInd(0))+":d' "+PLOTTED_FILES)
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
