@@ -119,9 +119,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_MAPS}" = "True" ]; then
         echo "MSG: MAPS submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_maps.generic.sh"
-        SPAWNFILE2="${WORKhafs}/graphics/GPLOT.spawn_maps.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_maps.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/graphics/GPLOT.spawn_maps.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_maps.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -153,9 +153,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_SHIPS}" = "True" ]; then
         echo "MSG: SHIPS submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_ships.generic.sh"
-        SPAWNFILE2="${WORKhafs}/graphics/spawn_ships.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_ships.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/graphics/GPLOT.spawn_ships.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_ships.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log -->  ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -185,9 +185,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_STATS}" = "True" ]; then
         echo "MSG: STATS submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_stats.generic.sh"
-        SPAWNFILE2="${WORKhafs}/graphics/spawn_stats.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_stats.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/graphics/spawn_stats.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_stats.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log -->  ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -216,9 +216,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_POLAR}" = "True" ]; then
         echo "MSG: POLAR submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_polar.generic.sh"
-        SPAWNFILE2="${WORKhafs}/graphics/spawn_polar.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_polar.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/graphics/spawn_polar.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_polar.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
