@@ -356,7 +356,7 @@ DO_CONVERTGIF      := where(DO_CONVERTGIF(1).eq."True",True,False)
 
 ; The maximum number of files to process.
 val := ind(isStrSubset2(data,"NMAX_MAPS"))
-if(.not.ismissing(val(0))	NMAX = data(val)
+if(.not.ismissing(val(0)))then	NMAX = data(val)
 				NMAX := str_squeeze(str_split(NMAX," = "))
 				NMAX := toint(NMAX(1))
 else				NMAX = 100
