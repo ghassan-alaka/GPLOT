@@ -354,6 +354,14 @@ DO_CONVERTGIF      = data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
 DO_CONVERTGIF      := str_squeeze(str_split(DO_CONVERTGIF," = "))
 DO_CONVERTGIF      := where(DO_CONVERTGIF(1).eq."True",True,False)
 
+; The maximum number of files to process.
+val := ind(isStrSubset2(data,"NMAX_MAPS"))
+if(.not.ismissing(val(0))	NMAX = data(val)
+				NMAX := str_squeeze(str_split(NMAX," = "))
+				NMAX := toint(NMAX(1))
+else				NMAX = 100
+end if
+
 
 
 
@@ -682,6 +690,12 @@ print("MSG: Found these forecast hours --> "+stringOut(FHR))
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
+
+; 6. Limit the total number of files to process, if required.
+if(nFiles.gt.NMAX)then
+	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
+	nFiles = NMAX
+end if
 
 
 
