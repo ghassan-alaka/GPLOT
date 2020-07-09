@@ -2874,9 +2874,9 @@ do fff = 0,nFiles-1
 		if(FHR(fff).le.FNL_HR)then
 			if(fileexists(PLOTTED_FILES))then
 				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
-				system("echo "+str_get_dq()+IFILE_BASE+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
 			else
-				system("echo "+str_get_dq()+IFILE_BASE+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
 			end if
 		end if
 		system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")

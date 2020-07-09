@@ -3136,17 +3136,17 @@ do fff = 0,nFiles-1
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
 				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
-                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
 				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
-                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+str_get_dq()+IFILE_BASE+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+                                system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
                 end if
                 system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
