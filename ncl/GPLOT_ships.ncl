@@ -2868,7 +2868,7 @@ do fff = 0,nFiles-1
 		;if(ATCF_REQD .and. ALL_ATCF)then
 		if(FHR(fff).le.FNL_HR)then
 			if(fileexists(PLOTTED_FILES))then
-				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+				system("sed -i ':"+iFiles(myInd(0))+":d' "+PLOTTED_FILES)
 				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
 			else
 				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
