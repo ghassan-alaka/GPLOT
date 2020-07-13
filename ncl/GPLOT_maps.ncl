@@ -354,6 +354,14 @@ DO_CONVERTGIF      = data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
 DO_CONVERTGIF      := str_squeeze(str_split(DO_CONVERTGIF," = "))
 DO_CONVERTGIF      := where(DO_CONVERTGIF(1).eq."True",True,False)
 
+; The maximum number of files to process.
+val := ind(isStrSubset2(data,"NMAX_MAPS"))
+if(.not.ismissing(val(0)))then	NMAX = data(val)
+				NMAX := str_squeeze(str_split(NMAX," = "))
+				NMAX := toint(NMAX(1))
+else				NMAX = 100
+end if
+
 
 
 
@@ -682,6 +690,12 @@ print("MSG: Found these forecast hours --> "+stringOut(FHR))
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
+
+; 6. Limit the total number of files to process, if required.
+if(nFiles.gt.NMAX)then
+	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
+	nFiles = NMAX
+end if
 
 
 
@@ -3107,6 +3121,10 @@ do fff = 0,nFiles-1
         if(FILE_DONE(fff))then
                 print("MSG: All graphics found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
                 
+		; Get the Input File base name
+		IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+		IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+
 		NATCF_NOW = 0
 		if(.not.all(ismissing(tcFHR(0,:))))then
 			vals1 = ind(tcFHR(0,:).eq.FHR(fff))
@@ -3117,7 +3135,7 @@ do fff = 0,nFiles-1
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
-				system("sed -i 's@"+iFiles(myInd(0))+"@d' "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
@@ -3125,7 +3143,7 @@ do fff = 0,nFiles-1
                 end if
                 if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
-				system("sed -i 's@"+iFiles(myInd(0))+"@d' "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
                                 system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)

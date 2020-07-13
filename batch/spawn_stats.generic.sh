@@ -163,7 +163,7 @@ fi
 
 # Define other important variables
 BATCHFILE1="${BATCH_DIR}/batch_stats.generic.sh"
-BATCHFILE2="${WORKhafs}/graphics/batch_stats.${EXPT}.sh"
+BATCHFILE2="${WORKhafs}/hrdgraphics/batch_stats.${EXPT}.sh"
 
 # Some housekeeping
 cp ${BATCHFILE1} ${BATCHFILE2}

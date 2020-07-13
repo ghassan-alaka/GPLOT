@@ -2864,11 +2864,16 @@ do fff = 0,nFiles-1
 	;    -- ATCF is not required
 	if(FILE_DONE)then
 		print("MSG: All graphics & data files found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
+
+		; Get the input file base name
+		IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+		IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+
 		PLOTTED_FILES = ODIR+"PlottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
 		;if(ATCF_REQD .and. ALL_ATCF)then
 		if(FHR(fff).le.FNL_HR)then
 			if(fileexists(PLOTTED_FILES))then
-				system("sed -i 's@iFiles(myInd(0))@d' "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
 				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
 			else
 				system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
