@@ -2620,7 +2620,7 @@ do fff = 0,nFiles-1
 						
 				iii=iii+1
 			end do
-			Vp = where(Vp.gt.10.e10,Vp@_FillValue,Vp)
+			Vp = where(Vp.gt.10.e10 .or. Vp.lt.-10.e10,Vp@_FillValue,Vp)
 			printMaxMin(Vp,0)
 					
 			; Find plot boundaries. Resize if necessary
