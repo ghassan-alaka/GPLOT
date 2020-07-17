@@ -119,9 +119,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_MAPS}" = "True" ]; then
         echo "MSG: MAPS submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_maps.generic.sh"
-        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_maps.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhwrf}/hrdgraphics/spawn_maps.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_maps.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhwrf}/hrdgraphics/spawn_maps.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -131,8 +131,8 @@ for NML in "${NML_LIST[@]}"; do
                 echo "MSG: Not submitting anything for MAPS."
             else
                 sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.spawn_maps.'"${SUBEXPT}"'/g' ${SPAWNFILE2}
-                sed -i 's/^#SBATCH --output=.*/#SBATCH --output="'"${WORKhafs}"'/graphics/GPLOT.spawn_maps.out"/g' ${SPAWNFILE2}
-                sed -i 's/^#SBATCH --error=.*/#SBATCH --error="'"${WORKhafs}"'/graphics/GPLOT.spawn_maps.err"/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --output=.*/#SBATCH --output="'"${WORKhwrf}"'/graphics/GPLOT.spawn_maps.out"/g' ${SPAWNFILE2}
+                sed -i 's/^#SBATCH --error=.*/#SBATCH --error="'"${WORKhwrf}"'/graphics/GPLOT.spawn_maps.err"/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${SPAWNFILE2}
@@ -153,9 +153,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_SHIPS}" = "True" ]; then
         echo "MSG: SHIPS submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_ships.generic.sh"
-        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_ships.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhwrf}/hrdgraphics/spawn_ships.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_ships.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhwrf}/hrdgraphics/spawn_ships.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log -->  ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -166,8 +166,8 @@ for NML in "${NML_LIST[@]}"; do
             else
                 
                 sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.spawn_ships.'"${SUBEXPT}"'"/g' ${SPAWNFILE2}
-                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${WORKhafs}"'/graphics/spawn_ships.'"${SUBEXPT}"'.out"@g' ${SPAWNFILE2}
-                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${WORKhafs}"'/graphics/spawn_ships.'"${SUBEXPT}"'.err"@g' ${SPAWNFILE2}
+                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${WORKhwrf}"'/graphics/spawn_ships.'"${SUBEXPT}"'.out"@g' ${SPAWNFILE2}
+                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${WORKhwrf}"'/graphics/spawn_ships.'"${SUBEXPT}"'.err"@g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${SPAWNFILE2}
@@ -185,9 +185,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_STATS}" = "True" ]; then
         echo "MSG: STATS submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_stats.generic.sh"
-        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_stats.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhwrf}/hrdgraphics/spawn_stats.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_stats.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhwrf}/hrdgraphics/spawn_stats.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log -->  ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -197,8 +197,8 @@ for NML in "${NML_LIST[@]}"; do
                 echo "MSG: Not submitting anything for STATS."
             else
                 sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.spawn_stats.'"${SUBEXPT}"'"/g' ${SPAWNFILE2}
-                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${WORKhafs}"'/graphics/spawn_stats.'"${SUBEXPT}"'.out"@g' ${SPAWNFILE2}
-                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${WORKhafs}"'/graphics/spawn_stats.'"${SUBEXPT}"'.err"@g' ${SPAWNFILE2}
+                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${WORKhwrf}"'/graphics/spawn_stats.'"${SUBEXPT}"'.out"@g' ${SPAWNFILE2}
+                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${WORKhwrf}"'/graphics/spawn_stats.'"${SUBEXPT}"'.err"@g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${SPAWNFILE2}
@@ -216,9 +216,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_POLAR}" = "True" ]; then
         echo "MSG: POLAR submission is turned on."
         SPAWNFILE1="${BATCHDIR}/spawn_polar.generic.sh"
-        SPAWNFILE2="${WORKhafs}/hrdgraphics/spawn_polar.${SUBEXPT}.sh"
+        SPAWNFILE2="${WORKhwrf}/hrdgraphics/spawn_polar.${SUBEXPT}.sh"
         cp ${SPAWNFILE1} ${SPAWNFILE2}
-        SPAWNLOG="${WORKhafs}/hrdgraphics/spawn_polar.${SUBEXPT}.log"
+        SPAWNLOG="${WORKhwrf}/hrdgraphics/spawn_polar.${SUBEXPT}.log"
         echo "MSG: Spawn file --> ${SPAWNFILE2}"
         echo "MSG: Spawn log --> ${SPAWNLOG}"
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
@@ -228,8 +228,8 @@ for NML in "${NML_LIST[@]}"; do
                 echo "MSG: Not submitting anything for POLAR."
             else
                 sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name="GPLOT.spawn_polar.'"${SUBEXPT}"'"/g' ${SPAWNFILE2}
-                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${WORKhafs}"'/graphics/spawn_polar.'"${SUBEXPT}"'.out"@g' ${SPAWNFILE2}
-                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${WORKhafs}"'/graphics/spawn_polar.'"${SUBEXPT}"'.err"@g' ${SPAWNFILE2}
+                sed -i 's@^#SBATCH --output=.*@#SBATCH --output="'"${WORKhwrf}"'/graphics/spawn_polar.'"${SUBEXPT}"'.out"@g' ${SPAWNFILE2}
+                sed -i 's@^#SBATCH --error=.*@#SBATCH --error="'"${WORKhwrf}"'/graphics/spawn_polar.'"${SUBEXPT}"'.err"@g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition='"${PARTITION}"'/g' ${SPAWNFILE2}
                 sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${SPAWNFILE2}
