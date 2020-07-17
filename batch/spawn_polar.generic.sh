@@ -148,7 +148,7 @@ fi
 
 # Define other important variables
 BATCHFILE1="${BATCH_DIR}/batch_polar.generic.sh"
-BATCHFILE2="${WORKhafs}/hrdgraphics/batch_polar.${EXPT}.sh"
+BATCHFILE2="${WORKhwrf}/hrdgraphics/batch_polar.${EXPT}.sh"
 
 
 # Some housekeeping

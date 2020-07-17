@@ -155,7 +155,7 @@ fi
 
 # Define other important variables
 BATCHFILE1="${BATCH_DIR}/batch_maps.generic.sh"
-BATCHFILE2="${WORKhafs}/hrdgraphics/batch_maps.${EXPT}.sh"
+BATCHFILE2="${WORKhwrf}/hrdgraphics/batch_maps.${EXPT}.sh"
 
 # Some housekeeping
 #mkdir -p ${LOG_DIR}

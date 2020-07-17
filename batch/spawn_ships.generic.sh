@@ -142,7 +142,7 @@ fi
 
 # Define other important variables
 BATCHFILE1="${BATCH_DIR}/batch_ships.generic.sh"
-BATCHFILE2="${WORKhafs}/hrdgraphics/batch_ships.${EXPT}.sh"
+BATCHFILE2="${WORKhwrf}/hrdgraphics/batch_ships.${EXPT}.sh"
 CTIME=`date +"%Y%m%d%H_%M"`
 
 # Some housekeeping
