@@ -178,6 +178,14 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
 
+	if ( centerlat > 50.0):
+		# Write the input file to a log to mark that it has ben processed
+		PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+		os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+		os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
+		os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+		break
+
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
 		print('None of These Yet!')
