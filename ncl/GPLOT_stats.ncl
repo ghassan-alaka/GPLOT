@@ -151,9 +151,14 @@ NML_DATA = asciiread(MASTER_NML,-1,"string")
 ;    DOMAIN, TIER, DSOURCE, SYS_ENV, IDATE, SID, ATCF_REQD
 ;    First, check if basic variables should be automatically defined (AUTO_VAR).
 ;    Any of these variables can be overwritten by command line arguments.
-AUTO_VAR	= NML_DATA(ind(isStrSubset2(NML_DATA,"AUTO_VAR =")))
-AUTO_VAR	:= str_squeeze(str_split(AUTO_VAR," = "))
-AUTO_VAR	:= where(AUTO_VAR(1).eq."True",True,False)
+val := ind(isStrSubset2(NML_DATA,"AUTO_VAR ="))
+if(ismissing(val(0)))then
+	AUTO_VAR	:= False
+else
+	AUTO_VAR	= NML_DATA(val(0))
+	AUTO_VAR	:= str_squeeze(str_split(AUTO_VAR," = "))
+	AUTO_VAR	:= where(AUTO_VAR(1).eq."True",True,False)
+end if
 if(AUTO_VAR)then	print("MSG: Auto-Variable functionality is ON. Ignoring basic settings in namelist.")
 			print("MSG: Please change namelist if this is not desired.")
 			if(isvar("DSOURCE"))then	print("MSG: Detected command line variable: DSOURCE")
@@ -248,9 +253,14 @@ end if
 ; 7. Get path variables from the master namelist:
 ;    EXPT, IDIR, ATCF1_DIR, ATCF1_TAG, ATCF2_DIR, ATCF2_TAG, ITAG, IDIR
 ;    First, check if paths should be automatically defined (AUTO_DIR)
-AUTO_DIR	= NML_DATA(ind(isStrSubset2(NML_DATA,"AUTO_DIR =")))
-AUTO_DIR	:= str_squeeze(str_split(AUTO_DIR," = "))
-AUTO_DIR	:= where(AUTO_DIR(1).eq."True",True,False)
+val := ind(isStrSubset2(NML_DATA,"AUTO_DIR ="))
+if(ismissing(val(0)))then
+	AUTO_DIR	= False
+else
+	AUTO_DIR	= NML_DATA(val(0))
+	AUTO_DIR	:= str_squeeze(str_split(AUTO_DIR," = "))
+	AUTO_DIR	:= where(AUTO_DIR(1).eq."True",True,False)
+end if
 if(AUTO_DIR)then	print("MSG: Auto-Directory functionality is ON. Ignoring paths defined in namelist.")
 			print("MSG: Please change namelist if this is not desired.")
 			EXPT	= getAutoDir(SYS_ENV,DSOURCE,"EXPT")
