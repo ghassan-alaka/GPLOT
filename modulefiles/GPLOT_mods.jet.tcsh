@@ -19,7 +19,7 @@ module load grads/2.0.2
 setenv NCARG_COLORMAPS $GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 
 # Python 3 Anaconda
-setenv python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
-setenv PATH "/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
+setenv python /lfs4/HFIP/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+setenv PATH "/lfs4/HFIP/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
 setenv PYTHONBUFFERED 1
 
