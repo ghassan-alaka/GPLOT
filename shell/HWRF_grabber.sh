@@ -47,19 +47,22 @@ for FILE in ${ALLFILES[@]}; do
 done
 
 
-# Remove directories for which GFS files are no longer available.
+# Remove directories for which HWRF files are no longer available.
 if [ "$DSOURCE" == "PUB" ]; then
     echo "MSG: Checking available HWRF files."
 
-    ALL_HWRF=( `find ${ODIR} -type f` ) # | xargs -n 1 basename` )
+    # Find files and soft links.
+    ALL_HWRF=( `find ${ODIR} -type f` `find ${ODIR} -type l`) # | xargs -n 1 basename` )
 
     for FILE in "${ALL_HWRF[@]}"; do
         echo "MSG: Working on --> $FILE"
+
+        # Extract info from the file path
         HWRF_BASE=`echo "$FILE" | xargs -n 1 basename`
         HWRF_PATH=`echo "$FILE" | rev | cut -d "/" -f2- | rev`
         YMDH=`echo "$HWRF_BASE" | cut -d "." -f2`
 
-
+        # Remove the link if the source file does not exist in $HWRFDIR
         if ls ${HWRFDIR}/${HWRF_BASE} 2> /dev/null; then
             echo "MSG: HWRF file is available for ${YMDH}. Keeping link."
         else
@@ -71,6 +74,8 @@ if [ "$DSOURCE" == "PUB" ]; then
             fi
         fi
     done
+
 fi
+
 
 echo "HWRF_grabber.sh completed `date`"
