@@ -75,6 +75,15 @@ if [ "$DSOURCE" == "PUB" ]; then
         fi
     done
 
+    ALL_DIR=( `find ${ODIR} -type d` )
+    for D in "${ALL_DIR[@]}"; do
+        echo "MSG: Checking this directory --> ${D}"
+        if [ -z "$(ls -A ${D})" ]; then
+            echo "MSG: Directory is empty. Deleting..."
+            rm -rf ${D}
+        fi
+    done
+
 fi
 
 
