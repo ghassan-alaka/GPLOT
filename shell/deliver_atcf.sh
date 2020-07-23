@@ -1,13 +1,13 @@
 #!/bin/sh
-#SBATCH --account=aoml-hafs1
+##SBATCH --account=aoml-hafs1
 #SBATCH --nodes=1
 #SBATCH --time=00:10:00
 #SBATCH --partition=service
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
-#SBATCH --error=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
+##SBATCH --output=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
+##SBATCH --error=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
 #SBATCH --job-name="GPLOT_deliver_atcf"
 #SBATCH --mem=16G
 
@@ -95,7 +95,7 @@ mkdir -p ${ATMP}
 mkdir -p ${AOUT}
 
 # Create the combined A-Deck for each storm
-${X_CREATE} ${ATMP} ${AIN}/*${EXT1}
+${X_CREATE} ${ATMP} ${AIN} "*${EXT1}"
 
 # Update the model code in each A-Deck, if necessary
 if [ "${MODIN}" != "${MODOUT}" ]; then
