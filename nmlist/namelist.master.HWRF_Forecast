@@ -163,8 +163,7 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-;TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HWRF_Forecast/tempdir
-;TEMPDIR; = /lfs1/projects/hur-aoml/rthr-aoml/GPLOT_Lew/HWRF_Forecast/tempdir
+PYTHONFILE = make_rz_plots_heightcoordinates_research.py
 RESOLUTION = 1.5
 RMAX = 600
 MODELTAG = hwrfprs.storm.0p015
