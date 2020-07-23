@@ -130,7 +130,7 @@ for D in "${NHC_DECKS[@]}"; do
     echo "MSG: Working on this NHC a-deck --> ${D}"
     if [ -f ${AOUT}/${D} ]; then
         TMP="$(date +%N).${D}"
-        cat ${AOUT}/${D} ${ANHC}/${D} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${AOUT}/${TMP}
+        cat ${AOUT}/${D} ${ANHC}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
             echo "MSG: Moving new deck to target location"
@@ -182,7 +182,7 @@ for D in "${M_DECKS[@]}"; do
     # Merge the model specific A-Deck into the output A-Deck
     if [ -f ${AOUT}/${D} ]; then
         TMP="$(date +%N).${D}"
-        cat ${AOUT}/${D} ${ATMP}/${D} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${AOUT}/${TMP}
+        cat ${AOUT}/${D} ${ATMP}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
             echo "MSG: Moving new deck to target location"
@@ -248,7 +248,7 @@ for D in "${M_DECKS[@]}"; do
         # Merge the output into the existing A-Deck
         if [ -f ${INTERP_ADIR}/${INTERP_FILE} ]; then
             TMP="$(date +%N).${D}"
-            cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${AOUT}/${TMP}
+            cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
             DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
             if [ "${DIFF}" != "" ]; then
                 echo "MSG: Moving new deck to target location"
