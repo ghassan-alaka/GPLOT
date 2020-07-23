@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -18,29 +18,7 @@ set -x
 #limit stacksize unlimited
 
 # Source the .profile to optimize the environment
-source ${GPLOT_DIR}/modulefiles/GPLOT_mods
-
-# Load MET-TC library path
-#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
-
-# Load wgrib module (needed for gribmap)
-#module load wgrib
-#module load wgrib2/0.2.0.1
-
-# Load GrADs for interfacing in Python
-#module load grads
-
-# Load intel module (needed for wgrib)
-#module load intel
-
-# Use the Python 3 install
-#alias python /lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
-#PYTHONEXE="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
-#PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
-
-# Turn off buffered output
-export PYTHONUNBUFFERED=1
-
+source ${GPLOT_DIR}/modulefiles/GPLOT_mods 1
 
 # 1. Get command line variables
 PYTHONDIR=
