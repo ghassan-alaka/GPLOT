@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh --login
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
