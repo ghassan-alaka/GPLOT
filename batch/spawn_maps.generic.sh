@@ -1,3 +1,5 @@
+w
+w
 #!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
@@ -257,6 +259,9 @@ for TR in ${TIER[@]}; do
             if [ ! -z "$(ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
                 #ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename
                 STORMS+=(`ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+            fi
+            if [ ! -z "$(ls -d ${IDIR}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
+                STORMS+=(`ls -d ${IDIR}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
             fi
         fi
 
@@ -562,7 +567,7 @@ for TR in ${TIER[@]}; do
                                "${ENSID}/${CYCLE_STR}" "${STORM_STR}/${ENSID}" "${ENSID}/${STORM}" "${EXPT}/com/${ENSID}/${CYCLE_STR}" \
                                "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}" "${EXPT}/${ENSID}/com/${CYCLE_STR}" "${EXPT}/${ENSID}/com" \
                                "${ENSID}/com/${CYCLE_STR}/${STORM}" "com/${CYCLE_STR}/${STORM}" "${ENSID}" "${CYCLE_STR}/00L" \
-                               "com/${CYCLE_STR}/00L" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L")
+                               "com/${CYCLE_STR}/00L" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L" )
 
 
                     # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
