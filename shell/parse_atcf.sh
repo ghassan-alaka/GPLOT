@@ -32,15 +32,15 @@ cd ${ODIR}
 # Checks
 if [ ! -d "$ADECKDIR" ]; then
     echo "ERROR: ADECKDIR is not a directory. Please fix this."
-    exit
+    exit 1
 fi
 if [ ! -d "$BDECKDIR" ]; then
     echo "ERROR: BDECKDIR is not a directory. Please fix this."
-    exit
+    exit 2
 fi
 if [ ! -d "$TCVDIR" ]; then
     echo "ERROR: TCVDIR is not a directory. Please fix this."
-    exit
+    exit 3
 fi
 
 # Find all A-DECKs
@@ -103,7 +103,13 @@ for ADECK in ${ALL_ADECKS[@]}; do
             SID="${SNUM}${BASIN2^^}"
 
             # If applicable, get the old SID
-            SID_OLD=`grep "${BASIN^^}${SNUM}${YEAR}" ${SID_FILE} | awk '{ print $4 }'`
+            SID_OLD=""
+            if [ -f "${SID_FILE}" ]; then
+                SID_OLD=`grep "${BASIN^^}${SNUM}${YEAR}" ${SID_FILE} | awk '{ print $4 }'`
+            fi
+            if [ ! -z "${SID_OLD}" ]; then
+                echo "MSG: Found this old Storm ID --> ${SID_OLD}"
+            fi
 
             # Get the TC name. This is for the Parsed ATCF file name
             TCNAME=""
@@ -116,7 +122,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Second, try to get the TC name from the Best Track entry in the B-Deck
             if [ -z "$TCNAME" ]; then
                 # Check that the B-Deck is available
-                BDECK=${BDECKDIR}b${BASIN,,}${SNUM}${YEAR}.dat
+                BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
                 if [ -f ${BDECK} ]; then
                     echo "MSG: B-Deck file found --> ${BDECK}"
                     TCNAME=`cat ${BDECK} | awk -v CYCLE="${CYCLE}" '$3==CYCLE' | head -1 | cut -d "," -f28`
@@ -128,7 +134,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
 
             # Third, try to get the TC name from the TCVItals entry
             if [ -z "$TCNAME" ]; then
-                SYNDAT="${TCVDIR}syndat_tcvitals.${YEAR}"
+                SYNDAT="${TCVDIR}/syndat_tcvitals.${YEAR}"
                 if [ -f ${SYNDAT} ]; then
                     echo "MSG: TCVitals found --> ${SYNDAT}"
                     TCNAME=`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`
@@ -147,11 +153,14 @@ for ADECK in ${ALL_ADECKS[@]}; do
             echo "MSG: TCNAME=$TCNAME"
 
             # Copy this entry to the new parsed ATCF
-            OFILE="${ODIR}${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            OFILE2="${ODIR}${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            TMPFILE="${ODIR}TMP.${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            echo "OFILE2 = ${OFILE2}"
-            if [ -f ${OFILE2} ]; then
+            OFILE="${ODIR}/${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            OFILE2="${ODIR}/${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            OFILE3="${ODIR}/invest${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            TMPFILE="${ODIR}/$(date +%N).${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+            #echo "OFILE2 = ${OFILE2}"
+            if [ -z "${SID_OLD}" ]; then
+                echo "WARNING: Old Storm ID not found. This might be OK."
+            elif [ -f ${OFILE2} ] || [ -f "${OFILE3}" ]; then
                 echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
                 rm -f ${OFILE}
                 continue
