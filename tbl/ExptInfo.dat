@@ -23,6 +23,10 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                                  HNVI_Forecast,                             2019 No-V.I. HWRF
                                   HWRFB_TEST01,                            2020 HWRF-B TEST01
                                   HWRFB_TEST02,          2020 HWRF-B (35N90W nx=1080 ny=1050)
-                                 HB20_retro_v1,                          2020 HWRF-B Retro V1
                                           B20C,                          2020 HWRF-B Baseline
                                           B20D,               2020 HWRF-B Baseline (18/6/2km)
+                                 HB20_v1_retro,                             2020 HWRF-B Retro
+                                  GSL_Forecast,                       2020 FV3GFS (RRFS Phys)
+                               HAFS_esg_2020rt,   Hurricane Analysis and Forecast System V0.1J ESG
+                             HAFSV0.1B_2020_RT,   Hurricane Analysis and Forecast System V0.1B
+                         UFS-CAMsuite_Forecast,          Unified Forecast System CAM Suite v1
