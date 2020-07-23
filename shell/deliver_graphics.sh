@@ -1,13 +1,13 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
-#SBATCH --nodes=1
+##SBATCH --account=aoml-hafs1
+#SBATCH --ntasks=1
 #SBATCH --time=00:10:00
 #SBATCH --partition=service
 #SBATCH --mail-type=FAIL
-#SBATCH --qos=windfall
+#SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/deliver_graphics.log
-#SBATCH --error=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/deliver_graphics.log
+##SBATCH --output=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/log/deliver_graphics.log
+##SBATCH --error=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/log/deliver_graphics.log
 #SBATCH --job-name="GPLOT_deliver_graphics"
 #SBATCH --mem=16G
 
