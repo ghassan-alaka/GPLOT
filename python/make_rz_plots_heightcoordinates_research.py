@@ -72,12 +72,12 @@ if PYTHONDIR == '':  PYTHONDIR = GPLOT_DIR+'/python'
 NMLDIR = GPLOT_DIR+'/nmlist'
 
 # Read the master namelist
-DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/polar/'
+DSOURCE = subprocess.run(['grep','^DSOURCE',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+EXPT = subprocess.run(['grep','^EXPT',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+ODIR = subprocess.run(['grep','^ODIR',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
 
 try:
-	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
+	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
 	DO_CONVERTGIF = (DO_CONVERTGIF == 'True');
 except:
 	DO_CONVERTGIF = False;
@@ -286,7 +286,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			ga('set z 1')
 			u10 = ga.exp('ugrd10m')
 			v10 = ga.exp('vgrd10m')
-			mslp = ga.exp('msletmsl')
+			if DSOURCE == 'HAFS':
+				mslp = ga.exp('msletmsl')
+			else:
+				mslp = ga.exp('prmslmsl')
 			tmp2m = ga.exp('tmp2m')
 			q2m = ga.exp('spfh2m')
 			rh2m = ga.exp('rh2m')
