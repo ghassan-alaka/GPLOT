@@ -27,12 +27,12 @@ setenv NCARG_COLORMAPS $GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then
-    PYDIR "/lfs4/HFIP/hur-aoml/Levi.Cowan/anaconda3"
+    setenv PYDIR "/lfs4/HFIP/hur-aoml/Levi.Cowan/anaconda3"
     # Python 3 Anaconda
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
     if ( -f "${PYDIR}/etc/profile.d/conda.csh" ) then
-        source "${PYDIR}/etc/profile.d/conda.csh" &> /dev/null
+        source "${PYDIR}/etc/profile.d/conda.csh" >& /dev/null
     else
         setenv PATH "${PYDIR}/bin:$PATH"
     endif
