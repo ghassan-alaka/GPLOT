@@ -1,13 +1,13 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 #SBATCH --nodes=1
 #SBATCH --time=00:10:00
 #SBATCH --partition=service
 #SBATCH --mail-type=FAIL
-#SBATCH --qos=windfall
+#SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
-#SBATCH --error=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
+#SBATCH --output=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
+#SBATCH --error=/scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/log/deliver_atcf.log
 #SBATCH --job-name="GPLOT_deliver_atcf"
 #SBATCH --mem=16G
 
@@ -46,13 +46,13 @@ BNHC="$8"
 MODI="$9"
 MOD12="${10}"
 FNL_HR="${11}"
+EXT1="${12}"
 
 # Define other variables
-EXT1=".atcfunix"
 EXT2=".dat"
 
 # Define executables
-X_CREATE="/home/Ghassan.Alaka/Shell/sh/create_adeck.sh"
+X_CREATE="/home/Ghassan.Alaka/GPLOT/shell/create_adeck.sh"
 X_MERGE="/home/Ghassan.Alaka/Shell/ksh/atcfMerge.ksh"
 
 # Safety checks
@@ -85,6 +85,9 @@ if [ ! -z "${BNHC}" ]; then
 else
     echo "MSG: Early forecasts will not be produced."
     DO_INTERP="NO"
+fi
+if [ -z "${EXT1}" ]; then
+    EXT1=".atcfunix"
 fi
 
 # Create directory names
