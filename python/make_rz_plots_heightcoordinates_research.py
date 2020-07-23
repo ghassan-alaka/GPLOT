@@ -286,7 +286,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			ga('set z 1')
 			u10 = ga.exp('ugrd10m')
 			v10 = ga.exp('vgrd10m')
-			mslp = ga.exp('msletmsl')
+			if DSOURCE == 'HAFS':
+				mslp = ga.exp('msletmsl')
+			else:
+				mslp = ga.exp('prmslmsl')
 			tmp2m = ga.exp('tmp2m')
 			q2m = ga.exp('spfh2m')
 			rh2m = ga.exp('rh2m')
