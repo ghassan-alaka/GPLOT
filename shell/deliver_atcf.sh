@@ -99,7 +99,17 @@ ${X_CREATE} ${ATMP} ${AIN}/*${EXT1}
 
 # Update the model code in each A-Deck, if necessary
 if [ "${MODIN}" != "${MODOUT}" ]; then
-    sed -i 's/'"${MODIN}"'/'"${MODOUT}"'/g' ${ATMP}/*${EXT2}
+    DECKS=( `find ${ATMP}/. -name "*${EXT2}" -printf "%f\n" `  )
+    for D in "${DECKS[@]}"; do
+        TMP="$(date +%N).${D}"
+        sed 's/'"${MODIN}"'/'"${MODOUT}"'/g' ${ATMP}/${D} > ${ATMP}/${TMP}
+        DIFF=$(diff ${ATMP}/${D} ${ATMP}/${TMP})
+        if [ "${DIFF}" != "" ]; then
+            mv ${ATMP}/${TMP} ${ATMP}/${D}
+        else
+            rm -f ${ATMP}/${TMP}
+        fi
+    done
 fi
 
 # Copy the interplation software and define required vars.

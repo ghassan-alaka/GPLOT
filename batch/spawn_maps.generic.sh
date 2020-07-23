@@ -386,12 +386,17 @@ if [ "${DO_MAPS}" = "True" ]; then
                         continue
                     fi
 
-                    # Never process the fake storm (00L) for storm-centered domains
-                    if [ "${STORM^^}" == "00L" ]; then
-                        echo "MSG: Fake storm detected. Skipping."
+                    # Skip the fake storm (00L) for storm-centered domains
+                    if [ "$SC" == "True" ] && [ "${STORM^^}" == "00L" ]; then
+                        echo "MSG: Skipping this domain because it is storm-centered and this is the fake storm (00L)."
                         continue
                     fi
-    
+
+                    # If not a storm-centered domain, set FOUND_FILES=False
+                    if [ "${SC}" == "True" ]; then
+                        FOUND_FILES="False"
+                    fi
+
                     # Get file prefix information from table or namelist
                     if [ -z "$ITAG" ]; then
                         FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}FilePrefix.dat`
