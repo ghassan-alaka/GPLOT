@@ -6,23 +6,45 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 
 # Instructions for installation
 
-1. Add 'GPLOT_DIR' to environment
+1. Add 'GPLOT_DIR' to environment [MANDATORY]
         Define GPLOT_DIR as the path where you cloned the GPLOT repository.
         This variable is critical to the functionality of GPLOT.
-        Add it to your ~/.cshrc and ~/.profile files.
+            csh/tcsh --> Add it to ~/.cshrc & ~/.profile
+            bash/sh  --> Add it to ~/.bashrc & ~/.bash_profile
 
 
-2. Install NCL (NCAR Command Language).
+2. Link the correct module file [MANDATORY]
+        Anything with an asterisk in Steps 2-4 should be taken care of automatically by loading
+        the appropriate modulefile.
+
+        On NOAA Jet:    cd ${GPLOT_DIR}/modulefiles
+                        ln -sf modulefile.gplot.jet GPLOT_mods
+
+        On NOAA Hera:   cd ${GPLOT_DIR}/modulefiles
+                        ln -sf modulefile.gplot.hera GPLOT_mods
+
+        If running via wrapper scripts and batch nodes, it is critical that GPLOT_mods point to the
+        correct version.
+
+        If running interactively in a tcsh or csh environment, you must specifically source the "tcsh"
+        version of these files:
+                source ${GPLOT_DIR}/modulefiles/modulefile.gplot.jettcsh
+
+
+3. Install NCL (NCAR Command Language) [MANDATORY FOR NON-NOAA MACHINES]
 	Pre-compiled libraries are preferred. To learn more, start here:
 		https://www.ncl.ucar.edu/Download/
 
 	Version 6.5.0 has been well-tested for GPLOT:
 		https://www.earthsystemgrid.org/dataset/ncl.650.html
 
-	On NOAA Jet:
-		*Load the module:	module load ncl/6.5.0
+        NOTE:  The NCL project is "feature frozen" as of September 2019, meaning
+               CISL has no plans to add new features to NCL. They will continue
+               to maintain the code and will infrequently release bug fixes as
+               well as user-contributed code.
 
-	On NOAA Hera:
+	NCL is automatically loaded as part of the GPLOT environment.
+        To manually load NCL on NOAA Jet and NOAA Hera:
 		*Load the module:	module load ncl/6.5.0
 
 	.hluresfile:
@@ -34,67 +56,57 @@ Git repository URL:  https://github.com/ghassan-alaka/GPLOT.git
 		available for NCL contour graphics.
 
 
-3. Install MET (Model Evaluation Tools)
-	To download the source code, go to the DTC web site:
-		https://dtcenter.org/community-code/model-evaluation-tools-met/download
+4. Install METplus (Model Evaluation Tools) [MANDATORY FOR NON-NOAA MACHINES]
+	To download the source code, go to the DTC web site
+		https://dtcenter.org/community-code/metplus/download
 
-	Version 8.1 has been well-tested for GPLOT:
-		https://dtcenter.org/sites/default/files/community-code/met/met-8.1.1.20190708.tar.gz
+	Version 9.0.2 has been well-tested for GPLOT:
+		https://dtcenter.org/sites/default/files/community-code/met/met-9.0.2.20200522.tar.gz
 
-	On NOAA Jet:
-		*Load the modules:	module load contrib
-					module load intel/18.0.5.274
-					module load met/8.1_beta2
-
-	On NOAA Hera:
+	METplus is automatically loaded as part of the GPLOT environment.
+        To manually load METplus on NOAA Jet:
 		*Load the modules:	module load intel/18.0.5.274
-					module load anaconda/anaconda2-4.4.0
-					module load met/8.1
+                                        module load netcdf/4.6.1
+                                        module load hdf5/1.10.4
+                                        module load intelpython/3.6.5
+                                        module use -a /contrib/met/modulefiles
+                                        module load met/9.0
 
-4. Install Python 3 Anaconda
-	To download the source code, go to the Python web site:
-		https://www.python.org/downloads/
+	To manually load METplus on NOAA Hera:
+		*Load the modules:	module load intel/18.0.5.274
+                                        module use -a /contrib/anaconda/modulefiles
+                                        module load anaconda/latest
+                                        module use -a /contrib/met/modulefiles
+                                        module load met/9.0_anacondal
 
-	Version 3.7.3 has been well-tested for GPLOT:
+5. Install Python 3 Anaconda [MANDATORY FOR NON-NOAA MACHINES]
+	To download the source code, go to the Python web site.
+        Version 3.7.3 has been well-tested for GPLOT:
 		https://www.python.org/downloads/release/python-373/
 
-	On NOAA RDHPCS systems (e.g., Jet, Hera), follow these instructions to build:
-		https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda
+        An Anaconda build is maintained on NOAA Jet and NOAA Hera. We encourage
+        that this build be used. Anacoda is automatically loaded as part of the
+        GPLOT environment.
 
-	On NOAA Jet:
-		*Add alias for python:	alias python="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python"
-		*Add python to path:	export PATH="/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin:${PATH}"
-		Build the centroid module:
-                                        mkdir -p python/modules
-					cd python/modules
-					python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
+        To manually load the envirnoment used for GPLOT on NOAA Jet:
+                csh/tcsh --> source ${GPLOT_DIR}/modulefiles/modulefile.gplot.jet 1
+                bash/sh  --> source ${GPLOT_DIR}/modulefiles/modulefile.gplot.jet 1
 
-	On NOAA Hera:
-		*Add alias for python:	alias python="/scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/python"
-		*Add python to path:	export PATH=/scratch2/GFDL/nggps_aoml/Andrew.Hazelton/anaconda3/bin/:$PATH
-		Build the centroid module:
-					mkdir -p python/modules
-                                        cd python/modules
-					python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
+        To manually load the envirnoment used for GPLOT on NOAA Hera:
+                csh/tcsh --> source ${GPLOT_DIR}/modulefiles/modulefile.gplot.hera 1
+                bash/sh  --> source ${GPLOT_DIR}/modulefiles/modulefile.gplot.hera 1
+
+        If the centroid module is not working, it can be reproduced by following
+        these steps:
+		cd ${GPLOT_DIR}/python/modules
+		python -m numpy.f2py -c ${GPLOT_DIR}/fortran/centroid.f90 -m centroid
+
+        If you would like to install your our Anaconda build on NOAA RDHPCS systems (not recommended)
+        (e.g., Jet, Hera), follow these instructions to build:
+                https://rdhpcs-common-docs.rdhpcs.noaa.gov/wiki/index.php/Anaconda
 
 
-5. Link the correct module file (for NOAA systems only)
-	Anything with an asterisk in Steps 2-4 should be taken care of automatically by loading
-	the appropriate modulefile.
 
-	On NOAA Jet:	cd modulefiles
-			ln -sf GPLOT_mods.jet GPLOT_mods
-
-	On NOAA Hera:	cd modulefiles
-			ln -sf GPLOT_mods.hera GPLOT_mods
-
-	If running via wrapper scripts and batch nodes, it is critical that GPLOT_mods point to the
-	correct version.
-
-	If running interactively in a tcsh or csh environment, you must specifically source the "tcsh"
-	version of these files:
-		source /PATH/TO/GPLOT/modulefiles/GPLOT_mods.jet.tcsh
-	
 
 
 
