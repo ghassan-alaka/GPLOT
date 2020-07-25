@@ -30,31 +30,110 @@
 ##
 ################################################################################
 
+# Parse input arguments
+while test $# -gt 0; do
+
+    case "$1" in
+        -h|--help)
+            echo "Create A-Deck -- parse & create combined A-Deck files"
+            echo " "
+            echo "create_adeck.sh [options]"
+            echo " "
+            echo "options:"
+            echo "-h, --help               show help"
+            echo "-i, --input              input data directory"
+            echo "-o, --output             output data directory"
+            echo "-n, --name               file name search string"
+            echo "-m1, --modelin           input model name (AAAA)"
+            echo "-m2, --modelout          output model name (BBBB)"
+            exit 0
+            ;;
+        -i|--input)
+            shift
+            if test $# -gt 0; then
+                IDIR="${1}"
+                if [ ! -d "${IDIR}" ]; then
+                    echo "ERROR: Input directory does not exist."
+                    exit 1
+                fi
+            else
+                echo "ERROR: Input directory not specified."
+                exit 1
+            fi
+            shift
+            ;;
+        -o|--output)
+            shift
+            if test $# -gt 0; then
+                OUTDIR="${1}"
+                if [ ! -d "${OUTDIR}" ]; then
+                    echo "MSG: Creating output directory because it does not exist."
+                    mkdir -p ${OUTDIR}
+                fi
+            else
+                echo "ERROR: Output directory not specified."
+                exit 1
+            fi
+            shift
+            ;;
+        -n|--name)
+            shift
+            if test $# -gt 0; then
+                TAG="${1}"
+            else
+                echo "WARNING: File name tag not specified. Defaulting to '*atcfunix'."
+                TAG="*.atcfunix"
+            fi
+            shift
+            ;;
+        -m1|--modelin)
+            shift
+            if test $# -gt 0; then
+                M_IN="${1}"
+            fi
+            shift
+            ;;
+        -m2|--modelout)
+            shift
+            if test $# -gt 0; then
+                M_OUT="${1}"
+            fi
+            shift
+            ;;
+        *)
+            break
+            ;;
+
+    esac
+
+done
+
 echo "MSG: create_adeck.sh started at `date`."
 
 # Check if at least 2 arguments were specified.
-if [ $# -lt 3 ]; then
-    echo "ERROR: At least 2 arguments are required. See script header for details."
-    exit 1
-fi
+#if [ $# -lt 2 ]; then
+#    echo "ERROR: At least 2 arguments are required. See script header for details."
+#    exit 1
+#fi
 
 # Read the output directory
-OUTDIR="$1"
-mkdir -p ${OUTDIR}
+#OUTDIR="$1"
+#mkdir -p ${OUTDIR}
 echo "MSG: Using output directory: ${OUTDIR}"
 
 # Read the input directory
-IDIR="$2"
-if [ ! -d "${IDIR}" ]; then
-  echo "ERROR: Input directory must exist."
-  exit 2
-fi
+#IDIR="$2"
+#if [ ! -d "${IDIR}" ]; then
+#  echo "ERROR: Input directory must exist."
+#  exit 2
+#fi
+echo "MSG: Using input directory: ${IDIR}"
 
 # Read the file tag.
-TAG="$3"
-if [ -z "${TAG}" ]; then
-  TAG="*atcfunix"
-fi
+#TAG="$3"
+#if [ -z "${TAG}" ]; then
+#  TAG="*atcfunix"
+#fi
 
 # Create a temporary directory.
 TMPDIR="${OUTDIR}/.create_adeck_tmp_${USER}_${HOSTNAME}_PROC-$$_RAND-$RANDOM"
@@ -189,21 +268,28 @@ printf "$SID_UNIQ\n" | while read SID; do
         cat "${TMPDIR}/${SID}___${dateAndModel}" >> "${TMP_FILE}"
     done
 
+    # Update the model code in the current A-Deck, if necessary
+    if [ "${M_IN}" != "${M_OUT}" ]; then
+        echo "MSG: Updating model code:  ${M_IN} --> ${M_OUT}"
+        sed -i 's/'"${M_IN}"'/'"${M_OUT}"'/g' "${TMP_FILE}"
+    fi
+
     # Check if the file needs to be updated, if necessary
     if [ "$FILE_CHK" == "YES" ]; then
         TMP="${TMPDIR}/$(date +%N).a${SID_lower}.dat"
         cat ${TMP_FILE} ${MERGED_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${TMP}
+        cp -p ${TMP} /lfs1/HFIP/hur-aoml/Ghassan.Alaka/SCRATCH/a${SID_lower}.dat
         DIFF=$(diff ${TMP} ${MERGED_FILE})
         if [ "${DIFF}" != "" ]; then
-            printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Moving new deck to target location"
+            #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Moving new deck to target location"
             #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): ${TMP} --> ${MERGED_FILE}"
-            #echo "MSG: Moving new deck to target location"
-            #echo "MSG: ${TMP} --> ${MERGED_FILE}"
+            echo "MSG: Moving new deck to target location"
+            echo "MSG: ${TMP} --> ${MERGED_FILE}"
             LOCK_FILE="${MERGED_FILE}.lock"
             T=0
             while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
-                printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is locked. Sleeping 5 seconds..."
-                #echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
+                #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is locked. Sleeping 5 seconds..."
+                echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
                 sleep 5
                 T=`expr $T + 5`
             done
@@ -211,17 +297,17 @@ printf "$SID_UNIQ\n" | while read SID; do
                 echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
                 exit 100
             fi
-            printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is unlocked. Locking it."
-            #echo "MSG: Output A-Deck is unlocked. Locking it."
+            #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is unlocked. Locking it."
+            echo "MSG: Output A-Deck is unlocked. Locking it."
             lockfile -r-1 -l 180 ${LOCK_FILE}
             mv ${TMP} ${MERGED_FILE}
             if [ ! -f ${MERGED_FILE} ]; then
-                #echo "ERROR: The output a-deck doesn't exist. Something went wrong."
+                echo "ERROR: The output a-deck doesn't exist. Something went wrong."
                 exit 6
             fi
             rm -f ${LOCK_FILE}
-            printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck processing complete. Unlocking it."
-            #echo "MSG: Output A-Deck processing complete. Unlocking it."
+            #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck processing complete. Unlocking it."
+            echo "MSG: Output A-Deck processing complete. Unlocking it."
         else
             rm -f ${TMP}
         fi

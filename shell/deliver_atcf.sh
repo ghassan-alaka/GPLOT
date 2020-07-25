@@ -95,7 +95,7 @@ mkdir -p ${ATMP}
 mkdir -p ${AOUT}
 
 # Create the combined A-Deck for each storm
-${X_CREATE} ${ATMP} ${AIN} "*${EXT1}"
+${X_CREATE} -o ${ATMP} -i ${AIN} -n "*${EXT1}" -m1 "${MODIN}" -m2 "${MODOUT}"
 
 # Update the model code in each A-Deck, if necessary
 if [ "${MODIN}" != "${MODOUT}" ]; then
