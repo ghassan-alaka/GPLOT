@@ -2395,7 +2395,7 @@ if(DO_LT_GUIDE)then
 		plot := gsn_csm_map_ce(wks,mpres1a)
 		dum1 := new(dimsizes(TRKmodels)+1,"graphic")
 		dum2 := new(dimsizes(TRKmodels)+1,"graphic")
-		dum3 := new((/dimsizes(TRKmodels)+1,50/),"graphic")
+		dum3 := new((/dimsizes(TRKmodels)+1,100/),"graphic")
 		TEST := new((/dimsizes(TRKmodels)+1/),"graphic")
 
 
@@ -2618,7 +2618,7 @@ if(DO_ET_GUIDE)then
 		plot	:= gsn_csm_map_ce(wks,mpres1b)
 		dum1	:= new(dimsizes(TRKmodelsI)+1,"graphic")
 		dum2	:= new(dimsizes(TRKmodelsI)+1,"graphic")
-		dum3	:= new((/dimsizes(TRKmodelsI)+1,50/),"graphic")
+		dum3	:= new((/dimsizes(TRKmodelsI)+1,100/),"graphic")
 
 
 		; Info about plot size
@@ -2644,7 +2644,7 @@ if(DO_ET_GUIDE)then
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
-		if(.not.all(ismissing(bTRK(:,vals))))then
+		if(.not.all(ismissing(bTRK(:,vals))) .and. .not.ismissing(vals3(0)))then
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
 			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
 			dum3(dimsizes(TRKmodelsI),vals3) = gsn_add_text(wks,plot,tostring(toint(bHrsI(vals2))),\
@@ -2685,10 +2685,9 @@ if(DO_ET_GUIDE)then
 			if(DO_MARKERS)then
 				dum2(ppp) = gsn_add_polymarker(wks,plot,aTRKI(ppp2,1,vals),aTRKI(ppp2,0,vals),mkres2)
 			end if
-		
-			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)))then
+			if(DO_FHRLABELS .and. .not.ismissing(vals2(0)) .and. .not.ismissing(vals3(0)))then
 				dum3(ppp,vals3) = gsn_add_text(wks,plot,tostring(toint(aTRKI(ppp2,2,vals2))),\
-									    aTRKI(ppp2,1,vals2)+0.3,aTRKI(ppp2,0,vals2)+0.3,txres3)
+							       aTRKI(ppp2,1,vals2)+0.3,aTRKI(ppp2,0,vals2)+0.3,txres3)
 			end if
 			
 			; Add legend info for each model
@@ -3414,7 +3413,7 @@ if(DO_LT_TREND)then
 		plot	:= gsn_csm_map_ce(wks,mpres4a)
 		dum1	:= new(nTrend+1,"graphic")
 		dum2	:= new(nTrend+1,"graphic")
-		dum3	:= new((/nTrend+1,50/),"graphic")
+		dum3	:= new((/nTrend+1,100/),"graphic")
 
 
 		; Info about plot size
