@@ -176,7 +176,7 @@ echo "MSG: Found these cycles --> ${CYCLES[*]}"
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAXCOUNT=20
+MAXCOUNT=30
 
 # Define the batch submission counter.
 N=0
@@ -257,6 +257,9 @@ for TR in ${TIER[@]}; do
             if [ ! -z "$(ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
                 #ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename
                 STORMS+=(`ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+            fi
+            if [ ! -z "$(ls -d ${IDIR}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
+                STORMS+=(`ls -d ${IDIR}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
             fi
         fi
 
@@ -562,7 +565,7 @@ for TR in ${TIER[@]}; do
                                "${ENSID}/${CYCLE_STR}" "${STORM_STR}/${ENSID}" "${ENSID}/${STORM}" "${EXPT}/com/${ENSID}/${CYCLE_STR}" \
                                "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}" "${EXPT}/${ENSID}/com/${CYCLE_STR}" "${EXPT}/${ENSID}/com" \
                                "${ENSID}/com/${CYCLE_STR}/${STORM}" "com/${CYCLE_STR}/${STORM}" "${ENSID}" "${CYCLE_STR}/00L" \
-                               "com/${CYCLE_STR}/00L" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L")
+                               "com/${CYCLE_STR}/00L" "${EXPT}/com/${CYCLE_STR}/00L" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L" )
 
 
                     # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
@@ -623,6 +626,7 @@ for TR in ${TIER[@]}; do
                     # Define the file that contains the status (STATUS_FILE)
                     PLOTTED_FILE="${ODIR_FULL}/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
                     STATUS_FILE="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
+                    LOCK_FILE="${STATUS_FILE}.lock"
 
 
                     # Get the list of plotted files for this case
@@ -631,7 +635,9 @@ for TR in ${TIER[@]}; do
 
 
                     # Get the status for this case
+                    lockfile -r-1 -l 180 "${LOCK_FILE}"
                     CASE_STATUS=`cat "${STATUS_FILE}" 2>/dev/null`
+                    rm -f "${LOCK_FILE}"
 
 
                     # THIS IS NOT NEESSARY FOR THE HAFS WORKFLOW.
@@ -700,11 +706,15 @@ for TR in ${TIER[@]}; do
                         if [ "$BROKEN_LINK" == "YES" ] && [ "$CASE_STATUS" != "complete" ]; then
                             echo "WARNING: No files to process, but broken links were detected."
                             echo "WARNING: Marking status as broken. It should be double-checked."
+                            lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "broken" > ${STATUS_FILE}
+                            rm -f "${LOCK_FILE}"
                         else
                             echo "MSG: All available input files have been processed."
                             echo "MSG: Marking status as complete."
+                            lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "complete" > ${STATUS_FILE}
+                            rm -f "${LOCK_FILE}"
                         fi
                         continue
                     fi
@@ -727,7 +737,9 @@ for TR in ${TIER[@]}; do
                     echo "MSG: The status file --> ${STATUS_FILE}"
                     if [ "$CASE_STATUS" == "force" ]; then
                         echo "MSG: Forcing production. Ignoring status file."
+                        lockfile -r-1 -l 180 "${LOCK_FILE}"
                         echo "start" > ${STATUS_FILE}
+                        rm -f "${LOCK_FILE}"
                     elif [ "$CASE_STATUS" == "complete" ]; then
                         if [ -z "${IFILES[*]}" ]; then
                             echo "MSG: Status suggests this case has been completed."
@@ -736,12 +748,16 @@ for TR in ${TIER[@]}; do
                         else
                             echo "MSG: Status says complete, but unprocessed files were found."
                             echo "MSG: Deleting the status for a restart."
+                            lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "start" > ${STATUS_FILE}
+                            rm -f "${LOCK_FILE}"
                         fi
                     elif [ "$CASE_STATUS" == "working" ]; then
                         echo "MSG: Status suggests this case is being worked on."
                         echo "MSG: Changing the status to 'update request 1'."
+                        lockfile -r-1 -l 180 "${LOCK_FILE}"
                         echo "update request 1" > ${STATUS_FILE}
+                        rm -f "${LOCK_FILE}"
                         continue
                     #elif [ "$CASE_STATUS" == "update request 1" ]; then
                     #    echo "MSG: Status suggests this case needs to be updated."
@@ -751,21 +767,29 @@ for TR in ${TIER[@]}; do
                     elif [ "$CASE_STATUS" == "update request 1" ] || [ "$CASE_STATUS" == "failed" ]; then
                         echo "MSG: Status suggests this case has stalled/failed."
                         echo "MSG: Deleting the status for a restart."
+                        lockfile -r-1 -l 180 "${LOCK_FILE}"
                         echo "start" > ${STATUS_FILE}
+                        rm -f "${LOCK_FILE}"
                     elif [ "$CASE_STATUS" == "incomplete" ]; then
                         echo "MSG: Status suggests that this case is incomplete."
                         echo "MSG: Will try to find new input files."
+                        lockfile -r-1 -l 180 "${LOCK_FILE}"
                         echo "start" > ${STATUS_FILE}
+                        rm -f "${LOCK_FILE}"
                     elif [ "$CASE_STATUS" == "broken" ]; then
                         echo "MSG: Status suggests that this case is broken."
                         echo "MSG: It will require manual resubmission."
                         continue
                     elif [ -z "$CASE_STATUS" ]; then
                         echo "MSG: Status not found. Treating this as a new case."
+                        lockfile -r-1 -l 180 "${LOCK_FILE}"
                         echo "start" > ${STATUS_FILE}
+                        rm -f "${LOCK_FILE}"
                     else
                         echo "MSG: Unknown status (${CASE_STATUS}). Treating this as a new case."
+                        lockfile -r-1 -l 180 "${LOCK_FILE}"
                         echo "start" > ${STATUS_FILE}
+                        rm -f "${LOCK_FILE}"
                     fi
 
 
@@ -778,12 +802,16 @@ for TR in ${TIER[@]}; do
                             echo "MSG: However, ATCF is not old enough to complete."
                             echo "MSG: More files might become available."
                             echo "MSG: Moving on to next case."
+                            lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "incomplete" > ${STATUS_FILE}
+                            rm -f "${LOCK_FILE}"
                         else    
                             echo "MSG: All available files have already been processed."
                             echo "MSG: Marking the status as complete."
                             echo "MSG: Moving on to next case."
+                            lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "complete" > ${STATUS_FILE}
+                            rm -f "${LOCK_FILE}"
                         fi
                         continue
                     fi
