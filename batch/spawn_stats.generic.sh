@@ -328,7 +328,11 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Get the status for this case
         STATUS_FILE="${ODIR_FULL}/status.${SIDLONG}.log"
+        LOCK_FILE="${STATUS_FILE}.lock"
+
+        lockfile -r-1 -l 180 "${LOCK_FILE}"
         CASE_STATUS=`cat ${STATUS_FILE} 2>/dev/null`
+        rm -f "${LOCK_FILE}"
 
 
         # Print some information
@@ -368,7 +372,9 @@ if [ "${DO_STATS}" = "True" ]; then
         # or will move on to the next case.
         if [ "$FORCE" == "True" ]; then
             echo "MSG: Forcing production. Will ignore status."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         elif [ "$CASE_STATUS" == "complete" ]; then
             echo "MSG: Status suggests this case has been completed."
             echo "MSG: Nothing to do here. Moving on to next case."
@@ -378,22 +384,32 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "MSG: Status suggests this case is being worked on."
             echo "MSG: Changing the status to 'update request 1'."
             echo ""
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "update request 1" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
             continue
         elif [ "$CASE_STATUS" == "update request 1" ]; then
             echo "MSG: Status suggests this case has stalled/failed."
             echo "MSG: Deleting the status for a restart."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         elif [ "$CASE_STATUS" == "incomplete" ]; then
             echo "MSG: Status suggests that this case is incomplete."
             echo "MSG: Will try to find new input files."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         elif [ -z "$CASE_STATUS" ]; then
             echo "MSG: Status not found. Treating this as a new case."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         else
             echo "MSG: Unknown status (${CASE_STATUS}). Treating this as a new case."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         fi
 
 

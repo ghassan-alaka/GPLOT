@@ -598,6 +598,7 @@ print("MSG: Found these forecast hours --> "+stringOut(FHR))
 ; 6. Define the status file. This will be updated throughout.
 ;    If running the GPLOT wrappers, this must match.
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
+LOCK_FILE = STATUS_FILE+".lock"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
@@ -759,7 +760,13 @@ do fff = 0,nFiles-1
 	;print("MKDEBUG:  iFiles = "+iFiles)
 	;printVarSummary(iFiles)
 
-	system("echo 'working' > "+STATUS_FILE)
+        ; Update the status file
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	myInd	:= ind(isStrSubset2(iFiles,".f"+sprinti(FMT_HR,FHR(fff))))
     	if(ismissing(myInd))then
 	        myInd   := ind(isStrSubset2(iFiles,"."+sprinti(FMT_HR,FHR(fff))+"."))
@@ -2892,6 +2899,8 @@ end if ; DO_PLOT
 ; IF YOU GOT HERE, THEN THE SCRIPT HAS FINISHED RUNNING WITHOUT
 ; FATAL, DEBILITATING ERRORS. WOW! I DIDN'T THINK ANYONE WOULD
 ; ACTUALLY GET THIS FAR. LET'S REJOICE! Cheers!
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 if(.not.FNL_ATCF)then
 	print("")
 	print("MSG: INCOMPLETE! Graphics were produced, but might be missing info from ATCFs.")
@@ -2908,6 +2917,8 @@ else
 	;print("MSG: This forecast will be double-checked for completeness.")
 	system("echo 'complete' > "+STATUS_FILE)	
 end if  end if
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 
 
