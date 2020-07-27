@@ -5797,7 +5797,7 @@ system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
 system("rm -f "+LOCK_FILE)
-print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+")."
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 if(DO_GUIDANCE)then
 	if(DO_LT_GUIDE)then
