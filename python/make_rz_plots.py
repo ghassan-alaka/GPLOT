@@ -87,6 +87,7 @@ UNPLOTTED_FILE = ODIR.strip()+'UnplottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+
 PLOTTED_FILE = ODIR.strip()+'PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 STATUS_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+ST_LOCK_FILE =  ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
 ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
 
 
@@ -135,7 +136,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
+	os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 	os.system('echo "working" > '+STATUS_FILE)
+        os.system('rm -f '+ST_LOCK_FILE)
 
 	# Get some useful information about the file name
 	FILE_BASE = os.path.basename(FILE)
@@ -1298,4 +1301,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 
 
+os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 os.system('echo "complete" > '+STATUS_FILE)
+os.system('rm -f '+ST_LOCK_FILE)

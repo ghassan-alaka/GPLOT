@@ -334,7 +334,10 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Get the status for this case
         STATUS_FILE="${ODIR_FULL}status.${SIDLONG}.log"
+        LOCK_FILE="${STATUS_FILE}.lock"
+        lockfile -r-1 -l 180 "${LOCK_FILE}"
         CASE_STATUS=`cat ${STATUS_FILE} 2>/dev/null`
+        rm -f "${LOCK_FILE}"
 
 
         # Print some information
@@ -343,7 +346,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
         # If the ATCF is new enough, force production.
-        test=$(find ${ATCF} -mmin -60 2>/dev/null)
+        test=$(find ${ATCF} -mmin -30 2>/dev/null)
         if [[ -n $test ]]; then
             echo "MSG: This ATCF is not old enough. Forcing production."
             FORCE="True"
@@ -353,7 +356,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # If the BDECK is new enough, force production.
         if [ -f ${BDECK} ]; then
             echo "MSG: Found this B-Deck --> $BDECK"
-            test=$(find ${BDECK} -mmin -90 2>/dev/null)
+            test=$(find ${BDECK} -mmin -30 2>/dev/null)
             if [[ -n $test ]]; then
                 echo "MSG: This BDECK is not old enough. Forcing production."
                 FORCE="True"
@@ -374,7 +377,9 @@ if [ "${DO_STATS}" = "True" ]; then
         # or will move on to the next case.
         if [ "$FORCE" == "True" ]; then
             echo "MSG: Forcing production. Will ignore status."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         elif [ "$CASE_STATUS" == "complete" ]; then
             echo "MSG: Status suggests this case has been completed."
             echo "MSG: Nothing to do here. Moving on to next case."
@@ -384,22 +389,32 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "MSG: Status suggests this case is being worked on."
             echo "MSG: Changing the status to 'update request 1'."
             echo ""
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "update request 1" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
             continue
         elif [ "$CASE_STATUS" == "update request 1" ]; then
             echo "MSG: Status suggests this case has stalled/failed."
             echo "MSG: Deleting the status for a restart."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         elif [ "$CASE_STATUS" == "incomplete" ]; then
             echo "MSG: Status suggests that this case is incomplete."
             echo "MSG: Will try to find new input files."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         elif [ -z "$CASE_STATUS" ]; then
             echo "MSG: Status not found. Treating this as a new case."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         else
             echo "MSG: Unknown status (${CASE_STATUS}). Treating this as a new case."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
         fi
 
 
@@ -411,7 +426,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Write the ATCF file name to a text file to be accessed later.
         # Be sure to delete duplicate entries.
-        if [ ! -z "$(cat ${ODIR_FULL}ATCF_FILES.dat)" ]; then
+        if [ ! -z "$(cat ${ODIR_FULL}ATCF_FILES.dat 2>/dev/null)" ]; then
             grep -v "${ATCF_BASE}" ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}TMP.dat
             mv ${ODIR_FULL}TMP.dat ${ODIR_FULL}ATCF_FILES.dat
         fi

@@ -1356,7 +1356,15 @@ print("MSG: Get the latest A-DECK and B-DECK.")
 ;================================================================
 
 print("MSG: Create new A-DECK")
-system("echo 'working' > "+ODIR+"/status."+LONGSID+".log")
+
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 ; Create a new ADECK file that includes the HWRF-B forecast
 ADIR	= ODIR+"atcf/"
@@ -1699,7 +1707,16 @@ tcInit	:= str_squeeze(str_get_field(data(vals),3,","))
 vals	:= ind(tcModel.eq.MCODE .and. tcFHR%6.eq.0 .and. toint(tcInit).le.toint(IDATE))
 if(ismissing(vals(0)))then
 	print("ERROR: No cycles in the A-Deck match "+MCODE+". Can't continue.")
-	system("echo  'failed' > "+ODIR+"/status."+LONGSID+".log")
+
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'failed' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	exit
 end if
 allDates := remove_duplicates(toint(tcInit(vals)))
@@ -2008,7 +2025,17 @@ end if
 if(fileexists(ADIR+BDECK))then
 
 	print("MSG: Reading BDECK file --> "+ADIR+BDECK)
-	system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
+
+	; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").") 
+	system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
+	; Read the b-deck
 	data	:= asciiread(ADIR+BDECK,-1,"string")
 
 	; Get Wind Radii - only keep indices for 34 kts.
@@ -2140,7 +2167,15 @@ if(DO_GUIDANCE)then
 print("")
 print("MSG: *************STEP THREE************")
 print("MSG: Produce guidance graphics.")
-system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
+
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 ; Workstation Resources
 wtype	= "png"
@@ -3307,7 +3342,15 @@ if(DO_TRENDS)then
 print("")
 print("MSG: *************STEP FOUR************")
 print("MSG: Produce trend graphics.")
-system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
+
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 
 ;================================================================
@@ -4484,7 +4527,15 @@ if(DO_VERIFICATION)then
 	print("MSG: Using NHC verification rules, which state that a storm")
 	print("MSG: must be a TC at the initial time and the verification")
 	print("MSG: time (HU,TS,TD,SS,SD).")
-	system("echo 'working' > "+ODIR+"status."+LONGSID+".log")
+	
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 
 	; 1. Set up variables
@@ -5693,7 +5744,15 @@ end if ;DO_VERIFICATION
 print("")
 print("MSG: *************STEP SIX************")
 print("MSG: Check on the graphical production.")
-system("echo 'working' > "+ODIR+"/status."+LONGSID+".log")
+
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 if(DO_GUIDANCE)then
 	if(DO_LT_GUIDE)then
@@ -5769,10 +5828,16 @@ end if  end if  end if
 ; Write final message to status file.
 ;================================================================
 
-if(FNL_ATCF)then	system("echo 'complete' > "+ODIR+"/status."+LONGSID+".log")
-else			system("echo 'incomplete' > "+ODIR+"/status."+LONGSID+".log")
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+if(FNL_ATCF)then	system("echo 'complete' > "+STATUS_FILE)
+else			system("echo 'incomplete' > "+STATUS_FILE)
 end if
-
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 
 ;================================================================
