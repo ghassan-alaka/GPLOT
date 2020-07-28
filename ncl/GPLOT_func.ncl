@@ -771,6 +771,12 @@ begin
 	else if(TYPE.eq.2)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
+                                if(TCLONS(i).lt.min(LONF))then
+					LONF    = (/LONF - 360./)
+				else if(TCLONS(i).gt.max(LONF))then
+					LONF    = (/LONF + 360./)
+                                end if  end if
+                                
 				BDS(3) = TCLONS(i)+15.
 				BDS(2) = TCLONS(i)-15.
 	
@@ -778,6 +784,11 @@ begin
 	else if(TYPE.eq.3)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
+                                if(TCLONS(i).lt.min(LONF))then
+                                        LONF    = (/LONF - 360./)
+                                else if(TCLONS(i).gt.max(LONF))then
+                                        LONF    = (/LONF + 360./)
+                                end if  end if
 				BDS(3) = TCLONS(i)+4.
 				BDS(2) = TCLONS(i)-4.
 
@@ -804,6 +815,11 @@ begin
 	else if(TYPE.eq.5)then	if(ismissing(TCLONS(0)))then	print("ERROR: get_dim_lon: Initial TC longitude not found.")
 								exit
 				end if
+                                if(TCLONS(0).lt.min(LONF))then
+                                        LONF    = (/LONF - 360./)
+                                else if(TCLONS(0).gt.max(LONF))then
+                                        LONF    = (/LONF + 360./)
+                                end if  end if
 				BDS(3) = TCLONS(0)+40.
 				BDS(2) = TCLONS(0)-40.
 	
@@ -811,6 +827,11 @@ begin
 	else if(TYPE.eq.6)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
+                                if(TCLONS(i).lt.min(LONF))then
+                                        LONF    = (/LONF - 360./)
+                                else if(TCLONS(i).gt.max(LONF))then
+                                        LONF    = (/LONF + 360./)
+                                end if  end if
 				BDS(3) = TCLONS(i)+10.
 				BDS(2) = TCLONS(i)-10.
 	
@@ -818,11 +839,18 @@ begin
 	else if(TYPE.eq.7)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
+                                if(TCLONS(i).lt.min(LONF))then
+                                        LONF    = (/LONF - 360./)
+                                else if(TCLONS(i).gt.max(LONF))then
+                                        LONF    = (/LONF + 360./)
+                                end if  end if
 				BDS(3) = TCLONS(i)+20.
 				BDS(2) = TCLONS(i)-20.
 	end if  end if  end if  end if  end if  end if  end if
+	LONF!0   = "lon"
+	LONF&lon = LONF
+	LONF@units = "degrees_east"
 
-	
 	; Create LON if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LON, then adjust
 	; to coordinates that are outside of BDS.
@@ -841,7 +869,7 @@ begin
 		if(.not.isvar("IBDS2"))then   IBDS2 = BDS(2)   end if
 		LON = (/LONF({IBDS3:IBDS2})/)
 	end if
-	
+
 	; Correct LON to be oriented the same as LONF
 	if(LONF(1)-LONF(0).gt.0 .and. LON(1)-LON(0).lt.0)then
 		LON = LON(::-1)
