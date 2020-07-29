@@ -1268,6 +1268,16 @@ print("MSG: Get the latest A-DECK and B-DECK.")
 ; Create a new ADECK, copy latest BDECK
 ;================================================================
 
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
+
 print("MSG: Create new A-DECK")
 
 ; Update the status file.
@@ -1434,6 +1444,16 @@ end if  end if
 ; Produce Interpolated Forecasts
 ;================================================================
 
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
+
 ; Check if the interpolated forecast already exists. If it does,
 ; skip the interpolation here.
 ;TEST := systemfunc("grep "+str_get_dq()+MCODEI")
@@ -1498,6 +1518,17 @@ end if
 ; the common GPLOT path. Then, delete the lock file so other jobs
 ; may proceed.
 ;================================================================
+
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
+
 LOCK_FILE = ODIR_ADECK+ADECK_N+".lock"
 ;do while(fileexists(LOCK_FILE))
 ;	print("MSG: '"+ODIR_ADECK+ADECK_N+"' is locked. Sleeping for 5 seconds...")
@@ -1573,6 +1604,16 @@ system("rm -f "+LOCK_FILE)
 ;================================================================
 ; Read ADECK data.
 ;================================================================
+
+; Update the status file.
+STATUS_FILE = ODIR+"status."+LONGSID+".log"
+LOCK_FILE = STATUS_FILE+".lock"
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+system("echo 'working' > "+STATUS_FILE)
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 print("MSG: Reading A-DECK file --> "+ADIR+ADECK_N)
 data	:= asciiread(ADIR+ADECK_N,-1,"string")
 
@@ -2267,6 +2308,15 @@ mkres3@gsMarkerThicknessF	= 3.0
 ;================================================================
 if(DO_LT_GUIDE)then
 
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	print("MSG: Producing graphics for late model track guidance.")
 	DO_THIS = True
 
@@ -2370,9 +2420,6 @@ if(DO_LT_GUIDE)then
 		plres1@gsLineColor	= "black"
 		vals  := ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
 		vals2 := ind(toint(bHrs)%12.eq.0 .and. bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
-print(vals2)
-print(bTRK(0,:))
-print(bHrs)
 		if(all(ismissing(bTRK(0,:))))then	vals3 := fval2
 							vals3@_FillValue = fval2
 		else					vals3 := vals2(ind(.not.ismissing(bTRK(0,vals2))))
@@ -2495,6 +2542,15 @@ end if ;DO_LT_GUIDE
 ; Produce early track guidance graphics.
 ;================================================================
 if(DO_ET_GUIDE)then
+
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 	print("MSG: Producing graphics for early model track guidance.")
 	DO_THIS = True
@@ -2711,6 +2767,15 @@ end if ;DO_ET_GUIDE
 ;================================================================
 if(DO_LI_GUIDE)then
 
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	print("MSG: Producing graphics for late model intensity guidance.")
 	DO_THIS = True
 
@@ -2904,6 +2969,15 @@ end if ;DO_LI_GUIDE
 ;================================================================
 if(DO_EI_GUIDE)then
 
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	print("MSG: Producing graphics for early model intensity guidance.")
 		
 	; Find the XY plot boundaries
@@ -3094,6 +3168,15 @@ end if ;DO_EI_GUIDE
 ; Produce late pressure guidance graphics
 ;================================================================
 if(DO_LP_GUIDE)then
+
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 	print("MSG: Producing graphics for late model pressure guidance.")
 	DO_THIS = True
@@ -3311,6 +3394,16 @@ print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 ; Produce late track trend graphics.
 ;================================================================
 if(DO_LT_TREND)then
+
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 
 	; Update resources
 	mpres4a = mpres
@@ -3762,6 +3855,15 @@ end if ;DO_LT_TREND
 ; Produce late intensity trend graphics
 ;================================================================
 if(DO_LI_TREND)then
+
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 	; Update resources
 	xyres5a = xyres
@@ -4271,6 +4373,15 @@ if(DO_LP_TREND)then
 	print("MSG: Producing graphic for late pressure trend.")
 	print("WARNING: Under construction.")
 
+        ; Update the status file.
+        STATUS_FILE = ODIR+"status."+LONGSID+".log"
+        LOCK_FILE = STATUS_FILE+".lock"
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	; Find map boundaries. Resize if necessary
 	maxInt	:= max((/max(aPRS2(:,0,:)),max(bINT(1,:))/))
 	minInt	:= min((/min(aPRS2(:,0,:)),min(bINT(1,:))/))
@@ -4680,6 +4791,15 @@ if(DO_VERIFICATION)then
 	;    Besides the model you chose (MCODE), the rest of the models
 	;    can be controlled in the master namelist.
 	if(DO_LT_VER)then
+
+                ; Update the status file.
+                STATUS_FILE = ODIR+"status."+LONGSID+".log"
+                LOCK_FILE = STATUS_FILE+".lock"
+                system("lockfile -r-1 -l 180 "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+                system("echo 'working' > "+STATUS_FILE)
+                system("rm -f "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 		
 		; a. Run the MET-TC program 'tc_pairs'
 		print("MSG: Running TC_PAIRS for late track models.")
@@ -4997,6 +5117,15 @@ if(DO_VERIFICATION)then
 	;     can be controlled in the master namelist.
 	if(DO_LI_VER)then
 
+                ; Update the status file.
+                STATUS_FILE = ODIR+"status."+LONGSID+".log"
+                LOCK_FILE = STATUS_FILE+".lock"
+                system("lockfile -r-1 -l 180 "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+                system("echo 'working' > "+STATUS_FILE)
+                system("rm -f "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for late intensity models.")
 		system("sed -i 's/^model = .*/model = "+liM_exp+"/g' "+TCPconf)
@@ -5233,6 +5362,15 @@ if(DO_VERIFICATION)then
 	;     Besides the model you chose (MCODEI), the rest of the models
 	;     can be controlled in the master namelist.
 	if(DO_ET_VER)then
+
+                ; Update the status file.
+                STATUS_FILE = ODIR+"status."+LONGSID+".log"
+                LOCK_FILE = STATUS_FILE+".lock"
+                system("lockfile -r-1 -l 180 "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+                system("echo 'working' > "+STATUS_FILE)
+                system("rm -f "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 		
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for early track models.")
@@ -5540,6 +5678,15 @@ if(DO_VERIFICATION)then
 	;     Besides the model you chose (MCODEI), the rest of the models
 	;     can be controlled in the master namelist.
 	if(DO_EI_VER)then
+
+                ; Update the status file.
+                STATUS_FILE = ODIR+"status."+LONGSID+".log"
+                LOCK_FILE = STATUS_FILE+".lock"
+                system("lockfile -r-1 -l 180 "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+                system("echo 'working' > "+STATUS_FILE)
+                system("rm -f "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for early intensity models.")
