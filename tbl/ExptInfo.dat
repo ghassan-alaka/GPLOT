@@ -28,7 +28,7 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                                  HB20_v1_retro,                             2020 HWRF-B Retro
                                   GSL_Forecast,                       2020 FV3GFS (RRFS Phys)
                                HAFS_esg_2020rt,   Hurricane Analysis and Forecast System V0.1J ESG
-                             HAFSV0.1B_2020_RT,   Hurricane Analysis and Forecast System V0.1B
+                             HAFSV0.1B_2020_RT,              2020 HAFS-globalnest (HAFSV0.1B)
                          UFS-CAMsuite_Forecast,                      2020 FV3GFS w/ RRFS Phys
                              FV3-RRFS_Forecast,              2020 FV3GFS w/ RRFS Physics (v1)
                                  HB20_Realtime,                         2020 Basin-Scale HWRF
