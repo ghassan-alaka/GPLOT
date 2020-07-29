@@ -2,10 +2,7 @@
 
 # MODULEFILE for HERA (bash)
 
-A="$1"
-if [ -z "${A}" ]; then
-    A=0
-fi
+A=${1:-0}
 
 # Load modules
 module purge
