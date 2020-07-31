@@ -1378,7 +1378,9 @@ test := systemfunc("ls "+ATCF2_DIR+"*"+str_lower(SID)+"*"+ATCF2_TAG+" 2>/dev/nul
 if(.not.ismissing(test(0)))then
 	system(ADECK_EXE+" "+ADIR+" "+ATCF_DIR+"*"+str_lower(SID)+"* >/dev/null 2>&1")
 	system("mv "+ADIR+ADECK+" "+ADIR+ADECK_M)
-	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_M)
+	;system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_M)
+	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+		+"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_M)
 	system("mv "+ADIR+"TMP."+ADECK_M+" "+ADIR+ADECK_M)
 else
 	system("cp "+ATCF_FILE+" "+ADIR+ADECK_M)
@@ -1393,12 +1395,16 @@ if(MORIG.ne.MCODE)then   system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M
 if(fileexists(ADECK_DIR+"/"+ADECK))then
 	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK)
 	system("cp "+ADECK_DIR+"/"+ADECK+" "+ADIR+ADECK)
-	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
+	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
+	system("cat` "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
 else if(fileexists(ADIR+ADECK))then
 	print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK)
 	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK+" > "+ADIR+"TMP."+ADECK)
 	system("mv "+ADIR+"TMP."+ADECK+" > "+ADIR+ADECK)
-	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
+	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
+	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
 else
 	print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+"/"+ADECK)
 	print("WARNING: This is OK, but graphics will be incomplete.")
@@ -1422,12 +1428,16 @@ if(.not.ismissing(SID_OLD))then
 	if(fileexists(ADECK_DIR+"/"+ADECK_OLD))then
 		print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK_OLD)
 		system("cp "+ADECK_DIR+"/"+ADECK_OLD+" "+ADIR+ADECK_OLD)
-		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
+		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
+		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+	                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
 	else if(fileexists(ADIR+ADECK_OLD))then
 		print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK_OLD)
 		system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM_OLD+","+str_get_dq()+" "+ADIR+ADECK_OLD+" > "+ADIR+"TMP."+ADECK_OLD)
 		system("mv "+ADIR+"TMP."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
-		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
+		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
+		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
 	else
 		print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+"/"+ADECK_OLD)
 		print("WARNING: This is OK, but graphics will be incomplete.")
@@ -1436,7 +1446,9 @@ if(.not.ismissing(SID_OLD))then
 	
 	
 	system("sed 's/"+str_upper(BASIN2)+", "+TC_NUM_OLD+",/"+str_upper(BASIN2)+", "+TC_NUM+",/g' "+ADIR+ADECK_N_OLD+" > "+ADIR+"TMP."+ADECK_N_OLD)
-	system("cat "+ADIR+"TMP."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
+	;system("cat "+ADIR+"TMP."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
+	system("cat "+ADIR+"TMP."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
 	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 	system("rm -f "+ADIR+"TMP."+ADECK_N_OLD)
 end if
@@ -1480,7 +1492,9 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 		system("awk '!(/"+MCODEI+"/ && /"+IDATE06+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
 		system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
 	end if
-	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
+	;system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
+	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
 	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 end if
 
@@ -1561,8 +1575,11 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	system(INTERP_EXE+" "+SID2+" doall "+INTERP_NML+" &> "+INTERP_ODIR+"/a"+SID2+".log")
 	
 	if(fileexists(INTERP_FILE))then
-		system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
-		       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
+		;system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
+		;       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
+		system("cat "+ADIR+ADECK_N+" "+INTERP_FILE\
+			+"sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        	        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
 		system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
 		system("sed '/"+MCODEI+"/p' "+INTERP_FILE+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_I)
 	end if
@@ -1620,7 +1637,9 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 		print("ERROR: File is empty before writing --> "+ODIR_ADECK+ADECK_N)
 	end if
 
-	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
+	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
+	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ODIR_ADECK+"TMP."+ADECK_N)
 	if(.not.fileexists(ODIR_ADECK+"TMP."+ADECK_N))then
 		print("ERROR: File does not exist --> "+ODIR_ADECK+"TMP."+ADECK_N)
 	end if
