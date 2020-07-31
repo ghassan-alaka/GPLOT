@@ -9,7 +9,7 @@ fi
 
 # Load modules
 module purge
-module load wgrib/1.8.1.0b
+module load wgrib/2.0.8
 module load intel/2020
 if [ "${A}" -eq 0 ]; then
     module load intelpython3/2020
