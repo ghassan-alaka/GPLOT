@@ -35,7 +35,7 @@ if [ "${A}" -eq 1 ]; then
     fi
     unset __conda_setup
     # <<< conda initialize <<<
-    conda activate GGPLOT
+    conda activate GPLOT
     #conda activate base
     export PYTHONBUFFERED=1
 fi
