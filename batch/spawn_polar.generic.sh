@@ -648,7 +648,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                         if [ -z "${IFILES[*]}" ]; then
                         #if [ -z "$(echo -e "${IFILES[*]}" | tr -d '[:space:]')" ]; then
                         #if [ -z $(echo "${IFILES[*]}" | sed -e 's/^[[:space:]]*//') ]; then
-                            if ! find "${STORM_ATCF[0]}" -mmin +60 >/dev/null ; then
+                            if ! find "${STORM_ATCF[0]}" -mmin +15 >/dev/null ; then
                                 echo "MSG: All available files have already been processed."
                                 echo "MSG: However, ATCF is not old enough to complete."
                                 echo "MSG: More files might become available."

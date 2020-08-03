@@ -518,7 +518,7 @@ for TR in ${TIER[@]}; do
                         FORCE="True"
                     elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
                         for ATCF in ${PREV_ATCF[@]}; do
-                            test=$(find ${ATCF} -mmin -60 2>/dev/null)
+                            test=$(find ${ATCF} -mmin -15 2>/dev/null)
                             if [[ -n $test ]]; then
                                 echo "MSG: This ATCF is not old enough. Forcing production."
                                 FORCE="True"
@@ -797,7 +797,7 @@ for TR in ${TIER[@]}; do
                     # Then, skip to the next and mark status=complete
                     if [ -z "${IFILES[*]}" ]; then
                     #if [ -z $(echo "${IFILES[*]}" | sed -e 's/^[[:space:]]*//') ]; then
-                        if [ "$ATCF_REQD" == "True" ] && ! find "$STORM_ATCF" -mmin +60 >/dev/null ; then
+                        if [ "$ATCF_REQD" == "True" ] && ! find "$STORM_ATCF" -mmin +15 >/dev/null ; then
                             echo "MSG: All available files have already been processed."
                             echo "MSG: However, ATCF is not old enough to complete."
                             echo "MSG: More files might become available."
