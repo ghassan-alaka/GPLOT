@@ -155,12 +155,12 @@ fi
 
 # Define other important variables
 BATCHFILE1="${BATCH_DIR}/batch_maps.generic.sh"
-BATCHFILE2="${WORKhwrf}/hrdgraphics/batch_maps.${EXPT}.sh"
+#BATCHFILE2="${WORKhwrf}/hrdgraphics/batch_maps.${EXPT}.sh"
 
 # Some housekeeping
 #mkdir -p ${LOG_DIR}
-cp ${BATCHFILE1} ${BATCHFILE2}
-chmod +x ${BATCHFILE2}
+#cp ${BATCHFILE1} ${BATCHFILE2}
+#chmod +x ${BATCHFILE2}
 
 
 # Find output files from which graphics should be created
@@ -555,7 +555,6 @@ for TR in ${TIER[@]}; do
                         echo "MSG: Current Ensemble ID --> $ENSID"
                     fi
 
-
                     # Create a list of IDIR subdirectory options
                     IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}" "${EXPT}/com/${CYCLE_STR}" "${EXPT}/com" \
                                "${EXPT}" "${CYCLE_STR}/${STORM}" "${CYCLE_STR}" "${STORM}" "${EXPT}/${CYCLE_STR}/${STORM}" \
@@ -836,6 +835,12 @@ for TR in ${TIER[@]}; do
                     echo "MSG: Using this file of unplotted lead times --> ${FHR_FILE}"
 
 
+                    # Create a temporary script to submit this child job.
+                    BATCHFILE2="${WORKhwrf}/hrdgraphics/batch_maps.${EXPT}.`date +"%N"`.sh"
+                    cp ${BATCHFILE1} ${BATCHFILE2}
+                    chmod +x ${BATCHFILE2}
+
+
                     # Choose a proper wallclock time for this job based on the number of files.
                     if [ "${#IFILES[@]}" -le "15" ]; then
                         RUNTIME="00:29:59"
@@ -937,6 +942,9 @@ for TR in ${TIER[@]}; do
                             fi
                             sbatch ${BATCHFILE2}
                         fi
+
+                        # Remove the temporary batch file
+                        rm -rf ${BATCHFILE2}
 
 
                         # Increase the batch job counter and check if we're over the limit.
