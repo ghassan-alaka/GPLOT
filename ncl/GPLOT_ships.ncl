@@ -1470,7 +1470,7 @@ do fff = 0,nFiles-1
 								V@long_name = "RH"
 								TITLE	= "500-300 hPa Relative Humidity (200-800km)"
 			end if  end if  end if
-			V@_FillVallue = -999.
+			V@_FillValue = -999.
 				
 			; 2) Set up the cartesian coordinates
 			X	:= tofloat(ispan(-800,800,10))
@@ -1484,21 +1484,25 @@ do fff = 0,nFiles-1
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
+
+			; 5) Since this is RH, set any values outside of (0,100) to a missing value.
+			V1      = where(V1.gt.100. .or. V1.lt.0., V1@_FillValue, V1)
+
+			; 6) Average all non-missing values of V1
 			V1	:= avg(V1)
 			copy_VarAtts(V,V1)
-			if(V1.gt.100.)then   V1 = V@_FillValue   end if
 
-			; 5) Append new entry
+			; 7) Append new entry
 			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
-			; 6) Write data block to .DAT file
+			; 8) Write data block to .DAT file
 			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
-			; 7) Update the title
+			; 9) Update the title
 			TITLE = TITLE+" ["+V1@units+"]"	
 			
 		else if(any((/"R000"/).eq.FNAME(ppp)))then				
