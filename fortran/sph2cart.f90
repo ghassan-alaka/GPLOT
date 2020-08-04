@@ -46,7 +46,7 @@
  REAL		:: iDiff(ISZ), jDiff(JSZ), jjj, iii
  REAL		:: DI, DJ, DX, DY
  REAL		:: LONr(ISZ), LATr(JSZ), ICENr(KSZ), JCENr(KSZ)
- REAL		:: aaa, bbb, ccc, ddd, eee
+ REAL		:: aaa, bbb, ccc, ddd, eee, fff
  
  
 ! Setup
@@ -158,13 +158,15 @@
 			ELSE
 				eee = MINVAL((/V_SPH(x1,y1,k), V_SPH(x1,y2,k), &
 					       V_SPH(x2,y1,k), V_SPH(x2,y2,k)/))
+                                fff = MAXVAL((/V_SPH(x1,y1,k), V_SPH(x1,y2,k), &
+                                               V_SPH(x2,y1,k), V_SPH(x2,y2,k)/))
 			ENDIF
 			!WRITE (*,*) aaa, bbb, ccc, ddd, eee
 			!WRITE (*,*) x1, x2, y1, y2
 		
 		
 			! INTERPOLATE to the (X,Y) point of interest.
-			IF ( eee /= FVAL ) THEN
+			IF ( eee /= FVAL .and. fff /= FVAL ) THEN
 				V_CART(i,j,k)	= bbb*(ddd*V_SPH(x2,y2,k) + ccc*V_SPH(x2,y1,k)) &
 						+ aaa*(ddd*V_SPH(x1,y2,k) + ccc*V_SPH(x1,y1,k))
 			ENDIF
