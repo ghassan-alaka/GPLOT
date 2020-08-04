@@ -1587,7 +1587,7 @@ print("Made it!")
 								V@long_name = "RH"
 								TITLE	= "500-300 hPa Relative Humidity (200-800km)"
 			end if  end if  end if
-			V@_FillVallue = -999.
+			V@_FillValue = -999.
 				
 			; 2) Set up the cartesian coordinates
 			X	:= tofloat(ispan(-800,800,10))
@@ -1597,13 +1597,17 @@ print("Made it!")
 			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
 			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
 				
-			; 4) Average U & V in a 200-800km annulus (see SHIPS)
+			; 4) Only retain V1 values within a 200-800km annulus of the TC center (see SHIPS)
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
+
+			; 5) Since this is RH, set any values outside of (0,100) to a missing value.
+			V1	= where(V1.gt.100. .or. V1.lt.0., V1@_FillValue, V1)
+
+			; 6) Average all non-missing values of V1
 			V1	:= avg(V1)
 			copy_VarAtts(V,V1)
-			if(V1.gt.100.)then   V1 = V@_FillValue   end if
 
 			; 5) Append new entry
 			data	:= new((/1,2/),"float")
