@@ -1376,12 +1376,13 @@ system("mkdir -p "+ADIR)
 ; If other ATCFS not found, copy the original ATCF file to a new ATCF
 test := systemfunc("ls "+ATCF2_DIR+"*"+str_lower(SID)+"*"+ATCF2_TAG+" 2>/dev/null")
 if(.not.ismissing(test(0)))then
+	TMP := systemfunc("date +%N")
 	system(ADECK_EXE+" "+ADIR+" "+ATCF_DIR+"*"+str_lower(SID)+"* >/dev/null 2>&1")
 	system("mv "+ADIR+ADECK+" "+ADIR+ADECK_M)
 	;system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_M)
 	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-		+"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_M)
-	system("mv "+ADIR+"TMP."+ADECK_M+" "+ADIR+ADECK_M)
+		+"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_M)
+	system("mv "+ADIR+"/"+TMP+"."+ADECK_M+" "+ADIR+ADECK_M)
 else
 	system("cp "+ATCF_FILE+" "+ADIR+ADECK_M)
 end if
@@ -1396,12 +1397,13 @@ if(fileexists(ADECK_DIR+"/"+ADECK))then
 	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK)
 	system("cp "+ADECK_DIR+"/"+ADECK+" "+ADIR+ADECK)
 	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
-	system("cat` "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
                 +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
 else if(fileexists(ADIR+ADECK))then
 	print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK)
-	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK+" > "+ADIR+"TMP."+ADECK)
-	system("mv "+ADIR+"TMP."+ADECK+" > "+ADIR+ADECK)
+	TMP := systemfunc("date +%N")
+	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK+" > "+ADIR+"/"+TMP+"."+ADECK)
+	system("mv "+ADIR+"/"+TMP+"."+ADECK+" "+ADIR+ADECK)
 	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
                 +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
@@ -1433,8 +1435,9 @@ if(.not.ismissing(SID_OLD))then
 	                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
 	else if(fileexists(ADIR+ADECK_OLD))then
 		print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK_OLD)
-		system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM_OLD+","+str_get_dq()+" "+ADIR+ADECK_OLD+" > "+ADIR+"TMP."+ADECK_OLD)
-		system("mv "+ADIR+"TMP."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
+		TMP := systemfunc("date +%N")
+		system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM_OLD+","+str_get_dq()+" "+ADIR+ADECK_OLD+" > "+ADIR+"/"+TMP+"."+ADECK_OLD)
+		system("mv "+ADIR+"/"+TMP+"."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
 		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
 		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
                         +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
@@ -1444,13 +1447,14 @@ if(.not.ismissing(SID_OLD))then
 		system("cp "+ADIR+ADECK_M_OLD+" "+ADIR+ADECK_N_OLD)
 	end if  end if
 	
-	
-	system("sed 's/"+str_upper(BASIN2)+", "+TC_NUM_OLD+",/"+str_upper(BASIN2)+", "+TC_NUM+",/g' "+ADIR+ADECK_N_OLD+" > "+ADIR+"TMP."+ADECK_N_OLD)
-	;system("cat "+ADIR+"TMP."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
-	system("cat "+ADIR+"TMP."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
-	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
-	system("rm -f "+ADIR+"TMP."+ADECK_N_OLD)
+
+	TMP := systemfunc("date +%N")
+	system("sed 's/"+str_upper(BASIN2)+", "+TC_NUM_OLD+",/"+str_upper(BASIN2)+", "+TC_NUM+",/g' "+ADIR+ADECK_N_OLD+" > "+ADIR+"/"+TMP+"."+ADECK_N_OLD)
+	;system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"/"+TMP+"."+ADECK_N)
+	system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+	system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
+	system("rm -f "+ADIR+"/"+TMP+"."+ADECK_N_OLD)
 end if
 
 
@@ -1484,18 +1488,19 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 		LOCK_TEST := systemfunc("find "+LOCK_FILE+" -mmin +5 2>/dev/null")
 		if(.not.ismissing(LOCK_TEST))then   system("rm -f "+LOCK_FILE)   end if
 	end do
-	
+
+	TMP := systemfunc("date +%N")
 	system("grep '^"+str_upper(BASIN2)+", "+TC_NUM+",' "+ODIR_ADECK+ADECK_N+" > "+ADIR+ADECK_T)
-	system("awk '!(/"+MCODE+"/ && /"+IDATE+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
-	system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
+	system("awk '!(/"+MCODE+"/ && /"+IDATE+"/)' "+ADIR+ADECK_T+" > "+ADIR+"/"+TMP+"."+ADECK_T)
+	system("mv "+ADIR+"/"+TMP+"."+ADECK_T+" "+ADIR+ADECK_T)
 	if(MCODEI.ne."MISSING")then
-		system("awk '!(/"+MCODEI+"/ && /"+IDATE06+"/)' "+ADIR+ADECK_T+" > "+ADIR+"TMP."+ADECK_T)
-		system("mv "+ADIR+"TMP."+ADECK_T+" "+ADIR+ADECK_T)
+		system("awk '!(/"+MCODEI+"/ && /"+IDATE06+"/)' "+ADIR+ADECK_T+" > "+ADIR+"/"+TMP+"."+ADECK_T)
+		system("mv "+ADIR+"/"+TMP+"."+ADECK_T+" "+ADIR+ADECK_T)
 	end if
 	;system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
 	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
-	system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+	system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
 end if
 
 ;print("MSG: '"+ODIR_ADECK+ADECK_N+"' has been unlocked ("+LOCK_FILE+").")
@@ -1508,9 +1513,10 @@ end if
 ;systemfunc("awk '$3 <= "
 
 ; Remove any blank lines from ADECK_N
+TMP := systemfunc("date +%N")
 ;system("sed -i '/^$/d' "+ADIR+ADECK_N)
-system("awk -F',' 'NF > 7 {print}' "+ADIR+ADECK_N+" > "+ADIR+"TMP."+ADECK_N)
-system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+system("awk -F',' 'NF > 7 {print}' "+ADIR+ADECK_N+" > "+ADIR+"/"+TMP+"."+ADECK_N)
+system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
 ;exit
 
 
@@ -1575,12 +1581,13 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	system(INTERP_EXE+" "+SID2+" doall "+INTERP_NML+" &> "+INTERP_ODIR+"/a"+SID2+".log")
 	
 	if(fileexists(INTERP_FILE))then
+		TMP := systemfunc("date +%N")
 		;system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
 		;       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
-		system("cat "+ADIR+ADECK_N+" "+INTERP_FILE\
+		system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+" | " \
 			+"sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        	        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
-		system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
+        	        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+		system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
 		system("sed '/"+MCODEI+"/p' "+INTERP_FILE+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_I)
 	end if
 
@@ -1637,27 +1644,23 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 		print("ERROR: File is empty before writing --> "+ODIR_ADECK+ADECK_N)
 	end if
 
-	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"TMP."+ADECK_N)
+	TMP := systemfunc("date +%N")
+	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ODIR_ADECK+"TMP."+ADECK_N)
-	if(.not.fileexists(ODIR_ADECK+"TMP."+ADECK_N))then
-		print("ERROR: File does not exist --> "+ODIR_ADECK+"TMP."+ADECK_N)
+                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
+	if(.not.fileexists(ODIR_ADECK+"/"+TMP+"."+ADECK_N))then
+		print("ERROR: File does not exist --> "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 	end if
 	
-	SIZE_TEST := systemfunc("find "+ODIR_ADECK+"TMP."+ADECK_N+" -size 0 2>/dev/null")
+	SIZE_TEST := systemfunc("find "+ODIR_ADECK+"/"+TMP+"."+ADECK_N+" -size 0 2>/dev/null")
 	if(ismissing(SIZE_TEST))then
-	;system("rm -f "+ODIR_ADECK+ADECK_N)
-	;system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ODIR_ADECK+"TMP."+ADECK_N+" > "+ODIR_ADECK+ADECK_N)
-	;system("rm -f "+ODIR_ADECK+"TMP."+ADECK_N)
-	;system("sed -i '/^$/d' "+ODIR_ADECK+ADECK_N)
-		print("MSG: File is not empty --> "+ODIR_ADECK+"TMP."+ADECK_N)
-		system("awk -F',' 'NF > 7 {print}' "+ODIR_ADECK+"TMP."+ADECK_N+" | grep '^"+str_upper(BASIN2)+", "+TC_NUM+",' > "+ODIR_ADECK+ADECK_N)
+		print("MSG: File is not empty --> "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
+		system("awk -F',' 'NF > 7 {print}' "+ODIR_ADECK+"/"+TMP+"."+ADECK_N+" | grep '^"+str_upper(BASIN2)+", "+TC_NUM+",' > "+ODIR_ADECK+ADECK_N)
 	else
-		print("ERROR: File is empty --> "+ODIR_ADECK+"TMP."+ADECK_N)
+		print("ERROR: File is empty --> "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 		print("ERROR: File is empty --> "+ADIR+ADECK_N)
 	end if
-	system("rm -f "+ODIR_ADECK+"TMP."+ADECK_N)
-	;system("mv "+ODIR_ADECK+"TMP."+ADECK_N+" "+ODIR_ADECK+ADECK_N)
+	system("rm -f "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 else
 	system("cp "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N)
 end if
@@ -2696,7 +2699,7 @@ if(DO_ET_GUIDE)then
 		txres3@txFontColor        = "black"
 		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
-		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
+		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
 		if(.not.all(ismissing(bTRK(:,vals))) .and. .not.ismissing(vals3(0)))then
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
