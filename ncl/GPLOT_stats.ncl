@@ -2656,7 +2656,7 @@ if(DO_ET_GUIDE)then
 		txres3@txFontColor        = "black"
 		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
-		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
+		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		if(ismissing(vals2(0)) .or. all(ismissing(bTRK(0,:))))then
 			vals3   := fval2
 			vals3@_FillValue = fval2
