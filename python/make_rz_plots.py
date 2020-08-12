@@ -87,6 +87,7 @@ UNPLOTTED_FILE = ODIR.strip()+'UnplottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+
 PLOTTED_FILE = ODIR.strip()+'PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 STATUS_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+ST_LOCK_FILE =  ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
 ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
 
 
@@ -135,7 +136,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
+	os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 	os.system('echo "working" > '+STATUS_FILE)
+	os.system('rm -f '+ST_LOCK_FILE)
 
 	# Get some useful information about the file name
 	FILE_BASE = os.path.basename(FILE)
@@ -169,6 +172,14 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
+
+	if ( centerlat > 50.0):
+		# Write the input file to a log to mark that it has ben processed
+		PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+		os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+		os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
+		os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+		break
 
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
@@ -1320,4 +1331,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 
 
+os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 os.system('echo "complete" > '+STATUS_FILE)
+os.system('rm -f '+ST_LOCK_FILE)

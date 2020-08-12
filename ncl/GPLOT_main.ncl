@@ -106,9 +106,12 @@ begin
 			else
 				LONF	:= (/f->$dNames(ddd)$/)
 				flipFlag = False
-			end if
-			end if
-			end if
+			end if  end if  end if
+                        if(Bds(2).lt.min(LONF))then
+				LONF = LONF - 360.
+                        else if(Bds(3).gt.max(LONF))then
+				LONF = LONF + 360.
+			end if  end if
 			LONF!0 = "lon"
 			LONF&lon = LONF
 			LONF@units = "degrees_east"

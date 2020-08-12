@@ -2,15 +2,19 @@
 
 # MODULEFILE for HERA (bash)
 
+A=${1:-0}
+
 # Load modules
 module purge
 module load intel/18.0.5.274
 module load wgrib/1.8.1.0b
 module load wgrib2/2.0.8
-module use -a /contrib/anaconda/modulefiles
-module load anaconda/latest
-module use -a /contrib/met/modulefiles
-module load met/9.0_anacondal
+if [ "${A}" -eq 0 ]; then
+    module use -a /contrib/anaconda/modulefiles
+    module load anaconda/latest
+    module use -a /contrib/met/modulefiles
+    module load met/9.0_anacondal
+fi
 module load ncl/6.5.0
 module load grads/2.2.1
 
@@ -20,7 +24,22 @@ export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 # Model Evaluation Tools (MET)
 
 # Python 3 Anaconda
-#export python=/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python
-alias python="/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/python"
-export PATH=/scratch2/NAGAPE/aoml-hafs1/Andrew.Hazelton/anaconda3/bin/:$PATH
-export PYTHONBUFFERED=1
+if [ "${A}" -eq 1 ]; then
+    PYDIR="/scratch2/NAGAPE/aoml-hafs1/Levi.Cowan/anaconda3"
+    # >>> conda initialize >>>
+    # !! Contents within this block are managed by 'conda init' !!
+    __conda_setup="$('${PYDIR}/conda' 'shell.bash' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+    else
+        if [ -f "${PYDIR}/etc/profile.d/conda.sh" ]; then
+            . "${PYDIR}/etc/profile.d/conda.sh" &>/dev/null
+        else
+            export PATH="${PYDIR}/bin:$PATH"
+        fi
+    fi
+    unset __conda_setup
+    # <<< conda initialize <<<
+    conda activate GPLOT
+    export PYTHONBUFFERED=1
+fi

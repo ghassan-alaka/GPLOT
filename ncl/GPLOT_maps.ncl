@@ -688,6 +688,7 @@ print("MSG: Found these forecast hours --> "+stringOut(FHR))
 ; 5. Define the status file. This will be updated throughout.
 ;    If running the GPLOT wrappers, this must match.
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
+LOCK_FILE = STATUS_FILE+".lock"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
@@ -903,7 +904,11 @@ do fff = 0,nFiles-1
         ; 1. START WORKING ON THE NEXT INPUT FILE
         ;    Tell the STATUS file that we're still working...
         ;================================================================
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
         system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
         
         
         ;================================================================
@@ -3170,6 +3175,8 @@ end if ; DO_PLOT
 ;================================================================
 ;================================================================
 
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 if(ATCF_REQD .and. .not.ALL_ATCF)then
         print("")
         print("MSG: INCOMPLETE! Graphics were produced, but might be missing info from ATCFs.")
@@ -3191,6 +3198,8 @@ else
         ;print("MSG: This forecast will be double-checked for completeness.")
         system("echo 'complete' > "+STATUS_FILE)        
 end if  end if  end if
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 
 

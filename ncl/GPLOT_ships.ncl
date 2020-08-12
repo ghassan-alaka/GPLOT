@@ -598,6 +598,7 @@ print("MSG: Found these forecast hours --> "+stringOut(FHR))
 ; 6. Define the status file. This will be updated throughout.
 ;    If running the GPLOT wrappers, this must match.
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
+LOCK_FILE = STATUS_FILE+".lock"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
@@ -759,7 +760,13 @@ do fff = 0,nFiles-1
 	;print("MKDEBUG:  iFiles = "+iFiles)
 	;printVarSummary(iFiles)
 
-	system("echo 'working' > "+STATUS_FILE)
+        ; Update the status file
+        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+        system("echo 'working' > "+STATUS_FILE)
+        system("rm -f "+LOCK_FILE)
+        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 	myInd	:= ind(isStrSubset2(iFiles,".f"+sprinti(FMT_HR,FHR(fff))))
     	if(ismissing(myInd))then
 	        myInd   := ind(isStrSubset2(iFiles,"."+sprinti(FMT_HR,FHR(fff))+"."))
@@ -1463,7 +1470,7 @@ do fff = 0,nFiles-1
 								V@long_name = "RH"
 								TITLE	= "500-300 hPa Relative Humidity (200-800km)"
 			end if  end if  end if
-			V@_FillVallue = -999.
+			V@_FillValue = -999.
 				
 			; 2) Set up the cartesian coordinates
 			X	:= tofloat(ispan(-800,800,10))
@@ -1477,21 +1484,25 @@ do fff = 0,nFiles-1
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
+
+			; 5) Since this is RH, set any values outside of (0,100) to a missing value.
+			V1      = where(V1.gt.100. .or. V1.lt.0., V1@_FillValue, V1)
+
+			; 6) Average all non-missing values of V1
 			V1	:= avg(V1)
 			copy_VarAtts(V,V1)
-			if(V1.gt.100.)then   V1 = V@_FillValue   end if
 
-			; 5) Append new entry
+			; 7) Append new entry
 			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
-			; 6) Write data block to .DAT file
+			; 8) Write data block to .DAT file
 			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
-			; 7) Update the title
+			; 9) Update the title
 			TITLE = TITLE+" ["+V1@units+"]"	
 			
 		else if(any((/"R000"/).eq.FNAME(ppp)))then				
@@ -2892,6 +2903,8 @@ end if ; DO_PLOT
 ; IF YOU GOT HERE, THEN THE SCRIPT HAS FINISHED RUNNING WITHOUT
 ; FATAL, DEBILITATING ERRORS. WOW! I DIDN'T THINK ANYONE WOULD
 ; ACTUALLY GET THIS FAR. LET'S REJOICE! Cheers!
+system("lockfile -r-1 -l 180 "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 if(.not.FNL_ATCF)then
 	print("")
 	print("MSG: INCOMPLETE! Graphics were produced, but might be missing info from ATCFs.")
@@ -2908,6 +2921,8 @@ else
 	;print("MSG: This forecast will be double-checked for completeness.")
 	system("echo 'complete' > "+STATUS_FILE)	
 end if  end if
+system("rm -f "+LOCK_FILE)
+print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 
 
