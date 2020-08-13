@@ -817,8 +817,14 @@ do fff = 0,nFiles-1
 				DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
 				if(ismissing(DAT_SZ(0)))then	FHRDONE = False
 								break
-				else if(DAT_SZ.eq.0)then	FHRDONE = False
-								break
+                                else if(DAT_SZ.eq.0)then        print("WARNING: One of the data files is unexpectedly empty --> "+DAT_FILE)
+                                                                print("WARNING: Will remove this empty file and will also remove the list of plotted files to force reproduction.")
+                                                                PLOTTED_FILES = ODIR+"PlottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
+                                                                print("WARNING: Plotted Files list --> "+PLOTTED_FILES)
+                                                                FHRDONE = False
+                                                                system("rm -f "+DAT_FILE)
+                                                                system("rm -f "+PLOTTED_FILES)
+                                                                break
 				end if  end if
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
@@ -836,6 +842,7 @@ do fff = 0,nFiles-1
 			continue
 		end if
 	end if
+	print("MSG: Yes, looks like at least one graphic type requires more processing for this lead time.")
 	
 
 	;================================================================
