@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# MODULEFILE for ORION (bash)
+
+A=${1:-0}
+
+# Load modules
+module purge
+module load wgrib/2.0.8
+module load intel/2020
+if [ "${A}" -eq 0 ]; then
+    module load intelpython3/2020
+    module load contrib met/9.0
+fi
+module load ncl/6.6.2
+module load grads/2.2.1
+
+# NCL
+export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+
+# Python 3 Anaconda
+if [ "${A}" -eq 1 ]; then
+    PYDIR="/work/noaa/aoml-hafs1/lcowan/anaconda3"
+    # >>> conda initialize >>>
+    # !! Contents within this block are managed by 'conda init' !!
+    __conda_setup="$('${PYDIR}/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+    else
+        if [ -f "${PYDIR}/etc/profile.d/conda.sh" ]; then
+            . "${PYDIR}/etc/profile.d/conda.sh" &>/dev/null
+        else
+            export PATH="${PYDIR}/bin:$PATH"
+        fi
+    fi
+    unset __conda_setup
+    # <<< conda initialize <<<
+    conda activate GPLOT
+    #conda activate base
+    export PYTHONBUFFERED=1
+fi
