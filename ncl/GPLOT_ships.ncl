@@ -2256,7 +2256,9 @@ do fff = 0,nFiles-1
 			if(any(V4.lt.0))then	V4(ind(V4.lt.0)) = 360.+V4(ind(V4.lt.0))   end if
 			V4@units = "degrees"
 			V4@long_name = "Wind Direction"
-			;end do
+
+			; 4F) Delete the large arrays to release memory
+			delete([/U1,V1/])
 				
 			; 8) Write data to a .DAT file.
 			data	:= new((/dimsizes(LEVC),4/),"float")
