@@ -1064,7 +1064,7 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	
 	; Check that1 vald ATCF is found. If not, exit.
 	if(dimsizes(val).gt.1)then
-		print("ERROR: Found more than 1 matching ATCF file found in "+ODIR+"ATCF_FILES.dat")
+		print("WARNING: Expected 1 matching ATCF file, but found "+dimsizes(val)+". I will only read the first ATCF.")
 		exit
 	end if
 	if(ismissing(val(0)))then
@@ -1073,7 +1073,7 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	end if
 	
 	; If the code gets here, we're good to go!
-	ATCF_FILE := ATCF_FILE(val)
+	ATCF_FILE := ATCF_FILE(val(0))
 else
 	;Add functionality to automatically search for ATCFs as a back up?
 	print("MSG: Could not find list of ATCF files. Searching based on namelist.")
