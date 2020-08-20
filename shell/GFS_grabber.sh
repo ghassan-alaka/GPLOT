@@ -115,8 +115,6 @@ if [ "$DSOURCE" == "PUB" ]; then
     echo "MSG: Searching for data in the public data directory."
 
     ALL_FILES=( `find ${IDIR1}/ -regextype sed -regex ".*[0-9]\{13\}"` )
-echo ${IDIR1}
-echo ${ALL_FILES[*]}
 
     for FILE in ${ALL_FILES[@]}; do
 
@@ -144,13 +142,13 @@ echo ${ALL_FILES[*]}
         OFILE="gfs.t${HH}z.pgrb2.0p25.f${FHR}.grb2"
 	if [ ! -f ${ODIR_NOW}/${OFILE} ]; then
             echo "MSG: Linking GFS file --> ${ODIR_NOW}/${OFILE}"
-	    ln -sf ${IDIR1}/${FILE} ${ODIR_NOW}/${OFILE}
+	    ln -sf ${FILE} ${ODIR_NOW}/${OFILE}
 	else
 	    echo "MSG: GFS file already linked --> ${ODIR_NOW}/${OFILE}"
 	fi
 
         # Check if the FHR=000 file exists. If not, link it.
-        OFILE="gfs.t${HH}z.pgrb2.0p25.f0000.grb2"
+        OFILE="gfs.t${HH}z.pgrb2.0p25.f000.grb2"
         FILE0="${YY}${JJJ}${HH}000000"
         if [ ! -f ${ODIR_NOW}/${OFILE} ] && [ -d ${IDIR2} ]; then
             echo "MSG: Linking GFS file --> ${ODIR_NOW}/${OFILE}"
