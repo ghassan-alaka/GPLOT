@@ -170,6 +170,7 @@ else
 fi
 
 # Define other important variables
+NCLFILE="GPLOT_maps.ncl"
 BATCHFILE1="batch_maps.generic.sh"
 #BATCHFILE2="batch_maps.${EXPT}.sh"
 
