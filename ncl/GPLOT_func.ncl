@@ -406,8 +406,8 @@ begin
 
 	; 1. Read the ATCF data
 	fileChk		= systemfunc("ls "+atcfFile+" 2>/dev/null")
-	if(ismissing(fileChk(0)))then	print("ERROR: atcfRead: ATCF file not found.")
-					print("ERROR: atcfRead: "+atcfFile)
+	if(ismissing(fileChk(0)))then	print("ERROR: adeckRead: ATCF file not found.")
+					print("ERROR: adeckRead: "+atcfFile)
 	end if
 	DATA		:= asciiread(atcfFile,-1,"string")
 
@@ -423,7 +423,7 @@ begin
 	end if
 	N		= dimsizes(vals)
 	BLOCK		= new((/4,N/),"float")
-	if(ismissing(vals(0)))then	print("ERROR: atcfRead: No valid entries found.")
+	if(ismissing(vals(0)))then	print("ERROR: adeckRead: No valid entries found.")
 					return(BLOCK)
 	end if
 	
@@ -469,8 +469,8 @@ end
 ; atcfRead
 
 undef("atcfRead")
-function atcfRead (atcfFile[1]:string)
-local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, iii, NEQ, windInt
+function atcfRead (atcfFile[1]:string,CYCLE[1]:string,MID[1]:string)
+local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, iii, NEQ, windInt, vals
 begin
 
 	; 1. Read the ATCF data
@@ -480,7 +480,6 @@ begin
 	end if
 	DATA		:= asciiread(atcfFile,-1,"string")
 
-
 	; 2. Find NEQ entry to determine where the Wind Radii data are stored
     iii = 0
     windInt = -999
@@ -489,18 +488,33 @@ begin
         if(any(NEQ.eq."NEQ"))then   windInt := toint(iii-1)   end if
         iii = iii+1
     end do
+
+   
         
-    
-        
-    ; 2. Get Wind Radii - only keep indices for 34 kts.
+    ; 2. Get Wind Radii - only keep indices for 34/0 kt.
 	windRad		:= toint(str_squeeze(str_get_field(DATA,windInt,",")))
-	vals		= ind(windRad.eq.34)
+	TEST_A = where(windRad.eq.34 .or. windRad.eq.0,True,False)
+
+	; 3) Filter by models, if applicable
+	if(MID.eq."")then	TEST_B = TEST_A
+				TEST_B = True
+	else			MODELS = str_squeeze(str_get_field(DATA,windInt-7,","))
+				TEST_B = where(MODELS.eq.MID,True,False)
+	end if
+
+	; 4) Filter by forecast cycle, if applicable
+	if(CYCLE.eq."")then	TEST_C = TEST_A
+				TEST_C = True
+	else			CYCLES = str_squeeze(str_get_field(DATA,windInt-9,","))
+				TEST_C = where(CYCLES.eq.CYCLE,True,False)
+	end if
+
+	vals	= ind(TEST_A .and. TEST_B .and. TEST_C)
 	N		= dimsizes(vals)
 	BLOCK		= new((/4,100/),"float")
 	if(ismissing(vals(0)))then	print("ERROR: atcfRead: No valid entries found.")
 					exit
 	end if
-
 
 	; 3. Parse out relevant data
 	; Get Latitude
