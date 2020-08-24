@@ -687,14 +687,14 @@ if [ "${DO_POLAR}" = "True" ]; then
                         if [ -z "$JOB_TEST" ]; then
                             LOG_DIR="$ODIR_FULL"
                             LOGFILE="GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
-                            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            #perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
-                            #perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=32G/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
+                            #perl -pi -e "s/^#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
+                            #perl -pi -e "s/^#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
+                            #perl -pi -e "s/^#SBATCH --mem=.*/#SBATCH --mem=32G/g" ${BATCH_DIR}${BATCHFILE2}
+                            perl -pi -e "s/^#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^PYTHONDIR=.*/PYTHONDIR=\"${PYTHON_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^PYTHONFILE=.*/PYTHONFILE=\"${PYTHONFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
                             perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
