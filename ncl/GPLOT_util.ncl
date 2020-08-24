@@ -2589,10 +2589,18 @@ undef("getModelInfo")
 function getModelInfo (MODELS[*]:string, infoType[1]:string)
 begin
 
-	masterInfo    = asciiread(GPLOT+"/tbl/ModelInfo.dat",-1,"string")
+	; Get the GPLOT Directory fro the environment.
+        GPLOT_DIR = systemfunc("echo $GPLOT_DIR")
+        if(ismissing(GPLOT_DIR))then	print("ERROR: getModelInfo: GPLOT directory not found.")
+        end if
+
+	; Read the model information table file.
+	print("MSG: getModelInfo: Reading model information from: "+GPLOT_DIR+"/tbl/ModelInfo.dat")
+	masterInfo    = asciiread(GPLOT_DIR+"/tbl/ModelInfo.dat",-1,"string")
 	masterModel   = str_get_cols(masterInfo,0,3)
 	masterType    = (/"model","long_name","marker","color","title"/)
 
+	; Check that the information type is supported.
 	if(.not.any(masterType.eq.infoType))then
 		print("ERROR: getModelInfo: infoType '"+infoType+"' not recognized.")
 		exit
@@ -2600,8 +2608,9 @@ begin
 		typeind =str_match_ind(masterType,infoType)+1 ;str_get_field starts at 1
 	end if
 
-	if(isatt(infoType,"IS_MSTORM"))then      IS_MSTORM = infoType@IS_MSTORM
-	else                                    IS_MSTORM = True
+	; Is this a multi-storm run? (currently not used)
+	if(isatt(infoType,"IS_MSTORM"))then	IS_MSTORM = infoType@IS_MSTORM
+	else                                    IS_MSTORM = False
 	end if
 
 	N = dimsizes(MODELS)
@@ -2610,31 +2619,22 @@ begin
 	do aaa = 0,N-1
 	
                 ; Auto-correct a few non-4-letter model identifiers
-                if(IS_MSTORM .and. isStrSubset(MODELS(aaa),"HWRF17"))then
-                        MODEL = "HB17"
-                else if(IS_MSTORM .and. isStrSubset(MODELS(aaa),"HWRF16"))then
-                        MODEL = "HB16"
-                else if(isStrSubset(MODELS(aaa),"fvGFS"))then
-                        MODEL = "FGFS"
-                else if(isStrSubset(MODELS(aaa),"GFS"))then
-                        MODEL = "GFSO"
-                else
-                        MODEL = MODELS(aaa)
-                end if  end if  end if  end if
+                if(isStrSubset(MODELS(aaa),"GFS"))then	MODEL = "GFSO"
+                else		                        MODEL = MODELS(aaa)
+                end if
 
                 ; Check if this particular MODEL is supported
                 if(.not.any(masterModel.eq.MODEL))then
                         print("WARNING: getModelInfo: MODEL '"+MODEL+"' not recognized. Assigning missing value.")
 		else
-		modelind=str_match_ind(masterModel,MODEL)
+			modelind=str_match_ind(masterModel,MODEL)
+print("MODEL="+MODEL+";  modelind="+modelind)
 			if (vartype.eq."string") then
-			MODELINFO(aaa)=str_squeeze(str_get_field(masterInfo(modelind),typeind,","))
+				MODELINFO(aaa)=str_squeeze(str_get_field(masterInfo(modelind),typeind,","))
 			else if (vartype.eq."integer") then
-			;print(str_get_field(masterInfo(modelind),typeind,", "))
-			MODELINFO(aaa)=toint(str_squeeze(str_get_field(masterInfo(modelind),typeind,",")))
-			end if
-			end if
-
+				;print(str_get_field(masterInfo(modelind),typeind,", "))
+				MODELINFO(aaa)=toint(str_squeeze(str_get_field(masterInfo(modelind),typeind,",")))
+			end if  end if
                 end if
 
 	end do
