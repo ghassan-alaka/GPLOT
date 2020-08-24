@@ -1103,7 +1103,7 @@ utc_base@units = tunits
 utc	= utc_base+6
 utc@units = tunits
 IDATE06 := tostring(toint(cd_calendar(utc,3)))
-system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+;system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
 
 
 ; Hours for XY Graphics (e.g., intensity, pressure)
@@ -1283,52 +1283,8 @@ end if
 ; Create color arrays for models
 ;================================================================
 
-TRKcolors   = getModelInfo(TRKmodels,"color")
-TRKmarkers  = getModelInfo(TRKmodels,"marker")
-TRKlongname = getModelInfo(TRKmodels,"long_name")
-
-INTcolors   = getModelInfo(INTmodels,"color")
-INTmarkers  = getModelInfo(INTmodels,"marker")
-INTlongname = getModelInfo(INTmodels,"long_name")
-
-TRKcolorsI  = getModelInfo(TRKmodelsI,"color")
-TRKmarkersI = getModelInfo(TRKmodelsI,"marker")
-TRKlongnameI    = getModelInfo(TRKmodelsI,"long_name")
-
-INTcolorsI  = getModelInfo(INTmodelsI,"color")
-INTmarkersI = getModelInfo(INTmodelsI,"marker")
-INTlongnameI    = getModelInfo(INTmodelsI,"long_name")
-
-PRScolors   = getModelInfo(PRSmodels,"color")
-PRSmarkers  = getModelInfo(PRSmodels,"marker")
-PRSlongname = getModelInfo(PRSmodels,"long_name")
-
-ETcolors    = getModelInfo(etModels,"color")
-ETmarkers   = getModelInfo(etModels,"marker")
-ETlongname  = getModelInfo(etModels,"long_name")
-
-EIcolors    = getModelInfo(eiModels,"color")
-EImarkers   = getModelInfo(eiModels,"marker")
-EIlongname  = getModelInfo(eiModels,"long_name")
-
-LTcolors    = getModelInfo(ltModels,"color")
-LTmarkers   = getModelInfo(ltModels,"marker")
-LTlongname  = getModelInfo(ltModels,"long_name")
-
-LIcolors    = getModelInfo(liModels,"color")
-LImarkers   = getModelInfo(liModels,"marker")
-LIlongname  = getModelInfo(liModels,"long_name")
-
-
-; Get a blue-faded color map
-;cmap   := read_colormap_file("WhiteBlue")
-;TRDcolors  = cmap(70:250:30,:)
-cmap    := read_colormap_file("NCV_blue_red")
-cmap    := cmap(:120:-1,:)  ; keep blues only
-TRDcolors   = cmap(2:92:18,:)
-TRDmarkers  = (/8,7,6,0,4,16/)
-TRKlongnameT    = getModelInfo(TRKmodelsT,"long_name")
-INTlongnameT    = getModelInfo(INTmodelsT,"long_name")
+;TRKlongnameT    = getModelInfo(TRKmodelsT,"long_name")
+;INTlongnameT    = getModelInfo(INTmodelsT,"long_name")
 
 
 ; Get a rainbow color map (support up to 100 forecasts)
@@ -1816,6 +1772,7 @@ end if
 
 ; EARLY TRACK GUIDANCE	
 if(DO_ET_GUIDE)then
+	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
 	print("MSG: Retrieving these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI))
 	aTRKI	= new((/dimsizes(TRKmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(TRKmodelsI)-1
@@ -1916,6 +1873,7 @@ end if
 
 ; EARLY INTENSITY GUIDANCE
 if(DO_EI_GUIDE)then
+	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
 	print("MSG: Retrieving these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI))
 	aINTI	= new((/dimsizes(INTmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(INTmodelsI)-1
@@ -2394,6 +2352,11 @@ if(DO_LT_GUIDE)then
 		DO_THIS = False
 		DO_LT_GUIDE = False
 	end if
+
+	; Get model information
+	TRKcolors   = getModelInfo(TRKmodels,"color")
+	TRKmarkers  = getModelInfo(TRKmodels,"marker")
+	TRKlongname = getModelInfo(TRKmodels,"long_name")
 	
 
 	; Enter here if everything looks good for graphical production.
@@ -2608,11 +2571,6 @@ if(DO_ET_GUIDE)then
         aTRKI_1 := where(aTRKI(:,2,:).le.tofloat(MAX_FHR),aTRKI(:,1,:),aTRKI@_FillValue)
         maxLon = max((/max(aTRKI_1),max(bTRK(1,vals))/))
         minLon = min((/min(aTRKI_1),min(bTRK(1,vals))/))
-	;maxLat	= max((/max(aTRKI(:,0,:)),max(bTRK(0,:))/))
-	;minLat	= min((/min(aTRKI(:,0,:)),min(bTRK(0,:))/))
-	;rngLat	= abs(maxLat-minLat)
-	;maxLon	= max((/max(aTRKI(:,1,:)),max(bTRK(1,:))/))
-	;minLon	= min((/min(aTRKI(:,1,:)),min(bTRK(1,:))/))
 	rngLon	= abs(maxLon-minLon)
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
@@ -2622,6 +2580,11 @@ if(DO_ET_GUIDE)then
 	
 
 	if(DO_THIS)then
+
+		; Get model information
+		TRKcolorsI  = getModelInfo(TRKmodelsI,"color")
+		TRKmarkersI = getModelInfo(TRKmodelsI,"marker")
+		TRKlongnameI    = getModelInfo(TRKmodelsI,"long_name")
 
 		; Calculate the lat/lon ratio and correct it to make a nice graphic.
 		llratio	= rngLat/rngLon
@@ -2809,6 +2772,11 @@ if(DO_LI_GUIDE)then
 		DO_THIS = False
 		DO_LI_GUIDE = False
 	end if
+
+	; Get model information
+	INTcolors   = getModelInfo(INTmodels,"color")
+	INTmarkers  = getModelInfo(INTmodels,"marker")
+	INTlongname = getModelInfo(INTmodels,"long_name")
 
 
 	if(DO_THIS)then
@@ -2999,6 +2967,11 @@ if(DO_EI_GUIDE)then
 
 	if(DO_THIS)then
 
+		; Get model information
+		INTcolorsI  = getModelInfo(INTmodelsI,"color")
+		INTmarkersI = getModelInfo(INTmodelsI,"marker")
+		INTlongnameI    = getModelInfo(INTmodelsI,"long_name")
+
 		rngInt	:= abs(maxInt-minInt)
 		if(1.2*rngInt.ge.100.)then
 			IntMjrGrd := ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%20 + 20,\
@@ -3181,6 +3154,11 @@ if(DO_LP_GUIDE)then
 		DO_LP_GUIDE = False
 	end if
 
+	; Get model information
+	PRScolors   = getModelInfo(PRSmodels,"color")
+	PRSmarkers  = getModelInfo(PRSmodels,"marker")
+	PRSlongname = getModelInfo(PRSmodels,"long_name")
+
 
 	if(DO_THIS)then
 
@@ -3297,16 +3275,16 @@ if(DO_LP_GUIDE)then
 				xyres3a@xyMarkLineMode  = "Lines"
 			end if
 	
-			plres2@gsLineColor   = INTcolors(ppp2)
-			txres4@txFontColor   = INTcolors(ppp2)
+			plres2@gsLineColor   = PRScolors(ppp2)
+			txres4@txFontColor   = PRScolors(ppp2)
 		
 			; Overlay the new pressure line
 			overlay(plot,gsn_csm_xy(wks,aPRS(ppp2,1,vals),aPRS(ppp2,0,vals),xyres3a))
 	
 			; Add legend info for each model
 			if(DO_MARKERS)then
-				mkres2@gsMarkerColor = INTcolors(ppp2)
-				mkres2@gsMarkerIndex = INTmarkers(ppp2)
+				mkres2@gsMarkerColor = PRScolors(ppp2)
+				mkres2@gsMarkerIndex = PRSmarkers(ppp2)
 				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),mkres2)
 			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp2%4)*0.25*vpWID),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.04/),\
@@ -3373,6 +3351,12 @@ print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
+; Get model information.
+cmap    := read_colormap_file("NCV_blue_red")
+cmap    := cmap(:120:-1,:)	; keep blues only
+TRDcolors   = cmap(2:92:18,:)	; blue-faded color map
+TRDmarkers  = (/8,7,6,0,4,16/)
 
 
 ;================================================================
@@ -4719,6 +4703,11 @@ if(DO_VERIFICATION)then
 	;    Besides the model you chose (MCODE), the rest of the models
 	;    can be controlled in the master namelist.
 	if(DO_LT_VER)then
+
+		; Get model information
+		LTcolors    = getModelInfo(ltModels,"color")
+		LTmarkers   = getModelInfo(ltModels,"marker")
+		LTlongname  = getModelInfo(ltModels,"long_name")
 		
 		; a. Run the MET-TC program 'tc_pairs'
 		print("MSG: Running TC_PAIRS for late track models.")
@@ -5018,6 +5007,11 @@ if(DO_VERIFICATION)then
 	;     can be controlled in the master namelist.
 	if(DO_LI_VER)then
 
+		; Get model information
+		LIcolors    = getModelInfo(liModels,"color")
+		LImarkers   = getModelInfo(liModels,"marker")
+		LIlongname  = getModelInfo(liModels,"long_name")
+
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for late intensity models.")
 		system("sed -i 's/^model = .*/model = "+liM_exp+"/g' "+TCPconf)
@@ -5242,6 +5236,11 @@ if(DO_VERIFICATION)then
 	;     Besides the model you chose (MCODEI), the rest of the models
 	;     can be controlled in the master namelist.
 	if(DO_ET_VER)then
+
+		; Get model information
+		ETcolors    = getModelInfo(etModels,"color")
+		ETmarkers   = getModelInfo(etModels,"marker")
+		ETlongname  = getModelInfo(etModels,"long_name")
 		
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for early track models.")
@@ -5531,6 +5530,11 @@ if(DO_VERIFICATION)then
 	;     Besides the model you chose (MCODEI), the rest of the models
 	;     can be controlled in the master namelist.
 	if(DO_EI_VER)then
+
+		; Get model information
+		EIcolors    = getModelInfo(eiModels,"color")
+		EImarkers   = getModelInfo(eiModels,"marker")
+		EIlongname  = getModelInfo(eiModels,"long_name")
 
 		; a. Run TC_PAIRS
 		print("MSG: Running TC_PAIRS for early intensity models.")
