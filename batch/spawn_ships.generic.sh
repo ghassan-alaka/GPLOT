@@ -276,7 +276,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
             if [ -z $STORM_ATCF ]; then
                 echo "WARNING: No ATCF found for this storm. This might be OK."
             else
-                ATCF_FHRS=( `awk -F',' '{print $6}' $STORM_ATCF | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                #ATCF_FHRS=( `awk -F',' '{print $6}' $STORM_ATCF | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                ATCF_FHRS=( `awk -F',' '{ printf("%03d\n", $6) }' ${STORM_ATCF} | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
             fi
 
             #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
