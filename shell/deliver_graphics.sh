@@ -61,7 +61,8 @@ if [ "${EXPT}" == "0" ]; then
 fi
 
 # Find all matching input directories beneath IDIR
-ALL_DIRS=`find ${IDIR} -type d -name "${LOC}"`
+echo "find ${IDIR} -type d -name \"${LOC}\""
+ALL_DIRS=`find "${IDIR}"/ -type d -name "${LOC}"`
 
 # Loop over all directories
 for D in ${ALL_DIRS[@]}; do
