@@ -60,6 +60,9 @@ if [ "${EXPT}" == "0" ]; then
     GET_EXPT="YES"
 fi
 
+# Define the rsync executable
+X_RSYNC="/home/Ghassan.Alaka/GPLOT/shell/rsync_no_vanished.sh"
+
 # Find all matching input directories beneath IDIR
 echo "find ${IDIR} -type d -name \"${LOC}\""
 ALL_DIRS=`find "${IDIR}"/ -type d -name "${LOC}"`
@@ -108,7 +111,7 @@ for D in ${ALL_DIRS[@]}; do
     echo "MSG: Delivering graphics to this path --> ${ODIR_FULL}"
 
     # Copy all modified files.
-    rsync -zav --include="*/" --include="*gif" --exclude="*" ${D}/* ${ODIR_FULL}
+    ${X_RSYNC} -zav --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
 
 done
 
