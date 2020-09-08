@@ -13,7 +13,7 @@
                                           H218,                               2018 Oper. HWRF
 hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Basin-Scale HWRF
                                         GEFS01,         Global Ensemble Forecast System (#01)
-                                 HWRF_Forecast,                               2019 Oper. HWRF
+                                 HWRF_Forecast,                                    Oper. HWRF
                                HAFS0.B_Testing,   Hurricane Analysis and Forecast System V0.B
                              HAFSV0.A_Forecast,   Hurricane Analysis and Forecast System V0.A
                              HAFSV0.B_Forecast,   Hurricane Analysis and Forecast System V0.B
@@ -29,4 +29,12 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                                   GSL_Forecast,                       2020 FV3GFS (RRFS Phys)
                                HAFS_esg_2020rt,   Hurricane Analysis and Forecast System V0.1J ESG
                              HAFSV0.1B_2020_RT,   Hurricane Analysis and Forecast System V0.1B
-                         UFS-CAMsuite_Forecast,          Unified Forecast System CAM Suite v1
+                         UFS-CAMsuite_Forecast,                      2020 FV3GFS w/ RRFS Phys
+                             FV3-RRFS_Forecast,              2020 FV3GFS w/ RRFS Physics (v1)
+                                 HB20_Realtime,                         2020 Basin-Scale HWRF
+                                 B220_Realtime,                  2020 Basin-Scale HWRF (PARA)
+                             HAFSV0.1A_2020_RT,   Hurricane Analysis and Forecast System V0.1A
+                           hafsv0p1acpl_202007,   Hurricane Analysis and Forecast System V0.1A
+                                 H220_ensemble,   Hurricane Analysis and Forecast System V0.1E
+                                 HMON_Forecast,                                    Oper. HMON
+
