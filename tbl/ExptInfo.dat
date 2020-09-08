@@ -36,5 +36,7 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                              HAFSV0.1A_2020_RT,   Hurricane Analysis and Forecast System V0.1A
                            hafsv0p1acpl_202007,   Hurricane Analysis and Forecast System V0.1A
                                  H220_ensemble,   Hurricane Analysis and Forecast System V0.1E
+                                 HB20_Realtime,                         2020 Basin-Scale HWRF
+                                 B220_Realtime,                  2020 Basin-Scale HWRF (PARA)
                                  HMON_Forecast,                                    Oper. HMON
 
