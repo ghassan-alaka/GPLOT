@@ -142,19 +142,20 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
 ATCF1_ALL=(`find -L ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2 -n -r | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
+echo "${ATCF1_ALL[*]}"
 ATCF2_ALL=(`find -L ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2 -n -r | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
 for ATCF in ${ATCF2_ALL[@]}; do
     ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
     ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
 done
 ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
+ATCF_ALL=( `printf '%s\n' "${ATCF_ALL[@]}" | awk -F'/' '{print $NF $0}' | sort -t. -k2 -n -r | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 if [ ! -z "$IDATE" ]; then
-    ATCF_ALL=(`echo ${ATCF_ALL[@]} | sed 's/ /\n/g' | grep ${IDATE}`)
+    ATCF_ALL=( `printf '%s\n' "${ATCF_ALL[@]}" | grep ${IDATE}` )
 fi
 if [ ! -z "$SID" ]; then
-    ATCF_ALL=(`echo ${ATCF_ALL[@]} | sed 's/ /\n/g' | grep ${SID,,}`)
+    ATCF_ALL=( `printf '%s\n' "${ATCF_ALL[@]}" | grep ${SID,,}` )
 fi
-
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
@@ -366,9 +367,14 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the current date is more recent than the date for the final lead time (DATE_CUT)
         # do NOT force production.
+        if [ "${FORCE}" != "True" ]; then
         if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
             echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
             FORCE="False"
+        else
+            echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
+            FORCE="Delay"
+        fi
         fi
 
 
@@ -380,6 +386,26 @@ if [ "${DO_STATS}" = "True" ]; then
             lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
             rm -f "${LOCK_FILE}"
+        elif [ "$CASE_STATUS" == "update request 1" ]; then
+            echo "MSG: Status suggests an update is requested."
+            echo "MSG: Changing the status to 'update request 2'."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "update request 2" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+            continue
+        elif [ "$CASE_STATUS" == "update request 2" ]; then
+            echo "MSG: Status suggests a 2nd update is requested."
+            echo "MSG: Will re-initiate production for this case."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "start" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+        elif [ "$FORCE" == "Delay" ]; then
+            echo "MSG: Forcing delayed production."
+            echo "MSG: Changing the status to 'update request 1'."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "update request 1" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+            continue
         elif [ "$CASE_STATUS" == "complete" ]; then
             echo "MSG: Status suggests this case has been completed."
             echo "MSG: Nothing to do here. Moving on to next case."
@@ -393,12 +419,6 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "update request 1" > ${STATUS_FILE}
             rm -f "${LOCK_FILE}"
             continue
-        elif [ "$CASE_STATUS" == "update request 1" ]; then
-            echo "MSG: Status suggests this case has stalled/failed."
-            echo "MSG: Deleting the status for a restart."
-            lockfile -r-1 -l 180 "${LOCK_FILE}"
-            echo "start" > ${STATUS_FILE}
-            rm -f "${LOCK_FILE}"
         elif [ "$CASE_STATUS" == "incomplete" ]; then
             echo "MSG: Status suggests that this case is incomplete."
             echo "MSG: Will try to find new input files."
@@ -489,7 +509,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
             # Limit the number of jobs to now overwhelm the batch scheduler
             if [[ N -ge NMAX ]]; then
-                echo "WARNING: Maximum number of jobs reahed (${NMAX})."
+                echo "WARNING: Maximum number of jobs reached (${NMAX})."
                 break
             fi
         else
