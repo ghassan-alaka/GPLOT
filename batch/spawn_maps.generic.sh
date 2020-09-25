@@ -944,7 +944,7 @@ for TR in ${TIER[@]}; do
                         fi
 
                         # Remove the temporary batch file
-                        rm -rf ${BATCHFILE2}
+                        #rm -rf ${BATCHFILE2}
 
 
                         # Increase the batch job counter and check if we're over the limit.
