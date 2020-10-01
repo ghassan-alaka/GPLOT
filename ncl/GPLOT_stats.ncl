@@ -1063,17 +1063,15 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	val := ind(isStrSubset2(ATCF_FILE,str_lower(SID)))
 	
 	; Check that1 vald ATCF is found. If not, exit.
-	if(dimsizes(val).gt.1)then
-		print("ERROR: Found more than 1 matching ATCF file found in "+ODIR+"ATCF_FILES.dat")
-		exit
-	end if
 	if(ismissing(val(0)))then
 		print("ERROR: Could not find matching ATCF in "+ODIR+"ATCF_FILES.dat")
 		exit
-	end if
+	else if(dimsizes(val).gt.1)then
+		print("WARNING: Expected 1 matching ATCF file, but found "+dimsizes(val)+". I will only read the first ATCF.")
+	end if  end if
 	
 	; If the code gets here, we're good to go!
-	ATCF_FILE := ATCF_FILE(val)
+	ATCF_FILE := ATCF_FILE(val(0))
 else
 	;Add functionality to automatically search for ATCFs as a back up?
 	print("MSG: Could not find list of ATCF files. Searching based on namelist.")
@@ -2656,7 +2654,7 @@ if(DO_ET_GUIDE)then
 		txres3@txFontColor        = "black"
 		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
-		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-6. .and. bHrsI.le.tofloat(MAX_FHR))
+		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		if(ismissing(vals2(0)) .or. all(ismissing(bTRK(0,:))))then
 			vals3   := fval2
 			vals3@_FillValue = fval2

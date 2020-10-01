@@ -1467,12 +1467,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 			norm_wind = colors.BoundaryNorm(levs_wind,256)
 
-			color_data_vt_budget = np.genfromtxt('/home/Andrew.Hazelton/python/colormaps/bluewhitered.txt')
+			color_data_vt_budget = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
 			colormap_vt_budget = matplotlib.colors.ListedColormap(color_data_vt_budget)
 			levs_vt_budget = np.linspace(-10,10,81,endpoint=True)
 			norm_vt_budget = colors.BoundaryNorm(levs_vt_budget,256)
 
-			color_data_vort_budget = np.genfromtxt('/home/Andrew.Hazelton/python/colormaps/bluewhitered.txt')
+			color_data_vort_budget = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
 			colormap_vort_budget = matplotlib.colors.ListedColormap(color_data_vort_budget)
 			levs_vort_budget = np.linspace(-40,40,41,endpoint=True)
 			norm_vort_budget = colors.BoundaryNorm(levs_vort_budget,256)
