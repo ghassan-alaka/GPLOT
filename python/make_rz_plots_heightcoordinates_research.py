@@ -200,7 +200,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 		if (gribfiletest < 1):
 
-			# Create the GrADs control file, if is hasn't already been created.
+			# Create the GrADs control file, if it hasn't already been created.
 			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
 			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
@@ -211,7 +211,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				if LOCK_TEST:
 					os.system('rm -f '+LOCK_FILE)
 
-			if not os.path.exists(CTL_FILE):
+			if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
 				print('MSG: GrADs control file not found. Creating it now.')
 				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
 				command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE

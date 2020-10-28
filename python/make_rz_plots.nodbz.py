@@ -186,16 +186,33 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		gribfiletest = os.system('ls '+FILE)
 
 		if (gribfiletest < 1):
-			# Create the GrADs control file, if is hasn't already been created.
+
+			# Create the GrADs control file, if it hasn't already been created.
 			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
-			if not os.path.exists(CTL_FILE):
+			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
+			while os.path.exists(LOCK_FILE):
+			        print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
+			        time.sleep(5)
+			        LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
+			        if LOCK_TEST:
+			                os.system('rm -f '+LOCK_FILE)
+			
+			if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
+			        print('MSG: GrADs control file not found. Creating it now.')
+			        os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
 			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
 			        os.system(command)
 			        command2 = 'gribmap -i '+CTL_FILE+' -big'
 			        os.system(command2)
+			        os.system('rm -f '+LOCK_FILE)
 			
-			#Open data file
+			while not os.path.exists(IDX_FILE):
+			        print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
+			        time.sleep(5)
+			
+			# Open GrADs data file
+			print('MSG: GrADs control and index files should be available.')
 			ga('open '+CTL_FILE)
 			env = ga.env()
 

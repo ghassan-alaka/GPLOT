@@ -198,20 +198,36 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		gribfiletest = os.system(lscommand)
 
 		if (gribfiletest < 1):
-			#command = '/home/rthr-aoml/GPLOT/grads/g2ctl.pl'+' '+gribfile+' '+gribfile+'.2.idx'+' > '+gribfile+'.ctl'
-			command = GPLOT_DIR+'/grads/g2ctl.pl'+' '+FILE+' '+TMPDIR+FILE_BASE+'.2.idx'+' > '+TMPDIR+FILE_BASE+'.ctl'
-			os.system(command)
-			#command2 = 'gribmap -i '+gribfile+'.ctl'
-			command2 = 'gribmap -i '+TMPDIR+FILE_BASE+'.ctl -big'
-			os.system(command2)
-			
-			#Open data file
-			#datafile = gribfile+'.ctl'
-			datafile = TMPDIR+FILE_BASE+'.ctl'
 
-			#Open data file
-			ga('open '+datafile)
+			# Create the GrADs control file, if it hasn't already been created.
+			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
+			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
+			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
+			while os.path.exists(LOCK_FILE):
+			        print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
+			        time.sleep(5)
+			        LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
+			        if LOCK_TEST:
+			                os.system('rm -f '+LOCK_FILE)
+			
+			if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
+			        print('MSG: GrADs control file not found. Creating it now.')
+			        os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
+			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
+			        os.system(command)
+			        command2 = 'gribmap -i '+CTL_FILE+' -big'
+			        os.system(command2)
+			        os.system('rm -f '+LOCK_FILE)
+			
+			while not os.path.exists(IDX_FILE):
+			        print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
+			        time.sleep(5)
+			
+			# Open GrADs data file
+			print('MSG: GrADs control and index files should be available.')
+			ga('open '+CTL_FILE)
 			env = ga.env()
+			
 
 			#Define how big of a box you want, based on lat distance
 			yoffset = 7
