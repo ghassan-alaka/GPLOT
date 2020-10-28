@@ -1068,13 +1068,10 @@ do fff = 0,nFiles-1
         ;================================================================
         myInd := new((/dimsizes(ITAG)/),"integer")
         do aaa = 0,dimsizes(ITAG)-1
-print(ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff))) .and. isStrSubset2(iFiles,ITAG(0))))
-print(FHR(fff))
-print(iFiles)
 		val := ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff))) .and. isStrSubset2(iFiles,ITAG(0)))
 		
                 if(.not.ONE_FILE .and. .not.ismissing(val(0)))then
-			if(dimsizes(val).gt.0)then   print("WARNING: More than one matching file found. I will only consider the first.")
+			if(dimsizes(val).gt.1)then   print("WARNING: More than one matching file found. I will only consider the first.")
 			end if
 			myInd(aaa) = val(0)
                 else
