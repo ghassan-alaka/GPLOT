@@ -19,6 +19,7 @@
 echo "MSG: Submitting jobs for GPLOT_MAPS."
 
 # Define important GPLOT directories
+echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
 BATCH_DIR="${GPLOT_DIR}/batch/"
 NCL_DIR="${GPLOT_DIR}/ncl/"
@@ -182,15 +183,15 @@ BATCHFILE1="batch_maps.generic.sh"
 # Find output files from which graphics should be created
 if [ -z "$IDATE" ]; then
     echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*[0-9]\{10\}" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    fi
     if [ -z "${CYCLES}" ]; then
         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/ 2>/dev/null | xargs -n 1 basename 2>/dev/null | tr "\n" " " 2>/dev/null` )
-    fi
-    if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
     fi
 else
     CYCLES=( "${IDATE[@]}" )
@@ -969,12 +970,10 @@ for TR in ${TIER[@]}; do
                         sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
                         sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}
 
-                        if [ "$SYS_ENV" == "JET" ]; then
-                            sed -i 's/^SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g' ${BATCHFILE2}
-                            #sed -i 's/^SBATCH --qos=.*/#SBATCH --qos=batch/g' ${BATCHFILE2}
-                        elif [ "$SYS_ENV" == "HERA" ]; then
-                            sed -i 's/^SBATCH --partition=.*/#SBATCH --partition=hera/g' ${BATCHFILE2}
-                            #sed -i 's/^SBATCH --qos=.*/#SBATCH --qos=windfall/g' ${BATCHFILE2}
+                        if [ "${SYS_ENV^^}" == "JET" ]; then
+                            sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g' ${BATCHFILE2}
+                        elif [ "${SYS_ENV^^}" == "HERA" ]; then
+                            sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=hera/g' ${BATCHFILE2}
                         fi
 
 
