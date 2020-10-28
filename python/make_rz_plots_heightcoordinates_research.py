@@ -211,7 +211,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				if LOCK_TEST:
 					os.system('rm -f '+LOCK_FILE)
 
-			if not os.path.exists(CTL_FILE):
+			if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
 				print('MSG: GrADs control file not found. Creating it now.')
 				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
 				command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
