@@ -1646,23 +1646,15 @@ windRad	:= toint(str_squeeze(str_get_field(data,12,",")))
 vals	:= ind(windRad.eq.34 .or. windRad.eq.0)
 
 ; Get Latitude
-tmp	:= tochar(str_squeeze(str_get_field(data(vals),7,",")))
-if(dimsizes(dimsizes(tmp)).eq.1)then
-	tmp := new((/1,dimsizes(tochar(str_squeeze(str_get_field(data(vals),7,","))))/),"character")
-	tmp(0,:) = tochar(str_squeeze(str_get_field(data(vals),7,",")))
-end if
-tcLats	:= tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.;
-
-
+tmp	:= str_squeeze(str_get_field(data(vals),7,","))
+NStag	:= where(isStrSubset2(tmp,"N"),"N","S")
+tcLats	:= where(NStag.eq."N",1.*tofloat(str_sub_str(tmp,"N",""))/10.,-1.*tofloat(str_sub_str(tmp,"S",""))/10.)
 
 ; Get Longitude
-tmp         := tochar(str_squeeze(str_get_field(data(vals),8,",")))
-if(dimsizes(dimsizes(tmp)).eq.1)then
-	tmp := new((/1,dimsizes(tochar(str_squeeze(str_get_field(data(vals),8,","))))/),"character")
-	tmp(0,:) = tochar(str_squeeze(str_get_field(data(vals),8,",")))
-end if
-tcLons	:= -1.*tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.
-;print(tcLats(:100)+"   "+tcLons(:100))
+tmp	:= str_squeeze(str_get_field(data(vals),8,","))
+EWtag	:= where(isStrSubset2(tmp,"W"),"W","E")
+tcLons	:= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
+;print(tcLats+"   "+NStag+"   "+tcLons+"   "+EWtag)
 ;exit
 
 ; Get Forecast Hours
