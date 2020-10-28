@@ -82,7 +82,7 @@ while test $# -gt 0; do
                 TAG="${1}"
             else
                 echo "WARNING: File name tag not specified. Defaulting to '*atcfunix'."
-                TAG="*.atcfunix"
+                TAG=".*/[a-z]\+[0-9]\{2\}[a-z]\.[0-9]\{10\}\.trak\..*\.atcfunix"
             fi
             shift
             ;;
@@ -146,14 +146,17 @@ echo "MSG: Created temporary directory --> ${TMPDIR}"
 rm -rf "${TMPDIR}"/*
 
 # Find all files that match user criteria
-find ${IDIR} -name "${TAG}" >> "${TMPDIR}/.inputFilesList"
-ALL_FILES=`find ${IDIR} -name "${TAG}"`
+#TAG="atcfunix"
+echo "find ${IDIR}/. -type f -regextype sed -regex \"${TAG}\" > \"${TMPDIR}/.inputFilesList\""
+find ${IDIR}/. -type f -regextype sed -regex "${TAG}" > "${TMPDIR}/.inputFilesList"
+ALL_FILES=( `find ${IDIR}/. -type f -regextype sed -regex "${TAG}" -printf "%f\n"` )
 
 # Display some info to user
-echo "MSG: Total files to be processed: ${#ALL_FILES}"
+echo "MSG: Total files to be processed: ${#ALL_FILES[@]}"
 
 # Iterate through each input a-deck file and sort them by storm, date, and model. Example temp file: AL032010___2010052600___HWRF
-printf "%b" "MSG: Processing input files: 0.00% complete -- Load First File"
+#printf "%b" "MSG: Processing input files: 0.00% complete -- Load First File"
+echo "MSG: Processing input files: 0.00% complete -- Load First File"
 count=0
 while read file; do
 
@@ -163,16 +166,16 @@ while read file; do
 
     # Check this is a valid file.
     if [ ! -f "$file" ]; then
-        printf "%b" "\nERROR: Invalid input a-deck file '$file'.\n"
-        printf "%b" "WARNING: Non-fatal file error. Skipping...\n"
+        echo "ERROR: Invalid input a-deck file '$file'."
+        echo "WARNING: Non-fatal file error. Skipping..."
         continue
     fi
 
     # Iterate through each line in the file, removing leading and trailing whitespaces.
     FILE_CHK=0 # Did this file lead to the creation of a temporary file.
     cat "$file" | awk '{ gsub(/^[ \t]+|[ \t]+$/, ""); print }'| awk '(length($0)>0){print}' | while read line; do
-
-    # Get the storm name, forecast date, and model name.
+#echo "$BASHPID"
+        # Get the storm name, forecast date, and model name.
         SID=`echo "$line" | awk -F "," '{print $1,$2,$3}' | tr -d ' ' | cut -c1-8 | tr '[a-z]' '[A-Z]' | grep "^[A-Z]\{2,2\}[0-9]\{6,6\}$"`
         CYCLE=`echo "$line" | awk -F "," '{print $3}' | tr -d ' ' | grep "^[0-9]\{10,10\}$"`
         MODEL=`echo "$line" | awk -F "," '{print $5}' | tr -d ' '`
@@ -180,7 +183,9 @@ while read file; do
 
         # Check that all arguments are valid.
         if [ -z "$SID" ] || [ -z "$CYCLE" ] || [ -z "$MODEL" ]; then
-            printf "\nERROR: Invalid line in input a-deck file '$file'. Please check the file format.\nLine: $line\n"
+            #printf "\nERROR: Invalid line in input a-deck file '$file'. Please check the file format.\nLine: $line\n"
+            echo "ERROR: Invalid line in input a-deck file '$file'. Please check the file format."
+            echo "ERROR: Invalid Line: ${line}"
             rm -rf "${TMPDIR}"
             exit 3
         fi
@@ -201,16 +206,19 @@ while read file; do
         fi
 
         # Search for an existing entry in the temporary file, and quit if found.
-        if [ "${FILE_CHK}" -ne 1 ] && [ ! -z $(awk -F "," -v h="$FHR" '(1.0*h==1.0*$6){print}' "${TMPDIR}/${SID}___${CYCLE}___${MODEL}") ]; then
-            printf "%b" "\nERROR: Duplicate entry found for storm '$SID', forecast date '$CYCLE', model '$MODEL', and forecast hour '$FHR'.\n"
-            exit 100
+        if [ "${FILE_CHK}" -ne 1 ] && [ ! -z "$(awk -F "," -v h="$FHR" '(1.0*h==1.0*$6){print}' "${TMPDIR}/${SID}___${CYCLE}___${MODEL}")" ]; then
+            #printf "%b" "\nERROR: Duplicate entry found for storm '$SID', forecast date '$CYCLE', model '$MODEL', and forecast hour '$FHR'.\n"
+            echo "WARNING: Duplicate entry found for storm '${SID}', forecast date '${CYCLE}', model '${MODEL}', and forecast hour '${FHR}'."
+            continue
         fi
 
         # Ensure we are not attempting to write into a symbolic link temporary file
         # That represents an input ATCF file containing a unique forecast.
         if [ -h "${TMPDIR}/${SID}___${CYCLE}___${MODEL}" ]; then
-            printf "%b" "\nERROR: Tried to write data from input file '$file' into temporary symbolic link file '${TMPDIR}/${SID}___${CYCLE}___${MODEL}' which points to a previously processed input ATCF file. This means that the ATCF forecast data for storm '$SID', forecast date '$CYCLE', and model '$MODEL' are located in more than 1 file. You are on your own here, buddy. I don't handle that and I don't get paid enough. Why would you do that anyway? That is so weird, man.\n"
-            exit 101
+            #printf "%b" "\nERROR: Tried to write data from input file '$file' into temporary symbolic link file '${TMPDIR}/${SID}___${CYCLE}___${MODEL}' which points to a previously processed input ATCF file. This means that the ATCF forecast data for storm '$SID', forecast date '$CYCLE', and model '$MODEL' are located in more than 1 file. You are on your own here, buddy. I don't handle that and I don't get paid enough. Why would you do that anyway? That is so weird, man.\n"
+            echo "$BASHPID"
+            echo "WARNING: The ATCF forecast data for storm '${SID}', forecast date '${CYCLE}', and model '${MODEL}' are located in more than 1 file."
+            continue
         fi
 
         #Write line data to the specified file.
@@ -219,36 +227,46 @@ while read file; do
     done
 
     # Update the progress bar.
-    pct=`echo "$count ${#ALL_FILES}" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
+    pct=`echo "$count ${#ALL_FILES[@]}" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
     f=`basename ${file}`
     f2=`printf "%50s" "$f"`
-    printf "%b" "\rMSG: Processing input files: ${pct}% complete -- ${f2}"
+    #printf "%b" "\rMSG: Processing input files: ${pct}% complete -- ${f2}"
+    echo "MSG: Processing input files: ${pct}% complete -- ${f2}"
 
 done < "${TMPDIR}/.inputFilesList"
 
 # Count the number of intermediary files created.
 NTMP=`ls "$TMPDIR" | wc -l | tr -d ' '`
 if [ "$NTMP" -eq 0 ]; then
-    printf "\nERROR: All lines in the input a-deck files were empty.\n"
+    #printf "\nERROR: All lines in the input a-deck files were empty.\n"
+    echo "ERROR: All lines in the input a-deck files were empty."
     rm -rf "${TMPDIR}"
     exit 4
 else
-    printf "\nMSG: Unique model forecasts found: $NTMP\n"
+    #printf "\nMSG: Unique model forecasts found: $NTMP\n"
+    echo "MSG: Unique model forecasts found: ${NTMP}"
 fi
 
 # Get a count of the final number of output merged a-deck files.
-SID_UNIQ=`ls "${TMPDIR}" | awk -F "___" '{print $1}' | sort -u` #Get the unique storm IDs.
+SID_UNIQ=( `ls "${TMPDIR}" | awk -F "___" '{print $1}' | sort -u` ) #Get the unique storm IDs.
+echo "${SID_UNIQ[*]}"
 NSTORMS=`printf "$SID_UNIQ\n" | wc -l | tr -d ' '`        #The number of merged files.
+echo "$NSTORMS"
+echo "${#SID_UNIQ[@]}"
 
 # Merge all files belonging to the same storm into a single a-deck file.
 # Iterate through every storm.
-printf "%b" "MSG: Merging unique forecasts: 0.00% complete"
+#printf "%b" "MSG: Merging unique forecasts: 0.00% complete"
+echo "MSG: Merging unique forecasts: 0.00% complete"
 count=0
-printf "$SID_UNIQ\n" | while read SID; do
+#printf "$SID_UNIQ\n" | while read SID; do
+for SID in ${SID_UNIQ[@]}; do
+
+    echo "MSG: Processing ${SID}"
 
     #Increment file counter.
     count=`expr "$count" + 1`
-    pct=`echo "$count $NSTORMS" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
+    #pct=`echo "$count ${#SID_UNIQ[@]}" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
 
     #Lowercase the storm ID for use in the merged a-deck file name.
     SID_lower=`echo "$SID" | tr '[A-Z]' '[a-z]'`
@@ -277,53 +295,61 @@ printf "$SID_UNIQ\n" | while read SID; do
     # Check if the file needs to be updated, if necessary
     if [ "$FILE_CHK" == "YES" ]; then
         TMP="${TMPDIR}/$(date +%N).a${SID_lower}.dat"
+
+        LOCK_FILE="${MERGED_FILE}.lock"
+        T=0
+        while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
+            #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is locked. Sleeping 5 seconds..."
+            echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
+            sleep 5
+            T=`expr $T + 5`
+        done
+        if [ $T -ge 120 ]; then
+            echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
+            exit 100
+        fi
+        #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is unlocked. Locking it."
+        echo "MSG: Output A-Deck is unlocked. Locking it."
+        lockfile -r-1 -l 180 ${LOCK_FILE}
+
         cat ${TMP_FILE} ${MERGED_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${TMP}
-        cp -p ${TMP} /lfs1/HFIP/hur-aoml/Ghassan.Alaka/SCRATCH/a${SID_lower}.dat
+        #cp -p ${TMP} /lfs1/HFIP/hur-aoml/Ghassan.Alaka/SCRATCH/a${SID_lower}.dat
+
         DIFF=$(diff ${TMP} ${MERGED_FILE})
         if [ "${DIFF}" != "" ]; then
             #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Moving new deck to target location"
             #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): ${TMP} --> ${MERGED_FILE}"
             echo "MSG: Moving new deck to target location"
             echo "MSG: ${TMP} --> ${MERGED_FILE}"
-            LOCK_FILE="${MERGED_FILE}.lock"
-            T=0
-            while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
-                #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is locked. Sleeping 5 seconds..."
-                echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
-                sleep 5
-                T=`expr $T + 5`
-            done
-            if [ $T -ge 120 ]; then
-                echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
-                exit 100
-            fi
-            #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck is unlocked. Locking it."
-            echo "MSG: Output A-Deck is unlocked. Locking it."
-            lockfile -r-1 -l 180 ${LOCK_FILE}
             mv ${TMP} ${MERGED_FILE}
             if [ ! -f ${MERGED_FILE} ]; then
                 echo "ERROR: The output a-deck doesn't exist. Something went wrong."
                 exit 6
             fi
-            rm -f ${LOCK_FILE}
-            #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck processing complete. Unlocking it."
-            echo "MSG: Output A-Deck processing complete. Unlocking it."
         else
             rm -f ${TMP}
         fi
+
+        # Release the lock.
+        rm -f ${LOCK_FILE}
+        #printf "%b" "\rMSG: Merging unique ATCF files (${pct}% complete): Output A-Deck processing complete. Unlocking it."
+        echo "MSG: Output A-Deck processing complete. Unlocking it."
+
         rm -f ${TMP_FILE}
     else
         mv ${TMP_FILE} ${MERGED_FILE}
     fi
 
     #Update the progress bar.
-    pct=`echo "$count $NSTORMS" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
-    printf "%b" "\rMSG: Merging unique forecasts (${pct}% complete): Finished."
+    pct=`echo "$count ${#SID_UNIQ[@]}" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
+    #printf "%b" "\rMSG: Merging unique forecasts (${pct}% complete): Finished."
+    echo "MSG: Merging unique forecasts (${pct}% complete): Finished."
 
 done
 
 # Delete the temporary directory and exit.
-printf "\nMSG: Created $numStorms merged a-deck ATCF files.\n"
+#printf "\nMSG: Created $numStorms merged a-deck ATCF files.\n"
+echo "MSG: Created $numStorms merged a-deck ATCF files."
 rm -rf "${TMPDIR}"
 
 echo "MSG: create_adeck.sh completed at `date`."

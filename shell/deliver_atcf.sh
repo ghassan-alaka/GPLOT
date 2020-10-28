@@ -46,7 +46,7 @@ BNHC="$8"
 MODI="$9"
 MOD12="${10}"
 FNL_HR="${11}"
-EXT1="${12}"
+NAME_REGEX="${12}"
 
 # Define other variables
 EXT2=".dat"
@@ -86,8 +86,8 @@ else
     echo "MSG: Early forecasts will not be produced."
     DO_INTERP="NO"
 fi
-if [ -z "${EXT1}" ]; then
-    EXT1=".atcfunix"
+if [ -z "${NAME_REGEX}" ]; then
+    NAME_REGEX=".*/[a-z]\+[0-9]\{2\}[a-z]\.[0-9]\{10\}\.trak\..*\.atcfunix"
 fi
 
 # Create directory names
@@ -95,11 +95,12 @@ mkdir -p ${ATMP}
 mkdir -p ${AOUT}
 
 # Create the combined A-Deck for each storm
-${X_CREATE} -o ${ATMP} -i ${AIN} -n "*${EXT1}" -m1 "${MODIN}" -m2 "${MODOUT}"
+echo "MSG: Combining individual ATCF files --> ${X_CREATE} -o ${ATMP} -i ${AIN} -n \"${NAME_REGEX}\" -m1 \"${MODIN}\" -m2 \"${MODOUT}\""
+${X_CREATE} -o ${ATMP} -i ${AIN} -n "${NAME_REGEX}" -m1 "${MODIN}" -m2 "${MODOUT}"
 
 # Update the model code in each A-Deck, if necessary
 if [ "${MODIN}" != "${MODOUT}" ]; then
-    DECKS=( `find ${ATMP}/. -name "*${EXT2}" -printf "%f\n" `  )
+    DECKS=( `find ${ATMP}/. -type f -regextype sed -regex ".*/a[a-z]\{2\}[0-9]\{6\}${EXT2}" -printf "%f\n" `  )
     for D in "${DECKS[@]}"; do
         TMP="$(date +%N).${D}"
         sed 's/'"${MODIN}"'/'"${MODOUT}"'/g' ${ATMP}/${D} > ${ATMP}/${TMP}
@@ -125,41 +126,49 @@ fi
 # Merge the NHC A-Deck
 echo "*********************************************"
 echo "MSG: PART ONE - MERGE THE NHC A_DECK"
-NHC_DECKS=( `find ${ANHC}/. -name "*${YYYY}${EXT2}" -printf "%f\n" ` )
+NHC_DECKS=( `find ${ANHC}/. -mmin -10080 -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 ls -t | xargs -L1 basename` )
 for D in "${NHC_DECKS[@]}"; do
     echo "MSG: Working on this NHC a-deck --> ${D}"
     if [ -f ${AOUT}/${D} ]; then
         TMP="$(date +%N).${D}"
+
+        # Wait for other processes to release the lock, then create a new lock.
+        LOCK_FILE="${AOUT}/${D}.lock"
+        T=0
+        while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
+            echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
+            sleep 5
+            T=`expr $T + 5`
+        done
+        if [ $T -ge 120 ]; then
+            echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
+            exit 100
+        fi
+        echo "MSG: Output A-Deck is unlocked. Locking it."
+        lockfile -r-1 -l 180 ${LOCK_FILE}
+
+        # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
         cat ${AOUT}/${D} ${ANHC}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
             echo "MSG: Moving new deck to target location"
             echo "MSG: ${AOUT}/${TMP} --> ${AOUT}/${D}"
-            LOCK_FILE="${AOUT}/${D}.lock"
-            T=0
-            while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
-                echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
-                sleep 5
-                T=`expr $T + 5`
-            done
-            if [ $T -ge 120 ]; then
-                echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
-                exit 100
-            fi
-            echo "MSG: Output A-Deck is unlocked. Locking it."
-            lockfile -r-1 -l 180 ${LOCK_FILE}
             mv ${AOUT}/${TMP} ${AOUT}/${D}
             if [ ! -f ${AOUT}/${D} ]; then
                 echo "ERROR: The output a-deck doesn't exist. Something went wrong."
                 exit 6
             fi
-            rm -f ${LOCK_FILE}
-            echo "MSG: Output A-Deck processing complete. Unlocking it."
         else
             echo "MSG: No differences, so keeping old deck --> ${AOUT}/${D}"
             echo "MSG: Removing this temporary file --> ${AOUT}/${TMP}"
             rm -f ${AOUT}/${TMP}
         fi
+
+        # Release the lock.
+        rm -f ${LOCK_FILE}
+        echo "MSG: Output A-Deck processing complete. Unlocking it."
+
     else
         echo "MSG: Target file doesn't exist, so copy NHC deck to target location."
         cp -p ${ANHC}/${D} ${AOUT}/${D}
@@ -171,7 +180,8 @@ done
 echo ""
 echo "*********************************************"
 echo "MSG: PART TWO - MERGE THE MODEL A_DECK"
-M_DECKS=( `find ${ATMP}/. -name "*${YYYY}${EXT2}" -printf "%f\n" ` )
+#M_DECKS=( `find ${ATMP}/. -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -printf "%f\n" ` )
+M_DECKS=( `find ${ATMP}/ -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -print0 | xargs -0 ls -t | xargs -L1 basename` )
 for D in "${M_DECKS[@]}"; do
     echo "MSG: Working on this model a-deck --> ${D}"
 
@@ -182,36 +192,45 @@ for D in "${M_DECKS[@]}"; do
     # Merge the model specific A-Deck into the output A-Deck
     if [ -f ${AOUT}/${D} ]; then
         TMP="$(date +%N).${D}"
+
+        # Wait for other processes to release the lock, then create a new lock.
+        LOCK_FILE="${AOUT}/${D}.lock"
+        T=0
+        while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
+            echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
+            sleep 5
+            T=`expr $T + 5`
+        done
+        if [ $T -ge 120 ]; then
+            echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
+            exit 100
+        fi
+        echo "MSG: Output A-Deck is unlocked. Locking it."
+        lockfile -r-1 -l 180 ${LOCK_FILE}
+
+        # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
         cat ${AOUT}/${D} ${ATMP}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
             echo "MSG: Moving new deck to target location"
             echo "MSG: ${AOUT}/${TMP} --> ${AOUT}/${D}"
-            LOCK_FILE="${AOUT}/${D}.lock"
-            T=0
-            while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
-                echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
-                sleep 5
-                T=`expr $T + 5`
-            done
-            if [ $T -ge 120 ]; then
-                echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
-                exit 100
-            fi
-            echo "MSG: Output A-Deck is unlocked. Locking it."
-            lockfile -r-1 -l 180 ${LOCK_FILE}
             mv ${AOUT}/${TMP} ${AOUT}/${D}
             if [ ! -f ${AOUT}/${D} ]; then
                 echo "ERROR: This a-deck should exist, but doesn't. Something went wrong."
                 exit 6
             fi
-            rm -f ${LOCK_FILE}
             echo "MSG: Output A-Deck processing complete. Unlocking it."
         else
             echo "MSG: No differences, so keeping old deck --> ${AOUT}/${D}"
             echo "MSG: Removing this temporary file --> ${AOUT}/${TMP}"
             rm -f ${AOUT}/${TMP}
         fi
+
+        # Release the lock.
+        rm -f ${LOCK_FILE}
+        echo "MSG: Output A-Deck processing complete. Unlocking it."
+
     else
         echo "MSG: Target file doesn't exist, so copy model deck to target location."
         cp -p ${ATMP}/${D} ${AOUT}/${D}
@@ -225,8 +244,11 @@ for D in "${M_DECKS[@]}"; do
         INTERP_FILE="a${SID}.gun"
 
         # Link in A-Deck and B-Deck files
-        ln -sf ${AOUT}/${D} ${INTERP_ADIR}/${D}
+        #ln -sf ${AOUT}/${D} ${INTERP_ADIR}/${D}
         ln -sf ${BNHC}/${B} ${INTERP_ADIR}/${B}
+
+        # Find all cycles in the A-Deck
+        ALL_CYCLES=( `awk -F ',' '{ print $3 }' ${AOUT}/${D} | tr -d ' ' | sort -u` )
 
         # Update the namelist.
         cp -p ${INTERP_DIR}/${INTERP_NML}.template ${INTERP_DIR}/${INTERP_NML}
@@ -234,25 +256,63 @@ for D in "${M_DECKS[@]}"; do
         sed -i 's/BBBB/'"${MOD12}"'/g' ${INTERP_DIR}/${INTERP_NML}
         sed -i 's/CCCC/'"${MODI}"'/g' ${INTERP_DIR}/${INTERP_NML}
         sed -i 's/DDD/006/g' ${INTERP_DIR}/${INTERP_NML}
-        sed -i 's/EEE/'"${FNL_HR}"'/g' ${INTERP_DIR}/${INTERP_NML}
+        #sed -i 's/EEE/'"${FNL_HR}"'/g' ${INTERP_DIR}/${INTERP_NML}
+        sed -i 's/EEE/096/g' ${INTERP_DIR}/${INTERP_NML}
 
         # Update the executable.
         cp -p ${INTERP_DIR}/${INTERP_EXE}.template ${INTERP_DIR}/${INTERP_EXE}
         sed -i 's@AAAA@'"${INTERP_DIR}"'@g' ${INTERP_DIR}/${INTERP_EXE}
         sed -i 's@BBBB@'"${INTERP_ADIR}"'@g' ${INTERP_DIR}/${INTERP_EXE}
 
-        # Run the interpolation software.
-        echo "MSG: Running this command for interpolation: ${INTERP_EXE} ${SID} doall ${INTERP_NML}"
-        ${INTERP_DIR}/${INTERP_EXE} ${SID} doall ${INTERP_NML} &> ${INTERP_ADIR}/a${SID}.log
+        # Loop over all cycles
+        for CYCLE in ${ALL_CYCLES[@]}; do
 
-        # Merge the output into the existing A-Deck
-        if [ -f ${INTERP_ADIR}/${INTERP_FILE} ]; then
+            # Find the cycles for 6-h and 12-h interpolation
+            YYYY=`echo "${CYCLE}" | cut -c1-4`
+            MM=`echo "${CYCLE}" | cut -c5-6`
+            DD=`echo "${CYCLE}" | cut -c7-8`
+            HH=`echo "${CYCLE}" | cut -c9-10`
+            CYCLE2="${YYYY}-${MM}-${DD} ${HH}:00 UTC"
+            CYCLE06="`date -d "${CYCLE2} + 6 hours" +'%Y%m%d%H'`"
+            CYCLE12="`date -d "${CYCLE2} + 12 hours" +'%Y%m%d%H'`"
+
+            # Lock the interpolation A-Deck
             TMP="$(date +%N).${D}"
-            cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
-            DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
-            if [ "${DIFF}" != "" ]; then
-                echo "MSG: Moving new deck to target location"
-                echo "MSG: ${AOUT}/${TMP} --> ${AOUT}/${D}"
+            LOCK_FILE="${INTERP_ADIR}/${D}.lock"
+            T=0
+            while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
+                echo "MSG: Interp. A-Deck is locked. Sleeping 5 seconds..."
+                sleep 5
+                T=`expr $T + 5`
+            done
+            if [ $T -ge 120 ]; then
+                echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
+                exit 100
+            fi
+            echo "MSG: Interp. A-Deck is unlocked. Locking it."
+            lockfile -r-1 -l 180 ${LOCK_FILE}
+
+            # Create an A-Deck with CARQ and the current model forecast.
+            grep "${CYCLE}" ${AOUT}/${D} | grep "${MODOUT}" > ${INTERP_ADIR}/${TMP}
+            grep "CARQ" ${AOUT}/${D} >> ${INTERP_ADIR}/${TMP}
+            sort -t, -k3,3 -k5,5 -k6,6n -k12,12 ${INTERP_ADIR}/${TMP} | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${INTERP_ADIR}/${D}
+            rm -f ${INTERP_ADIR}/${TMP}
+
+            # Run the interpolation software.
+            echo "MSG: Running this command for 6-h interpolation: ${INTERP_EXE} ${SID} ${CYCLE06} ${INTERP_NML}"
+            rm -f ${INTERP_ADIR}/${INTERP_FILE}
+            #${INTERP_DIR}/${INTERP_EXE} ${SID} doall ${INTERP_NML} &> ${INTERP_ADIR}/a${SID}.log
+            ${INTERP_DIR}/${INTERP_EXE} ${SID} ${CYCLE06} ${INTERP_NML} &>> ${INTERP_ADIR}/a${SID}.log
+
+            # Release the lock now that interpolation has completed.    
+            rm -f ${LOCK_FILE}
+            echo "MSG: Interp. A-Deck processing complete. Unlocking it."
+
+            # Merge the output into the existing A-Deck
+            if [ -f ${INTERP_ADIR}/${INTERP_FILE} ]; then
+                TMP="$(date +%N).${D}"
+
+                # Wait for other processes to release the lock, then create a new lock.
                 LOCK_FILE="${AOUT}/${D}.lock"
                 T=0
                 while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
@@ -266,19 +326,82 @@ for D in "${M_DECKS[@]}"; do
                 fi
                 echo "MSG: Output A-Deck is unlocked. Locking it."
                 lockfile -r-1 -l 180 ${LOCK_FILE}
-                mv ${AOUT}/${TMP} ${AOUT}/${D}
-                if [ ! -f ${AOUT}/${D} ]; then
-                    echo "ERROR: This a-deck should exist, but doesn't. Something went wrong."
-                    exit 6
+
+                # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
+                cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+
+                DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
+                if [ "${DIFF}" != "" ]; then
+                    echo "MSG: Moving new deck to target location"
+                    echo "MSG: ${AOUT}/${TMP} --> ${AOUT}/${D}"
+                    mv ${AOUT}/${TMP} ${AOUT}/${D}
+                    if [ ! -f ${AOUT}/${D} ]; then
+                        echo "ERROR: This a-deck should exist, but doesn't. Something went wrong."
+                        exit 6
+                    fi
+                else
+                    echo "MSG: No differences, so keeping old deck --> ${AOUT}/${D}"
+                    echo "MSG: Removing this temporary file --> ${AOUT}/${TMP}"
+                    rm -f ${AOUT}/${TMP}
                 fi
+
+                # Release the lock.
                 rm -f ${LOCK_FILE}
                 echo "MSG: Output A-Deck processing complete. Unlocking it."
-            else
-                echo "MSG: No differences, so keeping old deck --> ${AOUT}/${D}"
-                echo "MSG: Removing this temporary file --> ${AOUT}/${TMP}"
-                rm -f ${AOUT}/${TMP}
+
             fi
-        fi
+    
+            # Run the interpolation software.
+            echo "MSG: Running this command for 12-h interpolation: ${INTERP_EXE} ${SID} ${CYCLE12} ${INTERP_NML}"
+            rm -f ${INTERP_ADIR}/${INTERP_FILE}
+            #${INTERP_DIR}/${INTERP_EXE} ${SID} doall ${INTERP_NML} &> ${INTERP_ADIR}/a${SID}.log
+            ${INTERP_DIR}/${INTERP_EXE} ${SID} ${CYCLE12} ${INTERP_NML} &>> ${INTERP_ADIR}/a${SID}.log
+    
+            # Merge the output into the existing A-Deck
+            if [ -f ${INTERP_ADIR}/${INTERP_FILE} ]; then
+                TMP="$(date +%N).${D}"
+
+                # Wait for other processes to release the lock, then create a new lock.
+                LOCK_FILE="${AOUT}/${D}.lock"
+                T=0
+                while [ -f ${LOCK_FILE} ] && [ "$T" -lt 120 ]; do
+                    echo "MSG: Output A-Deck is locked. Sleeping 5 seconds..."
+                    sleep 5
+                    T=`expr $T + 5`
+                done
+                if [ $T -ge 120 ]; then
+                    echo "ERROR: I've been waiting too long for this file to unlock. Something went wrong."
+                    exit 100
+                fi
+                echo "MSG: Output A-Deck is unlocked. Locking it."
+                lockfile -r-1 -l 180 ${LOCK_FILE}
+
+                # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
+                cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+
+                DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
+                if [ "${DIFF}" != "" ]; then
+                    echo "MSG: Moving new deck to target location"
+                    echo "MSG: ${AOUT}/${TMP} --> ${AOUT}/${D}"
+                    mv ${AOUT}/${TMP} ${AOUT}/${D}
+                    if [ ! -f ${AOUT}/${D} ]; then
+                        echo "ERROR: This a-deck should exist, but doesn't. Something went wrong."
+                        exit 6
+                    fi
+                else
+                    echo "MSG: No differences, so keeping old deck --> ${AOUT}/${D}"
+                    echo "MSG: Removing this temporary file --> ${AOUT}/${TMP}"
+                    rm -f ${AOUT}/${TMP}
+                fi
+
+                # Release the lock.
+                rm -f ${LOCK_FILE}
+                echo "MSG: Output A-Deck processing complete. Unlocking it."
+
+            fi
+
+        done
+
     fi
 
 
@@ -287,9 +410,9 @@ done
 #${X_MERGE} ${MODOUT} ${AOUT} ${EXT2} 1 ${ATMP}/*${YYYY}${EXT2}
 
 # Remove NHC Interpolation subdirectory.
-if [ "${DO_INTERP}" == "YES" ]; then
-    rm -rf ${ATMP}/NHC_interp
-fi
+#if [ "${DO_INTERP}" == "YES" ]; then
+#    rm -rf ${ATMP}/NHC_interp
+#fi
 
 
 echo "MSG: deliver_atcf.sh completed at `date`"
