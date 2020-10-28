@@ -1068,9 +1068,6 @@ do fff = 0,nFiles-1
         ;================================================================
         myInd := new((/dimsizes(ITAG)/),"integer")
         do aaa = 0,dimsizes(ITAG)-1
-print(ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff))) .and. isStrSubset2(iFiles,ITAG(0))))
-print(FHR(fff))
-print(iFiles)
 		val := ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff))) .and. isStrSubset2(iFiles,ITAG(0)))
 		
                 if(.not.ONE_FILE .and. .not.ismissing(val(0)))then
