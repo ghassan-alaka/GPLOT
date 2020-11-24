@@ -878,6 +878,8 @@ do fff = 0,nFiles-1
 			; LATITUDE
 			if(isStrSubset(dNames(ddd),"lat"))then
 				lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats,tcLons,fff,B)
+                                dy := abs(lat(1)-lat(0))
+                                dym := dy*111200.
 				BOCO = lat@BOCO
 			end if
 			
@@ -885,6 +887,8 @@ do fff = 0,nFiles-1
 			; LONGITUDE
 			if(isStrSubset(dNames(ddd),"lon"))then
 				lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons,tcLats,fff,B)
+                                dx := abs(lon(1)-lon(0))
+                                dxm := dx*111200.
 				BOCO = lon@BOCO
 				flipFlag = lon@flipFlag
 				
@@ -1321,6 +1325,9 @@ do fff = 0,nFiles-1
 				; Set up the cartesian coordinates
 				X	:= tofloat(ispan(-1000,1000,10))
 				Y	:= tofloat(ispan(-1000,1000,10))
+
+                                ; Calculate the volume (assume height of 10 m)
+                                VOL = dxm*dym*10.
 				
 				; Convert both U & V to cartesian (X,Y) coordinates
 				V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",default_fillvalue("float"))
@@ -1328,13 +1335,13 @@ do fff = 0,nFiles-1
 				SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
 			
 				if(FNAME(ppp).eq."IKE34")then
-					V1	= where(V1.lt.34.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*25000000.)
+					V1	= where(V1.lt.34.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*1.225*VOL)
 					TITLE	= "Integrated Kinetic Energy (34+ kts)"
 				else if(FNAME(ppp).eq."IKE50")then
-					V1	= where(V1.lt.50.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*25000000.)
+					V1	= where(V1.lt.50.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*1.225*VOL)
 					TITLE	= "Integrated Kinetic Energy (50+ kts)"
 				else if(FNAME(ppp).eq."IKE64")then
-					V1	= where(V1.lt.64.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*25000000.)
+					V1	= where(V1.lt.64.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*1.225*VOL)
 					TITLE	= "Integrated Kinetic Energy (64+ kts)"
 				end if  end if  end if
 				if(all(ismissing(V1)))then	V1 := 0.
