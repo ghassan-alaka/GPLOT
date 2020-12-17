@@ -2617,8 +2617,10 @@ do fff = 0,nFiles-1
 							nDims_PSFC@dNames= dNames_PSFC
 							PSFC    := getVar2d(f,DSOURCE,(/"PSFC","",tostring(ttt)/),nDims_PSFC,BOCO2,mf,flipFlag,lonF)
 							copy_VarMeta(VOv5B,PSFC)
+							; Eliminate MSLP values less than or equal to 0
+							VOv5	= where(VOv5.le.0,fval3,VOv5)
 							; Do not mark H/L above .9 sigma surface
-							VOv5B   = where(PSFC/VOv5.le.0.90,fval3,VOv5B)
+							VOv5B	= where(PSFC/VOv5.le.0.90,fval3,VOv5B)
 				end if
 				if(lat(0).ne.VOv5B&lat(0))then   VOv5B := VOv5B(::--1,:)   end if
 				if(lon(0).ne.VOv5B&lon(0))then   VOv5B := VOv5B(:,::--1)   end if
@@ -3131,10 +3133,17 @@ do fff = 0,nFiles-1
 		IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
 
 		NATCF_NOW = 0
-		if(.not.all(ismissing(tcFHR(0,:))))then
-			vals1 = ind(tcFHR(0,:).eq.FHR(fff))
-			if(.not.ismissing(vals1(0)))then	NATCF_NOW = dimsizes(ind(.not.ismissing(tcLats(:,vals1)) .or. FNL_ATCF(:)))
-			end if
+		if(.not.all(ismissing(ndtooned(tcFHR))))then
+			do sss = 0,NATCF-1
+				vals1 = ind(tcFHR(sss,:).eq.FHR(fff))
+				if(.not.ismissing(vals1(0)))then
+					if(.not.ismissing(tcLats(sss,vals1)))then
+						NATCF_NOW = NATCF_NOW+1
+					end if
+				else if(FNL_ATCF(sss))then
+					NATCF_NOW = NATCF_NOW+1
+				end if  end if
+			end do
 		end if
 			
                 ;if(ATCF_REQD .and. ALL_ATCF)then

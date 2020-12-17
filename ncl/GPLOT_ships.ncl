@@ -817,8 +817,14 @@ do fff = 0,nFiles-1
 				DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
 				if(ismissing(DAT_SZ(0)))then	FHRDONE = False
 								break
-				else if(DAT_SZ.eq.0)then	FHRDONE = False
-								break
+                                else if(DAT_SZ.eq.0)then        print("WARNING: One of the data files is unexpectedly empty --> "+DAT_FILE)
+                                                                print("WARNING: Will remove this empty file and will also remove the list of plotted files to force reproduction.")
+                                                                PLOTTED_FILES = ODIR+"PlottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
+                                                                print("WARNING: Plotted Files list --> "+PLOTTED_FILES)
+                                                                FHRDONE = False
+                                                                system("rm -f "+DAT_FILE)
+                                                                system("rm -f "+PLOTTED_FILES)
+                                                                break
 				end if  end if
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
@@ -836,6 +842,7 @@ do fff = 0,nFiles-1
 			continue
 		end if
 	end if
+	print("MSG: Yes, looks like at least one graphic type requires more processing for this lead time.")
 	
 
 	;================================================================
@@ -871,6 +878,8 @@ do fff = 0,nFiles-1
 			; LATITUDE
 			if(isStrSubset(dNames(ddd),"lat"))then
 				lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats,tcLons,fff,B)
+                                dy := abs(lat(1)-lat(0))
+                                dym := dy*111200.
 				BOCO = lat@BOCO
 			end if
 			
@@ -878,6 +887,8 @@ do fff = 0,nFiles-1
 			; LONGITUDE
 			if(isStrSubset(dNames(ddd),"lon"))then
 				lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons,tcLats,fff,B)
+                                dx := abs(lon(1)-lon(0))
+                                dxm := dx*111200.
 				BOCO = lon@BOCO
 				flipFlag = lon@flipFlag
 				
@@ -1314,6 +1325,9 @@ do fff = 0,nFiles-1
 				; Set up the cartesian coordinates
 				X	:= tofloat(ispan(-1000,1000,10))
 				Y	:= tofloat(ispan(-1000,1000,10))
+
+                                ; Calculate the volume (assume height of 10 m)
+                                VOL = dxm*dym*10.
 				
 				; Convert both U & V to cartesian (X,Y) coordinates
 				V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",default_fillvalue("float"))
@@ -1321,13 +1335,13 @@ do fff = 0,nFiles-1
 				SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
 			
 				if(FNAME(ppp).eq."IKE34")then
-					V1	= where(V1.lt.34.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*25000000.)
+					V1	= where(V1.lt.34.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*1.225*VOL)
 					TITLE	= "Integrated Kinetic Energy (34+ kts)"
 				else if(FNAME(ppp).eq."IKE50")then
-					V1	= where(V1.lt.50.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*25000000.)
+					V1	= where(V1.lt.50.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*1.225*VOL)
 					TITLE	= "Integrated Kinetic Energy (50+ kts)"
 				else if(FNAME(ppp).eq."IKE64")then
-					V1	= where(V1.lt.64.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*25000000.)
+					V1	= where(V1.lt.64.,V1@_FillValue,0.5*(V1/C@ms2kts)*(V1/C@ms2kts)*1.225*VOL)
 					TITLE	= "Integrated Kinetic Energy (64+ kts)"
 				end if  end if  end if
 				if(all(ismissing(V1)))then	V1 := 0.
@@ -2249,7 +2263,9 @@ do fff = 0,nFiles-1
 			if(any(V4.lt.0))then	V4(ind(V4.lt.0)) = 360.+V4(ind(V4.lt.0))   end if
 			V4@units = "degrees"
 			V4@long_name = "Wind Direction"
-			;end do
+
+			; 4F) Delete the large arrays to release memory
+			delete([/U1,V1/])
 				
 			; 8) Write data to a .DAT file.
 			data	:= new((/dimsizes(LEVC),4/),"float")
