@@ -1437,7 +1437,7 @@ print("Made it!")
 				Y	:= tofloat(ispan(-1000,1000,10))
 
 				; Calculate the volume
-				VOL = dxm*dym*10.
+				VOL = 1.225*dxm*dym*10.
 
 				; Convert both U & V to cartesian (X,Y) coordinates
 				V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",default_fillvalue("float"))

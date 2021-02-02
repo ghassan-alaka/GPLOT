@@ -2655,7 +2655,12 @@ if(DO_ET_GUIDE)then
 		plres1@gsLineColor        = "black"
 		vals	:= ind(bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
 		vals2	:= ind(toint(bHrsI)%12.eq.0 .and. bHrsI.ge.-12. .and. bHrsI.le.tofloat(MAX_FHR))
-		vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
+		if(ismissing(vals2(0)) .or. all(ismissing(bTRK(0,:))))then
+			vals3   := fval2
+			vals3@_FillValue = fval2
+		else
+			vals3	:= vals2(ind(.not.ismissing(bTRK(0,vals2))))
+		end if
 		if(.not.all(ismissing(bTRK(:,vals))) .and. .not.ismissing(vals3(0)))then
 			dum1(dimsizes(TRKmodelsI))	= gsn_add_polyline(wks,plot,bTRK(1,vals),bTRK(0,vals),plres1)
 			dum2(dimsizes(TRKmodelsI))	= gsn_add_polymarker(wks,plot,bTRK(1,vals),bTRK(0,vals),mkres1)
