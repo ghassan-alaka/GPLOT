@@ -131,9 +131,9 @@ echo "MSG: Using input directory: ${IDIR}"
 
 # Read the file tag.
 #TAG="$3"
-#if [ -z "${TAG}" ]; then
-#  TAG="*atcfunix"
-#fi
+if [ -z "${TAG}" ]; then
+  TAG=".*/[a-z]\+[0-9]\{2\}[a-z]\.[0-9]\{10\}\.trak\..*\.atcfunix"
+fi
 
 # Create a temporary directory.
 TMPDIR="${OUTDIR}/.create_adeck_tmp_${USER}_${HOSTNAME}_PROC-$$_RAND-$RANDOM"
@@ -148,8 +148,8 @@ rm -rf "${TMPDIR}"/*
 # Find all files that match user criteria
 #TAG="atcfunix"
 echo "find ${IDIR}/. -type f -regextype sed -regex \"${TAG}\" > \"${TMPDIR}/.inputFilesList\""
-find ${IDIR}/. -type f -regextype sed -regex "${TAG}" > "${TMPDIR}/.inputFilesList"
-ALL_FILES=( `find ${IDIR}/. -type f -regextype sed -regex "${TAG}" -printf "%f\n"` )
+find -L ${IDIR}/. -type f -regextype sed -regex "${TAG}" > "${TMPDIR}/.inputFilesList"
+ALL_FILES=( `find -L ${IDIR}/. -type f -regextype sed -regex "${TAG}" -printf "%f\n"` )
 
 # Display some info to user
 echo "MSG: Total files to be processed: ${#ALL_FILES[@]}"
@@ -249,10 +249,10 @@ fi
 
 # Get a count of the final number of output merged a-deck files.
 SID_UNIQ=( `ls "${TMPDIR}" | awk -F "___" '{print $1}' | sort -u` ) #Get the unique storm IDs.
-echo "${SID_UNIQ[*]}"
+#echo "${SID_UNIQ[*]}"
 NSTORMS=`printf "$SID_UNIQ\n" | wc -l | tr -d ' '`        #The number of merged files.
-echo "$NSTORMS"
-echo "${#SID_UNIQ[@]}"
+#echo "$NSTORMS"
+#echo "${#SID_UNIQ[@]}"
 
 # Merge all files belonging to the same storm into a single a-deck file.
 # Iterate through every storm.
@@ -327,6 +327,7 @@ for SID in ${SID_UNIQ[@]}; do
                 exit 6
             fi
         else
+            echo "MSG: Deck has not changed. Not moving anything."
             rm -f ${TMP}
         fi
 
@@ -343,13 +344,13 @@ for SID in ${SID_UNIQ[@]}; do
     #Update the progress bar.
     pct=`echo "$count ${#SID_UNIQ[@]}" | awk '{printf "%3.2f\n",(100.0*$1)/$2}'`
     #printf "%b" "\rMSG: Merging unique forecasts (${pct}% complete): Finished."
-    echo "MSG: Merging unique forecasts (${pct}% complete): Finished."
+    echo "MSG: Finished processing ${SID}."
 
 done
 
 # Delete the temporary directory and exit.
 #printf "\nMSG: Created $numStorms merged a-deck ATCF files.\n"
-echo "MSG: Created $numStorms merged a-deck ATCF files."
+#echo "MSG: Created $numStorms merged a-deck ATCF files."
 rm -rf "${TMPDIR}"
 
 echo "MSG: create_adeck.sh completed at `date`."
