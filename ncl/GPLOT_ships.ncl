@@ -1433,11 +1433,11 @@ print("Made it!")
 			; or Define IKE
 			else if(isStrSubset(FNAME(ppp),"IKE"))then
 				; Set up the cartesian coordinates
-				X	:= tofloat(ispan(-1000,1000,10))
-				Y	:= tofloat(ispan(-1000,1000,10))
+				X	:= tofloat(ispan(-1000,1000,1))
+				Y	:= tofloat(ispan(-1000,1000,1))
 
-				; Calculate the volume
-				VOL = 1.225*dxm*dym*10.
+				; Calculate the volume [m*^3]
+				VOL = 1000.*1000.*1.
 
 				; Convert both U & V to cartesian (X,Y) coordinates
 				V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",default_fillvalue("float"))
