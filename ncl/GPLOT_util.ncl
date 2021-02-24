@@ -904,9 +904,13 @@ begin
 	else if(var.eq."SHFLX")then	levels = fspan(-50.,300.,11)
 					levels@stride = 1
 
+	; For Potential Vorticity
+	else if(var.eq."PV")then	levels = fspan(-5.,5.,41)
+					levels@stride = 4
+
 	end if  end if  end if  end if  end if  end if  end if
 	end if  end if  end if  end if  end if  end if  end if
-	end if  end if  end if  end if
+	end if  end if  end if  end if  end if
 		
 	return(levels)
 
@@ -1612,7 +1616,8 @@ begin
 			    "elant",   "bigd01",\
 			    "d01",     "d02",\
 			    "tkfull",  "ships",\
-                	    "carolina","global"/)
+                	    "carolina","sfla",\
+                            "neamer",  "global"/)
 
 	do bbb = 0,nBds-1
 		if(.not.any(masterBds.eq.nameBds(bbb)))then   continue   end if
@@ -1626,10 +1631,12 @@ begin
 		if(nameBds(bbb).eq."cpac")then		allBds(bbb,:) = (/35.,  0.,-180.,-140./) end if
 		if(nameBds(bbb).eq."gom")then		allBds(bbb,:) = (/35., 10.,-105., -70./) end if
 		if(nameBds(bbb).eq."eus")then		allBds(bbb,:) = (/45., 20., -85., -60./) end if
+		if(nameBds(bbb).eq."neamer")then	allBds(bbb,:) = (/60., 35.,-100., -60./) end if
 		if(nameBds(bbb).eq."bob")then		allBds(bbb,:) = (/40.,  5.,  65., 100./) end if
 		if(nameBds(bbb).eq."nio")then		allBds(bbb,:) = (/30.,  0.,  50., 100./) end if
 		if(nameBds(bbb).eq."bigd01")then	allBds(bbb,:) = (/70.,-40.,-200.,  40./) end if
 		if(nameBds(bbb).eq."carolina")then	allBds(bbb,:) = (/41., 31., -84., -74./) end if
+		if(nameBds(bbb).eq."sfla")then		allBds(bbb,:) = (/32., 22., -87., -77./) end if
 		
 		; Set these to zero, which means take the entire domain given
 		if(nameBds(bbb).eq."hwrf")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
@@ -1672,6 +1679,7 @@ begin
 			    "elant", "bigd01",\
 			    "d01",   "d02",\
 			    "tkfull", "ships",\
+			    "sfla",  "neamer",\
 			    "global"/)
 	if(.not.any(MASTER_DOMAIN.eq.DOMAIN))then
 		print("ERROR: getDmnInfo: DOMAIN '"+DOMAIN+"' not recognized. Assigning defaults.")
@@ -3046,6 +3054,10 @@ begin
 			List_Title	= "Near-Storm Hodograph [kts] (zoom)"
 		else if(short_name.eq."T850_UV850_MSLP")then
 			List_Title	= "850mb Temperature (K; shaded), 850mb Wind (kt; barbs), and MSLP (mb; centers)"
+		else if(short_name.eq."TPRCP_U10_MSLP")then
+			List_Title	= "Total Precip. (inches; shaded), 10m Wind (kt, barbs), MSLP (mb; centers)"
+		else if(short_name.eq."PV200_UV200_MSLP")then
+			List_Title	= "200mb Pot. Vorticity (PVU), 200mb Wind (kt; barbs), MSLP (mb; centers)"
 
                 ; For air-sea variables
                 else if(short_name.eq."DPT2_SST")then
@@ -3065,6 +3077,7 @@ begin
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
+		end if  end if
 
 
 		; If nothing from this above matches, then return a default title
