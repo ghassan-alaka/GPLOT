@@ -717,15 +717,20 @@ begin
 		else if(var.eq."REFL")then  
 			cmap	= "dbz"
 
+		; For Reflectivity at a particular level
 		else if(var.eq."REFD")then ; MKedit
 			cmap    = "REFD"
+
+		; For Potential Vorticity
+		else if(var.eq."PV")then
+			cmap 	= "BlueWhiteOrangeRed"
 
 		else
 			cmap	= "BlAqGrYeOrReVi200"
 			
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if  end if  end if
+		end if  end if  end if  end if  end if
 
 	return(cmap)
 
@@ -905,8 +910,13 @@ begin
 					levels@stride = 1
 
 	; For Potential Vorticity
-	else if(var.eq."PV")then	levels = fspan(-5.,5.,41)
+	else if(var.eq."PV")then
+		if(lev.eq."200")then	levels = fspan(-5.,5.,41)
 					levels@stride = 4
+		else if(lev.eq."200diff")then
+					levels = fspan(-1.,1.,21)
+                                        levels@stride = 4
+		end if  end if
 
 	end if  end if  end if  end if  end if  end if  end if
 	end if  end if  end if  end if  end if  end if  end if
@@ -1609,7 +1619,7 @@ begin
 	masterBds	= (/"hwrf",    "basin",\
 			    "atl",     "wlant",\
 			    "epac",    "cpac",\
-			    "gom",\
+			    "gom",     "clant",\
 			    "d03",     "bob",\
 			    "nio",     "data",\
 			    "eus",     "fvgfs",\
@@ -1626,6 +1636,7 @@ begin
 		if(nameBds(bbb).eq."fvgfs")then		allBds(bbb,:) = (/55.,  5.,-100.,   0./) end if
 		if(nameBds(bbb).eq."atl")then		allBds(bbb,:) = (/50.,  0.,-110.,   0./) end if
 		if(nameBds(bbb).eq."wlant")then		allBds(bbb,:) = (/40.,  5.,-110., -50./) end if
+		if(nameBds(bbb).eq."clant")then		allBds(bbb,:) = (/40.,  5., -80., -40./) end if
 		if(nameBds(bbb).eq."elant")then		allBds(bbb,:) = (/35.,  5., -60.,   0./) end if
 		if(nameBds(bbb).eq."epac")then		allBds(bbb,:) = (/35.,  0.,-140., -80./) end if
 		if(nameBds(bbb).eq."cpac")then		allBds(bbb,:) = (/35.,  0.,-180.,-140./) end if
@@ -1672,7 +1683,7 @@ begin
 	MASTER_DOMAIN	= (/"hwrf",  "basin",\
 			    "atl",   "wlant",\
 			    "epac",  "cpac",\
-			    "gom",\
+			    "gom",   "clant",\
 			    "d03",   "bob",\
 			    "nio",   "data",\
 			    "eus",   "fvgfs",\
@@ -1693,6 +1704,7 @@ begin
 		else if(DOMAIN.eq."fvgfs")then	OUT = 0
 		else if(DOMAIN.eq."atl")then	OUT = 0
 		else if(DOMAIN.eq."wlant")then	OUT = 0
+		else if(DOMAIN.eq."clant")then  OUT = 0
 		else if(DOMAIN.eq."elant")then	OUT = 0
 		else if(DOMAIN.eq."epac")then	OUT = 0
 		else if(DOMAIN.eq."cpac")then	OUT = 0
@@ -1713,7 +1725,7 @@ begin
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if
 	; Set the maximum number of High pressure markers
 	else if(INFO.eq."maxH")then
 		if(     DOMAIN.eq."basin")then	OUT = 10
@@ -1721,6 +1733,7 @@ begin
 		else if(DOMAIN.eq."d01")then	OUT = 10
 		else if(DOMAIN.eq."atl")then	OUT = 10
 		else if(DOMAIN.eq."wlant")then	OUT = 10
+		else if(DOMAIN.eq."clant")then  OUT = 10
 		else if(DOMAIN.eq."elant")then	OUT = 10
 		else if(DOMAIN.eq."epac")then	OUT = 10
 		else if(DOMAIN.eq."cpac")then	OUT = 10
@@ -1731,6 +1744,7 @@ begin
 		else				OUT = 10
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
+		end if
 	
 	; Set the maximum number of Low pressure markers
 	else if(INFO.eq."maxL")then
@@ -1758,6 +1772,7 @@ begin
 		else if(DOMAIN.eq."d01")then	OUT = 10.
 		else if(DOMAIN.eq."atl")then	OUT = 10.
 		else if(DOMAIN.eq."wlant")then	OUT = 7.5
+		else if(DOMAIN.eq."clant")then  OUT = 7.5
 		else if(DOMAIN.eq."elant")then	OUT = 7.5
 		else if(DOMAIN.eq."epac")then	OUT = 7.5
 		else if(DOMAIN.eq."cpac")then	OUT = 7.5
@@ -1768,6 +1783,7 @@ begin
 		else				OUT = 10.
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
+		end if
 
 	end if  end if  end if  end if
 
