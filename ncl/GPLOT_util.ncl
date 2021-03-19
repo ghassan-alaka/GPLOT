@@ -654,7 +654,7 @@ begin
 		; For Total Wind
 		else if(var.eq."UV")then
 			if(any((/"02000850d","05000850d","07000850d"/).eq.lev))then
-                cmap = "shear"
+               			cmap = "shear"
 			else if(any((/"02500850m","05000850m","02500500m","07000850m"/).eq.lev))then
 				cmap = "WhiteBlueGreenYellowRed"
 			else if(any((/"850","10","02001000","02001000y","02001000x"/).eq.lev))then
@@ -688,7 +688,11 @@ begin
 		
 		; For Geopotential Height
 		else if(var.eq."HGT")then
-			cmap	= "BlAqGrYeOrRe"
+			if(isStrSubset(lev,"diff"))then
+				cmap	= "BlueWhiteOrangeRed"
+			else
+				cmap	= "BlAqGrYeOrRe"
+			end if
 		
 		; For Convective Available Potential Energy
 		else if(var.eq."CAPE")then
@@ -732,6 +736,13 @@ begin
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 
+
+		; White-in-the-middle colorbar for difference plots.
+                if(isStrSubset(lev,"diff"))then
+			cmap    = "BlueWhiteOrangeRed"
+		end if
+
+
 	return(cmap)
 
 end
@@ -751,6 +762,16 @@ begin
 	if(var.eq."RVO")then
 		if(any((/"850","700","500","200"/).eq.lev))then
 			levels	= fspan(2.,70.,35)
+			levels@stride = 2
+		end if
+
+	; For Zonal Wind
+	else if(var.eq."U")then
+		if(isStrSubset(lev,"diff"))then
+			levels = fspan(-10,10,21)
+			levels@stride = 2
+		else
+			levels = fspan(-40.,40.,21)
 			levels@stride = 2
 		end if
 		
@@ -854,7 +875,10 @@ begin
 		else if(lev.eq."200")then
 			levels	= fspan(1170.,1260.,31)
 			levels@stride	= 2
-		end if  end if  end if
+		else if(isStrSubset(lev,"diff"))then
+			levels	= fspan(-0.5,0.5,21)
+			levels@stride	= 2
+		end if  end if  end if  end if
 	
 	; For Reflectivity
 	else if(var.eq."REFL")then	levels = fspan(5.,75.,15)
@@ -920,7 +944,7 @@ begin
 
 	end if  end if  end if  end if  end if  end if  end if
 	end if  end if  end if  end if  end if  end if  end if
-	end if  end if  end if  end if  end if
+	end if  end if  end if  end if  end if  end if
 		
 	return(levels)
 
@@ -1627,7 +1651,8 @@ begin
 			    "d01",     "d02",\
 			    "tkfull",  "ships",\
                 	    "carolina","sfla",\
-                            "neamer",  "global"/)
+                            "neamer",  "wmexico",\
+			    "global"/)
 
 	do bbb = 0,nBds-1
 		if(.not.any(masterBds.eq.nameBds(bbb)))then   continue   end if
@@ -1648,6 +1673,7 @@ begin
 		if(nameBds(bbb).eq."bigd01")then	allBds(bbb,:) = (/70.,-40.,-200.,  40./) end if
 		if(nameBds(bbb).eq."carolina")then	allBds(bbb,:) = (/41., 31., -84., -74./) end if
 		if(nameBds(bbb).eq."sfla")then		allBds(bbb,:) = (/32., 22., -87., -77./) end if
+		if(nameBds(bbb).eq."wmexico")then          allBds(bbb,:) = (/30., 10.,-120.,-100./) end if
 		
 		; Set these to zero, which means take the entire domain given
 		if(nameBds(bbb).eq."hwrf")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
@@ -1691,7 +1717,7 @@ begin
 			    "d01",   "d02",\
 			    "tkfull", "ships",\
 			    "sfla",  "neamer",\
-			    "global"/)
+			    "wmexico", "global"/)
 	if(.not.any(MASTER_DOMAIN.eq.DOMAIN))then
 		print("ERROR: getDmnInfo: DOMAIN '"+DOMAIN+"' not recognized. Assigning defaults.")
 	end if
@@ -1741,10 +1767,11 @@ begin
 		else if(DOMAIN.eq."d02")then	OUT = 10
 		else if(DOMAIN.eq."d03")then	OUT = 2
 		else if(DOMAIN.eq."global")then OUT = 25
+		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else				OUT = 10
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if
+		end if  end if
 	
 	; Set the maximum number of Low pressure markers
 	else if(INFO.eq."maxL")then
@@ -1760,9 +1787,11 @@ begin
 		else if(DOMAIN.eq."d02")then	OUT = 12
 		else if(DOMAIN.eq."d03")then	OUT = 2
 		else if(DOMAIN.eq."global")then OUT = 25
+		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else				OUT = 12
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
+		end if
 	
 	; Set the minimum lat/lon box for each High/Low MSLP marker
 	; This "thins" the markers
@@ -1780,10 +1809,11 @@ begin
 		else if(DOMAIN.eq."d02")then	OUT = 7.5
 		else if(DOMAIN.eq."d03")then	OUT = 2.5
 		else if(DOMAIN.eq."global")then OUT = 20.
+		else if(DOMAIN.eq."wmexico")then OUT = 4.
 		else				OUT = 10.
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if
+		end if  end if
 
 	end if  end if  end if  end if
 
