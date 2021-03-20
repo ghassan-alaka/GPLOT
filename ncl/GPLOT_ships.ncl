@@ -415,6 +415,18 @@ DO_CONVERTGIF	= data(ind(isStrSubset2(data,"DO_CONVERTGIF =")))
 DO_CONVERTGIF	:= str_squeeze(str_split(DO_CONVERTGIF," = "))
 DO_CONVERTGIF	:= where(DO_CONVERTGIF(1).eq."True",True,False)
 
+; j. If True, PDF files are created.
+; Also, DO_CONVERTGIF and DO_RMWHITE are set to False
+val := ind(isStrSubset2(data,"DO_PDF ="))
+if(.not.ismissing(val(0)))then  DO_PDF       = data(val)
+                                DO_PDF       := str_squeeze(str_split(DO_PDF," = "))
+                                DO_PDF       := where(DO_PDF(1).eq."True",True,False)
+else                            DO_PDF       := False
+end if
+if(DO_PDF)then		DO_CONVERTGIF = False
+			DO_RMWHITE = False
+end if
+
 
 
 
@@ -533,9 +545,13 @@ nTrend		= 6
 
 
 ; 10. Set up workstation resources
-wtype	= "png"
-wtype@wkWidth = 2048
-wtype@wkHeight = 2048
+if(DO_PDF)then
+	wtype = "pdf"
+else
+	wtype	= "png"
+	wtype@wkWidth = 2048
+	wtype@wkHeight = 2048
+end if
 
 
 ; 11. Parse the cycle (IDATE) for later use
