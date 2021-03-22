@@ -1063,7 +1063,8 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 									ptype[pi,yi,xi] = 2.
 
 				### Reclassify type of convection ###
-
+				#Change From Michael Fischer
+				#Test Comment
 				for yi in range(ptype.shape[1]): # Loop over latitudinal index
 					#print 'The current y-index is:',yi
 
