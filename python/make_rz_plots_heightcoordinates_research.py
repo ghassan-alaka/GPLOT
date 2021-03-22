@@ -1004,12 +1004,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			levi_ref_bb = np.where(hlevs == lev_ref_bb)[0][0] # Bright-band reference height (here, 4.5 km)
 
 			# Loop over all swaths:
-
 			for pi in range(1): # Loop over storm index
+				print('The current pass index is:',pi)
 				for yi in range(ptype.shape[1]): # Loop over latitudinal index
-							#print 'The current y-index is:',yi
+					#print 'The current y-index is:',yi
 					for xi in range(ptype.shape[2]): # Loop over longitudinal index
-									#print ptype[pi,yi,xi]
+						#print ptype[pi,yi,xi]
 						# Ensure good reflectivity data exists for current grid point:
 						if np.isfinite(sref[pi,yi,xi,levi_ref]):
 							# Make sure points hasn't already been filled in due to convective radius:
@@ -1019,8 +1019,8 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 									ptype[pi,yi,xi] = 3.
 									# Check to see if reflecitivty at grid point is less than weak echo threshold:
 								elif sref[pi,yi,xi,levi_ref] < zwe:
-										ptype[pi,yi,xi] = 1.
-											# If reflectivity is between extrema, use peakedness:
+									ptype[pi,yi,xi] = 1.
+								# If reflectivity is between extrema, use peakedness:
 								elif np.logical_and(sref[pi,yi,xi,levi_ref] >= zwe, sref[pi,yi,xi,levi_ref] < zti):
 									# Determine background reflectivity (zbg)
 									ymin = int(np.nanmax([0,yi - rnear]))
@@ -1038,7 +1038,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 									if np.logical_and(ref_dif > zcc,zbg > zbg2):
 										ptype[pi,yi,xi] = 3.
 
-															# Now make necessary adjacent points convective as well:
+										# Now make necessary adjacent points convective as well:
 										if zbg < 20:
 											conv_rad = 0.5
 										elif np.logical_and(zbg >= 20.,zbg < 35.):
@@ -1048,7 +1048,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 										# Identify points falling within convective radius:
 										curr_x_dist = np.arange(dxgrid*(0. - xi),dxgrid*(int(ptype.shape[2]) - xi),dxgrid)
-										curr_y_dist = np.arange(dygrid*(0. - yi),dygrid*(int(ptype.shape[1]) - yi),dygrid)
+										curr_y_dist = np.arange(dygrid*(0. - yi),dygrid*(int(ptype.shape[2]) - yi),dygrid)
 										CXD,CYD = np.meshgrid(curr_x_dist,curr_y_dist)
 										curr_dist = np.sqrt(CXD**2 + CYD**2) #total distance (km) from current pixel
 
@@ -1062,18 +1062,26 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 								if np.logical_and(np.isfinite(sref[pi,yi,xi,levi_ref]),ptype[pi,yi,xi] == 0.):
 									ptype[pi,yi,xi] = 2.
 
-							# Reclassify convective grid points as either shallow, moderate, or deep
-							if np.logical_and(ptype[pi,yi,xi] == 3., np.isfinite(sref[pi,yi,xi,levi_ref])):
+				### Reclassify type of convection ###
 
-								# Find maximum height of 20 dBZ echo top:
-								if np.nanmax(sref[pi,yi,xi,:]) >= echo_tt:
-									max_height = hlevs[np.where(sref[pi,yi,xi,:] >= echo_tt)[0][-1]]
+				for yi in range(ptype.shape[1]): # Loop over latitudinal index
+					#print 'The current y-index is:',yi
 
-									# Classify convection:
-									if np.logical_and(max_height >= mod_height, max_height < deep_height):
-										ptype[pi,yi,xi] = 4.
-									elif max_height >= deep_height:
-										ptype[pi,yi,xi] = 5.
+					for xi in range(ptype.shape[2]): # Loop over longitudinal index
+						#print ptype[pi,yi,xi]
+
+						# Reclassify convective grid points as either shallow, moderate, or deep
+						if np.logical_and(ptype[pi,yi,xi] == 3., np.isfinite(sref[pi,yi,xi,levi_ref])):
+
+							# Find maximum height of vertical velocity convective threshold:
+							if np.nanmax(sref[pi,yi,xi,:]) >= echo_tt:
+								max_height = hlevs[np.where(sref[pi,yi,xi,:] >= echo_tt)[0][-1]]
+
+								# Classify convection:
+								if np.logical_and(max_height >= mod_height, max_height < deep_height):
+									ptype[pi,yi,xi] = 4.
+								elif max_height >= deep_height:
+									ptype[pi,yi,xi] = 5.	
 			
 			#Do Interpolation of P type to polar coordinates
 			ptype = np.squeeze(ptype)
