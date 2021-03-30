@@ -2,11 +2,15 @@
 !   SUBROUTINE centroid
 !   -------------------
 !   INPUT              - field to be filtered
-!   OUTPUT             - 
-!   A                  - Threshold (must be within bounds of INPUT
-!   B                  - Centroid type (-1: less-than, 0: equal-to, 1: greater-than)
+!   ICTR               - Output that contains indices of (lon,lat) for every
+!                        level in INPUT.
+!   A                  - Threshold (must be within bounds of INPUT)
+!   B                  - Centroid type   -1: less-than A
+!                                         0: equal-to A (precise)
+!                                         1: greater-than A
 !   NI                 - Number of points in I direction
 !   NJ                 - Number of points in J direction
+!   NK                 - Number of points in the K direction (levels)
 
 
  SUBROUTINE centroid (INPUT,ICTR,A,B,NI,NJ,NK)
