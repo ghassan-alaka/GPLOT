@@ -138,7 +138,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 	os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 	os.system('echo "working" > '+STATUS_FILE)
-        os.system('rm -f '+ST_LOCK_FILE)
+	os.system('rm -f '+ST_LOCK_FILE)
 
 	# Get some useful information about the file name
 	FILE_BASE = os.path.basename(FILE)

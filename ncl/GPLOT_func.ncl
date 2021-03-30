@@ -1554,9 +1554,120 @@ begin
 			tmpV!1 = "lon"
 			tmpV&lat = f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})
 			tmpV&lon = f->$nDims@dNames(lonIND)$
-			V	= uv2vr_cfd(tmpU,tmpV,f->$nDims@dNames(latIND)$({iBds(0):iBds(1)}),f->$nDims@dNames(lonIND)$,2)
+
+			; Calculate the Relative Vorticity using a center-difference method.
+			V = uv2vr_cfd(tmpU,tmpV,f->$nDims@dNames(latIND)$({iBds(0):iBds(1)}),f->$nDims@dNames(lonIND)$,2)
+
+			; Calculate the Absolute Vorticity by adding the planetary vorticity and the relative vorticity.
+			if(varInfo(0).eq."AVO")then
+				V := V + conform(V,2.*omega*sin(d2r*f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})),0)
+			end if
 			V@units = "s-1"
 			delete([/tmpU,tmpV/])
+
+		else if(varInfo(0).eq."PV")then
+
+			; First, read or compute the Absolute Vorticity.
+			if(isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+				if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
+					AVO = f->$findVarName(dSource,"AVO",varInfo(1))$({iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
+					AVO = f->$findVarName(dSource,"AVO",varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. timeDim)then
+					AVO = f->$findVarName(dSource,"AVO",varInfo(1))$(tIND,{mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else
+					print("ERROR: getVar2d: To compute PV, absolute vort. must have latitude and longitude dimensions.")
+					print("ERROR: getVar2d: latitude = "+latIND)
+					print("ERROR: getVar2d: longitude = "+lonIND)
+				end if  end if  end if
+
+                                if(flipFlag)then        AVO     := lonPivot(AVO,PIV)
+                                                        xAdd    = -360.
+                                else                    xAdd    = 0.
+                                end if
+			else
+				if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
+					tmpU	= f->$findVarName(dSource,"U",varInfo(1))$({iBds(0):iBds(1)},:)
+					tmpV    = f->$findVarName(dSource,"V",varInfo(1))$({iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
+					tmpU	= f->$findVarName(dSource,"U",varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+					tmpV	= f->$findVarName(dSource,"V",varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. timeDim)then
+					tmpU    = f->$findVarName(dSource,"U",varInfo(1))$(tIND,{mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+					tmpV    = f->$findVarName(dSource,"V",varInfo(1))$(tIND,{mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else
+					print("ERROR: getVar2d: To compute PV, U-wind and V-wind must have latitude and longitude dimensions.")
+					print("ERROR: getVar2d: latitude = "+latIND)
+					print("ERROR: getVar2d: longitude = "+lonIND)
+				end if  end if  end if
+
+				if(flipFlag)then	tmpU    := lonPivot(tmpU,PIV)
+	                                                tmpV    := lonPivot(tmpV,PIV)
+	                                                xAdd    = -360.
+	                        else                    xAdd    = 0.
+	                        end if
+
+				; Update the metadata.
+	                        tmpU!0 = "lat"
+	                        tmpU!1 = "lon"
+	                        tmpU&lat = f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})
+	                        tmpU&lon = f->$nDims@dNames(lonIND)$
+	                        tmpV!0 = "lat"
+        	                tmpV!1 = "lon"
+	                        tmpV&lat = f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})
+	                        tmpV&lon = f->$nDims@dNames(lonIND)$
+
+				; Calculate the Relative Vorticity using a center-difference method.
+				; Then, add the Planetary Vorticity to compute Absolute Vorticity.
+	                        AVO = uv2vr_cfd(tmpU,tmpV,f->$nDims@dNames(latIND)$({iBds(0):iBds(1)}),f->$nDims@dNames(lonIND)$,2)
+				AVO = AVO + conform(AVO,2.*omega*sin(d2r*f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})),0)
+
+			end if
+
+			; Second, get information about pressure levels to compute potential temperature & center-difference.
+			tmpLev = f->$nDims@dNames(levIND)$
+			val	:= ind(tmpLev.eq.mf*tofloat(varInfo(1)))
+			if(tmpLev(0).lt.tmpLev(1))then	LevUp	= tmpLev(val-1)
+							LevDown	= tmpLev(val+1)
+			else				LevUp	= tmpLev(val+1)
+							LevDown	= tmpLev(val-1)
+			end if
+			LevDiff	= LevUp-LevDown
+			LevRef = max(tmpLev)
+
+			; Third, read the air temperature at the +1 and -1 levels and compute
+			; potential temperature.
+			if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
+				ThUp	= f->$findVarName(dSource,"T",varInfo(1))$({LevUp},{iBds(0):iBds(1)},:)
+				ThDown	= f->$findVarName(dSource,"T",varInfo(1))$({LevDown},{iBds(0):iBds(1)},:)
+			else if(latDim .and. lonDim .and. levDim .and. timeDim)then
+				ThUp    = f->$findVarName(dSource,"T",varInfo(1))$(tIND,{LevUp},{iBds(0):iBds(1)},:)
+				ThDown  = f->$findVarName(dSource,"T",varInfo(1))$(tIND,{LevDown},{iBds(0):iBds(1)},:)
+			else
+				print("ERROR: getVar2d: To compute PV, temperature must have level, latitude, and longitude dimensions.")
+				print("ERROR: getVar2d: level = "+levIND)
+				print("ERROR: getVar2d: latitude = "+latIND)
+				print("ERROR: getVar2d: longitude = "+lonIND)
+				exit
+			end if  end if
+			ThUp    = ThUp*(LevRef/LevUp)^0.286
+			ThDown  = ThDown*(LevRef/LevDown)^0.286
+
+                        if(flipFlag)then        ThUp    := lonPivot(ThUp,PIV)
+                                                ThDown  := lonPivot(ThDown,PIV)
+                                                xAdd    = -360.
+                        else                    xAdd    = 0.
+                        end if
+
+			; Fourth, compute Potential Vorticity.
+			V = -1.*g*AVO*(ThUp-ThDown)/(LevDiff)
+			V@units = "K m2 kg-1 s-1"
+
+			; Placeholder for vortex removal.
+			if(rmVortex)then	print("WARNING: Vortex removal not supported for potential vorticity.")
+						rmVortex = False
+			end if
+
 		else
 			if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
 				V = f->$findVarName(dSource,varInfo(0),varInfo(1))$({iBds(0):iBds(1)},:)
@@ -1582,7 +1693,7 @@ begin
 			if(isfilevaratt(f,findVarName(dSource,varInfo(0),varInfo(1)),"units"))then
 				V@units = f->$findVarName(dSource,varInfo(0),varInfo(1))$@units
 			end if
-		end if  end if
+		end if  end if  end if
 	end if
 
 	
@@ -1602,12 +1713,17 @@ begin
 
 	; Correct units
 	if(.not.isatt(V,"units"))then   V@units = ""   end if
-	if(varInfo(0).eq."RVO" .and. V@units.eq."s-1")then
-		V	= 100000.*(V - conform(V,2.*omega*sin(d2r*V&lat),0))
+	if(any((/"RVO","AVO"/).eq.varInfo(0)) .and. V@units.eq."s-1" .and. \
+	   .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		V	= 100000.*V
 		V@units	= "10^-5 s-1"
+	else if(varInfo(0).eq."RVO" .and. V@units.eq."s-1" .and. \
+	        isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		V	= 100000.*(V - conform(V,2.*omega*sin(d2r*V&lat),0))
+		V@units = "10^-5 s-1"
 	else if(any((/"UV","U","V"/).eq.varInfo(0)) .and. any((/"m s-1","m/s"/).eq.V@units))then
 		V	= ms2kts*V
-		V@units	= "kts"
+		V@units	= "kt"
 	else if(varInfo(0).eq."HGT" .and. any((/"m","gpm"/).eq.V@units))then
 		V	= 0.1*V
 		V@units	= "dam"
@@ -1620,7 +1736,11 @@ begin
 	else if(varInfo(0).eq."MSLP" .and. V@units.eq."Pa")then
 		V	= 0.01*V
 		V@units	= "hPa"
-	end if  end if  end if  end if  end if  end if
+	else if(varInfo(0).eq."PV" .and. V@units.eq."K m2 kg-1 s-1")then
+		V	= 1000000.*V
+		V@units	= "10^-6 K m2 kg-1 s-1"
+	end if  end if  end if  end if
+	end if  end if  end if  end if
 	
 	
 	; Add information about lonFlip and rmVortex

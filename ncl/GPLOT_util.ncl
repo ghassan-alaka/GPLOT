@@ -654,7 +654,7 @@ begin
 		; For Total Wind
 		else if(var.eq."UV")then
 			if(any((/"02000850d","05000850d","07000850d"/).eq.lev))then
-                cmap = "shear"
+               			cmap = "shear"
 			else if(any((/"02500850m","05000850m","02500500m","07000850m"/).eq.lev))then
 				cmap = "WhiteBlueGreenYellowRed"
 			else if(any((/"850","10","02001000","02001000y","02001000x"/).eq.lev))then
@@ -688,7 +688,11 @@ begin
 		
 		; For Geopotential Height
 		else if(var.eq."HGT")then
-			cmap	= "BlAqGrYeOrRe"
+			if(isStrSubset(lev,"diff"))then
+				cmap	= "BlueWhiteOrangeRed"
+			else
+				cmap	= "BlAqGrYeOrRe"
+			end if
 		
 		; For Convective Available Potential Energy
 		else if(var.eq."CAPE")then
@@ -717,15 +721,27 @@ begin
 		else if(var.eq."REFL")then  
 			cmap	= "dbz"
 
+		; For Reflectivity at a particular level
 		else if(var.eq."REFD")then ; MKedit
 			cmap    = "REFD"
+
+		; For Potential Vorticity
+		else if(var.eq."PV")then
+			cmap 	= "BlueWhiteOrangeRed"
 
 		else
 			cmap	= "BlAqGrYeOrReVi200"
 			
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if  end if  end if
+		end if  end if  end if  end if  end if
+
+
+		; White-in-the-middle colorbar for difference plots.
+                if(isStrSubset(lev,"diff"))then
+			cmap    = "BlueWhiteOrangeRed"
+		end if
+
 
 	return(cmap)
 
@@ -746,6 +762,16 @@ begin
 	if(var.eq."RVO")then
 		if(any((/"850","700","500","200"/).eq.lev))then
 			levels	= fspan(2.,70.,35)
+			levels@stride = 2
+		end if
+
+	; For Zonal Wind
+	else if(var.eq."U")then
+		if(isStrSubset(lev,"diff"))then
+			levels = fspan(-10,10,21)
+			levels@stride = 2
+		else
+			levels = fspan(-40.,40.,21)
 			levels@stride = 2
 		end if
 		
@@ -849,7 +875,10 @@ begin
 		else if(lev.eq."200")then
 			levels	= fspan(1170.,1260.,31)
 			levels@stride	= 2
-		end if  end if  end if
+		else if(isStrSubset(lev,"diff"))then
+			levels	= fspan(-0.5,0.5,21)
+			levels@stride	= 2
+		end if  end if  end if  end if
 	
 	; For Reflectivity
 	else if(var.eq."REFL")then	levels = fspan(5.,75.,15)
@@ -904,9 +933,18 @@ begin
 	else if(var.eq."SHFLX")then	levels = fspan(-50.,300.,11)
 					levels@stride = 1
 
+	; For Potential Vorticity
+	else if(var.eq."PV")then
+		if(lev.eq."200")then	levels = fspan(-5.,5.,41)
+					levels@stride = 4
+		else if(lev.eq."200diff")then
+					levels = fspan(-1.,1.,21)
+                                        levels@stride = 4
+		end if  end if
+
 	end if  end if  end if  end if  end if  end if  end if
 	end if  end if  end if  end if  end if  end if  end if
-	end if  end if  end if  end if
+	end if  end if  end if  end if  end if  end if
 		
 	return(levels)
 
@@ -1605,14 +1643,16 @@ begin
 	masterBds	= (/"hwrf",    "basin",\
 			    "atl",     "wlant",\
 			    "epac",    "cpac",\
-			    "gom",\
+			    "gom",     "clant",\
 			    "d03",     "bob",\
 			    "nio",     "data",\
 			    "eus",     "fvgfs",\
 			    "elant",   "bigd01",\
 			    "d01",     "d02",\
 			    "tkfull",  "ships",\
-                	    "carolina","global"/)
+                	    "carolina","sfla",\
+                            "neamer",  "wmexico",\
+			    "global"/)
 
 	do bbb = 0,nBds-1
 		if(.not.any(masterBds.eq.nameBds(bbb)))then   continue   end if
@@ -1621,15 +1661,19 @@ begin
 		if(nameBds(bbb).eq."fvgfs")then		allBds(bbb,:) = (/55.,  5.,-100.,   0./) end if
 		if(nameBds(bbb).eq."atl")then		allBds(bbb,:) = (/50.,  0.,-110.,   0./) end if
 		if(nameBds(bbb).eq."wlant")then		allBds(bbb,:) = (/40.,  5.,-110., -50./) end if
+		if(nameBds(bbb).eq."clant")then		allBds(bbb,:) = (/40.,  5., -80., -40./) end if
 		if(nameBds(bbb).eq."elant")then		allBds(bbb,:) = (/35.,  5., -60.,   0./) end if
 		if(nameBds(bbb).eq."epac")then		allBds(bbb,:) = (/35.,  0.,-140., -80./) end if
 		if(nameBds(bbb).eq."cpac")then		allBds(bbb,:) = (/35.,  0.,-180.,-140./) end if
 		if(nameBds(bbb).eq."gom")then		allBds(bbb,:) = (/35., 10.,-105., -70./) end if
 		if(nameBds(bbb).eq."eus")then		allBds(bbb,:) = (/45., 20., -85., -60./) end if
+		if(nameBds(bbb).eq."neamer")then	allBds(bbb,:) = (/60., 35.,-100., -60./) end if
 		if(nameBds(bbb).eq."bob")then		allBds(bbb,:) = (/40.,  5.,  65., 100./) end if
 		if(nameBds(bbb).eq."nio")then		allBds(bbb,:) = (/30.,  0.,  50., 100./) end if
 		if(nameBds(bbb).eq."bigd01")then	allBds(bbb,:) = (/70.,-40.,-200.,  40./) end if
 		if(nameBds(bbb).eq."carolina")then	allBds(bbb,:) = (/41., 31., -84., -74./) end if
+		if(nameBds(bbb).eq."sfla")then		allBds(bbb,:) = (/32., 22., -87., -77./) end if
+		if(nameBds(bbb).eq."wmexico")then          allBds(bbb,:) = (/30., 10.,-120.,-100./) end if
 		
 		; Set these to zero, which means take the entire domain given
 		if(nameBds(bbb).eq."hwrf")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
@@ -1665,14 +1709,15 @@ begin
 	MASTER_DOMAIN	= (/"hwrf",  "basin",\
 			    "atl",   "wlant",\
 			    "epac",  "cpac",\
-			    "gom",\
+			    "gom",   "clant",\
 			    "d03",   "bob",\
 			    "nio",   "data",\
 			    "eus",   "fvgfs",\
 			    "elant", "bigd01",\
 			    "d01",   "d02",\
 			    "tkfull", "ships",\
-			    "global"/)
+			    "sfla",  "neamer",\
+			    "wmexico", "global"/)
 	if(.not.any(MASTER_DOMAIN.eq.DOMAIN))then
 		print("ERROR: getDmnInfo: DOMAIN '"+DOMAIN+"' not recognized. Assigning defaults.")
 	end if
@@ -1685,6 +1730,7 @@ begin
 		else if(DOMAIN.eq."fvgfs")then	OUT = 0
 		else if(DOMAIN.eq."atl")then	OUT = 0
 		else if(DOMAIN.eq."wlant")then	OUT = 0
+		else if(DOMAIN.eq."clant")then  OUT = 0
 		else if(DOMAIN.eq."elant")then	OUT = 0
 		else if(DOMAIN.eq."epac")then	OUT = 0
 		else if(DOMAIN.eq."cpac")then	OUT = 0
@@ -1705,7 +1751,7 @@ begin
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if
 	; Set the maximum number of High pressure markers
 	else if(INFO.eq."maxH")then
 		if(     DOMAIN.eq."basin")then	OUT = 10
@@ -1713,6 +1759,7 @@ begin
 		else if(DOMAIN.eq."d01")then	OUT = 10
 		else if(DOMAIN.eq."atl")then	OUT = 10
 		else if(DOMAIN.eq."wlant")then	OUT = 10
+		else if(DOMAIN.eq."clant")then  OUT = 10
 		else if(DOMAIN.eq."elant")then	OUT = 10
 		else if(DOMAIN.eq."epac")then	OUT = 10
 		else if(DOMAIN.eq."cpac")then	OUT = 10
@@ -1720,9 +1767,11 @@ begin
 		else if(DOMAIN.eq."d02")then	OUT = 10
 		else if(DOMAIN.eq."d03")then	OUT = 2
 		else if(DOMAIN.eq."global")then OUT = 25
+		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else				OUT = 10
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
+		end if  end if
 	
 	; Set the maximum number of Low pressure markers
 	else if(INFO.eq."maxL")then
@@ -1738,9 +1787,11 @@ begin
 		else if(DOMAIN.eq."d02")then	OUT = 12
 		else if(DOMAIN.eq."d03")then	OUT = 2
 		else if(DOMAIN.eq."global")then OUT = 25
+		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else				OUT = 12
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
+		end if
 	
 	; Set the minimum lat/lon box for each High/Low MSLP marker
 	; This "thins" the markers
@@ -1750,6 +1801,7 @@ begin
 		else if(DOMAIN.eq."d01")then	OUT = 10.
 		else if(DOMAIN.eq."atl")then	OUT = 10.
 		else if(DOMAIN.eq."wlant")then	OUT = 7.5
+		else if(DOMAIN.eq."clant")then  OUT = 7.5
 		else if(DOMAIN.eq."elant")then	OUT = 7.5
 		else if(DOMAIN.eq."epac")then	OUT = 7.5
 		else if(DOMAIN.eq."cpac")then	OUT = 7.5
@@ -1757,9 +1809,11 @@ begin
 		else if(DOMAIN.eq."d02")then	OUT = 7.5
 		else if(DOMAIN.eq."d03")then	OUT = 2.5
 		else if(DOMAIN.eq."global")then OUT = 20.
+		else if(DOMAIN.eq."wmexico")then OUT = 4.
 		else				OUT = 10.
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
+		end if  end if
 
 	end if  end if  end if  end if
 
@@ -3046,6 +3100,10 @@ begin
 			List_Title	= "Near-Storm Hodograph [kts] (zoom)"
 		else if(short_name.eq."T850_UV850_MSLP")then
 			List_Title	= "850mb Temperature (K; shaded), 850mb Wind (kt; barbs), and MSLP (mb; centers)"
+		else if(short_name.eq."TPRCP_U10_MSLP")then
+			List_Title	= "Total Precip. (inches; shaded), 10m Wind (kt, barbs), MSLP (mb; centers)"
+		else if(short_name.eq."PV200_UV200_MSLP")then
+			List_Title	= "200mb Pot. Vorticity (PVU), 200mb Wind (kt; barbs), MSLP (mb; centers)"
 
                 ; For air-sea variables
                 else if(short_name.eq."DPT2_SST")then
@@ -3065,6 +3123,7 @@ begin
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
+		end if  end if
 
 
 		; If nothing from this above matches, then return a default title

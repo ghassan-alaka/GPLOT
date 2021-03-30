@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------
 !   SUBROUTINE sph2cart
 !   -------------------
-!   V_SPH		- Input, 3D & in cartesian coordinates
-!   V_CART		- Output, 3D & in polar-cylindrical coordinates
+!   V_SPH		- Input, 3D & in polar-cylindrical coordinates
+!   V_CART		- Output, 3D & in cartesian coordinates
 !   LON			- Longitude array (in degrees)
 !   ISZ			- Size of LON
 !   LAT			- Latitude array
@@ -80,14 +80,14 @@
 	ENDIF
 	
 	
-	! Convert radians to degrees
+	! Convert degrees to radians
 	ICENr(k) = D2R*ICEN(k)
 	JCENr(k) = D2R*JCEN(k)
 	
 	
 	! Loop over the Y dimension
 	DO j = 1,YSZ
-		! Convert radians to degrees
+		! Convert degrees to radians
 		LATr = D2R*LAT(j)
 	
 	
@@ -114,7 +114,7 @@
 		
 		! Loop over the X dimension
 		DO i = 1,XSZ
-			! Convert radians to degrees
+			! Convert degrees to radians
 			LONr = D2R*LON(i)
 			
 			
@@ -151,10 +151,13 @@
 			! Check that indices for interpolation are within expected bounds.
 			IF ( x1<0 .or. x2<0 .or. y1<0 .or. y2<0 ) THEN
 				eee = FVAL
+                                fff = FVAL
 			ELSEIF ( y1>JSZ .or. y2>JSZ ) THEN
 				eee = FVAL
+                                fff = FVAL
 			ELSEIF ( x1>ISZ .or. x2>ISZ ) THEN
 				eee = FVAL
+                                fff = FVAL
 			ELSE
 				eee = MINVAL((/V_SPH(x1,y1,k), V_SPH(x1,y2,k), &
 					       V_SPH(x2,y1,k), V_SPH(x2,y2,k)/))

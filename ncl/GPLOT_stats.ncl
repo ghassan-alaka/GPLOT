@@ -1148,11 +1148,11 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	; Retain only the ATCF that matched the storm ID (SID)
 	val := ind(isStrSubset2(ATCF_FILE,str_lower(SID)))
 	
-	; Check that1 vald ATCF is found. If not, exit.
+	; Check that 1 valid ATCF is found. If not, exit.
 	if(dimsizes(val).gt.1)then
 		print("WARNING: Found more than 1 matching ATCF file found in "+ODIR+"/ATCF_FILES.dat")
 		print("WARNING: Will process only the first ATCF file.")
-		val := val(0)
+		val := val(dimsizes(val)-1)
 	end if
 	if(ismissing(val(0)))then
 		print("ERROR: Could not find matching ATCF in "+ODIR+"ATCF_FILES.dat")
@@ -1212,6 +1212,10 @@ if(BASIN1.eq."l")then   BASIN2 = "al"   end if
 if(BASIN1.eq."e")then   BASIN2 = "ep"   end if
 if(BASIN1.eq."c")then   BASIN2 = "cp"   end if
 if(BASIN1.eq."w")then   BASIN2 = "wp"   end if
+if(BASIN1.eq."s")then   BASIN2 = "sh"   end if
+if(BASIN1.eq."p")then   BASIN2 = "sh"   end if
+if(BASIN1.eq."a")then   BASIN2 = "io"   end if
+if(BASIN1.eq."b")then   BASIN2 = "io"   end if
 if(.not.isvar("BASIN2"))then
 	print("ERROR: Two-character basin could not be defined.")
 	exit
