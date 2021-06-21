@@ -400,8 +400,10 @@ end
 ; adeckRead
 
 undef("adeckRead")
-function adeckRead (atcfFile[1]:string,IMODEL[1]:string,IDATE[1]:string)
-local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag
+function adeckRead (atcfFile[1]:string,IMODEL[1]:string,INFO[*]:string)
+local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, IDATE, SNUM, SBAS,\
+      allDates, allModels, allStorms, allBasins, testA, testB, testC, testD,\
+      testE, vals, N, IDATE2
 begin
 
 	; 1. Read the ATCF data
@@ -413,28 +415,49 @@ begin
 
 
 	; 2. Get Wind Radii - only keep indices for 34 kts.
+        IDATE = INFO(0)
+        if(dimsizes(INFO).ge.2)then   SNUM = INFO(1)
+	else			      SNUM = ""
+	end if
+        if(dimsizes(INFO).ge.3)then   SBAS = INFO(2)
+	else			      SBAS = ""
+	end if
+
+
+	; 3. Read important columns from the ATCF data.
 	windRad		:= toint(str_squeeze(str_get_field(DATA,12,",")))
 	allDates	:= str_squeeze(str_get_field(DATA,3,","))
 	allModels	:= str_squeeze(str_get_field(DATA,5,","))
-	if(IDATE.eq."")then
-		vals	= ind(windRad.le.34 .and. isStrSubset2(allModels,IMODEL))
-	else
-		vals	= ind(windRad.le.34 .and. allDates.eq.IDATE .and. isStrSubset2(allModels,IMODEL))
+	allStorms	:= str_squeeze(str_get_field(DATA,2,","))
+	allBasins	:= str_squeeze(str_get_field(DATA,1,","))
+
+
+	; 4. Create boolean arrays to find lines that satisfy all requirements.
+	testA		= where(windRad.le.34,True,False)
+	testB		= isStrSubset2(allModels,IMODEL)
+	if(IDATE.eq."")then	testC = testA
+				IDATE2 = tostring(remove_duplicates(toint(allDates)))
+	else			testC = where(allDates.eq.IDATE,True,False)
+				IDATE2 = IDATE
 	end if
-	N		= dimsizes(vals)
-	BLOCK		= new((/4,N/),"float")
+	if(SNUM.eq."")then	testD = testA
+	else			testD = where(allStorms.eq.SNUM,True,False)
+	end if
+	if(SBAS.eq."")then	testE = testA
+	else			testE = where(allBasins.eq.SBAS,True,False)
+	end if
+
+
+	; 5. Find all indices that match the requirements.
+	vals	= ind(testA .and. testB .and. testC .and. testD .and. testE)
+	N	= dimsizes(vals)
+	BLOCK	= new((/4,N/),"float")
 	if(ismissing(vals(0)))then	print("ERROR: adeckRead: No valid entries found.")
 					return(BLOCK)
 	end if
 	
-	if(IDATE.eq."")then
-		IDATE2	= tostring(remove_duplicates(toint(allDates)))
-	else
-		IDATE2	= IDATE
-	end if
 
-
-	; 3. Parse out relevant data
+	; 6. Parse out relevant data
 	; Get Latitude
 	tmp		:= str_squeeze(str_get_field(DATA(vals),7,","))
 	NStag		= where(isStrSubset2(tmp,"N"),"N","S")
