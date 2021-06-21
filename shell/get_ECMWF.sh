@@ -22,17 +22,21 @@ DO_NC="$2"
 FTP_DIR="dissemination.ecmwf.int"
 FTP_LOGIN="wmo:essential"
 
+if [ -z "${GPLOT_DIR}" ]; then
+    GPLOT_DIR="/home/Ghassan.Alaka/GPLOT"
+fi
+
 # Create and enter the output directory
 mkdir -p ${ODIR}
 cd ${ODIR}
 
 YMDHms="`date +'%Y%m%d%H'`0000"
-YMDHms_OLD="`date --date="5 day ago" +'%Y%m%d%H'`0000"
+YMDHms_OLD="`date --date="3 day ago" +'%Y%m%d%H'`0000"
 YYYY=`echo "$YMDHms" | cut -c1-4`
 MM=`echo "$YMDHms" | cut -c5-6`
 DD=`echo "$YMDHms" | cut -c7-8`
 HH=`echo "$YMDHms" | cut -c9-10`
-HH_OFFSET=$(( $HH % 12 ))
+HH_OFFSET=$(( $HH % 6 ))
 echo "$YMDHms"
 echo $HH_OFFSET
 
@@ -42,7 +46,7 @@ FTP_CYCLES=()
 N=0
 while [ "${YMDHms}" -gt "${YMDHms_OLD}" ]; do
 
-    HH3=$(( $HH_OFFSET + ( N * 12 ) ))
+    HH3=$(( $HH_OFFSET + ( N * 6 ) ))
     YMDH="`date --date="$HH3 hour ago" +'%Y%m%d%H'`"
     YMDHms="`date --date="$HH3 hour ago" +'%Y%m%d%H'`0000"
 
@@ -50,18 +54,24 @@ while [ "${YMDHms}" -gt "${YMDHms_OLD}" ]; do
     FTP_CYCLES+=( "${YMDHms}" )
 
     wget -r -A "*grib2.bin" -T 5 -N ftp://${FTP_LOGIN}@${FTP_DIR}/${YMDHms}/
+    wget -r -A "*bufr4.bin" -T 5 -N ftp://${FTP_LOGIN}@${FTP_DIR}/${YMDHms}/
 
     mkdir -p ${YMDH}
 
     # Link individual files into the expected location.
     ALL_FILES=( `find ${PWD}/${FTP_DIR}/${YMDHms}/ -type f -name "*_grib2.bin" 2> /dev/null` )
+    ALL_FILES+=( `find ${PWD}/${FTP_DIR}/${YMDHms}/ -type f -name "*ECMF*C_ECMP*tropical_cyclone_track*_bufr4.bin" 2> /dev/null` )
     if [ ! -z "${ALL_FILES[*]}" ]; then
         for FILE in ${ALL_FILES[@]}; do
             # Get the current file name and create the output file name.
             # This is important because NCL requires the "grib2" extension to read
             # the file properly.
             FILE_BASE=`basename $FILE`
-            OFILE_BASE="`echo "$FILE_BASE" | rev | cut -c11- | rev`.grib2"
+            if [[ "${FILE}" == *"grib2.bin"* ]]; then
+                OFILE_BASE="`echo "$FILE_BASE" | rev | cut -c11- | rev`.grib2"
+            elif [[ "${FILE}" == *"bufr4.bin"* ]]; then
+                OFILE_BASE="`echo "$FILE_BASE" | rev | cut -c11- | rev`.atcfunix"
+            fi
 
             # Don't link "_es_" or "_em_" files
             if [[ $FILE_BASE == *"_es_"* ]]; then
