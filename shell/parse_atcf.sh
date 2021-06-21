@@ -59,7 +59,11 @@ if [ -z "${AAA}" ]; then
         ALL_ADECKS=( `find "${ADECKDIR}" -name '*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*.atcfunix.all*' -type f -mmin -10080` )
     fi
 else
-    ALL_ADECKS=( `find "${ADECKDIR}" -name ${AAA} -type f` )
+    if [ "$TYPE" == "0" ]; then
+        ALL_ADECKS=( `find "${ADECKDIR}" -name ${AAA} -type f` )
+    elif [ "$TYPE" == "1" ]; then
+        ALL_ADECKS=( `find "${ADECKDIR}" -name ${AAA} -type f -mmin ${MMIN}` )
+    fi
 fi
 
 # Now, loop over the available A-DECKs
