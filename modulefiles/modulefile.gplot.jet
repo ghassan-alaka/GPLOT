@@ -24,7 +24,7 @@ export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
 
 # Python 3 Anaconda
 if [ "${A}" -eq 1 ]; then
-    PYDIR="/lfs4/HFIP/hur-aoml/Levi.Cowan/anaconda3"
+    PYDIR="/lfs1/HFIP/hur-aoml/Ghassan.Alaka/anaconda3"
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
     __conda_setup="$('${PYDIR}/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
