@@ -18,3 +18,5 @@ do_vt_tendency,N
 do_vort_tendency,N
 do_ur_pbl_p_mean,Y
 do_radar_plots,Y
+do_soundings,Y
+do_shear_and_rh_plots,Y
