@@ -20,6 +20,8 @@ from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
 import sys #To change the path 
 sys.path.append(GPLOT_DIR+'/python/modules')
+import skewTmodelTCpolar
+import shearandrhplot
 import centroid
 import glob
 import math
@@ -180,6 +182,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
+	rmwnmi = ATCF_DATA[list(FHRIND),19][0]
 
 	if ( centerlat > 50.0):
 		# Write the input file to a log to mark that it has ben processed
@@ -200,7 +203,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 		if (gribfiletest < 1):
 
-			# Create the GrADs control file, if it hasn't already been created.
+			# Create the GrADs control file, if is hasn't already been created.
 			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
 			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
@@ -231,15 +234,18 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 
 			#Define how big of a box you want, based on lat distance
-			yoffset = 7
+			yoffset = 6
+			test6 = np.cos((centerlat+6)*3.14159/180)*111.1*6
 			test7 = np.cos((centerlat+7)*3.14159/180)*111.1*7
 			test8 = np.cos((centerlat+8)*3.14159/180)*111.1*8
 			test9 = np.cos((centerlat+9)*3.14159/180)*111.1*9
 			test10 = np.cos((centerlat+10)*3.14159/180)*111.1*10
 			test11 = np.cos((centerlat+11)*3.14159/180)*111.1*11
 			test12 = np.cos((centerlat+12)*3.14159/180)*111.1*12
-
-			if (test7 > rmax):
+			
+			if (test6 > rmax):
+				xoffset = 6
+			elif (test7 > rmax):
 				xoffset = 7
 			elif (test8 > rmax):
 				xoffset = 8
@@ -314,11 +320,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			ga('set lev 850')
 			u850 = ga.exp('ugrdprs')
 			v850 = ga.exp('vgrdprs')
+			z850 = ga.exp('hgtprs')
 			ga('set lev 200')
 			u200 = ga.exp('ugrdprs')
 			v200 = ga.exp('vgrdprs')
+			z200 = ga.exp('hgtprs')
 			ga('set z 1')
-						
+			
 			#Get W from Omega
 			#w = -omega/(rho*g)
 			#rho = p/(Rd*Tv)
@@ -416,7 +424,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			pressure_pbl[:,:,0] = mslp
 			rho_pbl[:,:,0] = rho2m
 
-
 			#Do interpolation
 			print('Doing the Polar Interpolation Now')
 
@@ -484,14 +491,20 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			u10_p[:,:] = f_u10((YI,XI),method='linear')
 			v10_p[:,:] = f_v10((YI,XI),method='linear')
-			
-			vt10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-			ur10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 
 			u200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 			v200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 			u850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-			v850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			v850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan			
+			vt10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			ur10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			vt850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			ur850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			vt850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			ur850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			vt200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			ur200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+
 			f_u200 = interpolate.RegularGridInterpolator((y_sr, x_sr), u200[:,:])
 			f_v200 = interpolate.RegularGridInterpolator((y_sr, x_sr), v200[:,:])
 			f_u850 = interpolate.RegularGridInterpolator((y_sr, x_sr), u850[:,:])
@@ -505,24 +518,30 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			for j in range(np.shape(XI)[1]):
 				vt10_p[:,j] = -u10_p[:,j]*np.sin(theta)+v10_p[:,j]*np.cos(theta)
 				ur10_p[:,j] = u10_p[:,j]*np.cos(theta)+v10_p[:,j]*np.sin(theta)
-
+				vt850_p[:,j] = -u850_p[:,j]*np.sin(theta)+v850_p[:,j]*np.cos(theta)
+				ur850_p[:,j] = u850_p[:,j]*np.cos(theta)+v850_p[:,j]*np.sin(theta)
+				vt200_p[:,j] = -u200_p[:,j]*np.sin(theta)+v200_p[:,j]*np.cos(theta)
+				ur200_p[:,j] = u200_p[:,j]*np.cos(theta)+v200_p[:,j]*np.sin(theta)			
 			
 			#Calculate shear
-			u850_p_ring = u850_p[:,np.int(np.round(200/resolution)):np.int(np.round(600/resolution))]
-			v850_p_ring = v850_p[:,np.int(np.round(200/resolution)):np.int(np.round(600/resolution))]
-			u200_p_ring = u200_p[:,np.int(np.round(200/resolution)):np.int(np.round(600/resolution))]
-			v200_p_ring = v200_p[:,np.int(np.round(200/resolution)):np.int(np.round(600/resolution))]
+			#Two Metrics: 200 km - RMAX average, 0-500 km/rmax with vortex removed
+			
+			#First Do the 200 km - rmax average
+			u850_p_ring = u850_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
+			v850_p_ring = v850_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
+			u200_p_ring = u200_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
+			v200_p_ring = v200_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
 
 			u850_p_ring_mean = np.nanmean(np.nanmean(u850_p_ring))
 			v850_p_ring_mean = np.nanmean(np.nanmean(v850_p_ring))
 			u200_p_ring_mean = np.nanmean(np.nanmean(u200_p_ring))
 			v200_p_ring_mean = np.nanmean(np.nanmean(v200_p_ring))
 
-			ushear = u200_p_ring_mean-u850_p_ring_mean
-			vshear = v200_p_ring_mean-v850_p_ring_mean
+			ushear1 = u200_p_ring_mean-u850_p_ring_mean
+			vshear1 = v200_p_ring_mean-v850_p_ring_mean
 
-			shearmag = np.hypot(ushear,vshear)
-			sheardir = np.arctan2(vshear,ushear)*180.0/pi
+			shearmag = np.hypot(ushear1,vshear1)
+			sheardir = np.arctan2(vshear1,ushear1)*180.0/pi
 			shearstring = np.str(np.int(np.round(shearmag*1.94,0)))
 
 			#Convert shear to meteorological convention
@@ -543,7 +562,44 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			#Get index for shear
 			sheardir_index = np.int(sheardir_5deg/5)
 
-			#Rotate variables
+			vt_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			ur_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			u_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			v_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+			u850_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			v850_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			u200_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			v200_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			vt850_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			ur850_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			vt200_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+			ur200_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+
+			vt850_p_filtered[:,:] = vt850_p[:,:]-np.nanmean(vt850_p,0)
+			ur850_p_filtered[:,:] = ur850_p[:,:]-np.nanmean(ur850_p,0)
+			vt200_p_filtered[:,:] = vt200_p[:,:]-np.nanmean(vt200_p,0)
+			ur200_p_filtered[:,:] = ur200_p[:,:]-np.nanmean(ur200_p,0)
+
+			for k in range(zsize):
+				vt_p_filtered[:,:,k] = vt_p[:,:,k]-np.nanmean(vt_p[:,:,k],0)
+				ur_p_filtered[:,:,k] = ur_p[:,:,k]-np.nanmean(ur_p[:,:,k],0)
+				for j in range(np.shape(XI)[1]):
+					u_p_filtered[:,j,k] = ur_p_filtered[:,j,k]*np.cos(theta) - vt_p_filtered[:,j,k]*np.sin(theta)
+					v_p_filtered[:,j,k] = ur_p_filtered[:,j,k]*np.sin(theta) + vt_p_filtered[:,j,k]*np.cos(theta)
+
+			for j in range(np.shape(XI)[1]):
+				u850_p_filtered[:,j] = ur850_p_filtered[:,j]*np.cos(theta) - vt850_p_filtered[:,j]*np.sin(theta)
+				v850_p_filtered[:,j] = ur850_p_filtered[:,j]*np.sin(theta) + vt850_p_filtered[:,j]*np.cos(theta)
+				u200_p_filtered[:,j] = ur200_p_filtered[:,j]*np.cos(theta) - vt200_p_filtered[:,j]*np.sin(theta)
+				v200_p_filtered[:,j] = ur200_p_filtered[:,j]*np.sin(theta) + vt200_p_filtered[:,j]*np.cos(theta)
+
+			ushear_p = u200_p_filtered-u850_p_filtered
+			vshear_p = v200_p_filtered-v850_p_filtered
+
+			ushear2 = np.nanmean(np.nanmean(ushear_p))
+			vshear2 = np.nanmean(np.nanmean(vshear_p))
+
+			#Rotate variables based on the shear
 			#3D
 			u_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			v_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
@@ -950,7 +1006,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			###################################################################################################################
 			#Code to calculate precipitation partitioning (from Michael Fischer)
 			hlevs = heightlevs/1000
-			import datetime as DT
 			sref = np.ones((1,np.shape(dbz)[0],np.shape(dbz)[1],np.shape(dbz)[2]))*np.nan
 			sref[0,:,:,:] = dbz
 
@@ -1004,12 +1059,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			levi_ref_bb = np.where(hlevs == lev_ref_bb)[0][0] # Bright-band reference height (here, 4.5 km)
 
 			# Loop over all swaths:
-
 			for pi in range(1): # Loop over storm index
+				print('The current pass index is:',pi)
 				for yi in range(ptype.shape[1]): # Loop over latitudinal index
-							#print 'The current y-index is:',yi
+					#print 'The current y-index is:',yi
 					for xi in range(ptype.shape[2]): # Loop over longitudinal index
-									#print ptype[pi,yi,xi]
+						#print ptype[pi,yi,xi]
 						# Ensure good reflectivity data exists for current grid point:
 						if np.isfinite(sref[pi,yi,xi,levi_ref]):
 							# Make sure points hasn't already been filled in due to convective radius:
@@ -1019,8 +1074,8 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 									ptype[pi,yi,xi] = 3.
 									# Check to see if reflecitivty at grid point is less than weak echo threshold:
 								elif sref[pi,yi,xi,levi_ref] < zwe:
-										ptype[pi,yi,xi] = 1.
-											# If reflectivity is between extrema, use peakedness:
+									ptype[pi,yi,xi] = 1.
+								# If reflectivity is between extrema, use peakedness:
 								elif np.logical_and(sref[pi,yi,xi,levi_ref] >= zwe, sref[pi,yi,xi,levi_ref] < zti):
 									# Determine background reflectivity (zbg)
 									ymin = int(np.nanmax([0,yi - rnear]))
@@ -1038,7 +1093,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 									if np.logical_and(ref_dif > zcc,zbg > zbg2):
 										ptype[pi,yi,xi] = 3.
 
-															# Now make necessary adjacent points convective as well:
+										# Now make necessary adjacent points convective as well:
 										if zbg < 20:
 											conv_rad = 0.5
 										elif np.logical_and(zbg >= 20.,zbg < 35.):
@@ -1062,18 +1117,27 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 								if np.logical_and(np.isfinite(sref[pi,yi,xi,levi_ref]),ptype[pi,yi,xi] == 0.):
 									ptype[pi,yi,xi] = 2.
 
-							# Reclassify convective grid points as either shallow, moderate, or deep
-							if np.logical_and(ptype[pi,yi,xi] == 3., np.isfinite(sref[pi,yi,xi,levi_ref])):
+				### Reclassify type of convection ###
+				#Change From Michael Fischer
+				#Test Comment
+				for yi in range(ptype.shape[1]): # Loop over latitudinal index
+					#print 'The current y-index is:',yi
 
-								# Find maximum height of 20 dBZ echo top:
-								if np.nanmax(sref[pi,yi,xi,:]) >= echo_tt:
-									max_height = hlevs[np.where(sref[pi,yi,xi,:] >= echo_tt)[0][-1]]
+					for xi in range(ptype.shape[2]): # Loop over longitudinal index
+						#print ptype[pi,yi,xi]
 
-									# Classify convection:
-									if np.logical_and(max_height >= mod_height, max_height < deep_height):
-										ptype[pi,yi,xi] = 4.
-									elif max_height >= deep_height:
-										ptype[pi,yi,xi] = 5.
+						# Reclassify convective grid points as either shallow, moderate, or deep
+						if np.logical_and(ptype[pi,yi,xi] == 3., np.isfinite(sref[pi,yi,xi,levi_ref])):
+
+							# Find maximum height of vertical velocity convective threshold:
+							if np.nanmax(sref[pi,yi,xi,:]) >= echo_tt:
+								max_height = hlevs[np.where(sref[pi,yi,xi,:] >= echo_tt)[0][-1]]
+
+								# Classify convection:
+								if np.logical_and(max_height >= mod_height, max_height < deep_height):
+									ptype[pi,yi,xi] = 4.
+								elif max_height >= deep_height:
+									ptype[pi,yi,xi] = 5.	
 			
 			#Do Interpolation of P type to polar coordinates
 			ptype = np.squeeze(ptype)
@@ -1092,8 +1156,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			############################################################################################################################################
 			#Calculate some important structure metrics and write them and others to a text file
 			vmax = float(maxwind)
+			vt_max = np.nanmax(vt_p_mean)*1.94
+
 			rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vort = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
-			if ( rmw_2km < 200 and vmax > 25 ):
+			if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
 				#Calculate Vortex Depth based on Vt
 				vt_ratio = np.nanmax(vt_p_mean,0)/np.nanmax(vt_p_mean[:,4])
 				threshold_ratio_vt = 0.5
@@ -1434,7 +1500,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			do_vort_tendency = namelist_structure_vars[17,1]
 			do_ur_pbl_p_mean = namelist_structure_vars[18,1]
 			do_radar_plots = namelist_structure_vars[19,1]
-				
+			do_soundings = namelist_structure_vars[20,1]
+			do_shear_and_rh_plots = namelist_structure_vars[21,1]
+
+			#Do the Sounding Plots First Since Those Call an External Function      
+			if ( do_soundings == 'Y'):
+				skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,np.float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
+
 			#Load the colormaps needed
 			color_data_vt = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
 			colormap_vt = matplotlib.colors.ListedColormap(color_data_vt)
@@ -1487,7 +1559,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(0,rmax,11),fontsize=24)
+				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1510,7 +1582,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(0,rmax,11),fontsize=24)
+				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1533,7 +1605,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(0,rmax,11),fontsize=24)
+				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1556,7 +1628,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(0,rmax,11),fontsize=24)
+				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1579,7 +1651,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(0,rmax,11),fontsize=24)
+				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1603,7 +1675,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1629,7 +1701,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1655,7 +1727,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1681,7 +1753,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1707,7 +1779,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1733,7 +1805,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1759,7 +1831,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1785,7 +1857,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.ylim(0,18)
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.linspace(-rmax,rmax,11),fontsize=24)
+				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
 				plt.yticks(np.linspace(0,18,10),fontsize=24)
 				plt.xlabel('Radius (km)',fontsize=24)
 				plt.ylabel('Height (km)',fontsize=24)
@@ -1812,11 +1884,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.title(EXPT.strip()+'\n'+ r'WV#0,1,2 5-km Reflectivity ($dBZ$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
@@ -1829,11 +1901,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
@@ -1846,11 +1918,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
@@ -1862,11 +1934,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
@@ -1890,11 +1962,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 20, 40, 60, 80, 100])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.title(EXPT.strip()+'\n'+ r'WV#0,1,2 5-km RH ($\%$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
@@ -1907,11 +1979,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 20, 40, 60, 80, 100])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
@@ -1924,11 +1996,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[-30, -20, -10, 0, 10, 20, 30])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
@@ -1940,11 +2012,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[-30, -20, -10, 0, 10, 20, 30])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
@@ -1969,11 +2041,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 20, 40, 60, 80])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.title(EXPT.strip()+'\n'+ r'WV#0,1,2 10-m Tangential Wind ($m\ s^{-1}$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
@@ -1986,11 +2058,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[0, 20, 40, 60, 80, 100])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
@@ -2003,11 +2075,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[-15, -10, -5, 0, 5, 10, 15])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
@@ -2019,11 +2091,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.gca().set_aspect('equal', adjustable='box')
 				cbar = plt.colorbar(ticks=[-15, -10, -5, 0, 5, 10, 15])
 				cbar.ax.tick_params(labelsize=18)
-				plt.xticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
-				plt.yticks(np.linspace(-rmax/2,rmax/2,7),fontsize=18)
+				plt.xticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
+				plt.yticks(np.arange(-rmax/2,rmax/2+1,100),fontsize=18)
 				plt.xlabel('X (km)',fontsize=20)
 				plt.ylabel('Y (km)',fontsize=20)
-				plt.arrow(0,0,(ushear/25)*np.max(XI/2),(vshear/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
 				plt.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
@@ -2319,7 +2391,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.yticks(np.linspace(-100,100,5),fontsize=14)
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
-				plt.arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black')
+				plt.arrow(0,0,ushear1*3.5*1.94,vshear1*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black')
 				plt.xticks(np.linspace(-100,100,5),fontsize=14)
 				plt.yticks(np.linspace(-100,100,5),fontsize=14)
 				plt.xlabel('East-West Distance (n mi)',fontsize=18)
@@ -2356,7 +2428,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				ticks=[7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155]
 				plt.gca().streamplot(x_sr_2*0.54,y_sr_2*0.54,u2km*1.94,v2km*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
 				plt.gca().streamplot(x_sr_2*0.54,y_sr_2*0.54,u5km*1.94,v5km*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
-				plt.gca().arrow(0,0,ushear*3.5*1.94,vshear*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black',zorder=10)
+				plt.gca().arrow(0,0,ushear1*3.5*1.94,vshear1*3.5*1.94, width=2, head_width=10, head_length=10, fc='blue', ec='black',zorder=10)
 				ax = plt.gca()
 				divider = make_axes_locatable(ax)
 				cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -2491,7 +2563,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
 	
 				ga('close 1')
-	
+
+			#Make Shear/RH Combo Plot With Vortex-Removed Shear, If Flag is Set on
+			if (do_shear_and_rh_plots == 'Y'):
+				shearandrhplot.shearandrhplot(XI,YI,theta,r,ushear_p,vshear_p,np.nanmean(rh_p[:,:,6:10],2),'3km','5km',rmw_mean[6],rmw_mean[10],GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
+		
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 	os.system("sed -i '/"+np.str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
