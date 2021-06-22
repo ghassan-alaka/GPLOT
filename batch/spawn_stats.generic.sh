@@ -389,6 +389,13 @@ if [ "${DO_STATS}" = "True" ]; then
             rm -f "${LOCK_FILE}"
             continue
         elif [ "$CASE_STATUS" == "update request 1" ]; then
+            echo "MSG: Status suggests this case needs to be updated."
+            echo "MSG: Changing the status to 'update request 2'."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "update request 2" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+            continue
+        elif [ "$CASE_STATUS" == "update request 2" ]; then
             echo "MSG: Status suggests this case has stalled/failed."
             echo "MSG: Deleting the status for a restart."
             lockfile -r-1 -l 180 "${LOCK_FILE}"
