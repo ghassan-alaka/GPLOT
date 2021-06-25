@@ -1414,11 +1414,10 @@ end if
 ; This is tricky to implement because of early vs. late cycles.
 ;systemfunc("awk '$3 <= "
 
-; Remove any blank lines from ADECK_N
-;system("sed -i '/^$/d' "+ADIR+ADECK_N)
-system("awk -F',' 'NF > 7 {print}' "+ADIR+ADECK_N+" > "+ADIR+"TMP."+ADECK_N)
+; Retain ATCF lines that have at least 7 columns, reorder,
+; and remove fully/partially duplicate entries.
+system("awk -F',' 'NF > 7 {print}' "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"TMP."+ADECK_N)
 system("mv "+ADIR+"TMP."+ADECK_N+" "+ADIR+ADECK_N)
-;exit
 
 
 print("MSG: Copy latest B-DECK")
