@@ -1,5 +1,4 @@
 HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
-XXXX,         HWRF: Oper. HWRF,  4,                blue,                              Operational HWRF
 HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
 H211,    H211: 2011 Oper. HWRF,  2,             magenta,                               2011 Oper. HWRF
 H11I,       H11I: Interp. H211,  2,             magenta,                       2011 Oper. HWRF (Early)
@@ -19,8 +18,12 @@ H218,    H218: 2018 Oper. HWRF,  9,           darkgreen,                        
 H18I,       H18I: Interp. H218,  9,           darkgreen,                       2018 Oper. HWRF (Early)
 H219,    H219: 2019 Oper. HWRF, 16,                blue,                               2019 Oper. HWRF
 H19I,       H19I: Interp. H219, 16,                blue,                       2019 Oper. HWRF (Early)
-H20C,     H20C: 2020 HWRF Base,  16,              purple,                            2020 HWRF Baseline
-H220,    H220: 2020 Prop. HWRF,  9,                 red,                            2020 HWRF Proposed
+H1113I, H1113I: Interp H211-13,  2,             magenta,                  2011-2013 Oper. HWRF (Early)
+H1416I, H1416I: Interp H214-16,  6,               green,                  2014-2016 Oper. HWRF (Early)
+H1719I, H1719I: Interp H217-19, 16,                blue,                  2017-2019 Oper. HWRF (Early)
+H20C,     H20C: 2020 HWRF Base, 16,              purple,                            2020 HWRF Baseline
+H220,    H220: 2020 HWRF Retro,  9,               green,                               2020 HWRF Retro
+180M,   180M, 3-h Run Avg HWRF,  7,              purple,                   3-hour Running Average HWRF
 360M,   360M: 6-h Run Avg HWRF,  6,                 red,                   6-hour Running Average HWRF
 540M,   540M: 9-h Run Avg HWRF,  9,               green,                   9-hour Running Average HWRF
 HC18,    HC18: 2018 Ens. HWRFB,  7,               coral,                2018 Ensemble Basin-Scale HWRF
@@ -41,8 +44,8 @@ HMON,         HMON: Oper. HMON,  4,               green,                        
 HMNI,       HMNI: Interp. HMON,  4,               green,                      Operational HMON (Early)
 NVGM,       NVGM: Oper. NAVGEM, 11,                cyan,                            Operational NAVGEM
 NVGI,       NVGI: Interp. NVGM, 11,                cyan,                    Operational NAVGEM (Early)
-CTCX,          CTCX: COAMPS-TC,  8,          darkorange,                              COAMPS-TC w/ GFS
-CTCI,       CTCI: Interp. CTCX,  8,          darkorange,                               Early COAMPS-TC
+CTCX,          CTCX: COAMPS-TC,  8,                cyan,                              COAMPS-TC w/ GFS
+CTCI,       CTCI: Interp. CTCX,  8,                cyan,                               Early COAMPS-TC
 OFCL,       OFCL: NHC Official, 12,                 red,                         NHC Official Forecast
 OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
 DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
@@ -57,12 +60,10 @@ EGRR,              EGRR: UKMet,  3,           violetred,                        
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
 F218,    F218: 2018 HWRF-Gopal,  7,               brown,                               2018 HWRF-Gopal
 F18I,       F18I: Interp. F218,  7,               brown,                       2018 HWRF-Gopal (Early)
-HAFA,        HAFA: HAFS V0.1.A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V1.A
-HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                             HAFS V1.A (Early)
-XXXX,          HAFB: HAFS V0.B,  8,          aquamarine,   Hurricane Analysis and Forecast System V0.B
-XXXX,     HFBI: Interp. HAFS-B,  8,          aquamarine,                             HAFS V0.B (Early)
-HAFB,        HAFB: HAFS V0.1.B,  8,           orangered,   Hurricane Analysis and Forecast System V1.B
-HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                             HAFS V1.B (Early)
+HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
+HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.2A (Early)
+HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
+HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
 HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                         2019 Basin-Scale HWRF
 HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)
 HNVI,     HNVI: 2019 HWRF-NoVI,  9,         deepskyblue,                             2019 No-V.I. HWRF
@@ -76,10 +77,31 @@ B20C,   B20C: 2020 HWRF-B Base,  8,         deepskyblue,                2020 Bas
 B20D, B20D: 2020 HWRF-B 18-6-2,  7,         deepskyblue,              2020 Basin-Scale HWRF (18-6-2km)
 S218,    S218: Oper. HWRF Base,  4,                 red,                     Operational HWRF Baseline
 HB20,    HB20: 2020 HWRF-Basin,  7,               brown,                         2020 Basin-Scale HWRF
-B20I,    B20I:    Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
+B220,  B220: 2020 HWRF-Basin-P,  4,                blue,              2020 Basin-Scale HWRF (Parallel)
+B20S,       B20S: HB20 1-Storm,  4,                blue,               2020 Basin-Scale HWRF (1-Storm)
+B20I,       B20I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
 FV3R,     FV3R: FV3-RRFS Phys.,  4,            hotpink4,                   2020 FV3GFS w/ RRFS Physics
 F3RI,       F3RI: Interp. FV3R,  4,            hotpink4,           2020 FV3GFS w/ RRFS Physics (Early)
 HAFJ,     HAFJ: HAFS ESQ V0.1J, 16,                gold,   Hurricane Analysis and Forecast System V0.1J ESG
 HFJI,     HFJI: Interp. HAFS-J, 16,                gold,                            HAFS V0.1J (Early)
-UCS1,       UCS1: UFS-CAMsuite, 10,             magenta,          Unified Forecast System CAM Suite v1
-UCSI,       UCSI: Interp. UCS1, 10,             magenta,  Unified Forecast System CAM Suite v1 (Early)
+UCS1,           UCS1: FV3-RRFS, 10,            hotpink4,                2020 FV3GFS w/ RRFS Physics v1
+UCSI,       UCSI: Interp. UCS1, 10,            hotpink4,        2020 FV3GFS w/ RRFS Physics v1 (Early)
+HFMN,     HFMN: HAFSV0.1E(avg), 16,             sienna4,   Hurricane Analysis and Forecast System V1.E (avg)
+HF00,      HF00: HAFSV0.1E(00),  1,             hotpink,   Hurricane Analysis and Forecast System V1.E (00)
+HF01,      HF01: HAFSV0.1E(01),  1,             maroon1,   Hurricane Analysis and Forecast System V1.E (01)
+HF02,      HF02: HAFSV0.1E(02),  1,                 red,   Hurricane Analysis and Forecast System V1.E (02)
+HF03,      HF03: HAFSV0.1E(03),  1,              tomato,   Hurricane Analysis and Forecast System V1.E (03)
+HF04,      HF04: HAFSV0.1E(04),  1,           orangered,   Hurricane Analysis and Forecast System V1.E (04)
+HF05,      HF05: HAFSV0.1E(05),  1,             orange1,   Hurricane Analysis and Forecast System V1.E (05)
+HF06,      HF06: HAFSV0.1E(06),  1,          goldenrod1,   Hurricane Analysis and Forecast System V1.E (06)
+HF07,      HF07: HAFSV0.1E(07),  1,              yellow,   Hurricane Analysis and Forecast System V1.E (07)
+HF08,      HF08: HAFSV0.1E(08),  1,     darkolivegreen1,   Hurricane Analysis and Forecast System V1.E (08)
+HF09,      HF09: HAFSV0.1E(09),  1,               green,   Hurricane Analysis and Forecast System V1.E (09)
+HF10,      HF10: HAFSV0.1E(10),  1,           seagreen1,   Hurricane Analysis and Forecast System V1.E (10)
+HF11,      HF11: HAFSV0.1E(11),  1,             skyblue,   Hurricane Analysis and Forecast System V1.E (11)
+HF12,      HF12: HAFSV0.1E(12),  1,          cadetblue2,   Hurricane Analysis and Forecast System V1.E (12)
+HF13,      HF13: HAFSV0.1E(13),  1,          dodgerblue,   Hurricane Analysis and Forecast System V1.E (13)
+HF14,      HF14: HAFSV0.1E(14),  1,          royalblue1,   Hurricane Analysis and Forecast System V1.E (14)
+HF15,      HF15: HAFSV0.1E(15),  1,       mediumpurple1,   Hurricane Analysis and Forecast System V1.E (15)
+HF16,      HF16: HAFSV0.1E(16),  1,             purple1,   Hurricane Analysis and Forecast System V1.E (16)
+HF17,      HF17: HAFSV0.1E(17),  1,              grey35,   Hurricane Analysis and Forecast System V1.E (17)
