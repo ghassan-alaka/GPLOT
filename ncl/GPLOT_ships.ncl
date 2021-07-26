@@ -1851,6 +1851,7 @@ do fff = 0,nFiles-1
 					data	:= asciiread(DAT_FILE2,(/NL,2/),"float")
 					if(any(data(:,0).eq.tofloat(FHR(fff))))then
 						SHRD := data(ind(data(:,0).eq.tofloat(FHR(fff))),1)
+						if(dimsizes(SHRD).gt.1)then   SHRD := SHRD(0)   end if
 					else
 						SHRD := default_fillvalue("float")
 					end if
@@ -1863,6 +1864,7 @@ do fff = 0,nFiles-1
 					data	:= asciiread(DAT_FILE2,(/NL,2/),"float")
 					if(any(data(:,0).eq.tofloat(FHR(fff))))then
 						SHTD := data(ind(data(:,0).eq.tofloat(FHR(fff))),1)
+						if(dimsizes(SHTD).gt.1)then   SHTD := SHTD(0)   end if
 					else
 						SHTD := default_fillvalue("float")
 					end if
@@ -1875,6 +1877,7 @@ do fff = 0,nFiles-1
 					data	:= asciiread(DAT_FILE2,(/NL,2/),"float")
 					if(any(data(:,0).eq.tofloat(FHR(fff))))then
 						SHRS := data(ind(data(:,0).eq.tofloat(FHR(fff))),1)
+						if(dimsizes(SHRS).gt.1)then   SHRS := SHRS(0)   end if
 					else
 						SHRS := default_fillvalue("float")
 					end if
@@ -1887,6 +1890,7 @@ do fff = 0,nFiles-1
 					data	:= asciiread(DAT_FILE2,(/NL,2/),"float")
 					if(any(data(:,0).eq.tofloat(FHR(fff))))then
 						SHTS := data(ind(data(:,0).eq.tofloat(FHR(fff))),1)
+						if(dimsizes(SHTS).gt.1)then   SHTS := SHTS(0)   end if
 					else
 						SHTS := default_fillvalue("float")
 					end if
