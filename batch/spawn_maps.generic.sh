@@ -303,9 +303,9 @@ for TR in ${TIER[@]}; do
         for STORM in ${STORMS[@]}; do
 
             # Increase the storm counter
-            if [ "$STORM" != "00L" ]; then
-                ((NSTORM=NSTORM+1))
-            fi
+            #if [ "$STORM" != "00L" ]; then
+            ((NSTORM=NSTORM+1))
+            #fi
             echo "MSG: Storm number=${NSTORM}"
 
             # Find the forecast hours from the ATCF for thie particular storm
