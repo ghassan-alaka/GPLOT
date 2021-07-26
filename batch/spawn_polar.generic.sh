@@ -228,7 +228,7 @@ if [ "${DO_POLAR}" = "True" ]; then
         fi
 
         # Second, try to get STORMS from the ATCF files
-        if [ -z "$STORMS" ]; then
+        if [ -z "${STORMS[*]}" ]; then
             for ATCF in ${CYCLE_ATCF}; do
                 STORMS+=(`basename $ATCF | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
             done
@@ -236,25 +236,21 @@ if [ "${DO_POLAR}" = "True" ]; then
 
         # Third, try to get STORMS from the HWRF file path.
         # This is hard-coded and might not work.
-        if [ -z "$STORMS" ]; then
+        if [ -z "${STORMS[*]}" ]; then
             if [ ! -z $(ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
                 STORMS+=(`ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
             fi
         fi
 
-        # Fourth, if STORMS is still undefined, then set it to "NONE"
-        # Large-scale graphics may still proceed.
-        # Storm-centered graphics will be skipped.
-        if [ -z "$STORMS" ]; then
-            STORMS+=("NONE")
-        fi
+        # Fourth, remove duplicate storms, if applicable.
+        STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
 
-
-        # Fifth, append Fake Storm (00L) is IS_MSTORM=True and if other storms
-        # were found, i.e., STORMS != NONE
-        if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
+        # Fifth, append Fake Storm (00L) if IS_MSTORM=True
+        if [ "$IS_MSTORM" == "True" ]; then
             STORMS+=("00L")
         fi
+
+        echo "MSG: Found these storms: ${STORMS[*]}"
 
 
         ####################
