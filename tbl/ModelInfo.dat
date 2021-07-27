@@ -18,17 +18,6 @@ H218,    H218: 2018 Oper. HWRF, 16,         deepskyblue,                        
 H18I,       H18I: Interp. H218, 16,         deepskyblue,                       2018 Oper. HWRF (Early)
 H219,    H219: 2019 Oper. HWRF,  9,               brown,                               2019 Oper. HWRF
 H19I,       H19I: Interp. H219,  9,               brown,                       2019 Oper. HWRF (Early)
-H20C,     H20C: 2020 HWRF Base,  9,              purple,                            2020 HWRF Baseline
-HC18,    HC18: 2018 Ens. HWRFB,  7,               coral,                2018 Ensemble Basin-Scale HWRF
-HC8I,       HC8I: Interp. HC18,  7,               brown,            2018 Ens. Basin-Scale HWRF (Early)
-HB18,    HB18: 2018 HWRF-Basin,  7,               brown,                         2018 Basin-Scale HWRF
-HB8I,       HB8I: Interp. HB18,  7,               brown,                 2018 Basin-Scale HWRF (Early)
-HFV3,       HFV3: 2018 hfvGFS3,  7,          aquamarine,                                   2018 hfvGFS
-HF3I,       H18I: Interp. HFV3,  7,          aquamarine,                           2018 hfvGFS (Early)
-HB17,    HB17: 2017 HWRF-Basin,  7,               brown,                         2017 Basin-Scale HWRF
-HB7I,       HB7I: Interp. HB17,  7,               brown,                 2017 Basin-Scale HWRF (Early)
-HB16,    HB16: 2016 HWRF-Basin,  7,               coral,                         2016 Basin-Scale HWRF
-HB15,    HB15: 2015 HWRF-Basin,  7,         deepskyblue,                         2015 Basin-Scale HWRF
 AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
 AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
 GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
@@ -51,24 +40,13 @@ SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                        
 FGFS,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
 EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
-F218,    F218: 2018 HWRF-Gopal,  7,               brown,                               2018 HWRF-Gopal
-F18I,       F18I: Interp. F218,  7,               brown,                       2018 HWRF-Gopal (Early)
-HAFA,          HAFA: HAFS V0.A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.A
-HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                             HAFS V0.A (Early)
-XXXX,          HAFB: HAFS V0.B,  8,          aquamarine,   Hurricane Analysis and Forecast System V0.B
-XXXX,     HFBI: Interp. HAFS-B,  8,          aquamarine,                             HAFS V0.B (Early)
-HAFB,          HAFB: HAFS V0.B,  8,           orangered,   Hurricane Analysis and Forecast System V0.B
-HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                             HAFS V0.B (Early)
-HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                         2019 Basin-Scale HWRF
-HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)
-HNVI,     HNVI: 2019 HWRF-NoVI,  9,         deepskyblue,                             2019 No-V.I. HWRF
-HVII,       HVII: Interp. HNVI,  9,         deepskyblue,                     2019 No-V.I. HWRF (Early)
-HWFA,          HWFA: HWRF Kren,  7,               brown,                                   HWRF Andrew
-HWAI,       HWAI: Interp. HWFA,  7,               brown,                           HWRF Andrew (Early)
+HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
+HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.2A (Early)
+HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
+HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
 HB20,    HB20: 2020 HWRF-Basin,  7,               brown,                         2020 Basin-Scale HWRF
 HB0I,       HB0I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
 ECMO,          ECMO: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
 ECMI,       ECMI: Interp. ECMO,  8,               coral,      ECMWF Integrated Forecast System (Early)
-B20C,   B20C: 2020 HWRF-B Base,  7,               brown,                2020 Basin-Scale HWRF Baseline
-B20D, B20D: 2020 HWRF-B 18-6-2,  7,         deepskyblue,              2020 Basin-Scale HWRF (18-6-2km)
-S218,    S218: Oper. HWRF Base,  4,                 red,                     Operational HWRF Baseline
+HAFD,         HAFD: HAFS V0.2D,  7,             sienna1,   Hurricane Analysis and Forecast System V0.2D
+HFDI,     HFDI: Interp. HAFS-D,  7,             sienna1,                            HAFS V0.2D (Early)
