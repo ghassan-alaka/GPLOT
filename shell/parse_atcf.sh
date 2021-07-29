@@ -155,7 +155,11 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # If TCNAME still is not set, set it to something generic like "NONAME"
             if [ -z "$TCNAME" ]; then
                 echo "WARNING: TC Name not found for ${CYCLE}"
-                TCNAME="UNKNOWN"
+                if [ "$(echo ${SNUM} | cut -c1)" == "9" ]; then
+                    TCNAME="INVEST"
+                else
+                    TCNAME="STORM"
+                fi
             fi
 
             echo "MSG: TCNAME=$TCNAME"
