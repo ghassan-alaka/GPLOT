@@ -1,10 +1,16 @@
-#!/bin/sh --login
+#!/bin/sh
 
 # MODULEFILE for JET (tcsh)
 
-setenv A "$1"
+setenv A "${1}"
 if ( "${A}" == "" ) then
     setenv A "0"
+endif
+
+# Initialize 'module' command
+eval module help >& /dev/null
+if ( $status == 1 ) then
+    source /apps/lmod/lmod/init/csh
 endif
 
 # Load modules
@@ -22,11 +28,11 @@ module load ncl/6.5.0
 module load grads/2.0.2
 
 # NCL
-setenv NCARG_COLORMAPS $GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+setenv NCARG_COLORMAPS ${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then
-    PYDIR="/scratch2/NAGAPE/aoml-hafs1/Levi.Cowan/anaconda3"
+    PYDIR "/scratch2/AOML/aoml-hafs1/Ghassan.Alaka/anaconda3"
     # Python 3 Anaconda
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!

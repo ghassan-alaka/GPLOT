@@ -2,10 +2,19 @@
 
 # MODULEFILE for ORION (bash)
 
-A=${1:-0}
+A="${1:-0}"
+
+# Initialize 'module' command
+if ( ! eval module help > /dev/null 2>&1 ) ; then
+    source /apps/lmod/lmod/init/sh
+fi
 
 # Load modules
 module purge
+module use /apps/modulefiles/core
+module use /apps/contrib/modulefiles
+module use /apps/contrib/NCEPLIBS/lib/modulefiles
+module use /apps/contrib/NCEPLIBS/orion/modulefiles
 module load wgrib/2.0.8
 module load intel/2020
 if [ "${A}" -eq 0 ]; then
@@ -16,11 +25,11 @@ module load ncl/6.6.2
 module load grads/2.2.1
 
 # NCL
-export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+export NCARG_COLORMAPS=${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps
 
 # Python 3 Anaconda
 if [ "${A}" -eq 1 ]; then
-    PYDIR="/work/noaa/aoml-hafs1/lcowan/anaconda3"
+    PYDIR="/work/noaa/aoml-hafs1/galaka/anaconda3"
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
     __conda_setup="$('${PYDIR}/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"

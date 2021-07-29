@@ -7,6 +7,12 @@ if ( "${A}" == "" ) then
     setenv A "0"
 endif
 
+# Initialize 'module' command
+eval module help >& /dev/null
+if ( $status == 1 ) then
+    source /apps/lmod/lmod/init/csh
+endif
+
 # Load modules
 module purge
 module load wgrib/1.8.1.0b
