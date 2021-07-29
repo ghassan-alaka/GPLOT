@@ -4639,16 +4639,14 @@ if(DO_VERIFICATION)then
 	TCPout2		= ODIR+"mettc/tcpairs."+SID+"."+IDATE+".earlyINT"
 	TCPout3		= ODIR+"mettc/tcpairs."+SID+"."+IDATE+".lateTRK"
 	TCPout4		= ODIR+"mettc/tcpairs."+SID+"."+IDATE+".lateINT"
-	TCSfout1	= ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".earlyTRK"
-	TCSfout2	= ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".earlyINT"
-	TCSfout3	= ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".lateTRK"
-	TCSfout4	= ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".lateINT"
+	TCSfout1	= str_sub_str(ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".earlyTRK","//","/")
+	TCSfout2	= str_sub_str(ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".earlyINT","//","/")
+	TCSfout3	= str_sub_str(ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".lateTRK","//","/")
+	TCSfout4	= str_sub_str(ODIR+"mettc/tcstat.filter."+SID+"."+IDATE+".lateINT","//","/")
 	TCSsout1	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".earlyTRK"
 	TCSsout2	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".earlyINT"
 	TCSsout3	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".lateTRK"
 	TCSsout4	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".lateINT"
-	MET_PATH	= "/lfs1/projects/dtc-hurr/MET/MET_releases/8.0/bin"
-	MET_LIB		= "/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib"
 
 
 	; 2. set up files and directories
@@ -4805,12 +4803,7 @@ if(DO_VERIFICATION)then
 		
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-		;       ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-		;       " >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
 		       " -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
@@ -4829,12 +4822,7 @@ if(DO_VERIFICATION)then
 
 		; d. Create shell script to run TC_STAT with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-		;       ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-		;       " >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout3+".tcst -config "+TCSconf_f+str_get_dq()+\
 		       " >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
@@ -4858,12 +4846,7 @@ if(DO_VERIFICATION)then
 	
 			; Create shell script to run TC_STAT with shell options (better)
 			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"source ~/.profile"+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-			;       ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-			;       " >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout3+".tcst -config "+TCSconf_s+\
 			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
@@ -5131,8 +5114,6 @@ if(DO_VERIFICATION)then
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
 		       " -out "+TCPout4+" -log "+TCPout4+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
@@ -5152,9 +5133,6 @@ if(DO_VERIFICATION)then
 		; d. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout4+".tcst -config "+TCSconf_f+\
 		       str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
@@ -5178,9 +5156,6 @@ if(DO_VERIFICATION)then
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-			;        str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout4+".tcst -config "+TCSconf_s+\
 			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
@@ -5377,9 +5352,6 @@ if(DO_VERIFICATION)then
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-		;        str_get_dq()+" >> "+ODIR+"mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+\
 		       TCPconf+" -out "+TCPout1+" -log "+TCPout1+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
@@ -5399,9 +5371,6 @@ if(DO_VERIFICATION)then
 		; d. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout1+".tcst -config "+TCSconf_f+\
 		       str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
@@ -5426,9 +5395,6 @@ if(DO_VERIFICATION)then
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-			;        str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout1+".tcst -config "+TCSconf_s+" -out "+\
 			       tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
@@ -5693,9 +5659,6 @@ if(DO_VERIFICATION)then
 		; b. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+\
 		       TCPconf+" -out "+TCPout2+" -log "+TCPout2+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
@@ -5715,9 +5678,6 @@ if(DO_VERIFICATION)then
 		; d. Create shell script to run TC_PAIRS with shell options (better)
 		system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+\
-		;        str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout2+".tcst -config "+\
 		       TCSconf_f+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
 		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
@@ -5741,10 +5701,6 @@ if(DO_VERIFICATION)then
 			; Create a shell script to run TC_STAT with shell options.
 			system("echo "+str_get_dq()+"#!/bin/sh"+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export PATH="+MET_PATH+":\${PATH}"+str_get_dq()+" >> "+\
-			;       ODIR+"mettc/tc_stats_wrapper.sh")
-			;system("echo "+str_get_dq()+"export LD_LIBRARY_PATH="+MET_LIB+":\$LD_LIBRARY_PATH"+str_get_dq()+\
-			;       " >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout2+".tcst -config "+TCSconf_s+\
 			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
 			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
