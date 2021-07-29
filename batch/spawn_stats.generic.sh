@@ -137,13 +137,15 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
-ATCF2_ALL=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'`)
-for ATCF in ${ATCF2_ALL[@]}; do
-    ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
-    ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
+ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_ALL=()
+for ATCF in ${ATCF_TMP[@]}; do
+    ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
+    if [[ "${ATCF_ALL[*]}" != *"${ATCF_BASE}"* ]]; then
+        ATCF_ALL+=( "${ATCF}" )
+    fi
 done
-ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
 NATCF="${#ATCF_ALL[*]}"
 if [[ NATCF -gt NMAX ]]; then
     C=$((NATCF - NMAX))
@@ -174,7 +176,7 @@ chmod +x ${BATCHFILE2}
 #if [ -z "$IDATE" ]; then
 #    CYCLES=`ls -d ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "`
 #else
-    CYCLES="${IDATE[@]}"
+    CYCLES=("${IDATE[@]}")
 #fi
 echo "MSG: Found these cycles: ${CYCLES[*]}"
 echo ""
@@ -277,7 +279,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Process this ATCF only if the cycle is found in IDATE
         # or if IDATE is empty.
-        if [ ! -z "${CYCLES[@]}" ]; then
+        if [ ! -z "${CYCLES[*]}" ]; then
             CYCLE_FOUND="False"
             for D in "${CYCLES[@]}"; do
                 if [ "$D" == "$CYCLE" ]; then

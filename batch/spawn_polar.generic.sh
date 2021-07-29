@@ -126,13 +126,15 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}"`)
-ATCF2_ALL+=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}"`)
-for ATCF in ${ATCF2_ALL[@]}; do
-    ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
-    ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
+ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}"` )
+ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}"` )
+ATCF_ALL=()
+for ATCF in ${ATCF_TMP[@]}; do
+    ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
+    if [[ "${ATCF_ALL[*]}" != *"${ATCF_BASE}"* ]]; then
+        ATCF_ALL+=( "${ATCF}" )
+    fi
 done
-ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
 
 
 # Determine if this experiment has ensemble members
@@ -266,7 +268,7 @@ if [ "${DO_POLAR}" = "True" ]; then
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}"` )
+            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
             echo "MSG: The ATCF for this storm --> $STORM_ATCF"
             if [ -z "${STORM_ATCF[*]}" ]; then
                 echo "WARNING: No ATCF found for this storm. This might be OK."
