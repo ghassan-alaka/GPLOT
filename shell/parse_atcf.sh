@@ -133,7 +133,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
                 BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
                 if [ -f ${BDECK} ]; then
                     echo "MSG: B-Deck file found --> ${BDECK}"
-                    TCNAME=`cat ${BDECK} | awk -v CYCLE="${CYCLE}" '$3==CYCLE' | head -1 | cut -d "," -f28`
+                    TCNAME=`awk -v CYCLE="${CYCLE}" '$3~CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | awk '{$1=$1};1'`
                     #TCNAME=`grep "${CYCLE}" ${BDECK} | grep -v " 50, NEQ," | grep -v " 64, NEQ," | cut -d "," -f28 | sed -e 's/^[[:space:]]*//' | tr '[:upper:]' '[:lower:]'`
                 else
                     echo "WARNING: B-Deck not found --> ${BDECK}"
@@ -155,7 +155,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # If TCNAME still is not set, set it to something generic like "NONAME"
             if [ -z "$TCNAME" ]; then
                 echo "WARNING: TC Name not found for ${CYCLE}"
-                TCNAME="NONAME"
+                TCNAME="UNKNOWN"
             fi
 
             echo "MSG: TCNAME=$TCNAME"

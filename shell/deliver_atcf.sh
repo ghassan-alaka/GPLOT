@@ -1,7 +1,7 @@
 #!/bin/sh
 ##SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
-#SBATCH --time=00:10:00
+#SBATCH --time=00:19:30
 #SBATCH --partition=service
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
@@ -126,7 +126,11 @@ fi
 # Merge the NHC A-Deck
 echo "*********************************************"
 echo "MSG: PART ONE - MERGE THE NHC A_DECK"
-NHC_DECKS=( `find ${ANHC}/. -mmin -10080 -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 ls -t | xargs -L1 basename` )
+NHC_DECKS=( `find ${ANHC}/. -mmin -10080 -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
+if [ -z "${NHC_DECKS}" ]; then
+    echo "WARNING: Couldn't find any recent NHC a-decks. This might be OK."
+fi
+
 for D in "${NHC_DECKS[@]}"; do
     echo "MSG: Working on this NHC a-deck --> ${D}"
     if [ -f ${AOUT}/${D} ]; then
@@ -181,7 +185,10 @@ echo ""
 echo "*********************************************"
 echo "MSG: PART TWO - MERGE THE MODEL A_DECK"
 #M_DECKS=( `find ${ATMP}/. -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -printf "%f\n" ` )
-M_DECKS=( `find ${ATMP}/ -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -print0 | xargs -0 ls -t | xargs -L1 basename` )
+M_DECKS=( `find ${ATMP}/ -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
+if [ -z "${M_DECKS}" ]; then
+    echo "WARNING: Couldn't find any recent model a-decks. This might be OK."
+fi
 for D in "${M_DECKS[@]}"; do
     echo "MSG: Working on this model a-deck --> ${D}"
 
@@ -209,7 +216,8 @@ for D in "${M_DECKS[@]}"; do
         lockfile -r-1 -l 180 ${LOCK_FILE}
 
         # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-        cat ${AOUT}/${D} ${ATMP}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+        #cat ${AOUT}/${D} ${ATMP}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+        cat ${ATMP}/${D} ${AOUT}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
@@ -328,7 +336,8 @@ for D in "${M_DECKS[@]}"; do
                 lockfile -r-1 -l 180 ${LOCK_FILE}
 
                 # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-                cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+                #cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+                cat ${INTERP_ADIR}/${INTERP_FILE} ${AOUT}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
                 DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
                 if [ "${DIFF}" != "" ]; then
@@ -377,7 +386,8 @@ for D in "${M_DECKS[@]}"; do
                 lockfile -r-1 -l 180 ${LOCK_FILE}
 
                 # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-                cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+                #cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+                cat ${INTERP_ADIR}/${INTERP_FILE} ${AOUT}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
                 DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
                 if [ "${DIFF}" != "" ]; then

@@ -133,7 +133,7 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
         # Get the storm number
         SNUM1="`echo "$SID1" | cut -c1-2`"
-        if [[ ${SNUM1} -gt 50 ]]; then
+        if [[ $((10#${SNUM1})) -gt 50 ]]; then
             echo "WARNING: The first Storm Number must be from a designated tropical cyclone."
             echo "WARNING: Skipping because Storm Number (${SNUM1}) > 50."
             continue
@@ -203,7 +203,7 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
             # Define Storm Number
             SNUM2="`echo "$SID2" | cut -c1-2`"
-            if [[ ${SNUM2} -gt 50 ]] && [[ ${SNUM2} -lt 90 ]]; then
+            if [[ $((10#${SNUM2})) -gt 50 ]] && [[ $((10#${SNUM2})) -lt 90 ]]; then
                 echo "WARNING: The first Storm Number must be from a designated tropical cyclone or invest."
                 echo "WARNING: Skipping because 50 < Storm Number (${SNUM2}) < 90."
                 continue
@@ -299,7 +299,7 @@ for YMDH in "${ALL_YMDH[@]}"; do
 
             # Define Storm Number
             SNUM2="`echo "$SID2" | cut -c1-2`"
-            if [[ ${SNUM2} -gt 50 ]] && [[ ${SNUM2} -lt 90 ]]; then
+            if [[ $((10#${SNUM2})) -gt 50 ]] && [[ $((10#${SNUM2})) -lt 90 ]]; then
                 echo "WARNING: The first Storm Number must be from a designated tropical cyclone or invest."
                 echo "WARNING: Skipping because 50 < Storm Number (${SNUM2}) < 90."
                 continue
