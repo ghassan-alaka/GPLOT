@@ -4,6 +4,11 @@
 
 A=${1:-0}
 
+# Initialize 'module' command
+if ( ! eval module help > /dev/null 2>&1 ) ; then
+    source /apps/lmod/lmod/init/sh
+fi
+
 # Load modules
 module purge
 module load wgrib/1.8.1.0b
@@ -20,7 +25,7 @@ module load ncl/6.5.0
 module load grads/2.0.2
 
 # NCL
-export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+export NCARG_COLORMAPS=${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps
 
 # Python 3 Anaconda
 if [ "${A}" -eq 1 ]; then
