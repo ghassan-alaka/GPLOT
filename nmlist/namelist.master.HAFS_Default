@@ -92,7 +92,7 @@ DO_CONVERTGIF = True
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = wlant elant gom d01 d03
+DOMAIN = wlant elant gom d01 d03 epac wpac
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1
