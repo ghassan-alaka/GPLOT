@@ -490,6 +490,10 @@ wtype   = "png"
 wtype@wkWidth = 2048
 wtype@wkHeight = 2048
 
+; 10. Initialize a variable to determine if the model domain and
+;     graphic domain overlap.
+OUT_OF_BDS = False
+
 
 
 
@@ -1152,36 +1156,46 @@ do fff = 0,nFiles-1
                         if(any((/"TPRCP","PRCP"/).eq.G_BASE(0,ppp)))then
 				hr_offset := G_BASE(1,ppp)
 				if(DSOURCE.eq."GFS")then
-                                	if(FHR0.gt.6)then       G_BASE(1,ppp) = tostring(FHR0)+"h"
-	                                else                    G_BASE(1,ppp) = ""
-	                                end if
+					G_BASE_LEVS := (/"",tostring(FHR0)+"h"/)
+                                	;if(FHR0.gt.6)then       G_BASE(1,ppp) = tostring(FHR0)+"h"
+	                                ;else                    G_BASE(1,ppp) = ""
+	                                ;end if
 				else if(DSOURCE.eq."HAFS")then
-					if(FHR0.ge.6)then       G_BASE(1,ppp) = "3h"
-	                                else                    G_BASE(1,ppp) = ""
-	                                end if
+					G_BASE_LEVS := (/"","3h","6h"/)
+					;if(FHR0.ge.6)then       G_BASE(1,ppp) = "3h"
+	                                ;else                    G_BASE(1,ppp) = ""
+	                                ;end if
 				else if(DSOURCE.eq."HWRF")then
-					G_BASE(1,ppp) = ""
+					G_BASE_LEVS := ""
+					;G_BASE(1,ppp) = ""
 				end if  end if  end if
+			else
+				G_BASE_LEVS := G_BASE(1,ppp)
                         end if
                         
                         ;================================================================
                         ; vi. Determine which file contains the G_BASE variable
 			;     Check if the variable was found. If not, we can't continue.
                         ;================================================================
-			BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))
-                        varStatus = False
-                        do aaa = 0,dimsizes(myInd)-1
-                                if(aaa.eq.0)then        f := f1
-                                else if(aaa.eq.1)then   f := f2
-                                else if(aaa.eq.2)then   f := f3
-                                else if(aaa.eq.3)then   f := f4
-                                end if  end if  end if  end if
-                                
-                                if(isfilevar(f,BASEVAR))then
-                                        varStatus = True
-                                        break
-                                end if
-                        end do
+			do ggg = 0,dimsizes(G_BASE_LEVS)-1
+				;BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))
+				BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE_LEVS(ggg))
+	                        varStatus = False
+	                        do aaa = 0,dimsizes(myInd)-1
+	                                if(aaa.eq.0)then        f := f1
+	                                else if(aaa.eq.1)then   f := f2
+	                                else if(aaa.eq.2)then   f := f3
+	                                else if(aaa.eq.3)then   f := f4
+	                                end if  end if  end if  end if
+	                                
+	                                if(isfilevar(f,BASEVAR))then
+	                                        varStatus = True
+						G_BASE(1,ppp) = G_BASE_LEVS(ggg)
+	                                        break
+	                                end if
+	                        end do
+				if(varStatus)then   break   end if
+			end do
 
                         ;================================================================
                         ; vii. If the variable is not found in any input files, then we
@@ -1277,6 +1291,7 @@ do fff = 0,nFiles-1
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
                                         y = ddd
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
+					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
                                 end if
                         
@@ -1285,6 +1300,7 @@ do fff = 0,nFiles-1
                                         x = ddd
 					BOCO@PivotLon = PIV
                                         lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
+					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
                                         flipFlag = lon@flipFlag
                                         
@@ -1321,6 +1337,21 @@ do fff = 0,nFiles-1
                                                                                 mf              = 1.
                                 end if
                         end do
+
+			if(isvar("lat"))then
+			if(ismissing(lat(0)))then
+				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+				OUT_OF_BDS = True
+				continue
+			end if
+			end if
+			if(isvar("lon"))then
+			if(ismissing(lon(0)))then
+				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+				OUT_OF_BDS = True
+				continue
+			end if
+			end if
                 
                         ;================================================================
                         ; xii. 'mf' is the multiplicative factor for the vertical
@@ -1700,11 +1731,11 @@ do fff = 0,nFiles-1
 				;			continue
 				;end if
 				system("mkdir -p "+ODIR+"PRCPDATA")
-				if(FHR3(ttt).ge.6 .and. FHR3(ttt)%3.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc"))then
+				if(FHR3(ttt).ge.(DT*2) .and. FHR3(ttt)%DT.eq.0)then
+					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc"))then
 						continue
 					end if
-					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc","r")
+					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc","r")
 					Vbase	= Vbase + (/f2->TPRCP/)
 					Vbase!0 = "lat"
 					Vbase!1 = "lon"
@@ -3186,7 +3217,11 @@ end if ; DO_PLOT
 
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
-if(ATCF_REQD .and. .not.ALL_ATCF)then
+if(OUT_OF_BDS)then
+	print("")
+	print("MSG: COMPLETE! Nothing to do for this domain because it does not overlap with model domain.")
+	system("echo 'complete' > "+STATUS_FILE)
+else if(ATCF_REQD .and. .not.ALL_ATCF)then
         print("")
         print("MSG: INCOMPLETE! Graphics were produced, but might be missing info from ATCFs.")
         print("MSG: Graphics will be reproduced once ATCFs become available.")
@@ -3206,7 +3241,7 @@ else
         print("MSG: COMPLETE! Graphics were produced! Way to go! You rock!")
         ;print("MSG: This forecast will be double-checked for completeness.")
         system("echo 'complete' > "+STATUS_FILE)        
-end if  end if  end if
+end if  end if  end if  end if
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 

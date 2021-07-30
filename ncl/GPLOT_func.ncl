@@ -611,7 +611,17 @@ begin
 
 	; New boundaries
 	BDS = BOCO
-	
+
+        ; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(0:1).eq.0.))then
+	        if(max(f->$DIM$).lt.BDS(1))then		LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        else if(min(f->$DIM$).gt.BDS(0))then	LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        end if  end if
+	end if
 
 	; TYPE 0: take the boundaries as provided
 	; TYPE 1: Take the entire latitude dimension from the file
@@ -726,7 +736,7 @@ begin
 
 	; New boundaries
 	BDS = BOCO
-	
+
 	; Get the pivot longitude, if applicable
 	if(isatt(BOCO,"PivotLon"))then	PIV = BOCO@PivotLon
 	else				PIV = 180.
@@ -760,6 +770,17 @@ begin
 	LONF!0 = "lon"
 	LONF&lon = LONF
 	LONF@units = "degrees_east"
+
+        ; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(2:3).eq.0.))then
+	        if(max(LONF).lt.BDS(2))then		LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		else if(min(LONF).gt.BDS(3))then	LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		end if  end if
+	end if
 
 	; TYPE 0: take the boundaries as provided (no action needed)
 	; TYPE 1: Take the entire latitude dimension from the file
