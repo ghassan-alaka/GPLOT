@@ -47,3 +47,6 @@ hwrf-basinscale_multistorms-rev1_2016_realtime,                         2016 Bas
                              HAFSV0.2B_2021_RT,   Hurricane Analysis and Forecast System V0.2B
                              HAFSV0.2D_2021_RT,   Hurricane Analysis and Forecast System V0.2D
                              HAFSV0.2E_2021_RT,   Hurricane Analysis and Forecast System V0.2E
+                             TH16_GFS_Forecast,   Global Forecast System (v16; Thomp. substep)
+                             GF16_GFS_Forecast,    Global Forecast System (v16; GF convection)
+                             MY16_GFS_Forecast,         Global Forecast System (v16; MYNN PBL)
