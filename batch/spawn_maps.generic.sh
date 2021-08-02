@@ -626,7 +626,7 @@ for TR in ${TIER[@]}; do
                                "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
                                "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L/" \
                                "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
-                               "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/")
+                               "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
 
 
                     # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
