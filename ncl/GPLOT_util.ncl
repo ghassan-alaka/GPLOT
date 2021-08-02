@@ -876,7 +876,7 @@ begin
 			levels	= fspan(1170.,1260.,31)
 			levels@stride	= 2
 		else if(isStrSubset(lev,"diff"))then
-			levels	= fspan(-0.5,0.5,21)
+			levels	= fspan(-0.1,0.1,21)
 			levels@stride	= 2
 		end if  end if  end if  end if
 	
@@ -1083,7 +1083,7 @@ begin
 	VAR_LIST(2,:) = str_get_field(DATA,3,"	")
 
 
-	; Look for a matching catalog number in the model variable table	
+	; Look for a matching catalog number in the model variable table
 	MATCH = ind(VAR_LIST(1,:).eq.NCAT)
 	if(ismissing(MATCH(0)))then	print("WARNING: findVarName: Variable '"+OLDVAR+"' not found in table for "+DSOURCE+".")
 					NEWVAR = "missing"
