@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -14,29 +14,25 @@
 
 set -x
 
+# 1. Get command line arguments
+MACHINE="${1:-${MACHINE}}"
+NCLFILE="${2}"
+LOGFILE="${3}"
+NMLIST="${4:-namelist.master.default}"
+DOMAIN="${5:-atl}"
+TIER="${6:-Tier1}"
+ENSID="${7:-XX}"
+IDATE="${8}"
+SID="${9:-00L}"
+FORCE="${10:-False}"
+
+# 2. Determine the GPLOT source code directory
+if [ -z "${GPLOT_DIR}" ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
+
 # Source the .profile to optimize the environment
-source ${GPLOT_DIR}/modulefiles/GPLOT_mods
-
-# Load modules
-#module load intel
-
-# Define critical environmental variables (based on NOAA's Jet)
-#LD_LIBRARY_PATH="/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib:${LD_LIBRARY_PATH}"
-#export NCARG_COLORMAPS=$GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
-#export OMP_NUM_THREADS=1
-
-# 1. Get command line variables
-NCLDIR=
-NCLFILE=
-LOGDIR=
-LOGFILE=
-NMLIST=
-IDATE=
-SID=
-DOMAIN=
-TIER=
-ENSID=
-FORCE=
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
 
 # 2. Build list in input arguments for NCL
 NCL_ARGS=()
@@ -52,7 +48,9 @@ fi
 if [ ! -z "$TIER" ]; then
     NCL_ARGS+=('TIER="'"${TIER}"'"')
 fi
-if [ ! -z "$ENSID" ]; then
+if [ "${ENSID}" == "XX" ]; then
+    NCL_ARGS+=('ENSID=""')
+elif [ ! -z "$ENSID" ]; then
     NCL_ARGS+=('ENSID="'"${ENSID}"'"')
 fi
 if [ ! -z "$FORCE" ]; then
@@ -64,7 +62,7 @@ fi
 
 # 2. Submit the NCL job
 echo "${NCL_ARGS[*]}"
-ncl "${NCL_ARGS[@]}" ${NCLDIR}${NCLFILE}  > ${LOGDIR}${LOGFILE}
+ncl "${NCL_ARGS[@]}" ${NCLFILE} > ${LOGFILE}
 
 wait
 

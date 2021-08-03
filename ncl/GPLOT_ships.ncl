@@ -122,8 +122,11 @@ print("MSG: Verbose level = "+tostring(verbose))
 ; 1. Set the namelist path.
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
-if(.not.isvar("MASTER_NML_IN"))then	MASTER_NML = GPLOT_DIR+"/nmlist/namelist.input.default"
-else					MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+if(.not.isvar("MASTER_NML_IN"))then		MASTER_NML = GPLOT_DIR+"/nmlist/namelist.input.default"
+else
+	if(fileexists(MASTER_NML_IN))then	MASTER_NML = MASTER_NML_IN
+	else					MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+	end if
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
 
@@ -743,10 +746,8 @@ print("MSG: Searching for matching ATCFs.")
 		
 ; Get the list of ATCF files from a pre-existing text file
 ; If the text file does not exist, then set ATCF_FILES=NONE
-if(fileexists(ODIR+"ATCF_FILES.dat"))then
-	ATCF_FILES = asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
-else
-	ATCF_FILES = "NONE"
+if(fileexists(ODIR+"ATCF_FILES.dat"))then	ATCF_FILES = asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
+else						ATCF_FILES = "NONE"
 end if
 		
 ; Check if there are no ATCF files
@@ -773,11 +774,6 @@ tcFHR	:= new((/nFHR/),integer)
 tcINT	:= new((/nFHR/),integer)
 tcM6h	:= new((/nFHR/),float)
 tcM6hB	:= new((/nFHR/),float)
-;FNL_ATCF:= new(nAll,logical)
-;tcMAXHR	:= new(nAll,integer)
-;ALL_LONGSID := new(nAll,string)
-;ALL_SID	:= new(nAll,string)
-;ALL_SNUM:= new(nAll,integer)
 		
 
 ; Storm ID (SID) should already be defined.
@@ -849,24 +845,8 @@ end if
 FNL_HR = max(tcFHR)
 	
 	
-
-
-
-
-
-
-
-
-
-;fnlStr	= ".f"+sprinti("%0.3i",max(FHR))
-;print("MSG: "+fnlStr+" is the final forecast hour found.")
-;print("MSG: Graphics directory is: "+tmpDir)
-;print("MSG: GPLOT Status file is "+tmpDir+status_STR+IDtag+".log")
-
 if(.not.isvar("NameIDTag"))then   NameIDTag = "NONAME"+SID   end if
 if(.not.isvar("TCNAME"))then   TCNAME = "NONAME"   end if
-
-
 
 
 
