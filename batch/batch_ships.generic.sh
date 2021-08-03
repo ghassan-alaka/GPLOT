@@ -19,12 +19,12 @@ MACHINE="${1:-${MACHINE}}"
 NCLFILE="${2}"
 LOGFILE="${3}"
 NMLIST="${4:-namelist.master.default}"
-DOMAIN="${5:-atl}"
-TIER="${6:-Tier1}"
-ENSID="${7:-XX}"
-IDATE="${8}"
-SID="${9:-00L}"
-FORCE="${10:-False}"
+ENSID="${5:-XX}"
+IDATE="${6}"
+SID="${7:-00L}"
+FORCE="${8:-False}"
+DOMAIN="${9:-ships}"
+TIER="${10:-Tier1}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
@@ -36,27 +36,27 @@ source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
 
 # 2. Build list in input arguments for NCL
 NCL_ARGS=()
-if [ ! -z "$IDATE" ]; then
+if [ ! -z "${IDATE}" ]; then
     NCL_ARGS+=('IDATE="'"${IDATE}"'"')
 fi
-if [ ! -z "$SID" ]; then
+if [ ! -z "${SID}" ]; then
     NCL_ARGS+=('SID="'"${SID}"'"')
 fi
-if [ ! -z "$DOMAIN" ]; then
+if [ ! -z "${DOMAIN}" ]; then
     NCL_ARGS+=('DOMAIN="'"${DOMAIN}"'"')
 fi
-if [ ! -z "$TIER" ]; then
+if [ ! -z "${TIER}" ]; then
     NCL_ARGS+=('TIER="'"${TIER}"'"')
 fi
 if [ "${ENSID}" == "XX" ]; then
     NCL_ARGS+=('ENSID=""')
-elif [ ! -z "$ENSID" ]; then
+elif [ ! -z "${ENSID}" ]; then
     NCL_ARGS+=('ENSID="'"${ENSID}"'"')
 fi
-if [ ! -z "$FORCE" ]; then
+if [ ! -z "${FORCE}" ]; then
     NCL_ARGS+=('FORCE="'"${FORCE}"'"')
 fi
-if [ ! -z "$NMLIST" ]; then
+if [ ! -z "${NMLIST}" ]; then
     NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
 fi
 

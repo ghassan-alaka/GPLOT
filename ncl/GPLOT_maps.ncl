@@ -366,8 +366,8 @@ else				val := ind(isStrSubset2(data,"ODIR_TYPE ="))
 					ODIR_TYPE	:= toint(ODIR_TYPE(1))
 				end if
 end if
-if(ODIRTYPE.eq.1)then	ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/"
-else			ODIR = ODIR+"/"+EXPT+"/"+ENSID+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/"
+if(ODIR_TYPE.eq.1)then	ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/","//","/")
+else			ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
 end if
 print("MSG: I will place graphics in this location --> "+ODIR)
 

@@ -355,8 +355,8 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 			ODIR	= data(ind(isStrSubset2(data,"ODIR =")))
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
-			if(ODIR_TYPE.eq.1)then	ODIR = ODIR+DOMAIN"/"
-			else			ODIR = ODIR+EXPT+"/"+IDATE+"/"+DOMAIN+"/"
+			if(ODIR_TYPE.eq.1)then	ODIR = str_sub_str(ODIR+DOMAIN+"/","//","/")
+			else			ODIR = str_sub_str(ODIR+EXPT+"/"+IDATE+"/"+DOMAIN+"/","//","/")
 			end if
 	
 			ATCF1_DIR	= data(ind(isStrSubset2(data,"ATCF1_DIR =")))
