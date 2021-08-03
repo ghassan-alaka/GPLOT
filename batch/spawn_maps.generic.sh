@@ -925,12 +925,6 @@ for TR in ${TIER[@]}; do
                     echo "MSG: Using this file of unplotted lead times --> ${FHR_FILE}"
 
 
-                    # Create a temporary script to submit this child job.
-                    #BATCHFILE2="${BATCH_DIR}/batch_maps.${EXPT}.`date +"%N"`.sh"
-                    #cp ${BATCH_DIR}${BATCHFILE1} ${BATCHFILE2}
-                    #chmod +x ${BATCHFILE2}
-
-
                     # Choose a proper wallclock time for this job based on the number of files.
                     if [ "${#IFILES[@]}" -le "15" ]; then
                         RUNTIME="00:29:59"
@@ -956,7 +950,7 @@ for TR in ${TIER[@]}; do
 
 
                     # Check if a similar job is already submitted
-                    echo "MSG: The batch file --> ${BATCHFILE2}"
+                    echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE1}"
                     if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                         JOB_TEST=""
                     elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
@@ -991,27 +985,6 @@ for TR in ${TIER[@]}; do
                         LOGFILE1="GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                         LOGFILE2="${LOG_DIR}/GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
                         JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                        #sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name='"${JOBNAME}"'/g' ${BATCHFILE2}
-                        #sed -i 's@^#SBATCH --output=.*@#SBATCH --output='"${LOGFILE2}"'@g' ${BATCHFILE2}
-                        #sed -i 's@^#SBATCH --error=.*@#SBATCH --error='"${LOGFILE2}"'@g' ${BATCHFILE2}
-                        #sed -i 's/^#SBATCH --nodes=.*/#SBATCH --nodes=1/' ${BATCHFILE2}
-                        #sed -i 's/^#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g' ${BATCHFILE2}
-                        #sed -i 's/^#SBATCH --mem=.*/#SBATCH --mem=32G/g' ${BATCHFILE2}
-                        #sed -i 's/^#SBATCH --time=.*/#SBATCH --time='"${RUNTIME}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${BATCHFILE2}
-                        #sed -i 's@^NCLDIR=.*@NCLDIR='"${NCL_DIR}"'@g' ${BATCHFILE2}
-                        #sed -i 's/^NCLFILE=.*/NCLFILE='"${NCLFILE}"'/g' ${BATCHFILE2}
-                        #sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
-                        #sed -i 's/^LOGFILE=.*/LOGFILE='"${LOGFILE1}"'/g' ${BATCHFILE2}
-                        #sed -i 's@^NMLIST=.*@NMLIST='"${NMLIST}"'@g' ${BATCHFILE2}
-                        #sed -i 's/^DOMAIN=.*/DOMAIN='"${DMN}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^TIER=.*/TIER='"${TR}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^ENSID=.*/ENSID='"${ENSID}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^MODELID=.*/MODELID='"${MODEL}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^IDATE=.*/IDATE='"${CYCLE}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
-                        #sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}
 
 
                         # Call the child job
@@ -1021,26 +994,15 @@ for TR in ${TIER[@]}; do
                         if [ "$BATCH_MODE" == "FOREGROUND" ]; then
                             echo "MSG: Executing this command [${FULL_CMD}]."
                             ${FULL_CMD}
-                            #${BATCHFILE2} "${MACHINE}" "${NCL_DIR}" "${NCLFILE}" "${LOG_DIR}" "${LOGFILE1}" "${NMLIST}" "${DMN}" \
-                            #                     "${TR}" "${ENSID}" "${MODEL}" "${CYCLE}" "${STORM}" "${FORCE}"
                         elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
                             echo "MSG: Executing this command [${FULL_CMD} &]."
                             ${FULL_CMD} &
-                            #{BATCHFILE2} "${MACHINE}" "${NCL_DIR}" "${NCLFILE}" "${LOG_DIR}" "${LOGFILE1}" "${NMLIST}" "${DMN}" \
-                            #                    "${TR}" "${ENSID}" "${MODEL}" "${CYCLE}" "${STORM}" "${FORCE}" &
                         else
                             SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                             SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                             echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
                             sbatch ${SLRM_OPTS} ${FULL_CMD}
-                            #sbatch --account=${CPU_ACCT} --job-name="${JOBNAME}" --output="${LOGFILE2}" --error="${LOGFILE2}" \
-                            #       --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION} \
-                            #       ${BATCHFILE2} "${MACHINE}" "${NCL_DIR}" "${NCLFILE}" "${LOG_DIR}" "${LOGFILE1}" "${NMLIST}" "${DMN}" \
-                            #                     "${TR}" "${ENSID}" "${MODEL}" "${CYCLE}" "${STORM}" "${FORCE}"
                         fi
-
-                        # Remove the temporary batch file
-                        #rm -rf ${BATCHFILE2}
 
 
                         # Increase the batch job counter and check if we're over the limit.
