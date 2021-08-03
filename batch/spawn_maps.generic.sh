@@ -338,9 +338,7 @@ for TR in ${TIER[@]}; do
             echo ""
 
             # Increase the storm counter
-            if [ "$STORM" != "00L" ]; then
-                ((NSTORM=NSTORM+1))
-            fi
+            ((NSTORM=NSTORM+1))
 
             # Find the forecast hours from the ATCF for thie particular storm
             STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
@@ -572,7 +570,7 @@ for TR in ${TIER[@]}; do
                     echo "     Current tier        --> $TR"
                     echo "     Current model       --> $MODEL"
                     echo "     Output directory    --> $ODIR_FULL"
-                    if [ ! -z "${ENSID}" ]; then
+                    if [ ! -z "${ENSIDTAG}" ]; then
                         echo "     Current Ensemble ID --> $ENSID"
                     fi
                     if [ -z "${STORM_ATCF[*]}" ]; then
