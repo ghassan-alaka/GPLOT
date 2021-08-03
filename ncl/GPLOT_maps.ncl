@@ -354,30 +354,22 @@ else				val := ind(isStrSubset2(data,"ODIR ="))
 				end if
 end if
 
-; n. ODIRTYPE --> special option to modify ODIR
-if(isvar("ODIRTYPE"))then	print("MSG: Detected command line variable: ODIRTYPE")
-else				val := ind(isStrSubset2(data,"ODIRTYPE ="))
+; n. ODIR_TYPE --> special option to modify ODIR
+if(isvar("ODIR_TYPE"))then	print("MSG: Detected command line variable: ODIR_TYPE")
+else				val := ind(isStrSubset2(data,"ODIR_TYPE ="))
 				if(ismissing(val(0)))then
-					print("WARNING: ODIRTYPE should be supplied via command line or namelist.")
-					if(ENSID.eq."")then
-						print("WARNING: Assuming ODIRTYPE=0.")
-						ODIRTYPE = 0
-					else
-						print("WARNING: Assuming ODIRTYPE=1")
-						ODIRTYPE = 1
-					end if
+					print("WARNING: ODIR_TYPE should be supplied via command line or namelist.")
+					ODIR_TYPE = 0
 				else
-					ODIRTYPE	= data(val(0))
-					ODIRTYPE	:= str_squeeze(str_split(ODIRTYPE," = "))
-					ODIRTYPE	:= toint(ODIRTYPE(1))
+					ODIR_TYPE	= data(val(0))
+					ODIR_TYPE	:= str_squeeze(str_split(ODIR_TYPE," = "))
+					ODIR_TYPE	:= toint(ODIR_TYPE(1))
 				end if
 end if
-if(ODIRTYPE.eq.0)then
-	ODIR = ODIR+"/"+EXPT+"/"+IDATE+"/"+DOMAIN+"/"
-else if(ODIRTYPE.eq.1)then
-	ODIR = ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/"
-end if  end if
-print("MSG: Updating ODIR --> "+ODIR)
+if(ODIRTYPE.eq.1)then	ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/"
+else			ODIR = ODIR+"/"+EXPT+"/"+ENSID+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/"
+end if
+print("MSG: I will place graphics in this location --> "+ODIR)
 
 ; o. INIT_HR --> the initial forecast hour for which graphics will be produced.
 if(isvar("INIT_HR"))then	print("MSG: Detected command line variable: INIT_HR")

@@ -342,10 +342,22 @@ else			print("MSG: Auto-Directory functionality is OFF. Using paths defined in n
 							EXT := str_squeeze(str_split(EXT," "))
 			end if
 
+			val := ind(isStrSubset2(data,"ODIR_TYPE ="))
+			if(ismissing(val(0)))then
+                                print("WARNING: ODIR_TYPE should be supplied via command line or namelist.")
+                                ODIR_TYPE = 0
+			else
+				ODIR_TYPE	= date(val(0))
+				ODIR_TYPE	:= str_squeeze(str_split(ODIR_TYPE," = "))
+				ODIR_TYPE	:= toint(ODIR_TYPE(1))
+			end if
+
 			ODIR	= data(ind(isStrSubset2(data,"ODIR =")))
 			ODIR	:= str_squeeze(str_split(ODIR," = "))
 			ODIR	:= ODIR(1)
-			ODIR	= ODIR+EXPT+"/"+IDATE+"/"+DOMAIN+"/"
+			if(ODIR_TYPE.eq.1)then	ODIR = ODIR+DOMAIN"/"
+			else			ODIR = ODIR+EXPT+"/"+IDATE+"/"+DOMAIN+"/"
+			end if
 	
 			ATCF1_DIR	= data(ind(isStrSubset2(data,"ATCF1_DIR =")))
 			ATCF1_DIR	:= str_squeeze(str_split(ATCF1_DIR," = "))
