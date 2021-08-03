@@ -75,11 +75,6 @@ CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
 QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
 PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`
 
-#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
-#FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-
-
 # Print information
 echo "MSG: Found this data source in the namelist      --> $DSOURCE"
 echo "MSG: Found this experiment in the namelist       --> $EXPT"

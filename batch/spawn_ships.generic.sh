@@ -781,8 +781,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
        
                             # Submit the batch job.
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE1} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST} ${DMN}"
-                            FULL_CMD="${FULL_CMD} ${TR} ${ENSID} ${CYCLE} ${STORM} ${FORCE}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE1} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+                            FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
                                 ${FULL_CMD}
