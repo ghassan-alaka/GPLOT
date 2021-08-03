@@ -147,8 +147,11 @@ print("MSG: Verbose level = "+tostring(verbose))
 ; 1. Set the namelist path.
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
-if(.not.isvar("MASTER_NML_IN"))then     MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
-else                                    MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+if(.not.isvar("MASTER_NML_IN"))then		MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
+else
+	if(fileexists(MASTER_NML_IN))then	MASTER_NML = MASTER_NML_IN
+	else					MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+	end if
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
 
@@ -1005,8 +1008,12 @@ LONGSID_LIST = str_sub_str(LONGSID_LIST," ",", ")
         
         
 ; 7. Update the final forecast hour string for storm-centered domains
-;    Also, update the final forecase hour 
-if(SC_DOMAIN)then   FNL_HR = max(tcFHR)   end if                
+;    Also, update the final forecase hour
+SC_FHR = True
+if(SC_DOMAIN)then
+	FNL_HR = max(tcFHR)
+	if(all(ismissing(tcFHR)))then   SC_FHR = False   end if
+end if
 
 
 ; 8. Determine whether all of the final ATCFs have been found.
@@ -1048,6 +1055,7 @@ PLOTTED_FILES = ODIR+"PlottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
 ; OK, let's loop over all of the input files and process what we can!
 fff = 0
 DO_PLOT = True
+if(SC_FHR)then
 if(DO_PLOT)then
 do fff = 0,nFiles-1
 
@@ -3308,6 +3316,7 @@ do fff = 0,nFiles-1
         
 end do ; fff
 end if ; DO_PLOT
+end if ; SC_FHR
 
 
 
@@ -3326,7 +3335,12 @@ end if ; DO_PLOT
 LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
-if(ATCF_REQD .and. .not.ALL_ATCF)then
+if(.not.SC_FHR)then
+	print("")
+	print("MSG: COMPLETE! No more tracker info at these forecast lead times,")
+	print("MSG: so I can't do anything.")
+	system("echo 'complete' > "+STATUS_FILE)
+else if(ATCF_REQD .and. .not.ALL_ATCF)then
         print("")
         print("MSG: INCOMPLETE! Graphics were produced, but might be missing info from ATCFs.")
         print("MSG: Graphics will be reproduced once ATCFs become available.")
@@ -3346,7 +3360,7 @@ else
         print("MSG: COMPLETE! Graphics were produced! Way to go! You rock!")
         ;print("MSG: This forecast will be double-checked for completeness.")
         system("echo 'complete' > "+STATUS_FILE)        
-end if  end if  end if
+end if  end if  end if  end if
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 

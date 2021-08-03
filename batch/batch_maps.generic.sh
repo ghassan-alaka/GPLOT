@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -16,24 +16,28 @@ set -x
 
 echo "`date`"
 
-# Source GPLOT_mods to optimize the environment
-source ${GPLOT_DIR}/modulefiles/GPLOT_mods
+# 1. Get command line arguments
+MACHINE="${1:-${MACHINE}}"
+NCLFILE="${2}"
+LOGFILE="${3}"
+NMLIST="${4:-namelist.master.default}"
+DOMAIN="${5:-atl}"
+TIER="${6:-Tier1}"
+ENSID="${7:-XX}"
+MODELID="${8:-XXXX}"
+IDATE="${9}"
+SID="${10:-00L}"
+FORCE="${11:-False}"
 
-# 1. Get command line variables
-NCLDIR=
-NCLFILE=
-LOGDIR=
-LOGFILE=
-NMLIST=
-IDATE=
-SID=
-DOMAIN=
-TIER=
-ENSID=
-MODELID=
-FORCE=
+# 2. Determine the GPLOT source code directory
+if [ -z "${GPLOT_DIR}" ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
 
-# 2. Build list in input arguments for NCL
+# 3. Source GPLOT modulefile to optimize the environment
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
+
+# 4. Build array of input arguments for NCL
 NCL_ARGS=()
 if [ ! -z "$IDATE" ]; then
     NCL_ARGS+=('IDATE="'"${IDATE}"'"')
@@ -47,7 +51,9 @@ fi
 if [ ! -z "$TIER" ]; then
     NCL_ARGS+=('TIER="'"${TIER}"'"')
 fi
-if [ ! -z "$ENSID" ]; then
+if [ "${ENSID}" == "XX" ]; then
+    NCL_ARGS+=('ENSID=""')
+elif [ ! -z "${ENSID}" ]; then
     NCL_ARGS+=('ENSID="'"${ENSID}"'"')
 fi
 if [ ! -z "${MODELID}" ]; then
@@ -59,10 +65,14 @@ fi
 if [ ! -z "$NMLIST" ]; then
     NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
 fi
+if [ ! -f ${NCLFILE} ]; then
+    echo "ERROR: The run script does not exist --> ${NCLFILE}"
+    exit 2
+fi
 
-# 2. Submit the NCL job
+# 5. Submit the NCL job
 echo "${NCL_ARGS[*]}"
-ncl "${NCL_ARGS[@]}" ${NCLDIR}${NCLFILE} >> ${LOGDIR}${LOGFILE}
+ncl "${NCL_ARGS[@]}" ${NCLFILE} >> ${LOGFILE}
 
 wait
 

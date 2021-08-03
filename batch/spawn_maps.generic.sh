@@ -18,6 +18,11 @@
 
 echo "MSG: Submitting jobs for GPLOT_MAPS."
 
+# Determine the GPLOT source code directory
+if [ -z "${GPLOT_DIR}" ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
+
 # Define important GPLOT directories
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
@@ -26,51 +31,53 @@ NCL_DIR="${GPLOT_DIR}/ncl/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
-if [ ! -z "$1" ];then
-    NMLIST="$1"
-else
-    NMLIST="namelist.input.default"
-fi
+NMLIST="${1:-namelist.input.default}"
 
 # Check if the namelist exists. If not, exit.
-if [ ! -f ${NMLIST_DIR}${NMLIST} ]; then
-    echo "ERROR: Namelist does not exist."
-    exit
-else
-    echo "MSG: Found this namelist --> ${NMLIST_DIR}${NMLIST}."
+if [ ! -f ${NMLIST} ]; then
+    echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
+    NMLIST="${NMLIST_DIR}${NMLIST}"
+    if [ ! -f ${NMLIST} ]; then
+        echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
+        echo "ERROR: I can't proceed without a namelist."
+        exit
+    fi
 fi
+echo "MSG: Found this namelist --> ${NMLIST}"
 
 
 
 # Pull important variables from the namelist
-DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DSOURCE=`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXPT=`sed -n -e 's/^EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-MCODE=`sed -n -e 's/^MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_MSTORM=`sed -n -e 's/^IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ENSMEM=`sed -n -e 's/^ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EID=`sed -n -e 's/^EID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDIR=`sed -n -e 's/^IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ITAG=`sed -n -e 's/^ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXT=`sed -n -e 's/^EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ODIR=`sed -n -e 's/^ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-INIT_HR=`sed -n -e 's/^INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FNL_HR=`sed -n -e 's/^FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FHRFMT=`sed -n -e 's/^FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DT=`sed -n -e 's/^DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDATE=`sed -n -e 's/^IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SID=`sed -n -e 's/^SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_DIR=`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_TAG=`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_DIR=`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_TAG=`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DSOURCE=`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EXPT=`sed -n -e 's/^EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MCODE=`sed -n -e 's/^MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IS_MSTORM=`sed -n -e 's/^IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ENSMEM=`sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EID=`sed -n -e 's/^EID =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IDIR=`sed -n -e 's/^IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ITAG=`sed -n -e 's/^ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+EXT=`sed -n -e 's/^EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ODIR=`sed -n -e 's/^ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ODIR_TYPE=`sed -n -e 's/^ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+INIT_HR=`sed -n -e 's/^INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+FNL_HR=`sed -n -e 's/^FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+FHRFMT=`sed -n -e 's/^FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DT=`sed -n -e 's/^DT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+IDATE=`sed -n -e 's/^IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+SID=`sed -n -e 's/^SID =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF1_DIR=`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF1_TAG=`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF2_DIR=`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+ATCF2_TAG=`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MACHINE=`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
+QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
+PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`
 
-#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
+#FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
 
 
 # Print information
@@ -97,32 +104,54 @@ if [ ! -z "$EXT" ]; then
     echo "MSG: Considering this input file suffix          --> $EXT"
 fi
 echo "MSG: Found this top level output directory in the namelist --> $ODIR"
+if [ -z "${ODIR_TYPE}" ]; then
+    ODIR_TYPE="0"
+fi
 
 if [ -z "$CPU_ACCT" ]; then
     echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
     CPU_ACCT="hur-aoml"
 fi
 
-if [ -z "$QOS" ]; then
+if [ -z "${MACHINE}" ]; then
+    MACHINE=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST} | sed 's/^\t*//'`
+fi
+if [ -z "${MACHINE}" ]; then
+    MACHINE="JET"
+fi
+
+if [ -z "${QOS}" ]; then
     echo "MSG: Could not find a Queue of Service (QOS) in the namelist. Assuming 'batch'."
     QOS="batch"
 fi
 
+if [ -z "${PARTITION}" ]; then
+    if [ "${MACHINE^^}" == "JET" ]; then
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+    elif [ "${MACHINE^^}" == "HERA" ]; then
+        PARTITION="hera"
+    elif [ "${MACHINE^^}" == "ORION" ]; then
+        PARTITION="orion"
+    else
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+    fi
+fi
+
 # Get the domains
-DOMAIN=( `sed -n -e 's/^DOMAIN =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+DOMAIN=( `sed -n -e 's/^DOMAIN =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 echo "MSG: Found these graphic domains in the namelist --> ${DOMAIN[*]}"
 
 # Get the graphics tiers for this MAPS domain
-TIER=( `sed -n -e 's/^TIER =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+TIER=( `sed -n -e 's/^TIER =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 echo "MSG: Found these graphic tiers in the namelist   --> ${TIER[*]}"
 
 # Get the Model ID(s) [ABCD]
-MID=( `sed -n -e 's/^MID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+MID=( `sed -n -e 's/^MID =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 if [ -z "${MID}" ]; then
-    MID=( `sed -n -e 's/^MORIG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+    MID=( `sed -n -e 's/^MORIG =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
 if [ -z "${MID}" ]; then
-    MID=( `sed -n -e 's/^DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'` )
+    MID=( `sed -n -e 's/^DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
 
 # If FORCE is undefined, set it to False.
@@ -131,7 +160,7 @@ fi
 #fi
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
-BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
+BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
 if [ -z "$BATCH_MODE" ]; then
     BATCH_MODE="SBATCH"
     echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE[*]}"
@@ -143,15 +172,39 @@ fi
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
-# Get all of the ATCF files so they can be searched later.
+# Find the forecast cycles for which graphics should be created
+if [ -z "$IDATE" ]; then
+    echo ${IDIR}
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+    fi
+else
+    CYCLES=( "${IDATE[@]}" )
+fi
+echo "MSG: Found these cycles -->${CYCLES[*]}"
+
+# Get all of the ATCF files for the forecast cycles so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}"`)
-ATCF2_ALL+=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}"`)
-for ATCF in ${ATCF2_ALL[@]}; do
-    ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
-    ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
+ATCF_TMP=()
+ATCF_ALL=()
+for C in ${CYCLES[@]}; do
+    CYCLE10="`echo "${C}" | rev | cut -d'.' -f1 | rev`"
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${CYCLE10}*${ATCF2_TAG}"` )
+    ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${CYCLE10}*${ATCF1_TAG}"` )
 done
-ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
+for ATCF in ${ATCF_TMP[@]}; do
+    ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
+    if [[ "${ATCF_ALL[*]}" != *"${ATCF_BASE}"* ]]; then
+        ATCF_ALL+=( "${ATCF}" )
+    fi
+done
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
@@ -173,30 +226,6 @@ fi
 NCLFILE="GPLOT_maps.ncl"
 BATCHFILE1="batch_maps.generic.sh"
 #BATCHFILE2="batch_maps.${EXPT}.sh"
-
-# Some housekeeping
-#mkdir -p ${LOG_DIR}
-#cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
-#chmod +x ${BATCH_DIR}${BATCHFILE2}
-
-
-# Find output files from which graphics should be created
-if [ -z "$IDATE" ]; then
-    echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
-    if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
-    fi
-    if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
-    fi
-    if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
-    fi
-else
-    CYCLES=( "${IDATE[@]}" )
-fi
-echo "MSG: Found these cycles -->${CYCLES[*]}"
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
@@ -314,7 +343,7 @@ for TR in ${TIER[@]}; do
             fi
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}"` )
+            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
             if [ -z "${STORM_ATCF[*]}" ]; then
                 echo "WARNING: No ATCF found for ${STORM}. This might be OK."
             else
@@ -330,7 +359,6 @@ for TR in ${TIER[@]}; do
                 fi
             done
             ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
-
 
 
             #########################
@@ -353,7 +381,7 @@ for TR in ${TIER[@]}; do
                 # If FORCE is undefined, set it to False.
                 # FORCE may be automatically changed to 'True' later on,
                 # so it is critical to redefine it here.
-                FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                FORCE=`sed -n -e 's/^FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
                 if [ -z "$FORCE" ]; then
                     FORCE="False"
                 fi
@@ -369,7 +397,7 @@ for TR in ${TIER[@]}; do
                 if [ "$DMN" == "d03" ]; then
                     ATCF_REQD="True"
                 else
-                    ATCF_REQD=`sed -n -e 's/^.*ATCF_REQD =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                    ATCF_REQD=`sed -n -e 's/^.*ATCF_REQD =\s//p' ${NMLIST} | sed 's/^\t*//'`
                     if [ -z "$ATCF_REQD" ]; then
                         ATCF_REQD="False"
                     fi
@@ -422,10 +450,12 @@ for TR in ${TIER[@]}; do
                     FPREFIX="$ITAG"
                 fi
                 if [ -z "$FPREFIX" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File prefix not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
                     echo "ERROR: Or define ITAG in the namelist."
-                    echo "ERROR: Stopped working for: CYCLE=${CYCLE}, STORM=${STORM}, DOMAIN=${DMN}, and TIER=${TR}"
                     exit
                 fi
 
@@ -436,25 +466,29 @@ for TR in ${TIER[@]}; do
                     FHRSTR="$FHRSTR"
                 fi
                 if [ -z "$FHRSTR" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File hour string not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
                     echo "ERROR: Or define FHRSTR in the namelist."
-                    echo "ERROR: Stopped working for: CYCLE=${CYCLE}, STORM=${STORM}, DOMAIN=${DMN}, and TIER=${TR}"
                     exit
                 fi
 
                 # Get file hour format information from table or namelist
-                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
                 if [ -z "$FHRFMT" ]; then
                     FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
                 else
                     FHRFMT="%0${FHRFMT}d"
                 fi
                 if [ -z "$FHRFMT" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File hour format not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
                     echo "ERROR: Or define FHRFMT in the namelist."
-                    echo "ERROR: Stopped working for: CYCLE=${CYCLE}, STORM=${STORM}, DOMAIN=${DMN}, and TIER=${TR}"
                     exit
                 fi
 
@@ -465,10 +499,12 @@ for TR in ${TIER[@]}; do
                     FSUFFIX="$EXT"
                 fi
                 if [ -z "$FSUFFIX" ]; then
+                    echo ""
+                    echo "MSG: Current cycle       --> $CYCLE"
+                    echo "MSG: Current storm       --> $STORM"
                     echo "ERROR: File suffix not found for $DSOURCE."
                     echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
                     echo "ERROR: Or define EXT in the namelist."
-                    echo "ERROR: Stopped working for: CYCLE=${CYCLE}, STORM=${STORM}, DOMAIN=${DMN}, and TIER=${TR}"
                     exit
                 fi
                 if [ "$FSUFFIX" == "NONE" ]; then
@@ -480,18 +516,21 @@ for TR in ${TIER[@]}; do
                 # be present and contain forecast hours
                 if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
                     if [ -z "${STORM_ATCF[*]}" ]; then
-                        echo "WARNING: Nothing to do for: CYCLE=${CYCLE}, STORM=${STORM}, DOMAIN=${DMN}, and TIER=${TR}"
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
                         echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
                         echo "WARNING: But, found no matching ATCF files. Skipping to next."
                         continue
                     elif [ -z "${ATCF_FHRS[*]}" ]; then
-                        echo "WARNING: Nothing to do for: CYCLE=${CYCLE}, STORM=${STORM}, DOMAIN=${DMN}, and TIER=${TR}"
+                        echo ""
+                        echo "MSG: Current cycle       --> $CYCLE"
+                        echo "MSG: Current storm       --> $STORM"
                         echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
                         echo "WARNING: ATCF was found for this storm, but no forecast hours were found."
                         continue
                     fi
                 fi
-
 
 
 
@@ -505,20 +544,23 @@ for TR in ${TIER[@]}; do
 
                     # Set 2-digit variable ENSID
                     if [ "${IS_ENS}" == "False" ]; then
-                        ENSID=""
+                        ENSID="XX"
                         ENSIDTAG=""
                         MODEL="${MID}"
-
-                        # Create full output path
-                        ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
                     else				    
                         ENSID=$(printf "%02d\n" $ID)
                         ENSIDTAG=".E${ENSID}"
                         MODEL="${MID[NID]}"
-
-                        # Create full output path
-                        ODIR_FULL="${ODIR}${EXPT}/${ENSID}/${CYCLE}/${DMN}/"
                     fi
+
+                    # Create full output path
+                    if [ "${ODIR_TYPE}" == "1" ]; then
+                        ODIR_FULL="${ODIR}/${DMN}/"
+                    else
+                        ODIR_FULL="${ODIR}/${EXPT}/${ENSIDTAG}/${CYCLE}/${DMN}/"
+                    fi
+                    ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
+
                     ((NID++))
 
                     # Print some information to the terminal
@@ -557,7 +599,7 @@ for TR in ${TIER[@]}; do
                     fi
                     if [ -z "${MODEL_ATCF2[*]}" ] ; then
                         echo "WARNING: No matching ATCFs found for ${MODEL}. This might be OK."
-                    else
+                    elif [ "$SC" == "False" ]; then
                         echo "MSG: ATCF(s) found for ${MODEL} --> ${MODEL_ATCF2[*]}"
                         ATCF_FHRS=( `cat ${MODEL_ATCF2[*]} | awk -F',' '{ printf("%03d\n", $6) }' | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
                     fi
@@ -629,6 +671,13 @@ for TR in ${TIER[@]}; do
                                "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
 
 
+                    # Get the right list of lead times
+                    if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
+                        FILE_FHRS=( ${ATCF_FHRS[@]} )
+                    else
+                        FILE_FHRS=( ${FHRS[@]} )
+                    fi
+
                     # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                     # If a match is found, write lead time to a data file "AllForecastHours"
                     IFILES=()
@@ -642,13 +691,6 @@ for TR in ${TIER[@]}; do
                             continue
                         fi
                         
-                        # Get the right list of lead times 
-                        if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
-                            FILE_FHRS=${ATCF_FHRS[@]}
-                        else
-                            FILE_FHRS=${FHRS[@]}
-                        fi
-
                         # Loop over all lead times to find available files.
                         for FHR in ${FILE_FHRS[@]}; do
                             if [ -z "$FSUFFIX" ]; then
@@ -684,8 +726,8 @@ for TR in ${TIER[@]}; do
 
                     # Define the file that contains a list of plotted files (PLOTTED_FILE)
                     # Define the file that contains the status (STATUS_FILE)
-                    PLOTTED_FILE="${ODIR_FULL}PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                    STATUS_FILE="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
+                    PLOTTED_FILE="${ODIR_FULL}/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                    STATUS_FILE="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
                     LOCK_FILE="${STATUS_FILE}.lock"
 
 
@@ -865,8 +907,8 @@ for TR in ${TIER[@]}; do
 
 
                     # Write existing IFILES out to UNPLOTTED_FNAME log for use in plotting scripts
-                    UNPLOTTED_FILE="${ODIR_FULL}UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                    FHR_FILE="${ODIR_FULL}AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
+                    UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                    FHR_FILE="${ODIR_FULL}/AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
                     if [ -f "${UNPLOTTED_FILE}" ]; then
                         rm -f "${UNPLOTTED_FILE}"
                     fi
@@ -884,9 +926,9 @@ for TR in ${TIER[@]}; do
 
 
                     # Create a temporary script to submit this child job.
-                    BATCHFILE2="${BATCH_DIR}/batch_maps.${EXPT}.`date +"%N"`.sh"
-                    cp ${BATCH_DIR}${BATCHFILE1} ${BATCHFILE2}
-                    chmod +x ${BATCHFILE2}
+                    #BATCHFILE2="${BATCH_DIR}/batch_maps.${EXPT}.`date +"%N"`.sh"
+                    #cp ${BATCH_DIR}${BATCHFILE1} ${BATCHFILE2}
+                    #chmod +x ${BATCHFILE2}
 
 
                     # Choose a proper wallclock time for this job based on the number of files.
@@ -915,10 +957,11 @@ for TR in ${TIER[@]}; do
 
                     # Check if a similar job is already submitted
                     echo "MSG: The batch file --> ${BATCHFILE2}"
-                    if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+                    if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                         JOB_TEST=""
-                    elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+                    elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
                         JOB_TEST=""
+                    #elif [ "${BATCH_MODE^^}" == "SBATCH" ]; then
                     else
                         JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
                         JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
@@ -948,43 +991,52 @@ for TR in ${TIER[@]}; do
                         LOGFILE1="GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                         LOGFILE2="${LOG_DIR}/GPLOT_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
                         JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                        sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${BATCHFILE2}
-                        sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name='"${JOBNAME}"'/g' ${BATCHFILE2}
-                        sed -i 's@^#SBATCH --output=.*@#SBATCH --output='"${LOGFILE2}"'@g' ${BATCHFILE2}
-                        sed -i 's@^#SBATCH --error=.*@#SBATCH --error='"${LOGFILE2}"'@g' ${BATCHFILE2}
-                        sed -i 's/^#SBATCH --nodes=.*/#SBATCH --nodes=1/' ${BATCHFILE2}
-                        sed -i 's/^#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g' ${BATCHFILE2}
-                        sed -i 's/^#SBATCH --mem=.*/#SBATCH --mem=32G/g' ${BATCHFILE2}
-                        sed -i 's/^#SBATCH --time=.*/#SBATCH --time='"${RUNTIME}"'/g' ${BATCHFILE2}
-                        sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${BATCHFILE2}
-                        sed -i 's@^NCLDIR=.*@NCLDIR='"${NCL_DIR}"'@g' ${BATCHFILE2}
-                        sed -i 's/^NCLFILE=.*/NCLFILE='"${NCLFILE}"'/g' ${BATCHFILE2}
-                        sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
-                        sed -i 's/^LOGFILE=.*/LOGFILE='"${LOGFILE1}"'/g' ${BATCHFILE2}
-                        sed -i 's@^NMLIST=.*@NMLIST='"${NMLIST}"'@g' ${BATCHFILE2}
-                        sed -i 's/^DOMAIN=.*/DOMAIN='"${DMN}"'/g' ${BATCHFILE2}
-                        sed -i 's/^TIER=.*/TIER='"${TR}"'/g' ${BATCHFILE2}
-                        sed -i 's/^ENSID=.*/ENSID='"${ENSID}"'/g' ${BATCHFILE2}
-                        sed -i 's/^MODELID=.*/MODELID='"${MODEL}"'/g' ${BATCHFILE2}
-                        sed -i 's/^IDATE=.*/IDATE='"${CYCLE}"'/g' ${BATCHFILE2}
-                        sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
-                        sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}
-
-                        if [ "${SYS_ENV^^}" == "JET" ]; then
-                            sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g' ${BATCHFILE2}
-                        elif [ "${SYS_ENV^^}" == "HERA" ]; then
-                            sed -i 's/^#SBATCH --partition=.*/#SBATCH --partition=hera/g' ${BATCHFILE2}
-                        fi
+                        #sed -i 's/^#SBATCH --account=.*/#SBATCH --account='"${CPU_ACCT}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^#SBATCH --job-name=.*/#SBATCH --job-name='"${JOBNAME}"'/g' ${BATCHFILE2}
+                        #sed -i 's@^#SBATCH --output=.*@#SBATCH --output='"${LOGFILE2}"'@g' ${BATCHFILE2}
+                        #sed -i 's@^#SBATCH --error=.*@#SBATCH --error='"${LOGFILE2}"'@g' ${BATCHFILE2}
+                        #sed -i 's/^#SBATCH --nodes=.*/#SBATCH --nodes=1/' ${BATCHFILE2}
+                        #sed -i 's/^#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g' ${BATCHFILE2}
+                        #sed -i 's/^#SBATCH --mem=.*/#SBATCH --mem=32G/g' ${BATCHFILE2}
+                        #sed -i 's/^#SBATCH --time=.*/#SBATCH --time='"${RUNTIME}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^#SBATCH --qos=.*/#SBATCH --qos='"${QOS}"'/g' ${BATCHFILE2}
+                        #sed -i 's@^NCLDIR=.*@NCLDIR='"${NCL_DIR}"'@g' ${BATCHFILE2}
+                        #sed -i 's/^NCLFILE=.*/NCLFILE='"${NCLFILE}"'/g' ${BATCHFILE2}
+                        #sed -i 's@^LOGDIR=.*@LOGDIR='"${LOG_DIR}"'@g' ${BATCHFILE2}
+                        #sed -i 's/^LOGFILE=.*/LOGFILE='"${LOGFILE1}"'/g' ${BATCHFILE2}
+                        #sed -i 's@^NMLIST=.*@NMLIST='"${NMLIST}"'@g' ${BATCHFILE2}
+                        #sed -i 's/^DOMAIN=.*/DOMAIN='"${DMN}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^TIER=.*/TIER='"${TR}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^ENSID=.*/ENSID='"${ENSID}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^MODELID=.*/MODELID='"${MODEL}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^IDATE=.*/IDATE='"${CYCLE}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^SID=.*/SID='"${STORM}"'/g' ${BATCHFILE2}
+                        #sed -i 's/^FORCE=.*/FORCE='"${FORCE}"'/g' ${BATCHFILE2}
 
 
-                        # Call the batch job
+                        # Call the child job
                         echo "MSG: Executing GPLOT child job submission. BATCH_MODE = ${BATCH_MODE}"
+                        FULL_CMD="${BATCH_DIR}/${BATCHFILE1} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOG_DIR}${LOGFILE1} ${NMLIST} ${DMN}"
+                        FULL_CMD="${FULL_CMD} ${TR} ${ENSID} ${MODEL} ${CYCLE} ${STORM} ${FORCE}"
                         if [ "$BATCH_MODE" == "FOREGROUND" ]; then
-                            ${BATCHFILE2}
+                            echo "MSG: Executing this command [${FULL_CMD}]."
+                            ${FULL_CMD}
+                            #${BATCHFILE2} "${MACHINE}" "${NCL_DIR}" "${NCLFILE}" "${LOG_DIR}" "${LOGFILE1}" "${NMLIST}" "${DMN}" \
+                            #                     "${TR}" "${ENSID}" "${MODEL}" "${CYCLE}" "${STORM}" "${FORCE}"
                         elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
-                            ${BATCHFILE2} &
+                            echo "MSG: Executing this command [${FULL_CMD} &]."
+                            ${FULL_CMD} &
+                            #{BATCHFILE2} "${MACHINE}" "${NCL_DIR}" "${NCLFILE}" "${LOG_DIR}" "${LOGFILE1}" "${NMLIST}" "${DMN}" \
+                            #                    "${TR}" "${ENSID}" "${MODEL}" "${CYCLE}" "${STORM}" "${FORCE}" &
                         else
-                            sbatch ${BATCHFILE2}
+                            SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
+                            SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                            echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
+                            sbatch ${SLRM_OPTS} ${FULL_CMD}
+                            #sbatch --account=${CPU_ACCT} --job-name="${JOBNAME}" --output="${LOGFILE2}" --error="${LOGFILE2}" \
+                            #       --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION} \
+                            #       ${BATCHFILE2} "${MACHINE}" "${NCL_DIR}" "${NCLFILE}" "${LOG_DIR}" "${LOGFILE1}" "${NMLIST}" "${DMN}" \
+                            #                     "${TR}" "${ENSID}" "${MODEL}" "${CYCLE}" "${STORM}" "${FORCE}"
                         fi
 
                         # Remove the temporary batch file
@@ -1009,10 +1061,10 @@ for TR in ${TIER[@]}; do
 
                 # If input files were not found in the ID loop, then also skip all remaining domains
                 # Might need to optimize this if 'd03' graphics use a different file (e.g., HWRF).
-                if [ -z "${IFILES[*]}" ]; then
-                    echo "WARNING: No input files found. Skipping the rest of the domains."
-                    break
-                fi
+                #if [ -z "${IFILES[*]}" ]; then
+                #    echo "WARNING: No input files found. Skipping the rest of the domains."
+                #    break
+                #fi
 
             done #end of DMN loop
         done #end of STORM loop
