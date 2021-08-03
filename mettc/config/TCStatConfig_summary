@@ -135,8 +135,8 @@ rapid_inten = {
 // offset from the landfall time.  
 //
 landfall     = FALSE;
-landfall_beg = -86400;
-landfall_end = 0;
+// landfall_beg = -86400;
+// landfall_end = 0;
 
 //
 // Specify whether only those track points common to both the ADECK and BDECK
