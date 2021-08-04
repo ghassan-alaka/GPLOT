@@ -46,36 +46,36 @@ echo "MSG: Found this namelist                                   --> ${NMLIST}"
 
 
 # Pull important variables from the namelist
-DO_STATS=`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST} | sed 's/^\t*//'`
-DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`
-MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`
-IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
-EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ODIR_TYPE=`sed -n -e 's/^.*ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`
-IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`
-BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
-BDECK_DIR=`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-MACHINE=`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
-QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
-PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`
+DO_STATS="`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DSOURCE="`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXPT="`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+MCODE="`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IS_MSTORM="`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ENSMEM="`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDIR="`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ITAG="`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXT="`sed -n -e 's/^.*EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR="`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR_TYPE="`sed -n -e 's/^.*ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+INIT_HR="`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FNL_HR="`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DT="`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDATE="`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+SID="`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+BDECK_DIR="`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_DIR="`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_TAG="`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_DIR="`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_TAG="`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+BDECK_DIR="`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+QOS="`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 
 # Fallback option for BDECK_DIR
 if [ -z "${BDECK_DIR}" ]; then
-    BDECK_DIR=`sed -n -e 's/^.*BDECK2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+    BDECK_DIR="`sed -n -e 's/^.*BDECK2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 fi
 
 # Print information
@@ -190,20 +190,9 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_stats.generic.sh"
+BATCHFILE="batch_stats.sh"
 
-# Some housekeeping
-#mkdir -p ${LOG_DIR}
-#cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
-#chmod +x ${BATCH_DIR}${BATCHFILE2}
-
-
-# Find output files from which graphics should be created
-#if [ -z "$IDATE" ]; then
-#    CYCLES=`ls -d ${IDIR}*/ | xargs -n 1 basename | tr "\n" " "`
-#else
-    CYCLES="${IDATE[@]}"
-#fi
+CYCLES="${IDATE[@]}"
 echo "MSG: Found these cycles: ${CYCLES[*]}"
 echo ""
 
@@ -477,7 +466,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
         # Check if a similar job is already submitted
-        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
+        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
         RUNTIME="00:44:59"
         JOBNAME="GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}"
         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
@@ -494,7 +483,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
             # Call the batch job
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
-            FULL_CMD="${BATCH_DIR}/${BATCHFILE1} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE}"
             if [ "$BATCH_MODE" == "FOREGROUND" ]; then
                 echo "MSG: Executing this command [${FULL_CMD}]."
