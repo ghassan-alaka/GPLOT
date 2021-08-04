@@ -115,6 +115,7 @@ print("MSG: Verbose level = "+tostring(verbose))
 
 
 
+
 ;================================================================
 ; PART III. Read Master Namelist and Assign Variables 
 ;================================================================
@@ -491,6 +492,23 @@ if(DO_PDF)then		DO_CONVERTGIF = False
 			DO_RMWHITE = False
 end if
 
+; y. FORCE --> If True, force certain actions
+if(isvar("FORCE"))then          print("MSG: Detected command line variable: FORCE")
+else                            val := ind(isStrSubset2(data,"FORCE ="))
+                                if(.not.ismissing(val(0)))then  FORCE   = data(val)
+                                                                FORCE   := str_squeeze(str_split(FORCE," = "))
+                                                                FORCE   := where(FORCE(1).eq."True",True,False)
+                                else                            FORCE   := False
+                                end if
+end if
+if(.not.isvar("FORCE"))then             FORCE = False
+else
+        if(FORCE.eq."")then             FORCE := False
+        else if(typeof(FORCE).eq."string")then
+                                        FORCE := where(FORCE.eq."True",True,False)
+        end if  end if
+end if
+
 
 
 
@@ -760,7 +778,7 @@ STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
 LOCK_FILE = STATUS_FILE+".lock"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
-g
+
 ; 7. 'force=True' will overwrite every graphic, even if it exists.
 ;    Sometimes, that functionality is desired, but if 'force'
 ;    is undefined by now, then it should be set to 'force=False'
@@ -985,7 +1003,6 @@ do fff = 0,nFiles-1
 		end if
 	end do
 	print("MSG: Made it! Does at least one graphic type requires more processing? "+FHRDONE)
-
 	if(.not.FORCE)then
 		if(FHRDONE .and. FHR(fff).ne.max(FHR))then
 			print("MSG: Data already completed for this forecast hour.")
