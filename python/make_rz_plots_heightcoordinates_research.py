@@ -77,6 +77,14 @@ NMLDIR = GPLOT_DIR+'/nmlist'
 DSOURCE = subprocess.run(['grep','^DSOURCE',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+try:
+        ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
+except:
+        ODIR_TYPE = 0
+if ODIR_TYPE == 1:
+        ODIR = ODIR+'/polar/'
+else:
+        ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();

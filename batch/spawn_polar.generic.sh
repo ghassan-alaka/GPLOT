@@ -20,6 +20,11 @@
 echo "MSG: Submitting jobs for POLAR module."
 
 
+# Determine the GPLOT source code directory
+if [ -z "${GPLOT_DIR}" ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
+
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
 BATCH_DIR="${GPLOT_DIR}/batch/"
@@ -27,115 +32,160 @@ PYTHON_DIR="${GPLOT_DIR}/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
-if [ ! -z "$1" ];then
-    NMLIST="$1"
-else
-    NMLIST="namelist.input.default"
-fi
+NMLIST="${1:-namelist.input.default}"
 
 # Check if the namelist exists. If not, exit.
-if [ ! -f ${NMLIST_DIR}${NMLIST} ]; then
-    echo "ERROR: Namelist does not exist."
-    exit
-else
-    echo "MSG: Found this namelist --> ${NMLIST_DIR}${NMLIST}."
+if [ ! -f ${NMLIST} ]; then
+    echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
+    NMLIST="${NMLIST_DIR}${NMLIST}"
+    if [ ! -f ${NMLIST} ]; then
+        echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
+        echo "ERROR: I can't proceed without a namelist."
+        exit
+    fi
 fi
-
+echo "MSG: Found this namelist --> ${NMLIST}"
 
 
 # Pull important variables from the namelist
-DO_POLAR=`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DSOURCE=`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXPT=`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-MCODE=`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IS_MSTORM=`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ENSMEM=`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDIR=`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ITAG=`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-EXT=`sed -n -e 's/^.*EXT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ODIR=`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-INIT_HR=`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FNL_HR=`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-DT=`sed -n -e 's/^.*DT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-IDATE=`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SID=`sed -n -e 's/^.*SID =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-
-RESOLUTION=`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-RMAX=`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-LEVS=`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
-PYTHONFILE=`sed -n -e 's/^.*PYTHONFILE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+DO_POLAR="`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DSOURCE="`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXPT="`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+MCODE="`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IS_MSTORM="`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ENSMEM="`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDIR="`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ITAG="`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXT="`sed -n -e 's/^.*EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR="`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR_TYPE=`sed -n -e 's/^ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`
+INIT_HR="`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FNL_HR="`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DT="`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDATE="`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+SID="`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_DIR="`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_TAG="`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_DIR="`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_TAG="`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FORCE="`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+QOS="`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+RESOLUTION="`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+RMAX="`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+LEVS="`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+PYTHONFILE="`sed -n -e 's/^.*PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 
 # Print information
-echo "MSG: Found this data source in the namelist      --> $DSOURCE"
-echo "MSG: Found this experiment in the namelist       --> $EXPT"
-if [ -z "$IDATE" ]; then
+echo "MSG: Found this data source in the namelist      --> ${DSOURCE}"
+echo "MSG: Found this experiment in the namelist       --> ${EXPT}"
+if [ -z "${IDATE}" ]; then
     echo "MSG: No cycles defined in the namelist. Will consider all."
 else
-    echo "MSG: Found these cycles in the namelist          --> $IDATE"
+    echo "MSG: Found these cycles in the namelist          --> ${IDATE}"
 fi
-if [ -z "$SID" ]; then
+if [ -z "${SID}" ]; then
     echo "MSG: No Storm IDs defined in the namelist. Will consider all."
 else
-    echo "MSG: Found these Storm IDs in the namelist       --> $SID"
+    echo "MSG: Found these Storm IDs in the namelist       --> ${SID}"
 fi
-if [ "$IS_MSTORM" == "True" ]; then
+if [ "${IS_MSTORM}" == "True" ]; then
     echo "MSG: Data source has been identified as HWRF-B."
 fi
-echo "MSG: Found this top level input directory in the namelist --> $IDIR"
-if [ ! -z "$ITAG" ]; then
-    echo "MSG: Considering these input file tag --> $ITAG"
+echo "MSG: Found this top level input directory in the namelist --> ${IDIR}"
+if [ ! -z "${ITAG}" ]; then
+    echo "MSG: Considering these input file tag --> ${ITAG}"
 fi
-if [ ! -z "$EXT" ]; then
-    echo "MSG: Considering these input file extensions --> $EXT"
+if [ ! -z "${EXT}" ]; then
+    echo "MSG: Considering these input file extensions --> ${EXT}"
 fi
-echo "MSG: Found this top level output directory in the namelist --> $ODIR"
-if [ -z "$CPU_ACCT" ]; then
+echo "MSG: Found this top level output directory in the namelist --> ${ODIR}"
+if [ -z "${ODIR_TYPE}" ]; then
+    ODIR_TYPE="0"
+fi
+if [ -z "${CPU_ACCT}" ]; then
     echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
     CPU_ACCT="hur-aoml"
 fi
 
-if [ -z "$QOS" ]; then
+if [ -z "${MACHINE}" ]; then
+    MACHINE=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST} | sed 's/^\t*//'`
+fi
+if [ -z "${MACHINE}" ]; then
+    MACHINE="JET"
+fi
+
+if [ -z "${QOS}" ]; then
     echo "MSG: Could not find a Queue of Service (QOS) in the namelist. Assuming 'batch'."
     QOS="batch"
 fi
 
+if [ -z "${PARTITION}" ]; then
+    if [ "${MACHINE^^}" == "JET" ]; then
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+    elif [ "${MACHINE^^}" == "HERA" ]; then
+        PARTITION="hera"
+    elif [ "${MACHINE^^}" == "ORION" ]; then
+        PARTITION="orion"
+    else
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+    fi
+fi
+
 # If FORCE is undefined, set it to False.
-if [ -z "$FORCE" ]; then
+if [ -z "${FORCE}" ]; then
     FORCE="False"
 fi
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
-BATCH_MODE=( `sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//' | tr a-z A-Z` )
-if [ -z "$BATCH_MODE" ]; then
+BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
+if [ -z "${BATCH_MODE}" ]; then
     BATCH_MODE="SBATCH"
-    echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE[*]}"
+    echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE}"
 else
-    echo "MSG: Found a batch-submission mode in the namelist   --> ${BATCH_MODE[*]}"
+    echo "MSG: Found a batch-submission mode in the namelist   --> ${BATCH_MODE}"
 fi
 
 # Get a list of forecast lead times
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
-# Get all of the ATCF files so they can be searched later.
+# Find the forecast cycles for which graphics should be created
+if [ -z "${IDATE}" ]; then
+    echo ${IDIR}
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+    fi
+else
+    CYCLES=( "${IDATE[@]}" )
+fi
+echo "MSG: Found these cycles: ${CYCLES[*]}"
+echo ""
+
+# Get all of the ATCF files for the forecast cycles so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF1_ALL=(`find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}"`)
-ATCF2_ALL+=(`find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}"`)
-for ATCF in ${ATCF2_ALL[@]}; do
-    ATCF_BASE=`basename ${ATCF} | cut -d'.' -f-2`
-    ATCF1_ALL=( ${ATCF1_ALL[@]/*$ATCF_BASE*/} )
+ATCF_TMP=()
+ATCF_ALL=()
+for C in ${CYCLES[@]}; do
+    CYCLE10="`echo "${C}" | rev | cut -d'.' -f1 | rev`"
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${CYCLE10}*${ATCF2_TAG}"` )
+    ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${CYCLE10}*${ATCF1_TAG}"` )
 done
-ATCF_ALL=("${ATCF2_ALL[@]}" "${ATCF1_ALL[@]}")
+for ATCF in ${ATCF_TMP[@]}; do
+    ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
+    if [[ "${ATCF_ALL[*]}" != *"${ATCF_BASE}"* ]]; then
+        ATCF_ALL+=( "${ATCF}" )
+    fi
+done
 
 
 # Determine if this experiment has ensemble members
@@ -150,30 +200,11 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_polar.generic.sh"
-BATCHFILE2="batch_polar.${EXPT}.sh"
-
-
-# Some housekeeping
-cp ${BATCH_DIR}${BATCHFILE1} ${BATCH_DIR}${BATCHFILE2}
-chmod +x ${BATCH_DIR}${BATCHFILE2}
-
-
-# Find output files from which graphics should be created
-if [ -z "$IDATE" ]; then
-    CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/ 2>/dev/null | xargs -n 1 basename 2>/dev/null | tr "\n" " " 2>/dev/null` )
-    if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/*[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 2>/dev/null | rev | tr "\n" " " 2>/dev/null` )
-    fi
-else
-    CYCLES=( "${IDATE[@]}" )
-fi
-echo "MSG: Found these cycles: ${CYCLES[*]}"
-echo ""
+BATCHFILE="batch_polar.sh"
 
 
 # If PYTHONFILE is empty, set it to a default script.
-if [ -z "$PYTHONFILE" ]; then
+if [ -z "${PYTHONFILE}" ]; then
     PYTHONFILE="make_rz_plots.py"
 fi
 
@@ -310,13 +341,6 @@ if [ "${DO_POLAR}" = "True" ]; then
             for DMN in ${DOMAIN}; do
                 echo "MSG: Current domain --> $DMN"
 
-                # Create full output path
-                # Make the directory in case it doesn't already exist
-                ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
-                echo "MSG: Output directory --> $ODIR_FULL"
-                mkdir -p ${ODIR_FULL}
-
-
                 # Get nest information from GPLOT table
                 NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
                 if [ -z "$NEST" ]; then
@@ -352,7 +376,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                 fi
 
                 # Get file hour format information from table or namelist
-                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST_DIR}${NMLIST} | sed 's/^\t*//'`
+                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
                 if [ -z "$FHRFMT" ]; then
                     FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
                 else
@@ -424,13 +448,22 @@ if [ "${DO_POLAR}" = "True" ]; then
 
                         # Set 2-digit variable ENSID
                         if [ "${IS_ENS}" == "False" ]; then
-                            ENSID=""
+                            ENSID="XX"
                             ENSIDTAG=""
                         else
                             ENSID=$(printf "%02d\n" $ID)
                             ENSIDTAG=".E${ENSID}"
                             echo "MSG: Current ensemble member --> $ENSID"
                         fi
+
+                        # Create full output path
+                        if [ "${ODIR_TYPE}" == "1" ]; then
+                            ODIR_FULL="${ODIR}/${DMN}/"
+                        else
+                            ODIR_FULL="${ODIR}/${EXPT}/${ENSIDTAG}/${CYCLE}/${DMN}/"
+                        fi
+                        ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
+                        mkdir -p ${ODIR_FULL}
 
                         # Create a list of IDIR subdirectory options
                         IDIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
@@ -725,60 +758,35 @@ if [ "${DO_POLAR}" = "True" ]; then
                         fi
 
                         # Check if a similar job is already submitted
-                        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE2}"
-                        if [ "$BATCH_MODE" == "FOREGROUND" ]; then
-                            JOB_TEST=""
-                        elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
-                            JOB_TEST=""
+                        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
+                        JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
+                        if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+                            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
                         else
-                            JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+                            JOB_TEST=""
                         fi
 
                         # Change options in the batch submission script.
-                        if [ -z "$JOB_TEST" ]; then
+                        if [ -z "${JOB_TEST}" ]; then
                             LOG_DIR="$ODIR_FULL"
-                            LOGFILE="GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
-                            perl -pi -e "s/#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --output=.*/#SBATCH --output=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --error=.*/#SBATCH --error=\"${LOG_DIR////\/}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.err\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --nodes=.*/#SBATCH --nodes=1/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --ntasks-per-node=.*/#SBATCH --ntasks-per-node=12/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --mem=.*/#SBATCH --mem=32G/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --time=.*/#SBATCH --time=${RUNTIME}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^PYTHONDIR=.*/PYTHONDIR=\"${PYTHON_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^PYTHONFILE=.*/PYTHONFILE=\"${PYTHONFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^LOGDIR=.*/LOGDIR=\"${LOG_DIR////\/}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^LOGFILE=.*/LOGFILE=\"${LOGFILE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^NMLIST=.*/NMLIST=\"${NMLIST}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^DOMAIN=.*/DOMAIN=\"${DMN}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^TIER=.*/TIER=\"${TR}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^ENSID=.*/ENSID=\"${ENSID}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^IDATE=.*/IDATE=\"${CYCLE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^SID=.*/SID=\"${STORM}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^FORCE=.*/FORCE=\"${FORCE}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^RESOLUTION=.*/RESOLUTION=\"${RESOLUTION}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^RMAX=.*/RMAX=\"${RMAX}\"/g" ${BATCH_DIR}${BATCHFILE2}
-                            perl -pi -e "s/^LEVS=.*/LEVS=\"${LEVS}\"/g" ${BATCH_DIR}${BATCHFILE2}
-
-                            if [ "$SYS_ENV" == "JET" ]; then
-                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet/g" ${BATCH_DIR}${BATCHFILE2}
-                                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=batch/g" ${BATCH_DIR}${BATCHFILE2}
-                            elif [ "$SYS_ENV" == "HERA" ]; then
-                                perl -pi -e "s/#SBATCH --partition=.*/#SBATCH --partition=hera/g" ${BATCH_DIR}${BATCHFILE2}
-                                #perl -pi -e "s/#SBATCH --qos=.*/#SBATCH --qos=windfall/g" ${BATCH_DIR}${BATCHFILE2}
-                            fi
+                            LOGFILE1="${LOG_DIR}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                            LOGFILE2="${LOG_DIR}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
 
                             # Call the batch job
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
-                            if [ "$BATCH_MODE" == "FOREGROUND" ]; then
-                                ${BATCH_DIR}${BATCHFILE2}
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHONDIR}${PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
+                            FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
+                            if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
+                                echo "MSG: Executing this command [${FULL_CMD}]."
+                                ${FULL_CMD}
                             elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
-                                ${BATCH_DIR}${BATCHFILE2} &
+                                echo "MSG: Executing this command [${FULL_CMD} &]."
+                                ${FULL_CMD} &
                             else
-                                sbatch ${BATCH_DIR}${BATCHFILE2}
+                                SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
+                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
+                                sbatch ${SLRM_OPTS} ${FULL_CMD}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.
