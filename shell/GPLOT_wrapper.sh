@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #
 # This is a wrapper script that calls a single script
 # for one or more experiments (EXPT). The purpose of this
@@ -18,17 +18,16 @@ echo "MSG: shell scripts for each component of GPLOT."
 
 # GPLOT_DIR must be set. It is preferable for the user to set it
 # as an environmental variable. If not, the script will attempt to
+
+# Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
-    GPLOT_DIR="/home/${USER}/GPLOT"
-    echo "WARNING: Variable GPLOT_DIR not found in environment."
-    echo "MSG: Setting GPLOT_DIR --> ${GPLOT_DIR}"
-else
-    echo "MSG: GPLOT_DIR found in environment --> ${GPLOT_DIR}"
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev | sed s#//*#/#g)"
 fi
+echo "MSG: Setting GPLOT_DIR --> ${GPLOT_DIR}"
 
 
 # Test that GPLOT_DIR actually exists. If not, we can't continue.
-if [ ! -d "$GPLOT_DIR" ]; then
+if [ ! -d "${GPLOT_DIR}" ]; then
     echo "ERROR: GPLOT_DIR not found. Can't continue."
     exit
 fi
@@ -36,8 +35,9 @@ fi
 
 # Create variables for GPLOT subdirectories.
 NMLDIR="${GPLOT_DIR}/nmlist/"
+NMLDIR="$(echo "${NMLDIR}" | sed s#//*#/#g)"
 BATCHDIR="${GPLOT_DIR}/batch/"
-LOGDIR="${GPLOT_DIR}/log/"
+BATCHDIR="$(echo "${BATCHDIR}" | sed s#//*#/#g)"
 
 
 # Store all experiments in the EXPT variable. The user should submit all
@@ -51,31 +51,33 @@ LOGDIR="${GPLOT_DIR}/log/"
 #                                 fvGFS_ATL HB18_v2_forecast"
 if [ $# -eq 0 ]; then
     echo "MSG: No experiments found via the command line."
-    EXPT=( "GFS_Forecast" )
+    NML_LIST=( "/home/Ghassan.Alaka/GPLOT/nmlist/namelist.master.GFS_Forecast" \
+               "/home/Ghassan.Alaka/GPLOT/nmlist/namelist.master.HWRF_Forecast" \
+               "/home/Ghassan.Alaka/GPLOT/nmlist/namelist.master.HMON_Forecast" )
 else
     echo "MSG: Experiment found via the command line."
-    EXPT=( "$@" )
+    NML_LIST=( "$@" )
 fi
-if [ -z "$EXPT" ]; then
+if [ -z "${NML_LIST[*]}" ]; then
     echo "ERROR: No experiments found. Something went wrong."
     exit
 fi
-echo "MSG: Found these experiments --> ${EXPT[*]}"
+echo "MSG: Found these experiment namelists --> ${NML_LIST[*]}"
 
 
 # Loop over all experiments
-for d in "${EXPT[@]}"; do
-    echo "MSG: GPLOT is working on this experiment --> $d"
+for NML in "${NML_LIST[@]}"; do
+    echo "MSG: GPLOT is working on this experiment namelist --> ${NML}"
 
 
     # Define the master namelist file name.
     # If this namelist is not found in $GPLOT_DIR/nmlist/,
     # the submission will fail.
-    NML="namelist.master.${d}"
-    echo "MSG: Master namelist --> ${NMLDIR}${NML}"
-    if [ -z "${NMLDIR}${NML}" ]; then
-        echo "ERROR: Master namelist could not be found."
-        echo "ERROR: Can't submit anything for this experiment."
+    echo "MSG: Master namelist --> ${NML}"
+    if [ ! -f "${NML}" ]; then
+        echo "WARNING: Master namelist could not be found."
+        echo "WARNING: Can't submit anything for this experiment."
+        echo "WARNING: Skipping to next experiment namelist."
         continue
     fi
     echo "MSG: Master namelist found. Hooray!"
@@ -83,20 +85,37 @@ for d in "${EXPT[@]}"; do
 
     # Determine the components of GPLOT that should be submitted.
     # These options currently include:  Maps, Ships, Stats, Polar
-    DO_MAPS=`sed -n -e 's/^DO_MAPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_STATS=`sed -n -e 's/^DO_STATS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_SHIPS=`sed -n -e 's/^DO_SHIPS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    DO_POLAR=`sed -n -e 's/^DO_POLAR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    GPMODLIST=()
+    DO_MAPS="`sed -n -e 's/^DO_MAPS =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_MAPS}" = "True" ]; then
+        GPMODLIST+=("maps")
+    fi
+    DO_STATS="`sed -n -e 's/^DO_STATS =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_STATS}" = "True" ]; then
+        GPMODLIST+=("stats")
+    fi
+    DO_SHIPS="`sed -n -e 's/^DO_SHIPS =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_SHIPS}" = "True" ]; then
+        GPMODLIST+=("ships")
+    fi
+    DO_POLAR="`sed -n -e 's/^DO_POLAR =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_POLAR}" = "True" ]; then
+        GPMODLIST+=("polar")
+    fi
+    echo "MSG: Working on these GPLOT modules --> ${GPMODLIST[*]}"
+
+    # Get the experiment name
+    EXPT="${SUBEXPT:-$(sed -n -e 's/^EXPT =\s//p' ${NML} | sed 's/^\t*//')}"
 
     # Get the output directory for proper logging
-    ODIR=`sed -n -e 's/^ODIR =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    ODIR="`sed -n -e 's/^ODIR =\s//p' ${NML} | sed 's/^\t*//'`"
     if [ -d ${ODIR} ]; then
         LOGDIR="${ODIR}/log/"
+        LOGDIR="$(echo "${LOGDIR}" | sed s#//*#/#g)"
     fi
 
-
     # Get the submission mode from the namelist.
-    BATCH_MODE=`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//' | tr a-z A-Z`
+    BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NML} | sed 's/^\t*//' | tr a-z A-Z`"
     if [ -z "${BATCH_MODE}" ]; then
         BATCH_MODE="BACKGROUND"
     fi
@@ -104,147 +123,55 @@ for d in "${EXPT[@]}"; do
 
 
     # Get the system environment and project account for batch submissions ($BATCH_MODE="SBATCH")
-    SYS_ENV=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-    if [ "${BATCH_MODE}" == "SBATCH" ]; then
-        BATCH_DFLTS="batch.defaults.${SYS_ENV,,}"
-        AUTO_BATCH=`sed -n -e 's/^AUTO_BATCH =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
-        CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+    MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ -z "${MACHINE}" ]; then
+        MACHINE="`sed -n -e 's/^SYS_ENV =\s//p' ${NML} | sed 's/^\t*//'`"
+    fi
+    if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+        BATCH_DFLTS="${NMLDIR}batch.defaults.${MACHINE,,}"
+        AUTO_BATCH=`sed -n -e 's/^AUTO_BATCH =\s//p' ${NML} | sed 's/^\t*//'`
+        CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NML} | sed 's/^\t*//'`
         if [ -z ${CPU_ACCT} ] || [ "${AUTO_BATCH}" = "True" ]; then
-            CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
+            CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`
         fi
-        QOS=`sed -n -e 's/^QOS =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        QOS=`sed -n -e 's/^QOS =\s//p' ${NML} | sed 's/^\t*//'`
         if [ -z ${QOS} ] || [ "${AUTO_BATCH}" = "True" ]; then
-            QOS=`sed -n -e 's/^QOS =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
+            QOS=`sed -n -e 's/^QOS =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`
         fi
-        PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLDIR}${NML} | sed 's/^\t*//'`
+        PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NML} | sed 's/^\t*//'`
         if [ -z ${PARTITION} ] || [ "${AUTO_BATCH}" = "True" ]; then
-            PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLDIR}${BATCH_DFLTS} | sed 's/^\t*//'`
+            PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`
         fi
     fi
 
 
-    # This part submits the spawn file for MAPS
-    if [ "${DO_MAPS}" = "True" ]; then
-        echo "MSG: MAPS submission is turned on."
-        SPAWNFILE1="spawn_maps.generic.sh"
-        SPAWNFILE2="spawn_maps.${d}.sh"
-        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
-        SPAWNLOG="spawn_maps.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
-        echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_maps.${d}"; then
-                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_maps.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+    # Loop over GPLOT modules
+    for M in "${GPMODLIST[@]}"; do
+        echo "****************"
+        echo "MSG: Submission for GPLOT module ${M^^} is turned on."
+        SPAWNFILE="${BATCHDIR}spawn_${M,,}.sh"
+        SPAWNLOG1="${LOGDIR}spawn_${M,,}.${EXPT}.log"
+        SPAWNLOG2="${LOGDIR}spawn_${M,,}.${EXPT}.out"
+        JOBNAME="GPLOT.spawn_${M,,}.${EXPT}"
+        echo "MSG: Spawn file --> ${SPAWNFILE}"
+        echo "MSG: Spawn log --> ${SPAWNLOG}"
+        if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "${JOBNAME}"; then
+                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "${JOBNAME}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
                 echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
-                echo "MSG: Not submitting anything for MAPS."
+                echo "MSG: Not submitting anything for ${M^^}."
             else
-                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_maps.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_maps.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_maps.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+                SLRM_OPTS="--job-name=${JOBNAME}  --output=${SPAWNLOG2} --error=${SPAWNLOG2}"
+                SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
+                sbatch ${SLRM_OPTS} ${SPAWNFILE} ${NML}
             fi
-        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
+        elif [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
+            ${SPAWNFILE} ${NML} > ${SPAWNLOG1}
         else
-	    ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
+            ${SPAWNFILE} ${NML} > ${SPAWNLOG1} &
         fi
-    fi
+    done
 
-
-    # This part submits the spawn file for SHIPS
-    if [ "${DO_SHIPS}" = "True" ]; then
-        echo "MSG: SHIPS submission is turned on."
-        SPAWNFILE1="spawn_ships.generic.sh"
-        SPAWNFILE2="spawn_ships.${d}.sh"
-        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
-        SPAWNLOG="spawn_ships.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
-        echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_ships.${d}"; then
-                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_ships.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
-                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
-                echo "MSG: Not submitting anything for SHIPS."
-            else
-                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_ships.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_ships.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_ships.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
-            fi
-        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
-        else
-            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
-        fi
-    fi
-
-
-    # This part submits the spawn file for STATS
-    if [ "${DO_STATS}" = "True" ]; then
-        echo "MSG: STATS submission is turned on."
-        SPAWNFILE1="spawn_stats.generic.sh"
-        SPAWNFILE2="spawn_stats.${d}.sh"
-        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
-        SPAWNLOG="spawn_stats.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
-        echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_stats.${d}"; then
-                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_stats.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
-                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
-                echo "MSG: Not submitting anything for STATS."
-            else
-                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_stats.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_stats.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_stats.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
-            fi
-        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
-        else
-            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
-        fi
-    fi
-
-
-    # This part submits the spawn file for POLAR
-    if [ "${DO_POLAR}" = "True" ]; then
-        echo "MSG: POLAR submission is turned on."
-        SPAWNFILE1="spawn_polar.generic.sh"
-        SPAWNFILE2="spawn_polar.${d}.sh"
-        cp ${BATCHDIR}${SPAWNFILE1} ${BATCHDIR}${SPAWNFILE2}
-        SPAWNLOG="spawn_polar.${d}.log"
-        echo "MSG: Spawn file --> ${BATCHDIR}${SPAWNFILE2}"
-        echo "MSG: Spawn log --> ${LOGDIR}${SPAWNLOG}"
-        if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "GPLOT.spawn_polar.${d}"; then
-                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "GPLOT.spawn_polar.${d}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
-                echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
-                echo "MSG: Not submitting anything for POLAR."
-            else
-                perl -pi -e "s/^#SBATCH --job-name=.*/#SBATCH --job-name=\"GPLOT.spawn_polar.${d}\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --output=.*/#SBATCH --output=\"${LOGDIR////\/}spawn_polar.${d}.out\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --error=.*/#SBATCH --error=\"${LOGDIR////\/}spawn_polar.${d}.err\"/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --account=.*/#SBATCH --account=${CPU_ACCT}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --partition=.*/#SBATCH --partition=${PARTITION}/g" ${BATCHDIR}${SPAWNFILE2}
-                perl -pi -e "s/^#SBATCH --qos=.*/#SBATCH --qos=${QOS}/g" ${BATCHDIR}${SPAWNFILE2}
-                sbatch ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
-            fi
-        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG}
-        else
-            ${BATCHDIR}${SPAWNFILE2} ${NML} > ${LOGDIR}${SPAWNLOG} &
-        fi
-    fi
 done
 
 echo "MSG: GPLOT wrapper completed $(/bin/date)"
