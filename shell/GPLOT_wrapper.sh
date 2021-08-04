@@ -51,7 +51,7 @@ LOGDIR="${GPLOT_DIR}/log/"
 #                                 fvGFS_ATL HB18_v2_forecast"
 if [ $# -eq 0 ]; then
     echo "MSG: No experiments found via the command line."
-    EXPT=( "HB18_v3_history" "GFS_Forecast" )
+    EXPT=( "GFS_Forecast" )
 else
     echo "MSG: Experiment found via the command line."
     EXPT=( "$@" )

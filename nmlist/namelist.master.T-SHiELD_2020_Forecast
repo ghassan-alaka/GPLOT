@@ -47,10 +47,10 @@ EXT = .nc
 ODIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/HAFSV0.1B_2020_RT/
+ATCF1_DIR = /scratch2/GFDL/gfdlscr/Matthew.Morin/SHiELD_postproc/T-SHiELD_rt2020/C768r10n4_atl_new.u20h/ATCF/
 ATCF1_TAG = .dat
-ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/HAFSV0.1B_2020_RT/
-ATCF2_TAG = hafs.atcfunix
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/T-SHiELD_2020_Forecast/
+ATCF2_TAG = trak.t20h.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/GPLOT
@@ -86,6 +86,7 @@ BATCH_MODE = SBatch
 DO_CONVERTGIF = True
 
 QOS = batch
+CPU_ACCT = aoml-hafs1
 
 
 

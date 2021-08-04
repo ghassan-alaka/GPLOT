@@ -23,12 +23,12 @@ ODIR="$1"
 mkdir -p ${ODIR}
 cd ${ODIR}
 
-IDIR="/public/data/grids/hwrf/"
+IDIR="/scratch2/BMC/public/data/grids/hwrf"
 IEXT="3hourly"
 OEXT="atcfunix"
 
 # Find all ATCF output
-ALL_ATCF=( `find "${IDIR}" -name "*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*${IEXT}" -type f` )
+ALL_ATCF=( `find "${IDIR}/" -name "*[1-2][0-9][0-9][0-9][0-1][0-9][0-3][0-9][0-2][0-9]*${IEXT}" -type f` )
 
 echo ${ALL_ATCF[*]}
 

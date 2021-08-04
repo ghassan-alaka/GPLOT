@@ -12,7 +12,7 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = HMON_Forecast
+EXPT = GFS_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
@@ -21,7 +21,7 @@ DO_SHIPS = True
 DO_POLAR = True
 
 ; 1C. DATA SOURCE
-DSOURCE = HMON
+DSOURCE = GFS
 
 ; 1D. BASIN-SCALE HWRF DATA?
 IS_MSTORM = False
@@ -30,7 +30,7 @@ IS_MSTORM = False
 ENSMEM = 0
 
 ; 1E. SYSTEM ENVIRONMENT
-SYS_ENV = JET
+SYS_ENV = HERA
 
 ; 1FF. Operation or Research Mode?
 IS_REAL = True
@@ -42,27 +42,31 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/HMON_Forecast/
+IDIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/GFS_Forecast/
 ITAG =
-EXT =
+EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
+ODIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/HMON_Forecast/
-ATCF1_TAG = trak.hmon.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HMON_Forecast/
-ATCF2_TAG = atcfunix
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF1_TAG = trak.avno.atcfunix
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/GFS_Forecast/
+ATCF2_TAG = trak.avno.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
-BDECK2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+<<<<<<< Updated upstream
+ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT/
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+=======
+ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC/
+BDECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/bdeck/
+>>>>>>> Stashed changes
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
-FNL_HR = 126
+FNL_HR = 384
 FMT_HR = 3
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
@@ -96,8 +100,7 @@ BATCH_MODE = SBatch
 DO_CONVERTGIF = True
 
 ; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
-CPU_ACCT = hur-aoml
-
+CPU_ACCT = aoml-hafs1
 
 
 ;================================================================
@@ -105,10 +108,10 @@ CPU_ACCT = hur-aoml
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = hwrf d03
+DOMAIN = basin atl epac wlant elant gom cpac d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1 Tier2
+TIER = Tier1 Tier2 Tier3
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
@@ -120,37 +123,39 @@ ATCF_REQD = False
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = HMON
-MCODE = HMON
-MCODEI = HMNI
-MCODE12 = HMN2
+MORIG = AVNO
+MCODE = AVNO
+MCODEI = AVNI
+MCODE12 = AVN2
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM00 = AVNO HWRF CTCX EGRR
-TRKM06 = AVNO HWRF CTCX
-INTM = HWRF DSHP LGEM CTCX
-PRSM = AVNO HWRF CTCX
-TRKMI00 = AVNI HWFI EGRI CTCI TVCN OFCL
-TRKMI06 = AVNI HWFI CTCI TVCN OFCL
-INTMI = HWFI DSHP LGEM CTCI IVCN OFCL
-TRKMT00 = HWRF AVNO EGRR OFCL
-TRKMT06 = HWRF AVNO EGRR OFCL
-INTMT = HWRF DSHP OFCL
+TRKM00 = HWRF HMON HAFA HAFB NVGM CTCX EGRR
+TRKM06 = HWRF HMON HAFA HAFB NVGM CTCX
+INTM = HWRF HMON HAFA HAFB DSHP LGEM CTCX
+PRSM = HWRF HMON HAFA HAFB CTCX
+TRKMI00 = HWFI HMNI HFAI HFBI EGRI CTCI TVCN OFCL
+TRKMI06 = HWFI HMNI HFAI HFBI CTCI TVCN OFCL
+INTMI = HWFI HMNI HAFI HFBI DSHP LGEM CTCI IVCN OFCL
+TRKMT00 = HWRF HMON HAFA HAFB EGRR OFCL
+TRKMT06 = HWRF HMON HAFA HAFB OFCL
+INTMT = HWRF HMON HAFA HAFB DSHP OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = GFSI HWFI CTCI TVCN OFCL
-EIM = HWFI DSHP LGEM CTCI IVCN OFCL
-LTM = GFSO HWRF CTCX
-LIM = HWRF CTCX
+ETM = HWFI HMNI HFAI HFBI CTCI TVCN OFCL
+EIM = HWFI HMNI HFAI HFBI DSHP LGEM CTCI IVCN OFCL
+LTM = HWRF HMON HAFA HAFB CTCX
+LIM = HWRF HMON HAFA HAFB CTCX
+
 
 ; 3D. VERIFICATION TIMES
-LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
 
 ; 3E. NUMBER OF TREND FORECASTS
 NTREND = 6
 
 ; 3F. INTERPOLATION
 DO_INTERP = False
+
 
 
 ;================================================================
@@ -161,8 +166,9 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots_heightcoordinates_research.py
-RESOLUTION = 2.0
+PYTHONFILE = make_rz_plots.nodbz.py
+RESOLUTION = 1.5
 RMAX = 600
+MODELTAG = hwrfprs.storm.0p015
 LEVS = 46
 
