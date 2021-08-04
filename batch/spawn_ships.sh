@@ -149,15 +149,15 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # Find the forecast cycles for which graphics should be created
 if [ -z "$IDATE" ]; then
     echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -25 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -25 2>/dev/null` )
     fi
 else
     CYCLES=( "${IDATE[@]}" )
@@ -231,7 +231,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
         CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
         CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
 
-        echo "MSG: Current cycle --> $CYCLE"
+        #echo "MSG: Current cycle --> $CYCLE"
 
         # Parse the cycle into year, month, day, hour
         YYYY=`echo "$CYCLE" | cut -c1-4`
@@ -295,18 +295,19 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
             # Never process the fake storm (00L)
             if [ "${STORM^^}" == "00L" ]; then
-                echo "MSG: Fake storm detected. Skipping."
+                echo "MSG: Fake storm detected ${STORM}. Skipping."
+                continue
             fi
 
-            echo "MSG: Current storm --> $STORM"
+            #echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
             STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}" | head -1` )
-            echo "MSG: The ATCF for this storm --> $STORM_ATCF"
-            if [ -z "${STORM_ATCF[*]}" ]; then
-                echo "WARNING: No ATCF found for ${STORM}. This might be OK."
-            else
-                echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+            #echo "MSG: The ATCF for this storm --> $STORM_ATCF"
+            if [ ! -z "${STORM_ATCF[*]}" ]; then
+            #    echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+            #else
+                #echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
                 ATCF_FHRS=( `awk -F',' '{ printf("%03d\n", $6) }' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
             fi
 
@@ -328,13 +329,13 @@ if [ "${DO_SHIPS}" = "True" ]; then
             # LOOP OVER MAP DOMAINS #
             #########################
             for DMN in ${DOMAIN}; do
-                echo "MSG: Current domain --> ${DMN}"
+                #echo "MSG: Current domain --> ${DMN}"
 
                 # Get nest information from GPLOT table
                 NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
                 if [ -z "$NEST" ]; then
-                    echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
-                    echo "MSG: Assuming NEST=1."
+                    #echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
+                    #echo "MSG: Assuming NEST=1."
                     NEST=1
                 fi
 
@@ -397,16 +398,29 @@ if [ "${DO_SHIPS}" = "True" ]; then
                 # Run some tests on the ATCF for thie storm.
                 # If domain is storm-centerd and ATCF is required, then ATCF must
                 # be present and contain forecast hours
-                if [ -z ${STORM_ATCF} ]; then
-                    echo "ERROR: Domain is storm-centered and ATCF files are required."
-                    echo "ERROR: But, found no matching ATCF files. So, nothing to do."
+                if [ -z ${STORM_ATCF} ] || [ -z "${ATCF_FHRS[*]}" ]; then
                     echo ""
-                    continue
-                elif [ -z "${ATCF_FHRS[*]}" ]; then
-                    echo "ERROR: Domain is storm-centered and ATCF files are required."
-                    echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
-                    echo ""
-                    continue
+                    echo "MSG: **********DETAILS FOR THIS CASE**********"
+                    echo "     Current cycle       --> $CYCLE"
+                    echo "     Current storm       --> $STORM"
+                    echo "     Current domain      --> $DMN"
+                    echo "     Output directory    --> $ODIR_FULL"
+                    if [ -z "${STORM_ATCF[*]}" ]; then
+                        echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+                    else
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
+                    if [ -z ${STORM_ATCF} ]; then
+                        echo "ERROR: Domain is storm-centered and ATCF files are required."
+                        echo "ERROR: But, found no matching ATCF files. So, nothing to do."
+                        echo ""
+                        continue
+                    elif [ -z "${ATCF_FHRS[*]}" ]; then
+                        echo "ERROR: Domain is storm-centered and ATCF files are required."
+                        echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
+                        echo ""
+                        continue
+                    fi
                 fi
 
 
@@ -414,7 +428,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                 # LOOP OVER GRAPHIC TIERS #
                 ###########################
                 for TR in ${TIER}; do
-                    echo "MSG: Current tier --> $TR"
+                    #echo "MSG: Current tier --> $TR"
 
 
                     ##########################
@@ -443,6 +457,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         mkdir -p ${ODIR_FULL}
 
                         # Print some information to the terminal
+                        echo ""
                         echo "MSG: **********DETAILS FOR THIS CASE**********"
                         echo "     Current cycle       --> $CYCLE"
                         echo "     Current storm       --> $STORM"
