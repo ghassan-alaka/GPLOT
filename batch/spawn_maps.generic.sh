@@ -219,8 +219,7 @@ fi
 
 # Define other important variables
 NCLFILE="GPLOT_maps.ncl"
-BATCHFILE1="batch_maps.generic.sh"
-#BATCHFILE2="batch_maps.${EXPT}.sh"
+BATCHFILE="batch_maps.sh"
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
@@ -943,7 +942,7 @@ for TR in ${TIER[@]}; do
 
 
                     # Check if a similar job is already submitted
-                    echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE1}"
+                    echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
                     if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                         JOB_TEST=""
                     elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
@@ -982,7 +981,7 @@ for TR in ${TIER[@]}; do
 
                         # Call the child job
                         echo "MSG: Executing GPLOT child job submission. BATCH_MODE = ${BATCH_MODE}"
-                        FULL_CMD="${BATCH_DIR}/${BATCHFILE1} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOG_DIR}${LOGFILE1} ${NMLIST} ${DMN}"
+                        FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOG_DIR}${LOGFILE1} ${NMLIST} ${DMN}"
                         FULL_CMD="${FULL_CMD} ${TR} ${ENSID} ${MODEL} ${CYCLE} ${STORM} ${FORCE}"
                         if [ "$BATCH_MODE" == "FOREGROUND" ]; then
                             echo "MSG: Executing this command [${FULL_CMD}]."
