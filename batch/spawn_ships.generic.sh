@@ -189,7 +189,7 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_ships.sh"
+BATCHFILE="batch_ships.sh"
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
@@ -765,7 +765,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
 
                         # Check if a similar job is already submitted
-                        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE1}"
+                        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
                         JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
                         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
                             JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
@@ -781,7 +781,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
        
                             # Submit the batch job.
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE1} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
                             FULL_CMD="${FULL_CMD} ${ENSID} ${CYCLE} ${STORM} ${FORCE} ${DMN} ${TR}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
