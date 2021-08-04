@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
@@ -14,27 +14,28 @@
 
 set -x
 
-# Set stack size
-#limit stacksize unlimited
-
-# Source the .profile to optimize the environment
-source ${GPLOT_DIR}/modulefiles/GPLOT_mods 1
-
 # 1. Get command line variables
-PYTHONDIR=
-PYTHONFILE=
-LOGDIR=
-LOGFILE=
-NMLIST=
-IDATE=
-SID=
-DOMAIN=
-TIER=
-ENSID=
-RESOLUTION=
-RMAX=
-LEVS=
-FORCE=
+MACHINE="${1:-${MACHINE}}"
+PYTHONFILE="${2}"
+LOGFILE="${3}"
+NMLIST="${4:-namelist.master.default}"
+ENSID="${5:-XX}"
+IDATE="${6}"
+SID="${7}"
+DOMAIN="${8}"
+TIER="${9}"
+RESOLUTION="${10}"
+RMAX="${11}"
+LEVS="${12}"
+FORCE="${13}"
+
+# 2. Determine the GPLOT source code directory
+if [ -z "${GPLOT_DIR}" ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
+
+# 3. Source the .profile to optimize the environment
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
 # 2. Build list in input arguments for Python
 PYTHON_ARGS=()

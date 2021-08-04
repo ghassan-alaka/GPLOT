@@ -31,7 +31,7 @@ NCL_DIR="${GPLOT_DIR}/ncl/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
-NMLIST="${1:-namelist.input.default}"
+NMLIST="${1:-namelist.master.default}"
 
 # Check if the namelist exists. If not, exit.
 if [ ! -f ${NMLIST} ]; then

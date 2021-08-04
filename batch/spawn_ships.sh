@@ -15,6 +15,10 @@
 
 #set -x
 
+# Determine the GPLOT source code directory
+if [ -z "${GPLOT_DIR}" ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
 
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/nmlist/"
@@ -324,14 +328,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
             # LOOP OVER MAP DOMAINS #
             #########################
             for DMN in ${DOMAIN}; do
-                echo "MSG: Current domain --> $DMN"
-
-                # Create full output path
-                # Make the directory in case it doesn't already exist
-                #ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${DMN}/"
-                #echo "MSG: Output directory --> $ODIR_FULL"
-                #mkdir -p ${ODIR_FULL}
-
+                echo "MSG: Current domain --> ${DMN}"
 
                 # Get nest information from GPLOT table
                 NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
