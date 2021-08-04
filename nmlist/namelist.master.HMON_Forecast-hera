@@ -42,22 +42,22 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/pytmp/HMON_Forecast/
+IDIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/HMON_Forecast/
 ITAG =
 EXT =
 
 ; 1I. OUTPUT PATH
-ODIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/GPOUT/
+ODIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/pytmp/HMON_Forecast/
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/HMON_Forecast/
 ATCF1_TAG = trak.hmon.atcfunix
-ATCF2_DIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/noscrub/HMON_Forecast/
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/HMON_Forecast/
 ATCF2_TAG = atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/adeck/NHC/
-BDECK_DIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/bdeck/
+ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC/
+BDECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
