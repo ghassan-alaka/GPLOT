@@ -467,8 +467,8 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Check if a similar job is already submitted
         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
-        RUNTIME="00:44:59"
-        JOBNAME="GPLOT.${EXPT}.${MCODE}.${CYCLE}.${STORM}"
+        RUNTIME="00:29:59"
+        JOBNAME="GPLOT.${EXPT}.${CYCLE}.stats.${STORM}.${MCODE}"
         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
             JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
         else
