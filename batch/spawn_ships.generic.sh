@@ -189,7 +189,7 @@ else
 fi
 
 # Define other important variables
-BATCHFILE1="batch_ships.generic.sh"
+BATCHFILE1="batch_ships.sh"
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
