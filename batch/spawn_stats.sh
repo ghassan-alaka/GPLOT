@@ -163,30 +163,35 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
-ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
-ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -25` )
+ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ];then
+    ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+fi
 ATCF_ALL=()
-for ATCF in ${ATCF_TMP[@]}; do
+for ATCF in "${ATCF_TMP[@]}"; do
     ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
     if [[ "${ATCF_ALL[*]}" != *"${ATCF_BASE}"* ]]; then
         ATCF_ALL+=( "${ATCF}" )
     fi
 done
+
+# Limit the ATCF list based on NMAX
 NATCF="${#ATCF_ALL[*]}"
-if [[ NATCF -gt NMAX ]]; then
-    C=$((NATCF - NMAX))
-    ATCF_ALL=("${ATCF_ALL[@]:$C}" "${ATCF_ALL[@]:0:$C}")
-fi
+#if [[ NATCF -gt NMAX ]]; then
+#    C=$((NATCF - NMAX))
+#    ATCF_ALL=("${ATCF_ALL[@]:$C}" "${ATCF_ALL[@]:0:$C}")
+#fi
 
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
-if [ $ENSMEM -eq 0 ] || [ -z $ENSMEM ]; then
+if [ ${ENSMEM} -eq 0 ] || [ -z ${ENSMEM} ]; then
     IS_ENS="False"
     ENSIDS=0
 else
     IS_ENS="True"
-    ENSIDS=`seq 1 $ENSMEM`  # SKIP MEM 00, Start from 01
+    ENSIDS=`seq 1 ${ENSMEM}`  # SKIP MEM 00, Start from 01
 fi
 
 # Define other important variables
@@ -194,7 +199,6 @@ BATCHFILE="batch_stats.sh"
 
 CYCLES="${IDATE[@]}"
 echo "MSG: Found these cycles: ${CYCLES[*]}"
-echo ""
 
 
 # For EXPT=GFS_Forecast, FNL_HR=240
@@ -290,7 +294,6 @@ if [ "${DO_STATS}" = "True" ]; then
         # production for the current cycle should be forced.
         DATE_NOW="`date +'%Y%m%d%H'`"
         DATE_CUT="`date -d "${CYCLE2} UTC + ${FNL_HR} hours" +'%Y%m%d%H'`"
-        echo "CYCLE = $CYCLE, DATE_NOW = $DATE_NOW, DATE_CUT = $DATE_CUT"
 
         # Process this ATCF only if the cycle is found in IDATE
         # or if IDATE is empty.
@@ -307,14 +310,14 @@ if [ "${DO_STATS}" = "True" ]; then
         fi
 
         # If the cycle is not found in IDATE, then skip to next ATCF
-        if [ "$CYCLE_FOUND" == "False" ]; then
+        if [ "${CYCLE_FOUND}" == "False" ]; then
             #echo "WARNING: Skipping this ATCF because namelist cycle (IDATE) not found."
             continue
         fi
 
         # Process this ATCF only if the cycle is found in SID
         # or if SID is empty.
-        if [ ! -z "$SID" ]; then
+        if [ ! -z "${SID[*]}" ]; then
             STORM_FOUND="False"
             for S in "${SID[@]}"; do
                 if [ "$S" == "$STORM" ]; then
@@ -327,19 +330,27 @@ if [ "${DO_STATS}" = "True" ]; then
         fi
 
         # If the storm is not found in SID, then skip to next ATCF
-        if [ "$STORM_FOUND" == "False" ]; then
+        if [ "${STORM_FOUND}" == "False" ]; then
             #echo "WARNING: Skipping this ATCF because namelist storm ID (SID) not found."
             continue
         fi
 
         # OK, checks have been passed so let's process this file.
-        echo "MSG: Working on this ATCF --> $ATCF"
+        echo ""
+        echo "************************"
+        echo "MSG: Working on this ATCF --> ${ATCF}"
+        echo "MSG: CYCLE = $CYCLE, DATE_NOW = $DATE_NOW, DATE_CUT = $DATE_CUT"
 
 
         # Create full output path.
         # Make the directory in case it doesn't already exist.
-        ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/multi_model/"
-        echo "MSG: Output directory --> $ODIR_FULL"
+        if [ "${ODIR_TYPE}" == "1" ]; then
+            ODIR_FULL="${ODIR}/guidance/"
+        else
+            ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/guidance/"
+        fi
+        ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
+        echo "MSG: Output directory --> ${ODIR_FULL}"
         mkdir -p ${ODIR_FULL}
 
 
@@ -365,7 +376,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
         # If the BDECK is new enough, force production.
-        if [ -f ${BDECK} ]; then
+        if [ -f "${BDECK}" ]; then
             echo "MSG: Found this B-Deck --> $BDECK"
             test=$(find ${BDECK} -mmin -30 2>/dev/null)
             if [[ -n $test ]]; then
@@ -378,13 +389,13 @@ if [ "${DO_STATS}" = "True" ]; then
         # If the current date is more recent than the date for the final lead time (DATE_CUT)
         # do NOT force production.
         if [ "${FORCE}" != "True" ]; then
-        if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
-            echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
-            FORCE="False"
-        else
-            echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
-            FORCE="Delay"
-        fi
+            if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
+                echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
+                FORCE="False"
+            else
+                echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
+                FORCE="Delay"
+            fi
         fi
 
 
@@ -447,12 +458,6 @@ if [ "${DO_STATS}" = "True" ]; then
             rm -f "${LOCK_FILE}"
         fi
 
-
-        # Create full output path.
-        # Make the directory in case it doesn't already exist.
-        ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/multi_model/"
-        echo "MSG: Output directory --> $ODIR_FULL"
-        mkdir -p ${ODIR_FULL}
 
         # Write the ATCF file name to a text file to be accessed later.
         # Be sure to delete duplicate entries.
