@@ -180,17 +180,24 @@ else                            val := ind(isStrSubset2(data,"DSOURCE ="))
                                 end if
 end if
 
-; d. SYS_ENV --> the system environment (e.g., JET, HERA, ORION)
-if(isvar("SYS_ENV"))then        print("MSG: Detected command line variable: SYS_ENV")
-else                            val := ind(isStrSubset2(data,"SYS_ENV ="))
+; d. MACHINE --> the system environment (e.g., JET, HERA, ORION)
+if(isvar("MACHINE"))then        print("MSG: Detected command line variable: MACHINE")
+else                            val := ind(isStrSubset2(data,"MACHINE ="))
                                 if(ismissing(val(0)))then
-                                        print("WARNING: SYS_ENV should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming SYS_ENV='JET'.")
-                                        SYS_ENV = "JET"
+					val := ind(isStrSubset2(data,"SYS_ENV ="))
+					if(ismissing(val(0)))then
+	                                        print("WARNING: MACHINE should be supplied via command line or namelist.")
+	                                        print("WARNING: Assuming MACHINE='JET'.")
+	                                        MACHINE = "JET"
+					else
+						MACHINE = data(val(dimsizes(val)-1))
+						MACHINE := str_squeeze(str_split(MACHINE," = "))
+						MACHINE := MACHINE(1)
+					end if
                                 else
-                                        SYS_ENV = data(ind(isStrSubset2(data,"SYS_ENV =")))
-                                        SYS_ENV := str_squeeze(str_split(SYS_ENV," = "))
-                                        SYS_ENV := SYS_ENV(1)
+                                        MACHINE = data(val(dimsizes(val)-1))
+                                        MACHINE := str_squeeze(str_split(MACHINE," = "))
+                                        MACHINE := MACHINE(1)
                                 end if
 end if
 
@@ -529,7 +536,7 @@ print("MSG:   Graphics Tier:      "+TIER)
 if(ENSID.ne."")then	print("MSG:   Ensemble Member:    "+ENSID)	end if
 print("MSG:   Input Directory:    "+IDIR)
 print("MSG:   Output Directory:   "+ODIR)
-print("MSG:   System Environment: "+SYS_ENV)
+print("MSG:   System Environment: "+MACHINE)
 print("MSG:   Input File Tag(s):  "+stringOut(ITAG))
 print("MSG:   Initial/Final Hour: "+INIT_HR+"/"+FNL_HR)
 print("MSG:   Hour Format:        "+FMT_HR)
@@ -2411,8 +2418,6 @@ do fff = 0,nFiles-1
 							SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   CTR(:,1),CTR(:,0),V1@_FillValue)
 			end if
-			;printMaxMin(U2,0)
-			;exit
 
 			; 4C) Average U & V in a 200-800km annulus (see SHIPS)
 			U2	:= where(     sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).ge.200.\
@@ -2423,8 +2428,6 @@ do fff = 0,nFiles-1
 					.and.sqrt(conform(V2,X,2)^2.+conform(V2,Y,1)^2.).le.800.,\
 					V2,V2@_FillValue)
 			V2	:= dim_avg_n(V2,(/1,2/))
-			;printMaxMin(U2,0)
-			;exit
 
 			; 4D) FOR WIND MAGNITUDE
 			V3	:= sqrt(U2^2. + V2^2.)
@@ -2822,7 +2825,6 @@ do fff = 0,nFiles-1
 				iii=iii+1
 			end do
 			Vp = where(Vp.gt.10.e10 .or. Vp.lt.-10.e10,Vp@_FillValue,Vp)
-			printMaxMin(Vp,0)
 					
 			; Find plot boundaries. Resize if necessary
 			if(isvar("IntMjrGrd"))then   delete(IntMjrGrd)   end if
@@ -2877,10 +2879,6 @@ do fff = 0,nFiles-1
 					print("WARNING: No suitable major grid array could be found.")
 					IntMjrGrd = fspan(min(Vp),max(Vp),8)
 				end if
-				print(IntMjrGrd)
-				;print(dInt)
-				;print(dInt_rng)
-				;exit
 
 			end if  end if
 			myHrs	:= ispan(-24,FNL_HR,12)
@@ -3139,7 +3137,7 @@ print("MSG:   Graphics Tier:      "+TIER)
 if(ENSID.ne."")then	print("MSG:   Ensemble Member:    "+ENSID)	end if
 print("MSG:   Input Directory:    "+IDIR)
 print("MSG:   Output Directory:   "+ODIR)
-print("MSG:   System Environment: "+SYS_ENV)
+print("MSG:   System Environment: "+MACHINE)
 print("MSG:   Input File Tag(s):  "+stringOut(ITAG))
 print("MSG:   Initial/Final Hour: "+INIT_HR+"/"+FNL_HR)
 print("MSG:   Hour Format:        "+FMT_HR)
@@ -3158,7 +3156,6 @@ else			print("MSG:   Convert to GIF:     OFF")
 end if
 print("MSG:   Plotted Files file: "+PLOTTED_FILES)
 print("MSG:   Status file:        "+STATUS_FILE)
-;end if
 print("********************")
 
 
