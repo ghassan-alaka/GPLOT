@@ -164,8 +164,8 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
 ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -25` )
-ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
-if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ];then
+ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
     ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 fi
 ATCF_ALL=()
