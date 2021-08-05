@@ -110,8 +110,7 @@ for NML in "${NML_LIST[@]}"; do
     # Get the output directory for proper logging
     ODIR="`sed -n -e 's/^ODIR =\s//p' ${NML} | sed 's/^\t*//'`"
     if [ -d ${ODIR} ]; then
-        LOGDIR="${ODIR}/log/"
-        LOGDIR="$(echo "${LOGDIR}" | sed s#//*#/#g)"
+        LOGDIR="$(echo "${ODIR}/log/" | sed s#//*#/#g)"
     fi
 
     # Get the submission mode from the namelist.
@@ -121,27 +120,58 @@ for NML in "${NML_LIST[@]}"; do
     fi
     echo "MSG: BATCH_MODE --> ${BATCH_MODE}."
 
-
-    # Get the system environment and project account for batch submissions ($BATCH_MODE="SBATCH")
+    # Get the machine 
     MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NML} | sed 's/^\t*//'`"
     if [ -z "${MACHINE}" ]; then
         MACHINE="`sed -n -e 's/^SYS_ENV =\s//p' ${NML} | sed 's/^\t*//'`"
     fi
+
+    # Define extra variables for batch submissions ($BATCH_MODE="SBATCH")
     if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
         BATCH_DFLTS="${NMLDIR}batch.defaults.${MACHINE,,}"
-        AUTO_BATCH=`sed -n -e 's/^AUTO_BATCH =\s//p' ${NML} | sed 's/^\t*//'`
-        CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NML} | sed 's/^\t*//'`
-        if [ -z ${CPU_ACCT} ] || [ "${AUTO_BATCH}" = "True" ]; then
-            CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`
+
+        # Get the CPU account
+        CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NML} | sed 's/^\t*//'`"
+        if [ -z "${CPU_ACCT}" ] && [ -f ${BATCH_DFLTS} ]; then
+            CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
         fi
-        QOS=`sed -n -e 's/^QOS =\s//p' ${NML} | sed 's/^\t*//'`
-        if [ -z ${QOS} ] || [ "${AUTO_BATCH}" = "True" ]; then
-            QOS=`sed -n -e 's/^QOS =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`
+
+        # Get the Slurm Queue-Of-Service (QOS)
+        QOS="`sed -n -e 's/^QOS =\s//p' ${NML} | sed 's/^\t*//'`"
+        if [ -z "${QOS}" ] && [ -f ${BATCH_DFLTS} ]; then
+            QOS="`sed -n -e 's/^QOS =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
         fi
-        PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NML} | sed 's/^\t*//'`
-        if [ -z ${PARTITION} ] || [ "${AUTO_BATCH}" = "True" ]; then
-            PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`
+
+        # Get the Slurm partition
+        PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${NML} | sed 's/^\t*//'`"
+        if [ -z "${PARTITION}" ] && [ -f ${BATCH_DFLTS} ]; then
+            PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
         fi
+
+        # Get the 'sbatch' executable
+        if [ -z "${X_SBATCH}" ]; then
+            X_SBATCH="`which sbatch 2>/dev/null`"
+        fi
+        if [ -z "${X_SBATCH}" ] && [ -f ${BATCH_DFLTS} ]; then
+            X_SBATCH="`sed -n -e 's/^sbatch =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+        fi
+        if [ -z "${X_SBATCH}" ]; then
+            echo "ERROR: Can't find 'sbatch'. Exiting."
+            exit 2
+        fi
+
+        # Get the 'squeue' executable
+        if [ -z "${X_SQUEUE}" ]; then
+            X_SQUEUE="`which squeue 2>/dev/null`"
+        fi
+        if [ -z "${X_SQUEUE}" ] && [ -f ${BATCH_DFLTS} ]; then
+            X_SQUEUE="`sed -n -e 's/^squeue =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+        fi
+        if [ -z "${X_SQUEUE}" ]; then
+            echo "ERROR: Can't find 'squeue'. Exiting."
+            exit 2
+        fi
+          
     fi
 
 
@@ -156,14 +186,14 @@ for NML in "${NML_LIST[@]}"; do
         echo "MSG: Spawn file --> ${SPAWNFILE}"
         echo "MSG: Spawn log --> ${SPAWNLOG}"
         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
-            if squeue -u $USER -o "%.10i %.10P %.50j" | grep -q "${JOBNAME}"; then
-                id=( `squeue -u $USER -o "%.10i %.10P %.50j" | grep "${JOBNAME}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
+            if ${X_SQUEUE} -u ${USER} -o "%.10i %.10P %.50j" | grep -q "${JOBNAME}"; then
+                id=( `${X_SQUEUE} -u ${USER} -o "%.10i %.10P %.50j" | grep "${JOBNAME}" | sed 's/^[ \t]*//g' | cut -d' ' -f1` ) # 2>/dev/null 2>&1` )
                 echo "MSG: Batch job(s) already exist(s) --> ${id[*]}"
                 echo "MSG: Not submitting anything for ${M^^}."
             else
                 SLRM_OPTS="--job-name=${JOBNAME}  --output=${SPAWNLOG2} --error=${SPAWNLOG2}"
                 SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
-                sbatch ${SLRM_OPTS} ${SPAWNFILE} ${NML}
+                ${X_SBATCH} ${SLRM_OPTS} ${SPAWNFILE} ${NML}
             fi
         elif [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
             ${SPAWNFILE} ${NML} > ${SPAWNLOG1}
