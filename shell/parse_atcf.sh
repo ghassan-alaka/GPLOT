@@ -88,6 +88,20 @@ for ADECK in ${ALL_ADECKS[@]}; do
             echo "MSG: Found this cycle --> ${CYCLE}"
             # Get basin and year information. This will help build the output ATCF
             BASIN=`cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u`
+            if [ "$(awk -F',' 'NR==1{print $8}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c1)" == "W" ]; then
+                MLON="-1"
+            else
+                MLON="1"
+            fi
+            LON="$(awk -F',' 'NR==1{print $8}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c2- | rev)"
+            LON="$(expr ${MLON} \* ${LON})"
+            if [ "$(awk -F',' 'NR==1{print $7}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c1)" == "S" ]; then
+                MLAT="-1"
+            else
+                MLAT="1"
+            fi
+            LAT="$(awk -F',' 'NR==1{print $7}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c2- | rev)"
+            LAT="$(expr ${MLAT} \* ${LAT})"
             YEAR=`echo "$CYCLE" | cut -c1-4`
             YMD=`echo "$CYCLE" | cut -c1-8`
             HHHH=`echo "$CYCLE" | cut -c9-10`"00"
@@ -95,13 +109,33 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Parse only these basins
             if [ "${BASIN,,}" = "al" ]; then
                 BASIN2="l"
-                echo "MSG: ATCF basin --> North Atlantic"
+                echo "MSG: ATCF basin --> North Atlantic Ocean"
             elif [ "${BASIN,,}" = "ep" ]; then
                 BASIN2="e"
-                echo "MSG: ATCF basin --> eastern North Pacific"
+                echo "MSG: ATCF basin --> eastern North Pacific Ocean"
             elif [ "${BASIN,,}" = "cp" ]; then
                 BASIN2="c"
-                echo "MSG: ATCF basin --> central North Pacific"
+                echo "MSG: ATCF basin --> central North Pacific Ocean"
+            elif [ "${BASIN,,}" = "wp" ]; then
+                BASIN2="w"
+                echo "MSG: ATCF basin --> western North Pacific Ocean"
+            elif [ "${BASIN,,}" = "io" ]; then
+                if [ "${LON}" -ge "800" ]; then
+                    echo "MSG: ATCF basin --> Bay of Bengal (North Indian Ocean)"
+                    BASIN2="b"
+                else
+                    echo "MSG: ATCF basin --> Arabian Sea (North Indian Ocean)"
+                    BASIN2="a"
+                fi
+                echo "MSG: ATCF basin --> North Indian Ocean"
+            elif [ "${BASIN,,}" = "sh" ]; then
+                if [ "${LON}" -ge "1350" ] || [ "${LON}" -le "-1200" ] ; then
+                    echo "MSG: ATCF basin --> South Pacific Ocean (Southern Hemisphere)"
+                    BASIN2="p"
+                else
+                    echo "MSG: ATCF basin --> South Indian Ocean (Southern Hemisphere)"
+                    BASIN2="s"
+                fi
             else
                 echo "WARNING: ATCF basin not recognized. Skipping."
                 continue
