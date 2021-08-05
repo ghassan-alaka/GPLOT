@@ -2,3 +2,5 @@
 CPU_ACCT = aoml-hafs1
 QOS = batch
 PARTITION = hera
+sbatch = /apps/slurm/default/bin/sbatch
+squeue = /apps/slurm/default/bin/squeue
