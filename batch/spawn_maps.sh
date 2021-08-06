@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -74,6 +74,9 @@ MACHINE=`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`
 CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
 QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
 PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`
+
+# Define batch defaults
+BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
 
 # Print information
 echo "MSG: Found this data source in the namelist      --> $DSOURCE"
@@ -227,6 +230,18 @@ MAXCOUNT=20
 
 # Define the batch submission counter.
 N=0
+
+# Get the 'sbatch' executable
+if [ -z "${X_SBATCH}" ]; then
+    X_SBATCH="`which sbatch 2>/dev/null`"
+fi
+if [ -z "${X_SBATCH}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SBATCH="`sed -n -e 's/^sbatch =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'sbatch'. Exiting."
+    exit 2
+fi
 
 
 
@@ -992,8 +1007,8 @@ for TR in ${TIER[@]}; do
                         else
                             SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                             SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                            echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
-                            sbatch ${SLRM_OPTS} ${FULL_CMD}
+                            echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
+                            ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                         fi
 
 

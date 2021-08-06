@@ -44,6 +44,10 @@ if [ ! -f ${NMLIST} ]; then
 fi
 echo "MSG: Found this namelist                                   --> ${NMLIST}"
 
+# Define batch defaults
+BATCH_DFLTS="${NMLDIR}batch.defaults.${MACHINE,,}"
+
+
 
 # Pull important variables from the namelist
 DO_STATS="`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -72,6 +76,9 @@ MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 QOS="`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+
+# Define batch defaults
+BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
 
 # Fallback option for BDECK_DIR
 if [ -z "${BDECK_DIR}" ]; then
@@ -135,6 +142,7 @@ if [ -z "${PARTITION}" ]; then
     fi
 fi
 
+
 # If FORCE is undefined, set it to False.
 if [ -z "${FORCE}" ]; then
     FORCE="False"
@@ -151,6 +159,18 @@ if [ -z "${BATCH_MODE}" ]; then
     echo "MSG: No batch-submission found in the namelist. DEFAULT:   --> ${BATCH_MODE}"
 else
     echo "MSG: Found a batch-submission mode in the namelist         --> ${BATCH_MODE}"
+fi
+
+# Get the 'sbatch' executable
+if [ -z "${X_SBATCH}" ]; then
+    X_SBATCH="`which sbatch 2>/dev/null`"
+fi
+if [ -z "${X_SBATCH}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SBATCH="`sed -n -e 's/^sbatch =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'sbatch'. Exiting."
+    exit 2
 fi
 
 # Get a list of forecast lead times
@@ -465,7 +485,7 @@ if [ "${DO_STATS}" = "True" ]; then
             grep -v "${ATCF_BASE}" ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}TMP.dat
             mv ${ODIR_FULL}TMP.dat ${ODIR_FULL}ATCF_FILES.dat
         fi
-        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
+        echo "${ATCF}" >> ${ODIR_FULL}ATCF_FILES.dat
         sort -u ${ODIR_FULL}ATCF_FILES.dat > ${ODIR_FULL}ATCF_FILES.dat.TMP
         mv ${ODIR_FULL}ATCF_FILES.dat.TMP ${ODIR_FULL}ATCF_FILES.dat
 
@@ -481,8 +501,8 @@ if [ "${DO_STATS}" = "True" ]; then
         fi
 
         # Change options in the batch submission script.
-        if [ -z "$JOB_TEST" ]; then
-            LOG_DIR="$ODIR_FULL"
+        if [ -z "${JOB_TEST}" ]; then
+            LOG_DIR="${ODIR_FULL}"
             LOGFILE1="${LOG_DIR}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.log"
             LOGFILE2="${LOG_DIR}GPLOT_Stats.${EXPT}.${MCODE}.${CYCLE}.${STORM}.out"
 
@@ -490,17 +510,17 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
             FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE}"
-            if [ "$BATCH_MODE" == "FOREGROUND" ]; then
+            if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                 echo "MSG: Executing this command [${FULL_CMD}]."
                 ${FULL_CMD}
-            elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+            elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
                 echo "MSG: Executing this command [${FULL_CMD} &]."
                 ${FULL_CMD} &
             else
                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                 SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
-                sbatch ${SLRM_OPTS} ${FULL_CMD}
+                echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
+                ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
             fi
 
             # If the job was submitted, then increase the counter.

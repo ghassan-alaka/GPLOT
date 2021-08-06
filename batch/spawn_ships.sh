@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -64,13 +64,14 @@ ATCF1_DIR=`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
 ATCF1_TAG=`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
 ATCF2_DIR=`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
 ATCF2_TAG=`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
-#ATCF3_DIR=`sed -n -e 's/^.*ATCF3_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-#ATCF3_TAG=`sed -n -e 's/^.*ATCF3_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`
 FORCE=`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`
 MACHINE=`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`
 CPU_ACCT=`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`
 QOS=`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`
 PARTITION=`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`
+
+# Define batch defaults
+BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
 
 # Print information
 echo "MSG: Found this data source in the namelist      --> $DSOURCE"
@@ -198,6 +199,18 @@ BATCHFILE="batch_ships.sh"
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
 MAXCOUNT=25
+
+# Get the 'sbatch' executable
+if [ -z "${X_SBATCH}" ]; then
+    X_SBATCH="`which sbatch 2>/dev/null`"
+fi
+if [ -z "${X_SBATCH}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SBATCH="`sed -n -e 's/^sbatch =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'sbatch'. Exiting."
+    exit 2
+fi
 
 
 
@@ -805,8 +818,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                                 SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                                echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
-                                sbatch ${SLRM_OPTS} ${FULL_CMD}
+                                echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
+                                ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.

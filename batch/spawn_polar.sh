@@ -1,4 +1,4 @@
-#!/bin/sh --login
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -77,6 +77,9 @@ RESOLUTION="`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 RMAX="`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 LEVS="`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 PYTHONFILE="`sed -n -e 's/^.*PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+
+# Define batch defaults
+BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
 
 # Print information
 echo "MSG: Found this data source in the namelist      --> ${DSOURCE}"
@@ -212,6 +215,19 @@ fi
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
 MAXCOUNT=25
+
+
+# Get the 'sbatch' executable
+if [ -z "${X_SBATCH}" ]; then
+    X_SBATCH="`which sbatch 2>/dev/null`"
+fi
+if [ -z "${X_SBATCH}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SBATCH="`sed -n -e 's/^sbatch =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'sbatch'. Exiting."
+    exit 2
+fi
 
 
 
@@ -785,8 +801,8 @@ if [ "${DO_POLAR}" = "True" ]; then
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                                 SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                                echo "MSG: Executing this command [sbatch ${SLRM_OPTS} ${FULL_CMD}]."
-                                sbatch ${SLRM_OPTS} ${FULL_CMD}
+                                echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
+                                ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.
