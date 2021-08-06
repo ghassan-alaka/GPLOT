@@ -50,9 +50,7 @@
 ;
 ;================================================================
 
-;MKedit
 GPLOT=systemfunc("echo $GPLOT_DIR")
-;MKedit end
 
 ;================================================================
 ; Universal Constants
@@ -1867,123 +1865,6 @@ begin
 	return(EXPTINFO)
 end
 
-undef("getExptInfo2")
-function getExptInfo2 (EXPTS[*]:string, infoType[1]:string)
-local master_Type, master_EXPT, N, aaa, EXPT, EXPTINFO
-begin
-
-	; All possible values of "infoType"
-	master_Type	= (/"color","marker","title"/)
-	if(.not.any(master_Type.eq.infoType))then
-		print("ERROR: getExptInfo: infoType '"+infoType+"' not recognized.")
-		exit
-	end if
-	
-	; Not currently used
-	if(isatt(infoType,"IS_MSTORM"))then	IS_MSTORM = infoType@IS_MSTORM
-	else					IS_MSTORM = True
-	end if
-	
-	; All possible values of "MODELS"
-	master_EXPT	= (/"HB17_v1_forecast","HB17_v1_history",\
-					"H217_sensitivity","H217_sensitivity_irma",\
-					"H217_sensitivity_irma_jose","H217_sensitivity_irma_katia",\
-			    "GFS_Forecast",\
-			    "H18W","HP2H","HP2F","HP3H","H218","Test.MK"/)
-	
-	; How many models?
-	N = dimsizes(EXPTS)
-	if(infoType.eq."color")then		EXPTINFO = new(N,"string")
-	else if(infoType.eq."marker")then	EXPTINFO = new(N,"integer")
-	else if(infoType.eq."title")then	EXPTINFO = new(N,"string")
-	end if  end if  end if
-	
-	; Loop over all models (Could be 1)
-	do aaa = 0,N-1
-		
-		EXPT = EXPTS(aaa)
-		
-		; Check if this particular MODEL is supported
-		if(.not.any(master_EXPT.eq.EXPT))then
-			print("WARNING: getExptInfo: EXPT '"+EXPT+"' not recognized. Assigning missing value.")
-		end if
-		
-		
-		; This is a table of the relevant Model Info, separated by Data Source
-		if(     EXPT.eq."HB17_v1_forecast")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2017 Basin-Scale HWRF"
-			end if  end if  end if
-		else if(EXPT.eq."HB17_v1_history")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2017 Basin-Scale HWRF"
-			end if  end if  end if
-		else if(EXPT.eq."Test.MK")then
-                        if(infoType.eq."color")then             EXPTINFO(aaa) = "brown"
-                        else if(infoType.eq."marker")then       EXPTINFO(aaa) = 7
-                        else if(infoType.eq."title")then        EXPTINFO(aaa) = "2017 Basin-Scale HWRF"
-                        end if  end if  end if
-		else if(EXPT.eq."GFS_Forecast")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "blue"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 4
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "Global Forecast System"
-			end if  end if  end if
-		else if(EXPT.eq."H218")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2018 Oper. HWRF"
-			end if  end if  end if
-		else if(EXPT.eq."H18W")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2018 HWRF Test-W"
-			end if  end if  end if
-		else if(EXPT.eq."HP2H")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2018 HWRF Test-2H"
-			end if  end if  end if
-		else if(EXPT.eq."HP3H")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2018 HWRF Test-3H"
-			end if  end if  end if
-		else if(EXPT.eq."HP2F")then
-			if(infoType.eq."color")then		EXPTINFO(aaa) = "brown"
-			else if(infoType.eq."marker")then	EXPTINFO(aaa) = 7
-			else if(infoType.eq."title")then	EXPTINFO(aaa) = "2018 HWRF Test-2F"
-			end if  end if  end if
-        else if(EXPT.eq."H217_sensitivity")then
-            if(infoType.eq."color")then     EXPTINFO(aaa) = "brown"
-            else if(infoType.eq."marker")then   EXPTINFO(aaa) = 7
-            else if(infoType.eq."title")then    EXPTINFO(aaa) = "2017 Basin-Scale HWRF Test-A"
-            end if  end if  end if
-        else if(EXPT.eq."H217_sensitivity_irma")then
-            if(infoType.eq."color")then     EXPTINFO(aaa) = "brown"
-            else if(infoType.eq."marker")then   EXPTINFO(aaa) = 7
-            else if(infoType.eq."title")then    EXPTINFO(aaa) = "2017 Basin-Scale HWRF Test-B"
-            end if  end if  end if
-        else if(EXPT.eq."H217_sensitivity_irma_jose")then
-            if(infoType.eq."color")then     EXPTINFO(aaa) = "brown"
-            else if(infoType.eq."marker")then   EXPTINFO(aaa) = 7
-            else if(infoType.eq."title")then    EXPTINFO(aaa) = "2017 Basin-Scale HWRF Test-C"
-            end if  end if  end if
-        else if(EXPT.eq."H217_sensitivity_irma_katia")then
-            if(infoType.eq."color")then     EXPTINFO(aaa) = "brown"
-            else if(infoType.eq."marker")then   EXPTINFO(aaa) = 7
-            else if(infoType.eq."title")then    EXPTINFO(aaa) = "2017 Basin-Scale HWRF Test-D"
-            end if  end if  end if
-		end if  end if  end if  end if
-		end if  end if  end if  end if
-		end if  end if  end if  end if end if
-		
-	end do
-	
-	; Return Requested Model Info
-	return(EXPTINFO)
-end
 
 ;
 ;================================================================
@@ -2000,27 +1881,22 @@ begin
 	Resources:=Resources(ind(Resources.ne.""))
 	D=dimsizes(Resources) 
 
-
 	times=0
 	maxtime=D
 	do while (D.gt.0.and.times.lt.maxtime)
-;	print("MKMSG: getIDIR: Resources # = "+D+" Tried Times = "+times)
 	do i=0,D-1
 		temp:=systemfunc("ls "+DIR) 
 		ires=Resources(i)
 
 		if (.not.ismissing(ind(temp.eq.ires))) then 
 			DIR=DIR+ires+"/"
-;			print("MKMSG: getIDIR: Find "+ires+" Current DIR= "+DIR)
 
 			if (D.gt.1) then
 				Resources:=Resources(ind(Resources.ne.ires))
 				D=dimsizes(Resources)
-;				print("MKMSG: getIDIR: remained resources "+Resources)
 			else
 				Resources:=""
 				D=0
-;				print("MKMSG: getIDIR: No remained resources. Function End.")
 			end if
 
 			break 
@@ -2030,7 +1906,6 @@ begin
 	end do
 	
 	returns=DIR
-;	print("MKMSG: getIDIR: Unused Resources - "+Resources)
 	return(returns)
 
 end
@@ -2383,10 +2258,8 @@ begin
 			exit
 		end if  end if  end if  end if  end if
 		end if  end if  end if
-	else if(ITAG.ne."" .and. EXT.eq."")
-		ITAG2 = "*"+ITAG+"*"+FHR+"*.grb2"
-	else
-		ITAG2 = "*"+ITAG+"*"+FHR+"*"+EXT
+	else if(ITAG.ne."" .and. EXT.eq."")	ITAG2 = "*"+ITAG+"*"+FHR+"*.grb2"
+	else					ITAG2 = "*"+ITAG+"*"+FHR+"*"+EXT
 	end if  end if
 	
 	IFILE = IDIR2+ITAG2
@@ -2485,16 +2358,8 @@ begin
 		else if(LON(xxx).eq.360.)then	XLBL(xxx) = "0"
 		else if(LON(xxx).gt.360.\
 		   .and.LON(xxx).lt.540.)then	XLBL(xxx) = tostring(toint(LON(xxx)-360.))+"E"
-		end if
-		end if
-		end if
-		end if
-		end if
-		end if
-		end if
-		end if
-		end if
-		end if
+		end if  end if  end if  end if  end if
+		end if  end if  end if  end if  end if
 		end if
 	end do
 	
@@ -2503,9 +2368,7 @@ begin
 		if(	LAT(yyy).lt.0.)then	YLBL(yyy) = tostring(toint(abs(LAT(yyy))))+"S"
 		else if(LAT(yyy).eq.0.)then	YLBL(yyy) = "EQ"
 		else if(LAT(yyy).gt.0.)then	YLBL(yyy) = tostring(toint(LAT(yyy)))+"N"
-		end if
-		end if
-		end if
+		end if  end if  end if
 	end do
 	
 	; Assign Attributed
@@ -2654,7 +2517,7 @@ begin
         end if
 
 	; Read the model information table file.
-	print("MSG: getModelInfo: Reading model information from: "+GPLOT_DIR+"/tbl/ModelInfo.dat")
+	;print("DEBUG: getModelInfo: Reading model information from: "+GPLOT_DIR+"/tbl/ModelInfo.dat")
 	masterInfo    = asciiread(GPLOT_DIR+"/tbl/ModelInfo.dat",-1,"string")
 	masterModel   = str_get_cols(masterInfo,0,3)
 	masterType    = (/"model","long_name","marker","color","title"/)
@@ -2687,7 +2550,6 @@ begin
                         print("WARNING: getModelInfo: MODEL '"+MODEL+"' not recognized. Assigning missing value.")
 		else
 			modelind=str_match_ind(masterModel,MODEL)
-print("MODEL="+MODEL+";  modelind="+modelind)
 			if (vartype.eq."string") then
 				MODELINFO(aaa)=str_squeeze(str_get_field(masterInfo(modelind),typeind,","))
 			else if (vartype.eq."integer") then
