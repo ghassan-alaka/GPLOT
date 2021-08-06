@@ -39,7 +39,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs4/HFIP/hwrfv3/Role.rthmon-ens/hafstmp/hafsv0p2d_2021rt_test/com/
+IDIR = /lfs4/HFIP/hwrfv3/Role.rthmon-ens/hafstmp/hafsv0p2d_2021rt/com/
 ITAG =
 EXT = .grb2
 
