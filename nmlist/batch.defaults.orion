@@ -1,0 +1,6 @@
+# Default batch information for RDHPCS Jet
+CPU_ACCT = aoml-hafs1
+QOS = batch
+PARTITION = orion
+sbatch = /opt/slurm/bin/sbatch
+squeue = /opt/slurm/bin/squeue
