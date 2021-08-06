@@ -87,24 +87,81 @@ for ADECK in ${ALL_ADECKS[@]}; do
         for CYCLE in ${ALL_CYCLES[@]}; do
             echo "MSG: Found this cycle --> ${CYCLE}"
             # Get basin and year information. This will help build the output ATCF
-            BASIN=`cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u`
-            if [ "$(awk -F',' 'NR==1{print $8}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c1)" == "W" ]; then
+            BASIN="`cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u`"
+            YEAR="`echo "${CYCLE}" | cut -c1-4`"
+            YMD="`echo "${CYCLE}" | cut -c1-8`"
+            HHHH="`echo "${CYCLE}" | cut -c9-10`00"
+
+            # Check that the B-Deck is available
+            BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
+            if [ -f ${BDECK} ]; then
+               echo "MSG: B-Deck file found --> ${BDECK}"
+            else
+               echo "WARNING: B-Deck file not found --> ${BDECK}"
+               BDECK=
+            fi
+
+            # Check that TCVitals is available.
+            SYNDAT="${TCVDIR}/syndat_tcvitals.${YEAR}"
+            if [ -f ${SYNDAT} ]; then
+                echo "MSG: TCVitals file found --> ${SYNDAT}"
+            else
+               echo "WARNING: TCVitals file not found --> ${SYNDAT}"
+               SYNDAT=
+            fi
+
+            # Get the TC name. This is for the Parsed ATCF file name
+            TCNAME=""
+
+            # First, try to get the TC name from the CARQ entry in the A-Deck
+            if [ -z "${TCNAME}" ]; then
+                TCNAME="`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`"
+            fi
+
+            # Second, try to get the TC name from the Best Track entry in the B-Deck
+            if [ -z "${TCNAME}" ]; then
+                if [ ! -z "${BDECK}" ]; then
+                    TCNAME="`awk -v CYCLE="${CYCLE}" '$3~CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | awk '{$1=$1};1'`"
+                fi
+            fi
+
+            # Third, try to get the TC name from the TCVItals entry
+            if [ -z "${TCNAME}" ]; then
+                if [ ! -z "${SYNDAT}" ]; then
+                    TCNAME="`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`"
+                fi
+            fi
+
+            # If TCNAME still is not set, set it to something generic like "INVEST" (for SNUM=90-99) or "STORM"
+            if [ -z "${TCNAME}" ]; then
+                echo "WARNING: TC Name not found for ${CYCLE}"
+                if [ "$(echo ${SNUM} | cut -c1)" == "9" ]; then
+                    TCNAME="INVEST"
+                else
+                    TCNAME="STORM"
+                fi
+            fi
+
+            echo "MSG: TCNAME=${TCNAME}"
+
+            # Get the first latitude and longitude from the B-Deck file
+            if [ -f "${BDECK}" ]; then
+                MY_DECK="${BDECK}"
+            else
+                MY_DECK="${ADECK}"
+            fi
+            MLON="1"
+            if [ "$(awk -F',' 'NR==1{print $8}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c1)" == "W" ]; then
                 MLON="-1"
-            else
-                MLON="1"
             fi
-            LON="$(awk -F',' 'NR==1{print $8}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c2- | rev)"
-            LON="$(expr ${MLON} \* ${LON})"
-            if [ "$(awk -F',' 'NR==1{print $7}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c1)" == "S" ]; then
+            LON="$(expr ${MLON} \* $(awk -F',' 'NR==1{print $8}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c2- | rev) )"
+            MLAT="1"
+            if [ "$(awk -F',' 'NR==1{print $7}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c1)" == "S" ]; then
                 MLAT="-1"
-            else
-                MLAT="1"
             fi
-            LAT="$(awk -F',' 'NR==1{print $7}' ${ADECK} | tr -d "[:blank:]" | rev | cut -c2- | rev)"
-            LAT="$(expr ${MLAT} \* ${LAT})"
-            YEAR=`echo "$CYCLE" | cut -c1-4`
-            YMD=`echo "$CYCLE" | cut -c1-8`
-            HHHH=`echo "$CYCLE" | cut -c9-10`"00"
+            LAT="$(expr ${MLAT} \* $(awk -F',' 'NR==1{print $7}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c2- | rev) )"
+
+
 
             # Parse only these basins
             if [ "${BASIN,,}" = "al" ]; then
@@ -153,50 +210,6 @@ for ADECK in ${ALL_ADECKS[@]}; do
                 echo "MSG: Found this old Storm ID --> ${SID_OLD}"
             fi
 
-            # Get the TC name. This is for the Parsed ATCF file name
-            TCNAME=""
-
-            # First, try to get the TC name from the CARQ entry in the A-Deck
-            if [ -z "$TCNAME" ]; then
-                TCNAME=`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`
-            fi
-
-            # Second, try to get the TC name from the Best Track entry in the B-Deck
-            if [ -z "$TCNAME" ]; then
-                # Check that the B-Deck is available
-                BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
-                if [ -f ${BDECK} ]; then
-                    echo "MSG: B-Deck file found --> ${BDECK}"
-                    TCNAME=`awk -v CYCLE="${CYCLE}" '$3~CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | awk '{$1=$1};1'`
-                    #TCNAME=`grep "${CYCLE}" ${BDECK} | grep -v " 50, NEQ," | grep -v " 64, NEQ," | cut -d "," -f28 | sed -e 's/^[[:space:]]*//' | tr '[:upper:]' '[:lower:]'`
-                else
-                    echo "WARNING: B-Deck not found --> ${BDECK}"
-                fi
-            fi
-
-            # Third, try to get the TC name from the TCVItals entry
-            if [ -z "$TCNAME" ]; then
-                SYNDAT="${TCVDIR}/syndat_tcvitals.${YEAR}"
-                if [ -f ${SYNDAT} ]; then
-                    echo "MSG: TCVitals found --> ${SYNDAT}"
-                    TCNAME=`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`
-                else
-                    echo "WARNING: TCVitals not found --> ${SYNDAT}"
-                fi
-
-            fi
-
-            # If TCNAME still is not set, set it to something generic like "NONAME"
-            if [ -z "$TCNAME" ]; then
-                echo "WARNING: TC Name not found for ${CYCLE}"
-                if [ "$(echo ${SNUM} | cut -c1)" == "9" ]; then
-                    TCNAME="INVEST"
-                else
-                    TCNAME="STORM"
-                fi
-            fi
-
-            echo "MSG: TCNAME=$TCNAME"
 
             # Copy this entry to the new parsed ATCF
             OFILE="${ODIR}/${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
