@@ -105,8 +105,8 @@ HF24,      HF24: HAFSV0.2E(14),  2,          royalblue2,   Hurricane Analysis an
 HF25,      HF25: HAFSV0.2E(15),  2,       mediumpurple2,   Hurricane Analysis and Forecast System V0.2E (15)
 HF26,      HF26: HAFSV0.2E(16),  2,             purple2,   Hurricane Analysis and Forecast System V0.2E (16)
 HF27,      HF27: HAFSV0.2E(17),  2,              grey35,   Hurricane Analysis and Forecast System V0.2E (17)
-HAFD,         HAFD: HAFS V0.2D,  7,             sienna1,   Hurricane Analysis and Forecast System V0.2D
-HFDI,     HFDI: Interp. HAFS-D,  7,             sienna1,                            HAFS V0.2D (Early)
+HAFD,         HAFD: HAFS V0.2D,  7,           darkgreen,   Hurricane Analysis and Forecast System V0.2D
+HFDI,     HFDI: Interp. HAFS-D,  7,           darkgreen,                            HAFS V0.2D (Early)
 TH16,       TH16: GFSv16-Thomp, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
 TH6I,        TH6I: Interp TH16, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
 GF16,      GF16: GFSv16-GFconv, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
