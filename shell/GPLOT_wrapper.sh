@@ -121,6 +121,9 @@ for NML in "${NML_LIST[@]}"; do
     if [ -d ${ODIR} ]; then
         LOGDIR="$(echo "${ODIR}/log/" | sed s#//*#/#g)"
     fi
+    if [ ! -d ${LOGDIR} ]; then
+        mkdir -p ${LOGDIR}
+    fi
 
     # Get the submission mode from the namelist.
     BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NML} | sed 's/^\t*//' | tr a-z A-Z`"
