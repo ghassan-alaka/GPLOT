@@ -206,7 +206,7 @@ NATCF="${#ATCF_ALL[*]}"
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
-if [ ${ENSMEM} -eq 0 ] || [ -z ${ENSMEM} ]; then
+if [ "${ENSMEM[*]}" -eq 0 ] || [ -z ${ENSMEM} ]; then
     IS_ENS="False"
     ENSIDS=0
 else
