@@ -12,16 +12,16 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = ECMWF_Forecast
+EXPT = HWRF_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
-DO_STATS = False
-DO_SHIPS = False
-DO_POLAR = False
+DO_STATS = True
+DO_SHIPS = True
+DO_POLAR = True
 
 ; 1C. DATA SOURCE
-DSOURCE = ECMWF
+DSOURCE = HWRF
 
 ; 1D. BASIN-SCALE HWRF DATA?
 IS_MSTORM = False
@@ -32,6 +32,9 @@ ENSMEM = 0
 ; 1E. SYSTEM ENVIRONMENT
 SYS_ENV = HERA
 
+; 1FF. Operation or Research Mode?
+IS_REAL = True
+
 ; 1F. FORECAST CYCLE
 IDATE = 
 
@@ -39,18 +42,18 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/ECMWF_Forecast/
+IDIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/HWRF_Forecast/
 ITAG =
-EXT = .nc
+EXT =
 
 ; 1I. OUTPUT PATH
 ODIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF1_TAG = trak.emx.atcfunix
-ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF2_TAG = trak.emx.atcfunix
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/HWRF_Forecast/
+ATCF1_TAG = trak.hwrf.raw
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/HWRF_Forecast/
+ATCF2_TAG = atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC/
@@ -58,11 +61,11 @@ BDECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
-FNL_HR = 240
+FNL_HR = 126
 FMT_HR = 3
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
-DT = 24
+DT = 3
 
 ; 1N. MASK TOPOGRAPHY
 DO_TOPOMASK = False
@@ -95,8 +98,8 @@ DO_CONVERTGIF = True
 CPU_ACCT = aoml-hafs1
 
 QOS = batch
-
 PARTITION = hera
+
 
 
 ;================================================================
@@ -104,10 +107,10 @@ PARTITION = hera
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac d03
+DOMAIN = hwrf d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1
+TIER = Tier1 Tier2
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
@@ -119,35 +122,37 @@ ATCF_REQD = False
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = IFSO
-MCODE = IFSO
-MCODEI = IFSI
+MORIG = HWRF
+MCODE = HWRF
+MCODEI = HWFI
+MCODE12 = HWF2
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM00 = HWRF HMON NVGM CTCX EGRR
-TRKM06 = HWRF HMON NVGM CTCX
-INTM = HWRF HMON DSHP LGEM CTCX
-PRSM = HWRF HMON NVGM CTCX
-TRKMI00 = HWFI HMNI EGRI CTCI TVCN OFCL
-TRKMI06 = HWFI HMNI NVGI CTCI TVCN OFCL
-INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-TRKMT00 = HWRF HMON EGRR OFCL
-TRKMT06 = HWRF HMON EGRR OFCL
-INTMT = HWRF HMON DSHP OFCL
+TRKM00 = AVNO HMON CTCX EGRR
+TRKM06 = AVNO HMON CTCX
+INTM = HMON DSHP LGEM CTCX
+PRSM = AVNO HMON CTCX
+TRKMI00 = AVNI HMNI EGRI CTCI TVCN OFCL
+TRKMI06 = AVNI HMNI CTCI TVCN OFCL
+INTMI = HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT00 = HMON AVNO EGRR OFCL
+TRKMT06 = HMON AVNO EGRR OFCL
+INTMT = HMON DSHP OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HWFI HMNI NVGI CTCI TVCN OFCL
-EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-LTM = HWRF HMON NVGM CTCX
-LIM = HWRF HMON CTCX
-
+ETM = GFSI HMNI CTCI TVCN OFCL
+EIM = HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = GFSO HMON CTCX
+LIM = HMON CTCX
 
 ; 3D. VERIFICATION TIMES
-LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
 
 ; 3E. NUMBER OF TREND FORECASTS
 NTREND = 6
 
+; 3F. INTERPOLATION
+DO_INTERP = False
 
 
 ;================================================================
@@ -157,8 +162,9 @@ NTREND = 6
 ;================================================================
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
-PYTHONFILE = make_rz_plots.nodbz.py
-RESOLUTION = 50.0
+
+PYTHONFILE = make_rz_plots_heightcoordinates_research.py
+RESOLUTION = 1.5
 RMAX = 600
 LEVS = 46
 
