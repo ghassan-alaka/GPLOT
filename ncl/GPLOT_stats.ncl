@@ -450,17 +450,31 @@ else                            val := ind(isStrSubset2(data,"DO_RMWHITE ="))
                                 end if
 end if
 
-; u. DO_SRCLBL --> 'True' if the data source should be added to the graphic title.
-if(isvar("DO_SRCLBL"))then      print("MSG: Detected command line variable: DO_SRCLBL")
-else                            val := ind(isStrSubset2(data,"DO_SRCLBL ="))
+; u. DO_TITLES --> 'True' if the main title and subtitle should be added to the graphic.
+if(isvar("DO_TITLES"))then      print("MSG: Detected command line variable: DO_TITLES")
+else                            val := ind(isStrSubset2(data,"DO_TITLES ="))
                                 if(ismissing(val(0)))then
-                                        print("WARNING: DO_SRCLBL should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming DO_SRCLBL=False")
-                                        DO_SRCLBL = False
+                                        print("WARNING: DO_TITLES should be supplied via command line or namelist.")
+                                        print("WARNING: Assuming DO_TITLES=True")
+                                        DO_TITLES = True
                                 else
-                                        DO_SRCLBL       = data(val(0))
-                                        DO_SRCLBL       := str_squeeze(str_split(DO_SRCLBL," = "))
-                                        DO_SRCLBL       := where(DO_SRCLBL(1).eq."True",True,False)
+                                        DO_TITLES       = data(val(0))
+                                        DO_TITLES       := str_squeeze(str_split(DO_TITLES," = "))
+                                        DO_TITLES       := where(DO_TITLES(1).eq."True",True,False)
+                                end if
+end if
+
+; v. DO_DISCLAIMER --> 'True' if the disclaimer should be added to the graphic.
+if(isvar("DO_DISCLAIMER"))then      print("MSG: Detected command line variable: DO_DISCLAIMER")
+else                            val := ind(isStrSubset2(data,"DO_DISCLAIMER ="))
+                                if(ismissing(val(0)))then
+                                        print("WARNING: DO_DISCLAIMER should be supplied via command line or namelist.")
+                                        print("WARNING: Assuming DO_DISCLAIMER=True")
+                                        DO_DISCLAIMER = True
+                                else
+                                        DO_DISCLAIMER       = data(val(0))
+                                        DO_DISCLAIMER       := str_squeeze(str_split(DO_DISCLAIMER," = "))
+                                        DO_DISCLAIMER       := where(DO_DISCLAIMER(1).eq."True",True,False)
                                 end if
 end if
 
@@ -884,9 +898,6 @@ print("MSG:   ADECK Directory:    "+ADECK_DIR)
 print("MSG:   BDECK Directory:    "+BDECK_DIR)
 if(DO_RMWHITE)then	print("MSG:   Trim graphics:      ON")
 else			print("MSG:   Trim graphics:      OFF")
-end if
-if(DO_SRCLBL)then	print("MSG:   Source Labels:      ON")
-else			print("MSG:   Source Labels:      OFF")
 end if
 if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
 else			print("MSG:   Convert to GIF:     OFF")
@@ -1840,10 +1851,8 @@ if(DO_LT_GUIDE)then
 	else				print("WARNING: None of the late track models were found.")
 	end if
 	
-	; Only retain values within 126 h (to match HWRF forecasts)
-	; Do we really want to do this?
-	;aTRK(:,0,:)	= where(aTRK(:,2,:).gt.126.,fval3,aTRK(:,0,:))
-	;aTRK(:,1,:)	= where(aTRK(:,2,:).gt.126.,fval3,aTRK(:,1,:))
+	; Only retain values up to FNL_HR
+	;aTRK = where(conform(aTRK,aTRK(:,2,:),(/1,3/)).gt.FNL_HR,aTRK@_FillValue,aTRK)
 end if
 
 
@@ -1957,6 +1966,7 @@ if(DO_LI_GUIDE)then
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late intensity models at "+IDATE+" --> "+stringOut(INTmodels(vals)))
 	else				print("WARNING: None of the late intensity models were found.")
 	end if
+	aINT(:,0,:) = where(aINT(:,0,:).le.0, aINT@_FillValue, aINT(:,0,:))
 end if
 
 
@@ -1975,6 +1985,7 @@ if(DO_EI_GUIDE)then
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI(vals)))
 	else					print("WARNING: None of the early intensity models were found.")
 	end if
+	aINTI(:,0,:) = where(aINTI(:,0,:).le.0, aINTI@_FillValue, aINTI(:,0,:))
 end if
 
 
@@ -2032,6 +2043,8 @@ if(DO_LI_TREND)then
 		else				print("WARNING: No cycles were found.")
 		end if
 	end do
+	aINT2(:,:,0,:) = where(aINT2(:,:,0,:).le.0, aINT2@_FillValue, aINT2(:,:,0,:))
+	aINT3(:,:,0,:) = where(aINT3(:,:,0,:).le.0, aINT3@_FillValue, aINT3(:,:,0,:))
 end if
 
 
@@ -2577,19 +2590,16 @@ if(DO_LT_GUIDE)then
 			gsn_text_ndc(wks,TRKlongname(ppp2),vpLFT+(tofloat(ppp2%4)*0.25*vpWID)+0.045,vpTOP+vpHEAD-0.02*tofloat(ppp2/4),txres4)
 		end do
 	
-	
-		; Add a main title
-		gsn_text_ndc(wks,"Late Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
+		; Add a main title and a sub-title
+		if(DO_TITLES)then	gsn_text_ndc(wks,"Late Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
+					gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres2)
+		end if
 
-
-		; Add a sub-title
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres2)
-
-		
 		; Add disclaimer
-		xloc = mpres1a@mpMinLonF + 0.02*(mpres1a@mpMaxLonF-mpres1a@mpMinLonF)
-		yloc = mpres1a@mpMinLatF + 0.02*(mpres1a@mpMaxLatF-mpres1a@mpMinLatF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = mpres1a@mpMinLonF + 0.02*(mpres1a@mpMaxLonF-mpres1a@mpMinLonF)
+					yloc = mpres1a@mpMinLatF + 0.02*(mpres1a@mpMaxLatF-mpres1a@mpMinLatF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 
 		; Finish plot
@@ -2785,18 +2795,17 @@ if(DO_ET_GUIDE)then
 		end do
 		
 		
-		; Add a main title
-		gsn_text_ndc(wks,"Early Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
-
-
-		; Add a sub-title
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres2)
+		; Add a main title and a sub-title
+		if(DO_TITLES)then	gsn_text_ndc(wks,"Early Track Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres1)
+					gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres2)
+		end if
 
 
 		; Add disclaimer
-		xloc = mpres1b@mpMinLonF + 0.02*(mpres1b@mpMaxLonF-mpres1b@mpMinLonF)
-		yloc = mpres1b@mpMinLatF + 0.02*(mpres1b@mpMaxLatF-mpres1b@mpMinLatF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = mpres1b@mpMinLonF + 0.02*(mpres1b@mpMaxLonF-mpres1b@mpMinLonF)
+					yloc = mpres1b@mpMinLatF + 0.02*(mpres1b@mpMaxLatF-mpres1b@mpMinLatF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 
 		; Finish plot
@@ -2830,12 +2839,23 @@ if(DO_LI_GUIDE)then
 	DO_THIS = True
 
 	; Find the XY plot boundaries
-	maxInt	:= max((/max(aINT(:,0,:)),max(bINT(0,:))/))
-	minInt	:= min((/min(aINT(:,0,:)),min(bINT(0,:))/))
-	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
+	vals	:= ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
+	if(ismissing(vals(0)))then
 		print("WARNING: Late model intensity guidance can't be produced.")
 		DO_THIS = False
 		DO_LI_GUIDE = False
+	end if
+	if(DO_THIS)then
+		aINT_0	= where(aINT(:,1,:).le.tofloat(MAX_FHR),aINT(:,0,:),aINT@_FillValue)
+		maxInt	:= max((/max(aINT_0),max(bINT(0,vals))/))
+		minInt	:= min((/min(aINT_0),min(bINT(0,vals))/))
+		;maxInt	:= max((/max(aINT(:,0,:)),max(bINT(0,:))/))
+		;minInt	:= min((/min(aINT(:,0,:)),min(bINT(0,:))/))
+		if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
+			print("WARNING: Late model intensity guidance can't be produced.")
+			DO_THIS = False
+			DO_LI_GUIDE = False
+		end if
 	end if
 
 	; Get model information
@@ -2858,6 +2878,8 @@ if(DO_LI_GUIDE)then
 						 toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,5)
 		end if  end if  end if
 
+		; Apply forecast hour cutoff
+		vals    := ind(bHrs.le.tofloat(MAX_FHR) .and. .not.ismissing(bINT(0,:)))
 
 		; Setup the output file & workstation
 		OFILE	= ODIR+"IntensityGuidance."+LONGSID+"."+IDATE+".late"
@@ -2893,7 +2915,12 @@ if(DO_LI_GUIDE)then
 
 		; Plot the best track
 		;plot	:= gsn_csm_xy(wks,bHrs({-6:6.}),bINT(0,{-6:6.}),res)
-		plot	:= gsn_csm_xy(wks,bHrs,bINT(0,:),xyres2a)
+		;plot	:= gsn_csm_xy(wks,bHrs,bINT(0,:),xyres2a)
+                if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
+			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
+		else
+			plot	:= gsn_csm_blank_plot(wks,xyres2a)
+		end if
 
 
 		; Info about plot size
@@ -2936,7 +2963,8 @@ if(DO_LI_GUIDE)then
 		do ppp = 0,dimsizes(INTmodels)-1
 			ppp2	= dimsizes(INTmodels)-1-ppp
 			tmp	:= toint(where(ismissing(aINT(ppp2,1,:)), fval2, aINT(ppp2,1,:)))
-			vals	:= ind(tmp%6.eq.0)
+			;vals	:= ind(tmp%6.eq.0)
+			vals	:= ind(tmp%6.eq.0 .and. tmp.le.tofloat(MAX_FHR) .and. .not.ismissing(tmp))
 	
 			if(ismissing(vals(0)) .or. \
 			   all(ismissing(aINT(ppp2,0,vals))) .or. \
@@ -2978,18 +3006,17 @@ if(DO_LI_GUIDE)then
 		end do
 		
 		
-		; Add a main title
-		gsn_text_ndc(wks,"Late Intensity Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
-
-
-		; Add a sub-title
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
+		; Add a main title and a sub-title.
+		if(DO_TITLES)then	gsn_text_ndc(wks,"Late Intensity Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
+					gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
+		end if
 
 
 		; Add disclaimer
-		xloc = xyres2a@trXMinF + 0.02*(xyres2a@trXMaxF-xyres2a@trXMinF)
-		yloc = xyres2a@trYMinF + 0.02*(xyres2a@trYMaxF-xyres2a@trYMinF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = xyres2a@trXMinF + 0.02*(xyres2a@trXMaxF-xyres2a@trXMinF)
+					yloc = xyres2a@trYMinF + 0.02*(xyres2a@trYMaxF-xyres2a@trYMinF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 
 		; Actually plot here
@@ -3021,12 +3048,23 @@ if(DO_EI_GUIDE)then
 	print("MSG: Producing graphics for early model intensity guidance.")
 		
 	; Find the XY plot boundaries
-	maxInt	:= max((/max(aINTI(:,0,:)),max(bINT(0,:))/))
-	minInt	:= min((/min(aINTI(:,0,:)),min(bINT(0,:))/))
-	if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
+	vals	:= ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
+	if(ismissing(vals(0)))then
 		print("WARNING: Early model intensity guidance can't be produced.")
 		DO_THIS = False
 		DO_EI_GUIDE = False
+	end if
+	if(DO_THIS)then
+		aINTI_0	= where(aINTI(:,1,:).le.tofloat(MAX_FHR),aINTI(:,0,:),aINTI@_FillValue)
+		maxInt	:= max((/max(aINTI_0),max(bINT(0,vals))/))
+		minInt	:= min((/min(aINTI_0),min(bINT(0,vals))/))
+		;maxInt	:= max((/max(aINTI(:,0,:)),max(bINT(0,:))/))
+		;minInt	:= min((/min(aINTI(:,0,:)),min(bINT(0,:))/))
+		if(ismissing(maxInt) .or. ismissing(minInt) .or. maxInt.eq.minInt)then
+			print("WARNING: Early model intensity guidance can't be produced.")
+			DO_THIS = False
+			DO_EI_GUIDE = False
+		end if
 	end if
 
 
@@ -3048,6 +3086,9 @@ if(DO_EI_GUIDE)then
 			IntMjrGrd := ispan(toint(minInt-(0.10*rngInt)) - toint(minInt-(0.10*rngInt))%5 + 5,\
 					   toint(maxInt+(0.10*rngInt)) - toint(maxInt+(0.10*rngInt))%5,5)
 		end if  end if  end if
+
+		; Apply forecast hour cutoff
+		vals    := ind(bHrs.le.tofloat(MAX_FHR) .and. .not.ismissing(bINT(0,:)))
 
 
 		; Setup the output file
@@ -3084,7 +3125,13 @@ if(DO_EI_GUIDE)then
 	
 		; Plot the best track
 		;plot	:= gsn_csm_xy(wks,bHrs({-6:6.}),bINT(0,{-6:6.}),res)
-		plot	:= gsn_csm_xy(wks,bHrsI,bINT(0,:),xyres2b)
+		;plot	:= gsn_csm_xy(wks,bHrsI,bINT(0,:),xyres2b)
+		if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
+			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
+		else
+			plot	:= gsn_csm_blank_plot(wks,xyres2a)
+		end if
+
 
 
 		; Info about plot size
@@ -3127,7 +3174,8 @@ if(DO_EI_GUIDE)then
 		do ppp = 0,dimsizes(INTmodelsI)-1
 			ppp2	= dimsizes(INTmodelsI)-1-ppp
 			tmp	:= toint(where(ismissing(aINTI(ppp2,1,:)), fval2, aINTI(ppp2,1,:)))
-			vals	:= ind(tmp%6.eq.0)
+			;vals	:= ind(tmp%6.eq.0)
+			vals	:= ind(tmp%6.eq.0 .and. tmp.le.toint(MAX_FHR) .and. .not.ismissing(tmp))
 		
 			if(ismissing(vals(0)) .or. \
 			   all(ismissing(aINTI(ppp2,0,vals))) .or. \
@@ -3169,18 +3217,17 @@ if(DO_EI_GUIDE)then
 		end do
 		
 		
-		; Add a main title
-		gsn_text_ndc(wks,"Early Intensity Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
-
-
-		; Add a sub-title
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
+		; Add a main title and a sub-title
+		if(DO_TITLES)then	gsn_text_ndc(wks,"Early Intensity Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
+					gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE06,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
+		end if
 
 
 		; Add disclaimer
-		xloc = xyres2b@trXMinF + 0.02*(xyres2b@trXMaxF-xyres2b@trXMinF)
-		yloc = xyres2b@trYMinF + 0.02*(xyres2b@trYMaxF-xyres2b@trYMinF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = xyres2b@trXMinF + 0.02*(xyres2b@trXMaxF-xyres2b@trXMinF)
+					yloc = xyres2b@trYMinF + 0.02*(xyres2b@trYMaxF-xyres2b@trYMinF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 		; Actually plot here
 		draw(plot)
@@ -3211,13 +3258,31 @@ if(DO_LP_GUIDE)then
 	DO_THIS = True
 
 	; Find the XY plot boundaries
-	maxPrs	:= max((/max(aPRS(:,0,:)),max(bINT(1,:))/))
-	minPrs	:= min((/min(aPRS(:,0,:)),min(bINT(1,:))/))
-	if(ismissing(maxPrs) .or. ismissing(minPrs) .or. maxPrs.eq.minPrs)then
+	vals	:= ind(bHrs.ge.-12. .and. bHrs.le.tofloat(MAX_FHR))
+	if(ismissing(vals(0)))then
 		print("WARNING: Late model pressure guidance can't be produced.")
 		DO_THIS = False
 		DO_LP_GUIDE = False
 	end if
+	if(DO_THIS)then
+		aPRS_0	= where(aPRS(:,1,:).le.tofloat(MAX_FHR),aPRS(:,0,:),aPRS@_FillValue)
+		maxPrs	:= max((/max(aPRS_0),max(bINT(1,vals))/))
+		minPrs	:= min((/min(aPRS_0),min(bINT(1,vals))/))
+		;maxPrs	:= max((/max(aPRS(:,0,:)),max(bINT(1,:))/))
+		;minPrs	:= min((/min(aPRS(:,0,:)),min(bINT(1,:))/))
+		if(ismissing(maxPrs) .or. ismissing(minPrs) .or. maxPrs.eq.minPrs)then
+			print("WARNING: Late model pressure guidance can't be produced.")
+			DO_THIS = False
+			DO_LP_GUIDE = False
+		end if
+	end if
+	;maxPrs	:= max((/max(aPRS(:,0,:)),max(bINT(1,:))/))
+	;minPrs	:= min((/min(aPRS(:,0,:)),min(bINT(1,:))/))
+	;if(ismissing(maxPrs) .or. ismissing(minPrs) .or. maxPrs.eq.minPrs)then
+	;	print("WARNING: Late model pressure guidance can't be produced.")
+	;	DO_THIS = False
+	;	DO_LP_GUIDE = False
+	;end if
 
 	; Get model information
 	PRScolors   = getModelInfo(PRSmodels,"color")
@@ -3358,18 +3423,17 @@ if(DO_LP_GUIDE)then
 		end do
 		
 		
-		; Add a main title
-		gsn_text_ndc(wks,"Late Pressure Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
-
-
-		; Add a sub-title
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
+		; Add a main title and a sub-title
+		if(DO_TITLES)then	gsn_text_ndc(wks,"Late Pressure Guidance",vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.05,txres5)
+					gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,vpLFT+0.50*vpWID,vpTOP+vpHEAD+0.02,txres6)
+		end if
 
 
 		; Add disclaimer
-		xloc = xyres3a@trXMinF + 0.02*(xyres3a@trXMaxF-xyres3a@trXMinF)
-		yloc = xyres3a@trYMinF + 0.02*(xyres3a@trYMaxF-xyres3a@trYMinF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = xyres3a@trXMinF + 0.02*(xyres3a@trXMaxF-xyres3a@trXMinF)
+					yloc = xyres3a@trYMinF + 0.02*(xyres3a@trYMaxF-xyres3a@trYMinF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 		; Actually plot here
 		draw(plot)
@@ -3614,20 +3678,23 @@ if(DO_LT_TREND)then
 
 
 		; Add a title,sub-title
-		txares4a@txFont		= 22
-		txares4a@txFontHeightF	= 0.018
-		txares4a@txFontColor	:= "black"
-		txares4a@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,thisModel+" Late Track Trend",vpLFT,vpTOP+0.075,txares4a)
-		txares4a@txFont		= 21
-		txares4a@txFontHeightF	= 0.016
-		gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+") valid on "+IDATE,vpLFT,vpTOP+0.055,txares4a)
+		if(DO_TITLES)then
+			txares4a@txFont		= 22
+			txares4a@txFontHeightF	= 0.018
+			txares4a@txFontColor	:= "black"
+			txares4a@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,thisModel+" Late Track Trend",vpLFT,vpTOP+0.075,txares4a)
+			txares4a@txFont		= 21
+			txares4a@txFontHeightF	= 0.016
+			gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+") valid on "+IDATE,vpLFT,vpTOP+0.055,txares4a)
+		end if
 	
 	
 		; Add disclaimer
-		xloc = mpres4a@mpMinLonF + 0.02*(mpres4a@mpMaxLonF-mpres4a@mpMinLonF)
-		yloc = mpres4a@mpMinLatF + 0.02*(mpres4a@mpMaxLatF-mpres4a@mpMinLatF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = mpres4a@mpMinLonF + 0.02*(mpres4a@mpMaxLonF-mpres4a@mpMinLonF)
+					yloc = mpres4a@mpMinLatF + 0.02*(mpres4a@mpMaxLatF-mpres4a@mpMinLatF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 		; Finish plot
 		draw(plot)
@@ -3826,23 +3893,25 @@ if(DO_LT_TREND)then
 
 
 		; Add a title,sub-title
-		txares4b@txFont		= 22
-		txares4b@txFontHeightF	= 0.018
-		txares4b@txFontColor	:= "black"
-		txares4b@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,TRKmodelsT(mmm)+" Lifetime Track Forecasts",vpLFT,vpTOP+0.03,txares4b)
-		txares4b@txFont		= 21
-		txares4b@txFontHeightF	= 0.016
-		txares4b@txJust		= "CenterRight"
-		gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+")",vpRGT,vpTOP+0.01,txares4b)
-		txares4b@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,sprinti("%0.2i",dimsizes(ind(.not.ismissing(aTRK3(mmm,:,0,0)))))+" Forecasts thru "+IDATE,vpLFT,vpTOP+0.01,txares4b)
+		if(DO_TITLES)then
+			txares4b@txFont		= 22
+			txares4b@txFontHeightF	= 0.018
+			txares4b@txFontColor	:= "black"
+			txares4b@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,TRKmodelsT(mmm)+" Lifetime Track Forecasts",vpLFT,vpTOP+0.03,txares4b)
+			txares4b@txFont		= 21
+			txares4b@txFontHeightF	= 0.016
+			txares4b@txJust		= "CenterRight"
+			gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+")",vpRGT,vpTOP+0.01,txares4b)
+			txares4b@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,sprinti("%0.2i",dimsizes(ind(.not.ismissing(aTRK3(mmm,:,0,0)))))+" Forecasts thru "+IDATE,vpLFT,vpTOP+0.01,txares4b)
+		end if
 	
 		; Add disclaimer
-		xloc = mpres4b@mpMinLonF + 0.02*(mpres4b@mpMaxLonF-mpres4b@mpMinLonF)
-		yloc = mpres4b@mpMinLatF + 0.02*(mpres4b@mpMaxLatF-mpres4b@mpMinLatF)
-		print(yloc+"  "+xloc)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = mpres4b@mpMinLonF + 0.02*(mpres4b@mpMaxLonF-mpres4b@mpMinLonF)
+					yloc = mpres4b@mpMinLatF + 0.02*(mpres4b@mpMaxLatF-mpres4b@mpMinLatF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 	
 		; Finish plot
 		draw(plot)
@@ -4098,19 +4167,22 @@ if(DO_LI_TREND)then
 		end do ;ttt
 
 		; Add a title,sub-title
-		txares5a@txFont		= 22
-		txares5a@txFontHeightF	= 0.018
-		txares5a@txFontColor	:= "black"
-		txares5a@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,thisModel+" Late Intensity Trend",vpLFT,vpTOP+0.075,txares5a)
-		txares5a@txFont		= 21
-		txares5a@txFontHeightF	= 0.016
-		gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+") initialized on "+IDATE,vpLFT,vpTOP+0.052,txares5a)
+		if(DO_TITLES)then
+			txares5a@txFont		= 22
+			txares5a@txFontHeightF	= 0.018
+			txares5a@txFontColor	:= "black"
+			txares5a@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,thisModel+" Late Intensity Trend",vpLFT,vpTOP+0.075,txares5a)
+			txares5a@txFont		= 21
+			txares5a@txFontHeightF	= 0.016
+			gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+") initialized on "+IDATE,vpLFT,vpTOP+0.052,txares5a)
+		end if
 	
 		; Add disclaimer
-		xloc = xyres5a@trXMinF + 0.02*(xyres5a@trXMaxF-xyres5a@trXMinF)
-		yloc = xyres5a@trYMinF + 0.02*(xyres5a@trYMaxF-xyres5a@trYMinF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = xyres5a@trXMinF + 0.02*(xyres5a@trXMaxF-xyres5a@trXMinF)
+					yloc = xyres5a@trYMinF + 0.02*(xyres5a@trYMaxF-xyres5a@trYMinF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 		; Finish graphic
 		draw(plot)
@@ -4319,22 +4391,25 @@ if(DO_LI_TREND)then
 		end if
 	
 		; Add a title,sub-title
-		txares5b@txFont		= 22
-		txares5b@txFontHeightF	= 0.018
-		txares5b@txFontColor	:= "black"
-		txares5b@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,INTmodelsT(mmm)+" Lifetime Intensity Forecasts",vpLFT,vpTOP+0.03,txares5b)
-		txares5b@txFont		= 21
-		txares5b@txFontHeightF	= 0.016
-		txares5b@txJust		= "CenterRight"
-		gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+")",vpRGT,vpTOP+0.01,txares5b)
-		txares5b@txJust		= "CenterLeft"
-		gsn_text_ndc(wks,sprinti("%0.2i",dimsizes(allDates))+" Forecasts thru "+IDATE,vpLFT,vpTOP+0.01,txares5b)
+		if(DO_TITLES)then
+			txares5b@txFont		= 22
+			txares5b@txFontHeightF	= 0.018
+			txares5b@txFontColor	:= "black"
+			txares5b@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,INTmodelsT(mmm)+" Lifetime Intensity Forecasts",vpLFT,vpTOP+0.03,txares5b)
+			txares5b@txFont		= 21
+			txares5b@txFontHeightF	= 0.016
+			txares5b@txJust		= "CenterRight"
+			gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+")",vpRGT,vpTOP+0.01,txares5b)
+			txares5b@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,sprinti("%0.2i",dimsizes(allDates))+" Forecasts thru "+IDATE,vpLFT,vpTOP+0.01,txares5b)
+		end if
 	
 		; Add disclaimer
-		xloc = xyres5b@trXMinF + 0.02*(xyres5b@trXMaxF-xyres5b@trXMinF)
-		yloc = xyres5b@trYMinF + 0.02*(xyres5b@trYMaxF-xyres5b@trYMinF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = xyres5b@trXMinF + 0.02*(xyres5b@trXMaxF-xyres5b@trXMinF)
+					yloc = xyres5b@trYMinF + 0.02*(xyres5b@trYMaxF-xyres5b@trYMinF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 	
 		; Finish plot
 		draw(plot)
@@ -4546,17 +4621,23 @@ if(DO_LP_TREND)then
 		end do
 
 
-		; Add a sub-title
-		txres@txFontHeightF	= 0.018
-		txres@txJust		= "CenterCenter"
-		txres@txFontColor	= "black"
-		gsn_text_ndc(wks,"Storm: "+TC_NAME+" ("+str_upper(SID)+") valid "+IDATE,0.59,0.855,txres)
-
-
+		; Add a title,sub-title
+		if(DO_TITLES)then
+			txares5a@txFont		= 22
+			txares5a@txFontHeightF	= 0.018
+			txares5a@txFontColor	:= "black"
+			txares5a@txJust		= "CenterLeft"
+			gsn_text_ndc(wks,thisModel+" Late Pressure Trend",vpLFT,vpTOP+0.075,txares5a)
+			txares5a@txFont		= 21
+			txares5a@txFontHeightF	= 0.016
+			gsn_text_ndc(wks,TC_NAME+" ("+str_upper(SID)+") initialized on "+IDATE,vpLFT,vpTOP+0.052,txares5a)
+		end if
+	
 		; Add disclaimer
-		xloc = xyres3a@trXMinF + 0.02*(xyres3a@trXMaxF-xyres3a@trXMinF)
-		yloc = xyres3a@trYMinF + 0.02*(xyres3a@trYMaxF-xyres3a@trYMinF)
-		add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		if(DO_DISCLAIMER)then	xloc = xyres5a@trXMinF + 0.02*(xyres5a@trXMaxF-xyres5a@trXMinF)
+					yloc = xyres5a@trYMinF + 0.02*(xyres5a@trYMaxF-xyres5a@trYMinF)
+					add_disclaimer(wks,plot,EXPT,xloc,yloc,0.009,"left")
+		end if
 
 
 		; Finish plot
@@ -4889,7 +4970,7 @@ if(DO_VERIFICATION)then
 			res@xyLineColors	:= LTcolors
 			res@xyMarkers		:= LTmarkers
 			res@xyMarkerColors	:= LTcolors
-			res@tiMainString	= "LATE TRACK ERROR"
+			if(DO_TITLES)then   res@tiMainString = "LATE TRACK ERROR"   end if
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			res@xyExplicitLegendLabels := " "+ltModels
 			res@pmLegendHeightF	= 0.03*tofloat(dimsizes(ltModels))
@@ -4912,9 +4993,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -4950,7 +5032,7 @@ if(DO_VERIFICATION)then
 	                setvalues NhlGetWorkspaceObjectId()
 	                        "wsMaximumSize" : 500000000
 	                end setvalues
-			res@tiMainString	= "LATE ALONG TRACK ERROR"
+			if(DO_TITLES)then   res@tiMainString = "LATE ALONG TRACK ERROR"   end if
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(ALTK_ERR).lt.0.)then	res@trYMinF = floor(min(ALTK_ERR) - 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
 							res@trYMaxF = ceil(max(ALTK_ERR) + 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
@@ -4971,9 +5053,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5009,7 +5092,7 @@ if(DO_VERIFICATION)then
 	                setvalues NhlGetWorkspaceObjectId()
 	                        "wsMaximumSize" : 500000000
 	                end setvalues
-			res@tiMainString	= "LATE CROSS TRACK ERROR"
+			if(DO_TITLES)then   res@tiMainString = "LATE CROSS TRACK ERROR"   end if
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(CRTK_ERR).lt.0.)then	res@trYMinF = floor(min(CRTK_ERR) - 0.1*(max(CRTK_ERR)-min(CRTK_ERR)))
 							res@trYMaxF = ceil(max(CRTK_ERR) + 0.1*(max(CRTK_ERR)-min(CRTK_ERR)))
@@ -5030,9 +5113,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5167,7 +5251,7 @@ if(DO_VERIFICATION)then
 			res@xyLineColors	:= LIcolors
 			res@xyMarkers		:= LImarkers
 			res@xyMarkerColors	:= LIcolors
-			res@tiMainString	= "LATE INTENSITY ERROR (absolute)"
+			if(DO_TITLES)then   res@tiMainString = "LATE INTENSITY ERROR (absolute)"   end if
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			res@tiXAxisString	= "Lead Time [h]"
 			res@gsnRightString	= ""+str_upper(LONGSID)
@@ -5193,9 +5277,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5231,7 +5316,7 @@ if(DO_VERIFICATION)then
                         setvalues NhlGetWorkspaceObjectId()
                                 "wsMaximumSize" : 500000000
                         end setvalues
-			res@tiMainString	= "LATE INTENSITY ERROR (bias)"
+			if(DO_TITLES)then   res@tiMainString   = "LATE INTENSITY ERROR (bias)"   end if
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			if(min(WIND_ERR).lt.0.)then	res@trYMinF = floor(min(WIND_ERR) - 0.1*(max(WIND_ERR)-min(WIND_ERR)))
 							res@trYMaxF = ceil(max(WIND_ERR) + 0.1*(max(WIND_ERR)-min(WIND_ERR)))
@@ -5252,9 +5337,10 @@ if(DO_VERIFICATION)then
 			end do
 			
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5394,7 +5480,7 @@ if(DO_VERIFICATION)then
 			res@xyLineColors	:= ETcolors
 			res@xyMarkers		:= ETmarkers
 			res@xyMarkerColors	:= ETcolors
-			res@tiMainString	= "EARLY TRACK ERROR"
+			if(DO_TITLES)then   res@tiMainString = "EARLY TRACK ERROR"   end if
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			res@xyExplicitLegendLabels := " "+etModels
 			res@pmLegendHeightF	= 0.03*tofloat(dimsizes(etModels(ind(etModels.ne.""))))
@@ -5419,9 +5505,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5456,7 +5543,7 @@ if(DO_VERIFICATION)then
                         setvalues NhlGetWorkspaceObjectId()
                                 "wsMaximumSize" : 500000000
                         end setvalues
-			res@tiMainString	= "EARLY ALONG TRACK ERROR"
+			if(DO_TITLES)then   res@tiMainString = "EARLY ALONG TRACK ERROR"   end if
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(ALTK_ERR).lt.0.)then	res@trYMinF = floor(min(ALTK_ERR) - 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
 							res@trYMaxF = ceil(max(ALTK_ERR) + 0.1*(max(ALTK_ERR)-min(ALTK_ERR)))
@@ -5477,9 +5564,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5514,7 +5602,7 @@ if(DO_VERIFICATION)then
                         setvalues NhlGetWorkspaceObjectId()
                                 "wsMaximumSize" : 500000000
                         end setvalues
-			res@tiMainString	= "EARLY CROSS TRACK ERROR"
+			if(DO_TITLES)then   res@tiMainString = "EARLY CROSS TRACK ERROR"   end if
 			res@tiYAxisString	= "Track Error"+" [n mi]"
 			if(min(CRTK_ERR).lt.0.)then
 				res@trYMinF	= floor(min(CRTK_ERR) - 0.1*(max(CRTK_ERR)-min(CRTK_ERR)))
@@ -5537,9 +5625,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 			
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5675,7 +5764,7 @@ if(DO_VERIFICATION)then
 			res@xyLineColors	:= EIcolors
 			res@xyMarkers		:= EImarkers
 			res@xyMarkerColors	:= EIcolors
-			res@tiMainString	= "EARLY INTENSITY ERROR (absolute)"
+			if(DO_TITLES)then   res@tiMainString = "EARLY INTENSITY ERROR (absolute)"   end if
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			res@xyExplicitLegendLabels := " "+eiModels
 			res@pmLegendHeightF	= 0.03*tofloat(dimsizes(eiModels(ind(eiModels.ne.""))))
@@ -5698,9 +5787,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 			
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
@@ -5736,7 +5826,7 @@ if(DO_VERIFICATION)then
                         setvalues NhlGetWorkspaceObjectId()
                                 "wsMaximumSize" : 500000000
                         end setvalues
-			res@tiMainString	= "EARLY INTENSITY ERROR (bias)"
+			if(DO_TITLES)then   res@tiMainString = "EARLY INTENSITY ERROR (bias)"   end if
 			res@tiYAxisString	= "Intensity Error"+" [kt]"
 			res@tiXAxisString	= "Lead Time [h]"
 			if(min(WIND_ERR).lt.0.)then	res@trYMinF = floor(min(WIND_ERR) - 0.1*(max(WIND_ERR)-min(WIND_ERR)))
@@ -5758,9 +5848,10 @@ if(DO_VERIFICATION)then
 			end do
 
 			; Add disclaimer to the graphic.
-			XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
-			YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
-			add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			if(DO_DISCLAIMER)then	XLOC = min(tofloat(XYHrs(vals)))+0.02*(max(tofloat(XYHrs(vals)))-min(tofloat(XYHrs(vals))))
+						YLOC = res@trYMinF + 0.02*(res@trYMaxF-res@trYMinF)
+						add_disclaimer(wks,plot,EXPT,XLOC,YLOC,0.015,"left")
+			end if
 			
 			; ACTUALLY PRODUCE THE GRAPHIC HERE
 			draw(plot)
