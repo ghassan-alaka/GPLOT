@@ -35,6 +35,8 @@ DEFAULT   d01      10
 DEFAULT   atl      8
 DEFAULT   epac     4
 DEFAULT   cpac     4
+DEFAULT   wpac     8
+DEFAULT   spac     8
 DEFAULT   wlant    4
 DEFAULT   elant    4
 DEFAULT   gom      4
@@ -42,5 +44,6 @@ DEFAULT   eus      4
 DEFAULT   d03      10
 DEFAULT   bob      4
 DEFAULT   nio      8
+DEFAULT   aust     4
 DEFAULT   tkfull   4
 DEFAULT   wmexico  4

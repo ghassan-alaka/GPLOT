@@ -1829,6 +1829,10 @@ if(DO_LT_GUIDE)then
 		end if
 		aTRK(aaa,0,:dimsizes(tcLats(vals))-1) = tcLats(vals)
 		aTRK(aaa,1,:dimsizes(tcLons(vals))-1) = tcLons(vals)
+		if(.not.ismissing(aTRK(aaa,1,0)))then
+			if(aTRK(aaa,1,0).ge.90)then   aTRK(aaa,1,:) = where(aTRK(aaa,1,:).lt.0,aTRK(aaa,1,:)+360.,aTRK(aaa,1,:))   end if
+			if(aTRK(aaa,1,0).le.-90)then   aTRK(aaa,1,:) = where(aTRK(aaa,1,:).gt.0,aTRK(aaa,1,:)-360.,aTRK(aaa,1,:))   end if
+		end if
 		aTRK(aaa,2,:dimsizes(tcFHR(vals))-1) = tofloat(tcFHR(vals))
 	end do
 	vals := ind(.not.ismissing(aTRK(:,0,0)))
@@ -1856,6 +1860,10 @@ if(DO_ET_GUIDE)then
 		end if
 		aTRKI(aaa,0,:dimsizes(tcLats(vals))-1) = tcLats(vals)
 		aTRKI(aaa,1,:dimsizes(tcLons(vals))-1) = tcLons(vals)
+		if(.not.ismissing(aTRKI(aaa,1,0)))then
+	                if(aTRKI(aaa,1,0).ge.90)then   aTRKI(aaa,1,:) = where(aTRKI(aaa,1,:).lt.0,aTRKI(aaa,1,:)+360.,aTRKI(aaa,1,:))   end if
+	                if(aTRKI(aaa,1,0).le.-90)then   aTRKI(aaa,1,:) = where(aTRKI(aaa,1,:).gt.0,aTRKI(aaa,1,:)-360.,aTRKI(aaa,1,:))   end if
+		end if
 		aTRKI(aaa,2,:dimsizes(tcFHR(vals))-1) = tofloat(tcFHR(vals))
 	end do
 	vals := ind(.not.ismissing(aTRKI(:,0,0)))
@@ -1890,6 +1898,10 @@ if(DO_LT_TREND)then
 			if(.not.ismissing(vals(0)))then
 				aTRK2(mmm,iii,0,:dimsizes(tcLats(vals))-1)	= tcLats(vals)
 				aTRK2(mmm,iii,1,:dimsizes(tcLons(vals))-1)	= tcLons(vals)
+				if(.not.ismissing(aTRK2(mmm,iii,1,0)))then
+	                                if(aTRK2(mmm,iii,1,0).ge.90)then   aTRK2(mmm,iii,1,:) = where(aTRK2(mmm,iii,1,:).lt.0,aTRK2(mmm,iii,1,:)+360.,aTRK2(mmm,iii,1,:))   end if
+	                                if(aTRK2(mmm,iii,1,0).le.-90)then   aTRK2(mmm,iii,1,:) = where(aTRK2(mmm,iii,1,:).gt.0,aTRK2(mmm,iii,1,:)-360.,aTRK2(mmm,iii,1,:))   end if
+				end if
 				aTRK2(mmm,iii,2,:dimsizes(tcFHR(vals))-1)	= tofloat(tcFHR(vals))+tofloat(ddd)
 			end if
 			iii = iii+1
@@ -1913,6 +1925,10 @@ if(DO_LT_TREND)then
 			if(ismissing(vals(0)))then   continue   end if
 			aTRK3(mmm,ddd,0,:dimsizes(tcLats(vals))-1)	= tcLats(vals)
 			aTRK3(mmm,ddd,1,:dimsizes(tcLons(vals))-1)	= tcLons(vals)
+			if(.not.ismissing(aTRK3(mmm,ddd,1,0)))then
+	                        if(aTRK3(mmm,ddd,1,0).ge.90)then   aTRK3(mmm,ddd,1,:) = where(aTRK3(mmm,ddd,1,:).lt.0,aTRK3(mmm,ddd,1,:)+360.,aTRK3(mmm,ddd,1,:))   end if
+	                        if(aTRK3(mmm,ddd,1,0).le.-90)then   aTRK3(mmm,ddd,1,:) = where(aTRK3(mmm,ddd,1,:).gt.0,aTRK3(mmm,ddd,1,:)-360.,aTRK3(mmm,ddd,1,:))   end if
+			end if
 			aTRK3(mmm,ddd,2,:dimsizes(tcFHR(vals))-1)	= tofloat(tcFHR(vals))+tofloat(offset)
 		end do
 		vals := ind(.not.ismissing(aTRK3(mmm,:,0,0)))
@@ -2089,42 +2105,13 @@ if(fileexists(ADIR+BDECK))then
         print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
 	; Read the b-deck
-	data	:= asciiread(ADIR+BDECK,-1,"string")
-
-	; Get Wind Radii - only keep indices for 34 kts.
-	windRadB = toint(str_squeeze(str_get_field(data,12,",")))
-	vals := ind(windRadB.eq.34 .or. windRadB.eq.0)
-
-	; Get Latitude
-	tmp	:= tochar(str_squeeze(str_get_field(data(vals),7,",")))
-	;printVarSummary(tmp)
-	if(dimsizes(dimsizes(tmp)).eq.1)then
-		tmp := new((/1,dimsizes(tochar(str_squeeze(str_get_field(data(vals),7,","))))/),"character")
-		tmp(0,:) = tochar(str_squeeze(str_get_field(data(vals),7,",")))
-	end if
-	;print(N)
-	tcLatsB	= tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.;
-	;print(tcLats(:100))
-
-	; Get Longitude
-	tmp         := tochar(str_squeeze(str_get_field(data(vals),8,",")))
-	if(dimsizes(dimsizes(tmp)).eq.1)then
-		tmp := new((/1,dimsizes(tochar(str_squeeze(str_get_field(data(vals),7,","))))/),"character")
-		tmp(0,:) = tochar(str_squeeze(str_get_field(data(vals),7,",")))
-	end if
-	tcLonsB	= -1.*tofloat(tostring(tmp(:,:dimsizes(tmp(0,:))-2)))/10.
-
-	; Get Intensity
-	tcINTB	= toint(str_squeeze(str_get_field(data(vals),9,",")))
-
-	; Get Central Pressure
-	tcPRESB	= toint(str_squeeze(str_get_field(data(vals),10,",")))
-
-	; Get Dates
-	tcValidB= str_squeeze(str_get_field(data(vals),3,","))
-
-	; Get Classification
-	tcCLASB	= str_squeeze(str_get_field(data(vals),11,","))
+	data	:= bdeckRead(ADIR+BDECK,"none")
+	tcLatsB	= data(0,:)		; Latitude
+	tcLonsB	= data(1,:)		; Longitude
+	tcINTB	= data(3,:)		; Maximum Intensity
+	tcPRESB	= data(4,:)		; Minimum Pressure
+	tcValidB= data@valid_times	; Valid Time
+	tcCLASB	= data@type		; Classification Type
 
 else
 	tcValidB = "MISSING"
