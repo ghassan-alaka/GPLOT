@@ -1638,51 +1638,45 @@ begin
 
 	nameBds	= str_lower(nameBds)
 
-	masterBds	= (/"hwrf",    "basin",\
-			    "atl",     "wlant",\
-			    "epac",    "cpac",\
-			    "gom",     "clant",\
-			    "d03",     "bob",\
-			    "nio",     "data",\
-			    "eus",     "fvgfs",\
-			    "elant",   "bigd01",\
-			    "d01",     "d02",\
-			    "tkfull",  "ships",\
-                	    "carolina","sfla",\
-                            "neamer",  "wmexico",\
-			    "global"/)
+        masterBds       = (/"global",  "basin",\                                                 ; Multi-Basin domains
+                            "atl",     "wlant",   "elant",   "gom",     "eus",     "carolina",\  ; North Atlantic Ocean domains
+                            "epac",    "cpac",    "wpac",    "seasia",\                          ; North Pacific Ocean domains
+                            "nio",     "bob",     "arab",\                                       ; North Indian Ocean domains
+			    "sio",     "spac",    "aust",\					 ; Southern Hemisphere domains
+                            "hwrf",    "d01",     "d02",     "d03",\                             ; Model Nest domains
+                            "tkfull",  "ships",   "data"/)                                       ; Other domains
 
-	do bbb = 0,nBds-1
-		if(.not.any(masterBds.eq.nameBds(bbb)))then   continue   end if
+        do bbb = 0,nBds-1
+                if(.not.any(masterBds.eq.nameBds(bbb)))then   continue   end if
 
-		if(nameBds(bbb).eq."basin")then		allBds(bbb,:) = (/50.,-15.,-160.,   0./) end if
-		if(nameBds(bbb).eq."fvgfs")then		allBds(bbb,:) = (/55.,  5.,-100.,   0./) end if
-		if(nameBds(bbb).eq."atl")then		allBds(bbb,:) = (/50.,  0.,-110.,   0./) end if
-		if(nameBds(bbb).eq."wlant")then		allBds(bbb,:) = (/40.,  5.,-110., -50./) end if
-		if(nameBds(bbb).eq."clant")then		allBds(bbb,:) = (/40.,  5., -80., -40./) end if
-		if(nameBds(bbb).eq."elant")then		allBds(bbb,:) = (/35.,  5., -60.,   0./) end if
-		if(nameBds(bbb).eq."epac")then		allBds(bbb,:) = (/35.,  0.,-140., -80./) end if
-		if(nameBds(bbb).eq."cpac")then		allBds(bbb,:) = (/35.,  0.,-180.,-140./) end if
-		if(nameBds(bbb).eq."gom")then		allBds(bbb,:) = (/35., 10.,-105., -70./) end if
-		if(nameBds(bbb).eq."eus")then		allBds(bbb,:) = (/45., 20., -85., -60./) end if
-		if(nameBds(bbb).eq."neamer")then	allBds(bbb,:) = (/60., 35.,-100., -60./) end if
-		if(nameBds(bbb).eq."bob")then		allBds(bbb,:) = (/40.,  5.,  65., 100./) end if
-		if(nameBds(bbb).eq."nio")then		allBds(bbb,:) = (/30.,  0.,  50., 100./) end if
-		if(nameBds(bbb).eq."bigd01")then	allBds(bbb,:) = (/70.,-40.,-200.,  40./) end if
-		if(nameBds(bbb).eq."carolina")then	allBds(bbb,:) = (/41., 31., -84., -74./) end if
-		if(nameBds(bbb).eq."sfla")then		allBds(bbb,:) = (/32., 22., -87., -77./) end if
-		if(nameBds(bbb).eq."wmexico")then          allBds(bbb,:) = (/30., 10.,-120.,-100./) end if
-		
-		; Set these to zero, which means take the entire domain given
-		if(nameBds(bbb).eq."hwrf")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."d01")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."d02")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."d03")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."tkfull")then	allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."data")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."ships")then		allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-		if(nameBds(bbb).eq."global")then	allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
-	end do
+                if(nameBds(bbb).eq."basin")then         allBds(bbb,:) = (/50.,-15.,-160.,   0./)  end if
+                if(nameBds(bbb).eq."atl")then           allBds(bbb,:) = (/50.,  0.,-110.,   0./)  end if
+                if(nameBds(bbb).eq."wlant")then         allBds(bbb,:) = (/40.,  5.,-110., -50./)  end if
+                if(nameBds(bbb).eq."elant")then         allBds(bbb,:) = (/35.,  5., -60.,   0./)  end if
+                if(nameBds(bbb).eq."gom")then           allBds(bbb,:) = (/35., 10.,-105., -70./)  end if
+                if(nameBds(bbb).eq."eus")then           allBds(bbb,:) = (/45., 20., -85., -60./)  end if
+                if(nameBds(bbb).eq."carolina")then      allBds(bbb,:) = (/41., 31., -84., -74./)  end if
+                if(nameBds(bbb).eq."epac")then          allBds(bbb,:) = (/35.,  0.,-140., -80./)  end if
+                if(nameBds(bbb).eq."cpac")then          allBds(bbb,:) = (/35.,  0.,-180.,-140./)  end if
+                if(nameBds(bbb).eq."wpac")then          allBds(bbb,:) = (/45.,  0., 100., 180./)  end if
+                if(nameBds(bbb).eq."seasia")then        allBds(bbb,:) = (/30.,  5.,  95., 125./)  end if
+                if(nameBds(bbb).eq."bob")then           allBds(bbb,:) = (/25.,  5.,  80., 100./)  end if
+		if(nameBds(bbb).eq."arab")then		allBds(bbb,:) = (/30.,  5.,  40.,  80./)  end if
+                if(nameBds(bbb).eq."nio")then           allBds(bbb,:) = (/30.,  0.,  50., 100./)  end if
+		if(nameBds(bbb).eq."sio")then		allBds(bbb,:) = (/0., -40.,  30.,  90./)  end if
+		if(nameBds(bbb).eq."aust")then		allBds(bbb,:) = (/0., -35.,  90., 160./)  end if
+		if(nameBds(bbb).eq."spac")then		allBds(bbb,:) = (/0., -40., 160., 240./)  end if
+
+                ; Set these to zero, which means take the entire domain given
+                if(nameBds(bbb).eq."hwrf")then          allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."d01")then           allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."d02")then           allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."d03")then           allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."tkfull")then        allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."data")then          allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."ships")then         allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."global")then        allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+        end do
 
 	if(nBds.eq.1)then   allBds := allBds(0,:)   end if
 	
