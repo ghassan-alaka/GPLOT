@@ -108,13 +108,16 @@ CPU_ACCT = aoml-hafs1
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant gom cpac d03
+DOMAIN = global basin atl epac wlant elant gom cpac wpac nio sio d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1 Tier2 Tier3
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
+
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
 
 
 
