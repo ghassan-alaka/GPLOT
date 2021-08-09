@@ -73,14 +73,23 @@ for NML in "${NML_LIST[@]}"; do
     # Define the master namelist file name.
     # If this namelist is not found in $GPLOT_DIR/nmlist/,
     # the submission will fail.
-    echo "MSG: Master namelist --> ${NML}"
     if [ ! -f "${NML}" ]; then
-        echo "WARNING: Master namelist could not be found."
-        echo "WARNING: Can't submit anything for this experiment."
-        echo "WARNING: Skipping to next experiment namelist."
-        continue
+        NML2="${NMLDIR}${NML}"
+	if [ ! -f "${NML2}" ]; then
+            NML2="${NMLDIR}namelist.master.${NML}"
+            if [ ! -f "${NML2}" ]; then
+                echo "WARNING: Master namelist could not be found."
+                echo "WARNING: Can't submit anything for this experiment."
+                echo "WARNING: Skipping to next experiment namelist."
+                continue
+            else
+                NML="${NML2}"
+            fi
+        else
+            NML="${NML2}"
+        fi
     fi
-    echo "MSG: Master namelist found. Hooray!"
+    echo "MSG: Hooray! Master namelist found --> ${NML}"
 
 
     # Determine the components of GPLOT that should be submitted.
