@@ -616,6 +616,8 @@ begin
 	tmp		:= str_squeeze(str_get_field(DATA(vals),8,","))
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
+	if(BLOCK(1,0).ge.0)then   BLOCK(1,:) = where(BLOCK(1,:).lt.0,BLOCK(1,:)+360.,BLOCK(1,:))   end if
+	if(BLOCK(1,0).le.0)then   BLOCK(1,:) = where(BLOCK(1,:).gt.0,BLOCK(1,:)-360.,BLOCK(1,:))   end if
 	; Get Intensity
 	BLOCK(3,:)	= toint(str_squeeze(str_get_field(DATA(vals),9,",")))
 	; Get Pressure
@@ -782,6 +784,7 @@ begin
 						;			   lonFlip(f->$DIM$))/)
 						LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
+						if(BDS(2).gt.0)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF 	= (/f->$DIM$/)
 						flipFlag= False
