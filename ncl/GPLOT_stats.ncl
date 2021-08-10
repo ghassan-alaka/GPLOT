@@ -2125,9 +2125,11 @@ if(fileexists(ADIR+BDECK))then
 	tcPRESB	= data(4,:)		; Minimum Pressure
 	tcValidB= data@valid_times	; Valid Time
 	tcCLASB	= data@type		; Classification Type
+	tcLonStartType = data@LonStartType
 
 else
 	tcValidB = "MISSING"
+	tcLonStartType = "MISSING"
 end if
 
 
@@ -2420,6 +2422,11 @@ if(DO_LT_GUIDE)then
 	maxLon = max((/max(aTRK_LT),max(bTRK(1,vals))/))
 	minLon = min((/min(aTRK_LT),min(bTRK(1,vals))/))
 	rngLon = abs(maxLon-minLon)
+	if(rngLon.gt.360. .and. maxLon.gt.180.)then		maxLon = maxLon - 360.
+								rngLon = abs(maxLon-minLon)
+	else if(rngLon.gt.360. .and. minLon.lt.-180.)then	minLon = minLon + 360.
+								rngLon = abs(maxLon-minLon)
+	end if  end if
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
@@ -2642,6 +2649,11 @@ if(DO_ET_GUIDE)then
         maxLon = max((/max(aTRKI_1),max(bTRK(1,vals))/))
         minLon = min((/min(aTRKI_1),min(bTRK(1,vals))/))
 	rngLon	= abs(maxLon-minLon)
+	if(rngLon.gt.360. .and. maxLon.gt.180.)then		maxLon = maxLon - 360.
+								rngLon = abs(maxLon-minLon)
+	else if(rngLon.gt.360. .and. minLon.lt.-180.)then	minLon = minLon + 360.
+								rngLon = abs(maxLon-minLon)
+	end if  end if
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
 		print("WARNING: Late model track guidance can't be produced.")
 		DO_THIS = False
@@ -2908,6 +2920,8 @@ if(DO_LI_GUIDE)then
 		xyres2a@tmYLValues	= IntMjrGrd
 		xyres2a@tmYLLabels	= "" + xyres2a@tmYLValues
 		xyres2a@tmYROn		= False
+		;xyres2a@tmXBLabelFontHeightF:= 0.018
+		;xyres2a@tmYLLabelFontHeightF:= 0.018
 		xyres2a@trYMaxF		= maxInt+(0.10*rngInt)
 		xyres2a@trYMinF		= minInt-(0.10*rngInt)
 		xyres2a@xyMarkLineMode	= "MarkLines"
@@ -3528,6 +3542,11 @@ if(DO_LT_TREND)then
 		maxLon	:= max((/max(aTRK2(mmm,:,1,:)),max(bTRK(1,:))/))
 		minLon	:= min((/min(aTRK2(mmm,:,1,:)),min(bTRK(1,:))/))
 		rngLon	:= abs(maxLon-minLon)
+		if(rngLon.gt.360. .and. maxLon.gt.180.)then		maxLon = maxLon - 360.
+									rngLon = abs(maxLon-minLon)
+		else if(rngLon.gt.360. .and. minLon.lt.-180.)then	minLon = minLon + 360.
+									rngLon = abs(maxLon-minLon)
+		end if  end if
 		if(ismissing(rngLat) .or. ismissing(rngLon) .or. rngLon.eq.0)then
 			print("WARNING: "+thisModel+" track trend can't be produced.")
 			continue
@@ -3733,7 +3752,11 @@ if(DO_LT_TREND)then
 		maxLon	:= max((/max(aTRK3(mmm,:,1,:)),max(bTRK(1,:))/))
 		minLon	:= min((/min(aTRK3(mmm,:,1,:)),min(bTRK(1,:))/))
 		rngLon	:= abs(maxLon-minLon)
-		
+		if(rngLon.gt.360. .and. maxLon.gt.180.)then		maxLon = maxLon - 360.
+									rngLon = abs(maxLon-minLon)
+		else if(rngLon.gt.360. .and. minLon.lt.-180.)then	minLon = minLon + 360.
+									rngLon = abs(maxLon-minLon)
+		end if  end if
 		if(ismissing(rngLat) .or. ismissing(rngLon) .or. rngLon.eq.0)then
 			print("WARNING: "+thisModel+" track trend can't be produced.")
 			continue
