@@ -40,7 +40,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT
-IDIR = /home/rtfim/GFSv16_HFIP/FV3GFSrun/rt_gfsv16_gfaer/
+IDIR = /home/rtfim/GFSv16_HFIP/FV3GFSrun/rt_gfsv16_gf/
 ITAG =
 EXT = 
 
@@ -117,7 +117,7 @@ TIER = Tier1 Tier2
 ATCF_REQD = False
 
 ; 2D. MAP PIVOT LONGITUDE
-PIV = 180
+PIV = 20
 
 
 
