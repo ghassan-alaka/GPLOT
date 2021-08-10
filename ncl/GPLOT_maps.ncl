@@ -1711,15 +1711,19 @@ do fff = 0,nFiles-1
                                         res@lbLabelFontHeightF  = 0.012
                                         res@tmYLLabelFontHeightF= 0.012
                                         res@tmXBLabelFontHeightF= 0.012
-                                else if(DOMAIN.eq."global")then
-                                        res@tmXBValues = where(toint(res@tmXBValues)%20.eq.0,res@tmXBValues,fval)
-                                        vals := ind(res@tmXBValues.ne.fval)
-                                        res@tmXBValues := res@tmXBValues(vals)
-                                        res@tmXBLabels := res@tmXBLabels(vals)
-                                        res@tmYLValues = where(toint(res@tmYLValues)%20.eq.0,res@tmYLValues,fval)
-                                        vals := ind(res@tmYLValues.ne.fval)
-                                        res@tmYLValues := res@tmYLValues(vals)
-                                        res@tmYLLabels := res@tmYLLabels(vals)
+                                else
+					if(abs(BOCO(3)-BOCO(2)).ge.180.)then
+	                                        res@tmXBValues = where(toint(res@tmXBValues)%20.eq.0,res@tmXBValues,fval)
+	                                        vals := ind(res@tmXBValues.ne.fval)
+	                                        res@tmXBValues := res@tmXBValues(vals)
+	                                        res@tmXBLabels := res@tmXBLabels(vals)
+					end if
+					if(abs(BOCO(0)-BOCO(1)).ge.180.)then
+	                                        res@tmYLValues = where(toint(res@tmYLValues)%20.eq.0,res@tmYLValues,fval)
+	                                        vals := ind(res@tmYLValues.ne.fval)
+	                                        res@tmYLValues := res@tmYLValues(vals)
+	                                        res@tmYLLabels := res@tmYLLabels(vals)
+					end if
                                 end if  end if
                         end if
 

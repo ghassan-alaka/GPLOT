@@ -1162,8 +1162,9 @@ begin
 					;res@tmYLMajorOutwardLengthF	= 0.0
 					;res@tmYLMinorOutwardLengthF	= 0.0
 					res@tmXBMode			= "Explicit"
-					res@tmXBValues			= fspan(-280.,460.,75)
-					res@tmXBLabels			= (/ "80E", "90E","100E","110E","120E","130E","140E","150E",\
+					res@tmXBValues			= fspan(-360.,540.,91)
+					res@tmXBLabels			= (/   "0", "10E", "20E", "30E", "40E", "50E", "60E", "70E",\
+									     "80E", "90E","100E","110E","120E","130E","140E","150E",\
 									    "160E","170E", "180","170W","160W","150W","140W","130W",\
 									    "120W","110W","100W", "90W", "80W", "70W", "60W", "50W",\
 									     "40W", "30W", "20W", "10W",   "0", "10E", "20E", "30E",\
@@ -1172,7 +1173,8 @@ begin
 									    "160W","150W","140W","130W","120W","110W","100W", "90W",\
 									     "80W", "70W", "60W", "50W", "40W", "30W", "20W", "10W",\
 									       "0", "10E", "20E", "30E", "40E", "50E", "60E", "70E",\
-									     "80E", "90E","100E"/)
+									     "80E", "90E","100E","110E","120E","130E","140E","150E",\
+									    "160E","170E", "180"/)
 					res@tmXBLabelFontHeightF	= 0.009
 					res@tmXBMajorLengthF		= 0.005
 					res@tmXBMajorOutwardLengthF	= 0.005
