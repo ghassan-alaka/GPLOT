@@ -617,7 +617,7 @@ begin
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
 	if(BLOCK(1,0).ge.0)then   BLOCK(1,:) = where(BLOCK(1,:).lt.0,BLOCK(1,:)+360.,BLOCK(1,:))   end if
-	if(BLOCK(1,0).le.0)then   BLOCK(1,:) = where(BLOCK(1,:).gt.0,BLOCK(1,:)-360.,BLOCK(1,:))   end if
+	if(BLOCK(1,0).lt.0)then	  BLOCK(1,:) = where(BLOCK(1,:).gt.0,BLOCK(1,:)-360.,BLOCK(1,:))   end if
 	; Get Intensity
 	BLOCK(3,:)	= toint(str_squeeze(str_get_field(DATA(vals),9,",")))
 	; Get Pressure
