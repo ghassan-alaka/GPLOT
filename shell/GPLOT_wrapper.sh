@@ -117,10 +117,8 @@ for NML in "${NML_LIST[@]}"; do
     EXPT="${SUBEXPT:-$(sed -n -e 's/^EXPT =\s//p' ${NML} | sed 's/^\t*//')}"
 
     # Get the output directory for proper logging
-    ODIR="`sed -n -e 's/^ODIR =\s//p' ${NML} | sed 's/^\t*//'`"
-    if [ -d ${ODIR} ]; then
-        LOGDIR="$(echo "${ODIR}/log/" | sed s#//*#/#g)"
-    fi
+    ODIR="`sed -n -e 's/^ODIR =\s//p' ${NML} | sed 's/^\t*//'| sed s#//*#/#g`"
+    LOGDIR="$(echo "${ODIR}/log/" | sed s#//*#/#g)"
     if [ ! -d ${LOGDIR} ]; then
         mkdir -p ${LOGDIR}
     fi
