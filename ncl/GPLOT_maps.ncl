@@ -642,6 +642,10 @@ wtype   = "png"
 wtype@wkWidth = 2048
 wtype@wkHeight = 2048
 
+; 10. Initialize a variable to determine if the model domain and
+;     graphic domain overlap.
+OUT_OF_BDS = False
+
 
 
 
@@ -841,6 +845,7 @@ print("MSG: Found these forecast hours --> "+stringOut(FHR))
 ; 5. Define the status file. This will be updated throughout.
 ;    If running the GPLOT wrappers, this must match.
 STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
+LOCK_FILE = STATUS_FILE+".lock"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
@@ -888,30 +893,30 @@ end if
         
 ; 3. Determine how many ATCFs are needed.
 ;    If this case is storm-centered, then only 1 ATCF is needed
-if(SC_DOMAIN)then       nAll            := 1
-                        ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID))))
-else                    nAll            := dimsizes(ATCF_FILES)
+if(SC_DOMAIN)then       NATCF            := 1
+                        ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)+".")))
+else                    NATCF            := dimsizes(ATCF_FILES)
 end if
 
 
 ; 4. Setup a number of variables that will be filled
 ;    by the loop below.
-tcLats  := new((/nAll,nFHR/),float)
-tcLons  := new((/nAll,nFHR/),float)
-tcFHR   := new((/nAll,nFHR/),integer)
-tcINT   := new((/nAll,nFHR/),integer)
-FNL_ATCF:= new(nAll,logical)
-tcMAXHR := new(nAll,integer)
-ALL_LONGSID := new(nAll,string)
-ALL_SID := new(nAll,string)
-ALL_SNUM:= new(nAll,integer)
+tcLats  := new((/NATCF,nFHR/),float)
+tcLons  := new((/NATCF,nFHR/),float)
+tcFHR   := new((/NATCF,nFHR/),integer)
+tcINT   := new((/NATCF,nFHR/),integer)
+FNL_ATCF:= new(NATCF,logical)
+tcMAXHR := new(NATCF,integer)
+ALL_LONGSID := new(NATCF,string)
+ALL_SID := new(NATCF,string)
+ALL_SNUM:= new(NATCF,integer)
 
                 
 ; 5. Loop over all of the storms
 LONGSID_LIST = ""
-FNL_ATCF = False
+FNL_ATCF = True		; Assume True, but we will set this to False if necessary.
 ;ALL_ATCF  = True       ; assume True, but we will set this to False if necessary
-do sss = 0,nAll-1
+do sss = 0,NATCF-1
                         
         ; a. Skip this part if no ATCF files were found.
         ;    The scrip would have already exited if this is not OK.
@@ -968,10 +973,10 @@ do sss = 0,nAll-1
                         end if
                 else
                         ; This is the most common extraction of ATCF data.
-                        tcLats(sss,fff) = data(0,val)
-                        tcLons(sss,fff) = data(1,val)
-                        tcFHR(sss,fff)  = toint(data(2,val))
-                        tcINT(sss,fff)  = toint(data(3,val))
+                        tcLats(sss,fff) = data(0,val(0))
+                        tcLons(sss,fff) = data(1,val(0))
+                        tcFHR(sss,fff)  = toint(data(2,val(0)))
+                        tcINT(sss,fff)  = toint(data(3,val(0)))
                 end if
         end do ;fff                     
 
@@ -1055,7 +1060,6 @@ do fff = 0,nFiles-1
         ; 1. START WORKING ON THE NEXT INPUT FILE
         ;    Tell the STATUS file that we're still working...
         ;================================================================
-        LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
         system("echo 'working' > "+STATUS_FILE)
@@ -1308,37 +1312,35 @@ do fff = 0,nFiles-1
                         ;================================================================
                         if(any((/"TPRCP","PRCP"/).eq.G_BASE(0,ppp)))then
 				hr_offset := G_BASE(1,ppp)
-				if(DSOURCE.eq."GFS")then
-                                	if(FHR0.gt.6)then       G_BASE(1,ppp) = tostring(FHR0)+"h"
-	                                else                    G_BASE(1,ppp) = ""
-	                                end if
-				else if(DSOURCE.eq."HAFS")then
-					if(FHR0.ge.6)then       G_BASE(1,ppp) = "3h"
-	                                else                    G_BASE(1,ppp) = ""
-	                                end if
-				else if(DSOURCE.eq."HWRF")then
-					G_BASE(1,ppp) = ""
+				if(DSOURCE.eq."GFS")then	G_BASE_LEVS := (/"",tostring(FHR0)+"h"/)
+				else if(DSOURCE.eq."HAFS")then	G_BASE_LEVS := (/"","3h","6h"/)
+				else if(DSOURCE.eq."HWRF")then	G_BASE_LEVS := ""
 				end if  end if  end if
+			else
+				G_BASE_LEVS := G_BASE(1,ppp)
                         end if
                         
                         ;================================================================
                         ; vi. Determine which file contains the G_BASE variable
 			;     Check if the variable was found. If not, we can't continue.
                         ;================================================================
-			BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE(1,ppp))
-                        varStatus = False
-                        do aaa = 0,dimsizes(myInd)-1
-                                if(aaa.eq.0)then        f := f1
-                                else if(aaa.eq.1)then   f := f2
-                                else if(aaa.eq.2)then   f := f3
-                                else if(aaa.eq.3)then   f := f4
-                                end if  end if  end if  end if
-                                
-                                if(isfilevar(f,BASEVAR))then
-                                        varStatus = True
-                                        break
-                                end if
-                        end do
+			do ggg = 0,dimsizes(G_BASE_LEVS)-1
+				BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE_LEVS(ggg))
+	                        varStatus = False
+	                        do aaa = 0,dimsizes(myInd)-1
+	                                if(aaa.eq.0)then        f := f1
+	                                else if(aaa.eq.1)then   f := f2
+	                                else if(aaa.eq.2)then   f := f3
+	                                else if(aaa.eq.3)then   f := f4
+	                                end if  end if  end if  end if
+	                                if(isfilevar(f,BASEVAR))then
+	                                        varStatus = True
+						G_BASE(1,ppp) = G_BASE_LEVS(ggg)
+	                                        break
+	                                end if
+	                        end do
+				if(varStatus)then   break   end if
+			end do
 
                         ;================================================================
                         ; vii. If the variable is not found in any input files, then we
@@ -1388,8 +1390,6 @@ do fff = 0,nFiles-1
 												LONTMP := lonPivot(LONTMP,PIV)
 												LONTMP := where(LONTMP.ge.PIV,LONTMP-360.,LONTMP)
 												TEST := lonPivot(TEST,PIV)
-												;printMaxMin(LONTMP,0)
-												;printMaxMin(TEST@$dNames(ddd)$,0)
 												if(max(LONTMP).ne.max(TEST&$dNames(ddd)$) \
 												   .or. min(LONTMP).ne.min(TEST&$dNames(ddd)$))then
 													TEST&$dNames(ddd)$ = LONTMP
@@ -1436,6 +1436,7 @@ do fff = 0,nFiles-1
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
                                         y = ddd
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
+					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
                                 end if
                         
@@ -1444,6 +1445,7 @@ do fff = 0,nFiles-1
                                         x = ddd
 					BOCO@PivotLon = PIV
                                         lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
+					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
                                         flipFlag = lon@flipFlag
                                         
@@ -1480,6 +1482,21 @@ do fff = 0,nFiles-1
                                                                                 mf              = 1.
                                 end if
                         end do
+
+			if(isvar("lat"))then
+			if(ismissing(lat(0)))then
+				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+				OUT_OF_BDS = True
+				continue
+			end if
+			end if
+			if(isvar("lon"))then
+			if(ismissing(lon(0)))then
+				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+				OUT_OF_BDS = True
+				continue
+			end if
+			end if
                 
                         ;================================================================
                         ; xii. 'mf' is the multiplicative factor for the vertical
@@ -1863,11 +1880,11 @@ do fff = 0,nFiles-1
 				;			continue
 				;end if
 				system("mkdir -p "+ODIR+"PRCPDATA")
-				if(FHR3(ttt).ge.6 .and. FHR3(ttt)%3.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc"))then
+				if(FHR3(ttt).ge.(DT*2) .and. FHR3(ttt)%DT.eq.0)then
+					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc"))then
 						continue
 					end if
-					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-3)+".nc","r")
+					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc","r")
 					Vbase	= Vbase + (/f2->TPRCP/)
 					Vbase!0 = "lat"
 					Vbase!1 = "lon"
@@ -3126,7 +3143,7 @@ do fff = 0,nFiles-1
 	                ;if(isStrSubset(DSOURCE,"HWRF") .or. DSOURCE.eq."GFS" .or. isStrSubset(str_lower(DSOURCE),"fvgfs"))then
                         
 				; Loop over all available storms
-	                        do sss = 0,nAll-1
+	                        do sss = 0,NATCF-1
 	                                ; Get TC Info for current time
 	                                myInd2  = ind(tcFHR(sss,:).eq.toint(str_sub_str(sprinti(FMT_HR,FHR3(ttt)),"f","")))
 	                                if(ismissing(myInd2(0)))then   continue   end if
@@ -3336,13 +3353,17 @@ if(.not.SC_FHR)then
 	print("MSG: COMPLETE! No more tracker info at these forecast lead times,")
 	print("MSG: so I can't do anything.")
 	system("echo 'complete' > "+STATUS_FILE)
+else if(OUT_OF_BDS)then
+	print("")
+	print("MSG: COMPLETE! Nothing to do for this domain because it does not overlap with model domain.")
+	system("echo 'complete' > "+STATUS_FILE)
 else if(ATCF_REQD .and. .not.ALL_ATCF)then
         print("")
         print("MSG: INCOMPLETE! Graphics were produced, but might be missing info from ATCFs.")
         print("MSG: Graphics will be reproduced once ATCFs become available.")
         system("echo 'incomplete' > "+STATUS_FILE)
 else if(.not.all(FNL_IFILES))then
-        print("")
+        print("") 
         print("MSG: INCOMPLETE! Graphics were produced, but new input files might be available.")
         print("MSG: If new input files are found, a new session will be initiated.")
         system("echo 'incomplete' > "+STATUS_FILE)
@@ -3356,7 +3377,7 @@ else
         print("MSG: COMPLETE! Graphics were produced! Way to go! You rock!")
         ;print("MSG: This forecast will be double-checked for completeness.")
         system("echo 'complete' > "+STATUS_FILE)        
-end if  end if  end if  end if
+end if  end if  end if  end if  end if
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 
@@ -3400,8 +3421,6 @@ end if
 if(DO_SRCLBL)then       print("MSG:   Source Labels:      ON")
 else                    print("MSG:   Source Labels:      OFF")
 end if
-;if(DO_TOPOMASK)then    print("MSG:   Topography mask:    ON")
-;else                   print("MSG:   Topography mask:    OFF")
 if(DO_CONVERTGIF)then   print("MSG:   Convert to GIF:     ON")
 else                    print("MSG:   Convert to GIF:     OFF")
 end if
