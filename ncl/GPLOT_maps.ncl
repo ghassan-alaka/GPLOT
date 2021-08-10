@@ -1724,7 +1724,7 @@ do fff = 0,nFiles-1
 	                                        res@tmYLValues := res@tmYLValues(vals)
 	                                        res@tmYLLabels := res@tmYLLabels(vals)
 					end if
-                                end if  end if
+                                end if
                         end if
 
                         ; 3. Global Resources
