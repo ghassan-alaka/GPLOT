@@ -408,13 +408,13 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the current date is more recent than the date for the final lead time (DATE_CUT)
         # do NOT force production.
-        if [ "${FORCE}" != "True" ]; then
+        if [ "${FORCE}" == "True" ]; then
             if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
                 echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
                 FORCE="False"
-            else
-                echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
-                FORCE="Delay"
+            #else
+            #    echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
+            #    FORCE="Delay"
             fi
         fi
 
@@ -518,7 +518,8 @@ if [ "${DO_STATS}" = "True" ]; then
                 ${FULL_CMD} &
             else
                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
             fi
