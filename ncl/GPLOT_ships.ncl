@@ -2775,68 +2775,70 @@ do fff = 0,nFiles-1
 				gsn_polyline_ndc(wks,(/xleg(ddd)-0.02,xleg(ddd)+0.02/),(/yleg(ddd),yleg(ddd)/),plres)
 				gsn_text_ndc(wks,IDATE2(ddd),xtxt(ddd),ytxt(ddd),txres)
 			end do
-					
-			; Plot a vertical black line at 0 h
-			LINE01	:= new(dimsizes(myHrs),"graphic")
-			LINE02	:= new(dimsizes(IntMjrGrd),"graphic")
-					
-			plres@gsLineThicknessF	= 10.0
-			plres@gsLineColor	:= "black"
-			plres@gsLineDashPattern	= 0
-			plres@tfPolyDrawOrder	= "PreDraw"
-			LINE01(ind(myHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/res@trYMinF,res@trYMaxF/),plres)
 
-			plres@gsLineThicknessF	= 1.5
-			plres@gsLineDashPattern	= 11
-			plres@gsLineColor	= "grey70"
-			do ggg = 0,dimsizes(myHrs)-1
-				if(myHrs(ggg).eq.0)then continue end if
-				LINE01(ggg)	= gsn_add_polyline(wks,plot,(/tofloat(myHrs(ggg)),tofloat(myHrs(ggg))/),(/res@trYMinF,res@trYMaxF/),plres)
-			end do
-			do ggg = 0,dimsizes(IntMjrGrd)-1
-				LINE02(ggg)	= gsn_add_polyline(wks,plot,(/res@trXMinF,res@trXMaxF/),(/IntMjrGrd(ggg),IntMjrGrd(ggg)/),plres)
-			end do
+			if(isvar("plot"))then
+				; Plot a vertical black line at 0 h
+				LINE01	:= new(dimsizes(myHrs),"graphic")
+				LINE02	:= new(dimsizes(IntMjrGrd),"graphic")
+						
+				plres@gsLineThicknessF	= 10.0
+				plres@gsLineColor	:= "black"
+				plres@gsLineDashPattern	= 0
+				plres@tfPolyDrawOrder	= "PreDraw"
+				LINE01(ind(myHrs.eq.0))	= gsn_add_polyline(wks,plot,(/0.,0./),(/res@trYMinF,res@trYMaxF/),plres)
+	
+				plres@gsLineThicknessF	= 1.5
+				plres@gsLineDashPattern	= 11
+				plres@gsLineColor	= "grey70"
+				do ggg = 0,dimsizes(myHrs)-1
+					if(myHrs(ggg).eq.0)then continue end if
+					LINE01(ggg)	= gsn_add_polyline(wks,plot,(/tofloat(myHrs(ggg)),tofloat(myHrs(ggg))/),(/res@trYMinF,res@trYMaxF/),plres)
+				end do
+				do ggg = 0,dimsizes(IntMjrGrd)-1
+					LINE02(ggg)	= gsn_add_polyline(wks,plot,(/res@trXMinF,res@trXMaxF/),(/IntMjrGrd(ggg),IntMjrGrd(ggg)/),plres)
+				end do
+					
+				; Retrieve viewport info from 'plot'
+				getvalues plot
+					"vpYF" : vpTOP
+					"vpXF" : vpLFT
+					"vpHeightF" : vpHGT
+					"vpWidthF" : vpWID
+				end getvalues
+				vpRGT  = vpLFT+vpWID
+				vpPCTX = 0.01*(vpRGT-vpLFT)
+				vpBOT  = vpTOP-vpHGT
+				vpPCTY = 0.01*(vpTOP-vpBOT)
 				
-			; Retrieve viewport info from 'plot'
-			getvalues plot
-				"vpYF" : vpTOP
-				"vpXF" : vpLFT
-				"vpHeightF" : vpHGT
-				"vpWidthF" : vpWID
-			end getvalues
-			vpRGT  = vpLFT+vpWID
-			vpPCTX = 0.01*(vpRGT-vpLFT)
-			vpBOT  = vpTOP-vpHGT
-			vpPCTY = 0.01*(vpTOP-vpBOT)
-			
-			; Graphic Title
-			add_graphic_title(wks,TITLE,vpLFT,vpTOP+0.045,0.015)
-				
-			; Time Title
-			TimeTitle	= "Init: "+changeTimeFmt(str_sub_str(IDATE,"gfs.",""),"YYYYMMDDHH","HHz DOW, Month DD YYYY",0)
-			add_time_title(wks,TimeTitle,vpRGT,vpTOP+0.023,0.012,"right")
-				
-			; Storm Title
-			add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.012,"right")
-				
-			; Add the Model to the Title & Disclaimer to the bottom
-			if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.065,0.016)
-						add_disclaimer(wks,plot,EXPT,-24.,min(IntMjrGrd)+0.05*abs(max(IntMjrGrd)-min(IntMjrGrd)),0.010,"left")
+				; Graphic Title
+				add_graphic_title(wks,TITLE,vpLFT,vpTOP+0.045,0.015)
+					
+				; Time Title
+				TimeTitle	= "Init: "+changeTimeFmt(str_sub_str(IDATE,"gfs.",""),"YYYYMMDDHH","HHz DOW, Month DD YYYY",0)
+				add_time_title(wks,TimeTitle,vpRGT,vpTOP+0.023,0.012,"right")
+					
+				; Storm Title
+				add_storm_title(wks,str_upper(LONGSID),vpRGT,vpTOP+0.008,0.012,"right")
+					
+				; Add the Model to the Title & Disclaimer to the bottom
+				if(DO_SRCLBL)then	add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.065,0.016)
+							add_disclaimer(wks,plot,EXPT,-24.,min(IntMjrGrd)+0.05*abs(max(IntMjrGrd)-min(IntMjrGrd)),0.010,"left")
+				end if
+	
+				; Finish plot
+				draw(plot)
+				frame(wks)
+	
+				; Remove white space on plot
+				;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
+				if (DO_RMWHITE .and. DO_CONVERTGIF) then
+				    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				else if (DO_CONVERTGIF) then
+				    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				else if (DO_RMWHITE) then
+				    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
+				end if  end if  end if
 			end if
-
-			; Finish plot
-			draw(plot)
-			frame(wks)
-
-			; Remove white space on plot
-			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
-			if (DO_RMWHITE .and. DO_CONVERTGIF) then
-			    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_CONVERTGIF) then
-			    system("convert "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_RMWHITE) then
-			    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
-			end if  end if  end if
 			
 		end if		
 		
