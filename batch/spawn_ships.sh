@@ -529,7 +529,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         F=0
                         IFHRS=()
                         while [ -z "$IFILES" ]; do
-                            IDIR_FULL="${IDIR}${IDIR_OPTS[$F]}"
+                            IDIR_FULL="${IDIR}/${IDIR_OPTS[$F]}"
 
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
