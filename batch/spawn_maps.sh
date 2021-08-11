@@ -243,6 +243,18 @@ if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
     exit 2
 fi
 
+# Get the 'squeue' executable
+if [ -z "${X_SQUEUE}" ]; then
+    X_SQUEUE="`which squeue 2>/dev/null`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SQUEUE="`sed -n -e 's/^squeue =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'squeue'. Exiting."
+    exit 2
+fi
+
 
 
 
@@ -324,8 +336,8 @@ for TR in ${TIER[@]}; do
         # Fifth, append Fake Storm (00L) if IS_MSTORM=True and if other storms
         # were found, i.e., STORMS != NONE
         if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
-            STORMS+=("00L")
             STORMS=(`echo "${STORMS[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
+            STORMS+=("00L")
         fi
 
         # Set the storm counter. This is important because large-scale
@@ -691,7 +703,7 @@ for TR in ${TIER[@]}; do
                     F=0
                     IFHRS=()
                     while [ -z "$IFILES" ]; do
-                        IDIR_FULL="${IDIR}${IDIR_OPTS[$F]}"
+                        IDIR_FULL="${IDIR}/${IDIR_OPTS[$F]}"
                         # If the input directory doesn't exist, continue to the next option
                         if [ ! -d ${IDIR_FULL} ]; then
                             ((F=F+1))
@@ -965,7 +977,7 @@ for TR in ${TIER[@]}; do
                     #elif [ "${BATCH_MODE^^}" == "SBATCH" ]; then
                     else
                         JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                        JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
+                        JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
                     fi
 
                     # Change options in the batch submission script.

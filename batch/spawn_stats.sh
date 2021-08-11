@@ -173,6 +173,18 @@ if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
     exit 2
 fi
 
+# Get the 'squeue' executable
+if [ -z "${X_SQUEUE}" ]; then
+    X_SQUEUE="`which squeue 2>/dev/null`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SQUEUE="`sed -n -e 's/^squeue =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'squeue'. Exiting."
+    exit 2
+fi
+
 # Get a list of forecast lead times
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
@@ -495,7 +507,7 @@ if [ "${DO_STATS}" = "True" ]; then
         RUNTIME="00:29:59"
         JOBNAME="GPLOT.${EXPT}.${CYCLE}.stats.${STORM}.${MCODE}"
         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
-            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
+            JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
         else
             JOB_TEST=""
         fi

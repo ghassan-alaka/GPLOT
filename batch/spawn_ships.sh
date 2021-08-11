@@ -212,6 +212,18 @@ if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
     exit 2
 fi
 
+# Get the 'squeue' executable
+if [ -z "${X_SQUEUE}" ]; then
+    X_SQUEUE="`which squeue 2>/dev/null`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SQUEUE="`sed -n -e 's/^squeue =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'squeue'. Exiting."
+    exit 2
+fi
+
 
 
 
@@ -793,7 +805,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
                         JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
                         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
-                            JOB_TEST=`/apps/slurm/default/bin/squeue -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
+                            JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
                         else
                             JOB_TEST=""
                         fi
