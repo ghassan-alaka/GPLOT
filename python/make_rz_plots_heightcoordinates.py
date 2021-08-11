@@ -1,4 +1,4 @@
-###!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+#!/usr/bin/env python
 
 # Check that GPLOT_DIR is defined in the environment.
 import os
@@ -64,22 +64,31 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
+NMLDIR = GPLOT_DIR+'/nmlist'
+if os.path.exists(NMLIST):
+	MASTER_NML_IN = NMLIST
+elif os.path.exists(GPLOT_DIR+'/nmlist/'+NMLIST):
+	MASTER_NML_IN = NML_DIR+'/'+NMLIST
+else:
+	print("ERROR: I couldn't find the Master Namelist.")
+	sys.exit()
+PYTHONDIR = sys.argv[11]
+if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
+	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/python'
+
 
 # Read the master namelist
-#NML_DATA = np.genfromtxt(MASTER_NML_IN,dtype='str')
-#NML_DATE = np.loadtxt(MASTER_NML_IN)
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
 try:
-        ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
+	ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
 except:
-        ODIR_TYPE = 0
+	ODIR_TYPE = 0
 if ODIR_TYPE == 1:
-        ODIR = ODIR+'/polar/'
+	ODIR = ODIR+'/polar/'
 else:
-        ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+	ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
 
 try:
 	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -110,10 +119,9 @@ zsize_pressure = np.int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-#print(str(ATCF_LIST))
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
-	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
+	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID+'.').lower() in s][:]][0]
 else:
 	ATCF = ATCF_LIST
 print('MSG: Found this ATCF --> '+str(ATCF))
@@ -134,17 +142,18 @@ ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in 
 # Get the list of unplotted files
 UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
-#FHR_LIST = [ int(x) for x in [np.genfromtxt(ALLFHR_FILE,dtype='str')] ]
+# Get the list of forecast lead time in hours
 FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
 if (FHR_LIST.size == 1):
 	FHR_LIST = np.append(FHR_LIST,"999")
 	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
+# Define executables
+X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
-	if (FILE == 'MISSING'):
-		continue
+	if (FILE == 'MISSING'):  continue
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
@@ -186,23 +195,15 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
-	print(str(centerlon)+'  '+str(centerlat))
-	exit
 
-	#figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}.png")])[0]
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
 		print('None of These Yet!')
 		print(figuretest)
 		print('h = ',list(FHRIND))
 
-		#Make GrADS control file and index file
-		
-		#gribfile = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#gribfile2 = datadir+'/natl00l.'+forecastinit+'.'+modeltag+'.f'+format(FHR,'03d')+'.grb2'
-		#print(gribfile)
-		lscommand = 'ls '+FILE
-		gribfiletest = os.system(lscommand)
+		# Check that the data file 'FILE' exists
+		gribfiletest = os.system('ls '+FILE)
 
 		if (gribfiletest < 1):
 
@@ -211,30 +212,29 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
 			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
 			while os.path.exists(LOCK_FILE):
-			        print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
-			        time.sleep(5)
-			        LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
-			        if LOCK_TEST:
-			                os.system('rm -f '+LOCK_FILE)
+				print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
+				time.sleep(5)
+				LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
+				if LOCK_TEST:  os.system('rm -f '+LOCK_FILE)
 			
 			if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
-			        print('MSG: GrADs control file not found. Creating it now.')
-			        os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
-			        command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
-			        os.system(command)
-			        command2 = 'gribmap -i '+CTL_FILE+' -big'
-			        os.system(command2)
-			        os.system('rm -f '+LOCK_FILE)
-			
+				print('MSG: GrADs control file not found. Creating it now.')
+				os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
+				command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
+				os.system(command)
+				command2 = 'gribmap -i '+CTL_FILE+' -big'
+				os.system(command2)
+				os.system('rm -f '+LOCK_FILE)
+
 			while not os.path.exists(IDX_FILE):
-			        print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
-			        time.sleep(5)
+				print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
+				time.sleep(5)
 			
 			# Open GrADs data file
 			print('MSG: GrADs control and index files should be available.')
 			ga('open '+CTL_FILE)
 			env = ga.env()
-			
+
 
 			#Define how big of a box you want, based on lat distance
 			yoffset = 7
@@ -303,7 +303,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			ga('set z 1')
 			u10 = ga.exp('ugrd10m')
 			v10 = ga.exp('vgrd10m')
-			mslp = ga.exp('msletmsl')
+			if DSOURCE == 'HAFS':
+				mslp = ga.exp('msletmsl')
+			else:
+				mslp = ga.exp('prmslmsl')
 			tmp2m = ga.exp('tmp2m')
 			q2m = ga.exp('spfh2m')
 			rh2m = ga.exp('rh2m')
@@ -321,7 +324,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			u200 = ga.exp('ugrdprs')
 			v200 = ga.exp('vgrdprs')
 			ga('set z 1')
-						
+			
 			#Get W from Omega
 			#w = -omega/(rho*g)
 			#rho = p/(Rd*Tv)
@@ -1341,11 +1344,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-	os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+	os.system("sed -i '/"+np.str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
+	os.system('echo "'+np.str(FILE)+' 1" >> '+PLOTTED_FILES)
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 
 
-s.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
+print('COMPLETING')
+os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 os.system('echo "complete" > '+STATUS_FILE)
 os.system('rm -f '+ST_LOCK_FILE)

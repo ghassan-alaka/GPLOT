@@ -436,17 +436,6 @@ if [ "${DO_POLAR}" = "True" ]; then
                     continue
                 fi
 
-                # Create a text file with ATCFs for this cycle in the output directory
-                if [ -z "${CYCLE_ATCF}" ]; then
-                    echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
-                else
-                    if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
-                        rm -f ${ODIR_FULL}ATCF_FILES.dat
-                    fi
-                    for ATCF in ${CYCLE_ATCF}; do
-                        echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
-                    done
-                fi
 
 
                 ###########################
@@ -730,6 +719,17 @@ if [ "${DO_POLAR}" = "True" ]; then
                             continue
                         fi
 
+                        # Create a text file with ATCFs for this cycle in the output directory
+                        if [ -z "${CYCLE_ATCF}" ]; then
+                            echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
+                        else
+                            if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                                rm -f ${ODIR_FULL}ATCF_FILES.dat
+                            fi
+                            for ATCF in ${CYCLE_ATCF}; do
+                                echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
+                            done
+                        fi
 
                         # Write existing IFILES out to UNPLOTTED_FNAME log for use in plotting scripts
                         UNPLOTTED_FILE="${ODIR_FULL}UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
@@ -790,7 +790,7 @@ if [ "${DO_POLAR}" = "True" ]; then
 
                             # Call the batch job
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHONDIR}${PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
                             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."

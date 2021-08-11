@@ -1,4 +1,4 @@
-#!/lfs3/projects/hur-aoml/Andrew.Hazelton/anaconda3/bin/python
+#!/usr/bin/env python
 
 # Check that GPLOT_DIR is defined in the environment.
 import os
@@ -63,12 +63,23 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-MASTER_NML_IN = GPLOT_DIR+'/nmlist/'+NMLIST
+NMLDIR = GPLOT_DIR+'/nmlist'
+if os.path.exists(NMLIST):
+	MASTER_NML_IN = NMLIST
+elif os.path.exists(GPLOT_DIR+'/nmlist/'+NMLIST):
+	MASTER_NML_IN = NML_DIR+'/'+NMLIST
+else:
+	print("ERROR: I couldn't find the Master Namelist.")
+	sys.exit()
+PYTHONDIR = sys.argv[11]
+if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
+	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/python'
+
 
 # Read the master namelist
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
 try:
 	ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
 except:
@@ -96,7 +107,7 @@ UNPLOTTED_FILE = ODIR.strip()+'UnplottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+
 PLOTTED_FILE = ODIR.strip()+'PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
 STATUS_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-ST_LOCK_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
+ ST_LOCK_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
 ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
 
 
@@ -107,10 +118,9 @@ zsize = np.int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
-print(str(ATCF_LIST))
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
-	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
+	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID+'.').lower() in s][:]][0]
 else:
 	ATCF = ATCF_LIST
 print('MSG: Found this ATCF --> '+str(ATCF))
@@ -131,6 +141,7 @@ ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in 
 # Get the list of unplotted files
 UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
 
+# Get the list of forecast lead time in hours
 FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
 if (FHR_LIST.size == 1):
 	FHR_LIST = np.append(FHR_LIST,"999")
@@ -141,8 +152,7 @@ X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
-	if (FILE == 'MISSING'):
-		continue
+	if (FILE == 'MISSING'):  continue
 
 	print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
 
@@ -1324,11 +1334,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-	os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+	os.system("sed -i '/"+np.str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
+	os.system('echo "'+np.str(FILE)+' 1" >> '+PLOTTED_FILES)
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 
 
+print('COMPLETING')
 os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
 os.system('echo "complete" > '+STATUS_FILE)
 os.system('rm -f '+ST_LOCK_FILE)

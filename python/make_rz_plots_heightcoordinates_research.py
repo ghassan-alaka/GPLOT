@@ -67,27 +67,34 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-MASTER_NML_IN = NMLIST
-PYTHONDIR = sys.argv[11]
-if PYTHONDIR == '':  PYTHONDIR = GPLOT_DIR+'/python'
-
 NMLDIR = GPLOT_DIR+'/nmlist'
+if os.path.exists(NMLIST):
+	MASTER_NML_IN = NMLIST
+elif os.path.exists(GPLOT_DIR+'/nmlist/'+NMLIST):
+	MASTER_NML_IN = NML_DIR+'/'+NMLIST
+else:
+	print("ERROR: I couldn't find the Master Namelist.")
+	sys.exit()
+PYTHONDIR = sys.argv[11]
+if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
+	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/python'
+
 
 # Read the master namelist
-DSOURCE = subprocess.run(['grep','^DSOURCE',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-EXPT = subprocess.run(['grep','^EXPT',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-ODIR = subprocess.run(['grep','^ODIR',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+ODIR = subprocess.run(['grep','^ODIR',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
 try:
-        ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
+	ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
 except:
-        ODIR_TYPE = 0
+	ODIR_TYPE = 0
 if ODIR_TYPE == 1:
-        ODIR = ODIR+'/polar/'
+	ODIR = ODIR+'/polar/'
 else:
-        ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+	ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
 
 try:
-	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',NMLDIR+'/'+MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
+	DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
 	DO_CONVERTGIF = (DO_CONVERTGIF == 'True');
 except:
 	DO_CONVERTGIF = False;

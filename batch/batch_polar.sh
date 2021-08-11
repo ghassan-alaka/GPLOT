@@ -92,13 +92,13 @@ fi
 if [ ! -z "${PYTHONDIR}" ]; then
     PYTHON_ARGS+=("${PYTHONDIR}")
 else
-    PYTHON_ARGS+=("MISSING")
+    PYTHON_ARGS+=("${GPLOT_DIR}/python")
 fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
 #${PYTHONEXE} ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
-python ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
+python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
 
 wait
 
