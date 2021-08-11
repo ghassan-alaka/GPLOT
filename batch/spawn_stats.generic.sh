@@ -137,8 +137,8 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
-ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
-ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 ATCF_ALL=()
 for ATCF in ${ATCF_TMP[@]}; do
     ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
