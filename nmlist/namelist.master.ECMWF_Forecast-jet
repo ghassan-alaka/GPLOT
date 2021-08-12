@@ -121,9 +121,9 @@ ATCF_REQD = False
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = IFSO
-MCODE = IFSO
-MCODEI = IFSI
+MORIG = EMX
+MCODE = EMX
+MCODEI = EMXI
 
 ; 3B. FORECAST GUIDANCE MODELS
 TRKM00 = HWRF HMON NVGM CTCX EGRR
