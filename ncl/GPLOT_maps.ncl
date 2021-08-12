@@ -1083,6 +1083,7 @@ do fff = 0,nFiles-1
                 end if
         end do
         myInd   := myInd(ind(.not.ismissing(myInd)))
+	iFiles(myInd) = str_sub_str(iFiles(myInd),"//","/")
         
         
         ;================================================================
