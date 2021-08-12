@@ -583,7 +583,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
 
                         # Get the list of plotted files for this case
-                        CASE_PLOTTED=(`cat ${PLOTTED_FILE} 2>/dev/null`)
+                        CASE_PLOTTED=(`cat ${PLOTTED_FILE} | sed 's#//*#/#g' 2>/dev/null`)
                         
 
                         # Get the status for this case
