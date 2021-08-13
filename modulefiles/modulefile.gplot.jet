@@ -18,6 +18,9 @@ if [ -z "${MODULEPATH}" ]; then
     export MODULEPATH="/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles"
 fi
 
+# Turn off core dump files
+ulimit -c 0
+
 # Load modules
 module purge
 module load wgrib/1.8.1.0b

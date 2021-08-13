@@ -24,6 +24,9 @@ if (! $?MODULEPATH) then
     setenv MODULEPATH "/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles"
 endif
 
+# Turn off core dump files
+limit core 0
+
 # Load modules
 module purge
 module load wgrib/1.8.1.0b

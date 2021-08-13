@@ -18,6 +18,9 @@ if [ -z "${MODULEPATH}" ]; then
     export MODULEPATH="/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles:/opt/cray/modulefiles:/opt/cray/craype/default/modulefiles"
 fi
 
+# Turn off core dump files
+ulimit -c 0
+
 # Load modules
 module purge
 module load intel/18.0.5.274

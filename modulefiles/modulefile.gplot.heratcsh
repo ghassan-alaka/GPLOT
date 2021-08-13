@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# MODULEFILE for JET (tcsh)
+# MODULEFILE for HERA (tcsh)
 
 # Read the first arg
 setenv A "${1}"
@@ -23,6 +23,9 @@ endif
 if (! $?MODULEPATH) then
     setenv MODULEPATH "/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles:/opt/cray/modulefiles:/opt/cray/craype/default/modulefiles"
 endif
+
+# Turn off core dump files
+limit core 0
 
 # Load modules
 module purge
