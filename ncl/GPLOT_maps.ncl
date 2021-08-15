@@ -1007,7 +1007,7 @@ LONGSID_LIST = str_sub_str(LONGSID_LIST," ",", ")
 ; 7. Update the final forecast hour string for storm-centered domains
 ;    Also, update the final forecase hour
 SC_FHR = True
-if(SC_DOMAIN)then
+if(SC_DOMAIN .and. DOMAIN.ne."hwrf")then
 	FNL_HR = max(tcFHR)
 	if(all(ismissing(tcFHR)))then   SC_FHR = False   end if
 end if
@@ -1316,7 +1316,8 @@ do fff = 0,nFiles-1
 				if(DSOURCE.eq."GFS")then	G_BASE_LEVS := (/"",tostring(FHR0)+"h"/)
 				else if(DSOURCE.eq."HAFS")then	G_BASE_LEVS := (/"","3h","6h"/)
 				else if(DSOURCE.eq."HWRF")then	G_BASE_LEVS := ""
-				end if  end if  end if
+				else if(DSOURCE.eq."HMON")then	G_BASE_LEVS := (/"","3h","6h"/)
+				end if  end if  end if  end if
 			else
 				G_BASE_LEVS := G_BASE(1,ppp)
                         end if
@@ -1872,20 +1873,27 @@ do fff = 0,nFiles-1
                         end if
 			
 			
-			; For DSOURCE=GFS, the total precipitation variable (TPRCP) only reflects the precipitation
-			; that accumulated since the previous output file. To get the total precip over the entire
+			; For some data sources, the total precipitation variable (TPRCP) only reflects partial
+			; accumulation of the forecast period. To get the total precip over the entire
 			; forecast, the total precip from all previous forecast lead times must be added to the
 			; total precip from the current lead time.
-			if(G_BASE(0,ppp).eq."TPRCP" .and. any((/"HAFS"/).eq.DSOURCE))then
-				;if(FHR3(ttt).eq.0)then	print("MSG: No precipitation data at 0-h. Skipping...")
-				;			continue
-				;end if
-				system("mkdir -p "+ODIR+"PRCPDATA")
-				if(FHR3(ttt).ge.(DT*2) .and. FHR3(ttt)%DT.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc"))then
+			if(G_BASE(0,ppp).eq."TPRCP" .and. any((/"HAFS","HMON"/).eq.DSOURCE))then
+				if(isvar("DT_TPRCP"))then   delete(DT_TPRCP)   end if
+				if(any((/"HAFS"/).eq.DSOURCE))then
+					if(FHR3(ttt).ge.(DT*2) .and. FHR3(ttt)%DT.eq.0)then	DT_TPRCP = DT
+					end if
+				else if(any((/"HMON"/).eq.DSOURCE))then
+					if(FHR3(ttt).gt.(DT*2) .and. FHR3(ttt)%6.eq.0)then      DT_TPRCP = 6
+					else if(FHR3(ttt).gt.(DT*2) .and. FHR3(ttt)%6.ne.0)then DT_TPRCP = 3
+					end if  end if
+				end if  end if
+				if(isvar("DT_TPRCP"))then
+					system("mkdir -p "+ODIR+"PRCPDATA")
+					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"))then
+						print("WARNING: Can't compute total precipitation because data from forecast hours is missing. Skipping...")
 						continue
 					end if
-					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc","r")
+					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc","r")
 					Vbase	= Vbase + (/f2->TPRCP/)
 					Vbase!0 = "lat"
 					Vbase!1 = "lon"
