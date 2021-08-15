@@ -113,23 +113,24 @@ for ADECK in ${ALL_ADECKS[@]}; do
             # Get the TC name. This is for the Parsed ATCF file name
             TCNAME=""
 
-            # First, try to get the TC name from the CARQ entry in the A-Deck
-            if [ -z "${TCNAME}" ]; then
-                TCNAME="`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`"
-            fi
 
-            # Second, try to get the TC name from the Best Track entry in the B-Deck
+            # First, try to get the TC name from the Best Track entry in the B-Deck
             if [ -z "${TCNAME}" ]; then
                 if [ ! -z "${BDECK}" ]; then
                     TCNAME="`awk -v CYCLE="${CYCLE}" '$3~CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | awk '{$1=$1};1'`"
                 fi
             fi
 
-            # Third, try to get the TC name from the TCVItals entry
+            # Second, try to get the TC name from the TCVItals entry
             if [ -z "${TCNAME}" ]; then
                 if [ ! -z "${SYNDAT}" ]; then
                     TCNAME="`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`"
                 fi
+            fi
+
+            # Third, try to get the TC name from the CARQ entry in the A-Deck
+            if [ -z "${TCNAME}" ]; then
+                TCNAME="`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`"
             fi
 
             # If TCNAME still is not set, set it to something generic like "INVEST" (for SNUM=90-99) or "STORM"
@@ -219,15 +220,23 @@ for ADECK in ${ALL_ADECKS[@]}; do
             #echo "OFILE2 = ${OFILE2}"
             if [ -z "${SID_OLD}" ]; then
                 echo "WARNING: Old Storm ID not found. This might be OK."
-            elif [ -f ${OFILE2} ] || [ -f "${OFILE3}" ]; then
+            elif [ "${TCNAME,,}" != "invest" ]; then
+                echo "MSG: TC name is ${TCNAME,,}. Ignoring old SID (${SID_OLD})."
+                rm -f ${OFILE2} ${OFILE3}
+            elif [ -f ${OFILE2} ]; then
                 echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
+                rm -f ${OFILE}
+                continue
+            elif [ -f "${OFILE3}" ]; then
+                echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE3}"
                 rm -f ${OFILE}
                 continue
             fi
             if [ -f ${OFILE} ]; then
                 #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
                 #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
-                grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                #grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
                 if diff -q "${OFILE}" "${TMPFILE}" ; then
                     echo "MSG: Parsed A-Deck has not changed --> ${OFILE}"
                     rm -f ${TMPFILE}
@@ -240,7 +249,16 @@ for ADECK in ${ALL_ADECKS[@]}; do
                 #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
                 grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
                 echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
+
             fi
+            #if [ -f ${OFILE} ] && [ -f ${OFILE2} ]; then
+            #    echo "MSG: Removing ATCF that was found for the old SID (${SID_OLD}) --> ${OFILE2}"
+            #    rm -f ${OFILE2}
+            #fi
+            #if [ -f ${OFILE} ] && [ -f ${OFILE3} ]; then
+            #    echo "MSG: Removing ATCF that was found for the old SID (${SID_OLD}) --> ${OFILE3}"
+            #    rm -f ${OFILE3}
+            #fi
 
         done
     done
