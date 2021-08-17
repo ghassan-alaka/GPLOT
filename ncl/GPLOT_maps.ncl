@@ -754,6 +754,9 @@ FNAME           = str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")
 if(DSOURCE.eq."GFS" .and. any(FNAME.eq."REFL_MSLP"))then
         What2Plot = where(FNAME.eq."REFL_MSLP",False,What2Plot)
 end if
+if(DSOURCE.eq."GFS" .and. any(FNAME.eq."REFL_UV750"))then
+        What2Plot = where(FNAME.eq."REFL_UV750",False,What2Plot)
+end if
 if(DOMAIN.eq."d03" .and. any(FNAME.eq."PRCP_MSLP_Z1000500"))then
         What2Plot = where(FNAME.eq."PRCP_MSLP_Z1000500",False,What2Plot)
 end if
@@ -1878,6 +1881,7 @@ do fff = 0,nFiles-1
 			; forecast, the total precip from all previous forecast lead times must be added to the
 			; total precip from the current lead time.
 			if(G_BASE(0,ppp).eq."TPRCP" .and. any((/"HAFS","HMON"/).eq.DSOURCE))then
+				system("mkdir -p "+ODIR+"PRCPDATA")
 				if(isvar("DT_TPRCP"))then   delete(DT_TPRCP)   end if
 				if(any((/"HAFS"/).eq.DSOURCE))then
 					if(FHR3(ttt).ge.(DT*2) .and. FHR3(ttt)%DT.eq.0)then	DT_TPRCP = DT
@@ -1888,7 +1892,6 @@ do fff = 0,nFiles-1
 					end if  end if
 				end if  end if
 				if(isvar("DT_TPRCP"))then
-					system("mkdir -p "+ODIR+"PRCPDATA")
 					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"))then
 						print("WARNING: Can't compute total precipitation because data from forecast hours is missing. Skipping...")
 						continue
@@ -1902,17 +1905,19 @@ do fff = 0,nFiles-1
 					Vbase@units = "mm h-1"
 				end if
 				
-				; Write TPRCP data to simple NC file for easy access. Only for GFS.	
-				system("/bin/rm -f "+ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
-				FOUT = addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
-				fAtt = True
-				fAtt@title = DSOURCE+" Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
-				fAtt@source_file = iFiles(myInd)
-				fAtt@creation_date = systemfunc("date")
-				fileattdef(FOUT,fAtt)
-				FOUT->TPRCP = Vbase
-				FOUT->lat = lat
-				FOUT->lon = lon
+				; Write TPRCP data to simple NC file for easy access. Only for GFS.
+				if(FHR3(ttt).gt.0)then
+					system("/bin/rm -f "+ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
+					FOUT = addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
+					fAtt = True
+					fAtt@title = DSOURCE+" Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
+					fAtt@source_file = iFiles(myInd)
+					fAtt@creation_date = systemfunc("date")
+					fileattdef(FOUT,fAtt)
+					FOUT->TPRCP = Vbase
+					FOUT->lat = lat
+					FOUT->lon = lon
+				end if
 			end if
                                 
                         ;================================================================
