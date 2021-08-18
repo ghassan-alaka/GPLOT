@@ -1892,11 +1892,15 @@ do fff = 0,nFiles-1
 					end if  end if
 				end if  end if
 				if(isvar("DT_TPRCP"))then
-					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"))then
+		                        if(SC_GRAPHICS)then	PFILE1 = ODIR+"PRCPDATA/"+str_lower(ALL_LONGSID(0))+".TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"
+		                        else			PFILE1 = ODIR+"PRCPDATA/TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"
+		                        end if
+
+					if(.not.fileexists(PFILE1))then
 						print("WARNING: Can't compute total precipitation because data from forecast hours is missing. Skipping...")
 						continue
 					end if
-					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc","r")
+					f2 := addfile(PFILE1,"r")
 					Vbase	= Vbase + (/f2->TPRCP/)
 					Vbase!0 = "lat"
 					Vbase!1 = "lon"
@@ -1907,8 +1911,11 @@ do fff = 0,nFiles-1
 				
 				; Write TPRCP data to simple NC file for easy access. Only for GFS.
 				if(FHR3(ttt).gt.0)then
-					system("/bin/rm -f "+ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
-					FOUT = addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
+					if(SC_GRAPHICS)then	PFILE2 = ODIR+"PRCPDATA/"+str_lower(ALL_LONGSID(0))+".TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt))+".nc"
+					else			PFILE2 = ODIR+"PRCPDATA/TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt))+".nc"
+					end if
+					system("/bin/rm -f "+PFILE2)
+					FOUT = addfile(PFILE2,"c")
 					fAtt = True
 					fAtt@title = DSOURCE+" Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
 					fAtt@source_file = iFiles(myInd)
