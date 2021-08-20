@@ -1481,8 +1481,10 @@ if(.not.ismissing(test(0)))then
 	system(ADECK_EXE+" "+ADIR+" "+ATCF_DIR+"*"+str_lower(SID)+"* >/dev/null 2>&1")
 	system("mv "+ADIR+ADECK+" "+ADIR+ADECK_M)
 	;system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_M)
-	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-		+"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_M)
+	;system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+	;	+"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_M)
+	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | tac | " \
+	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_M)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK_M+" "+ADIR+ADECK_M)
 else
 	system("cp "+ATCF_FILE+" "+ADIR+ADECK_M)
@@ -1498,16 +1500,20 @@ if(fileexists(ADECK_DIR+"/"+ADECK))then
 	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK)
 	system("cp "+ADECK_DIR+"/"+ADECK+" "+ADIR+ADECK)
 	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
-	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
+	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
+	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | tac | " \
+	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N)
 else if(fileexists(ADIR+ADECK))then
 	print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK)
 	TMP := systemfunc("date +%N")
 	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK+" > "+ADIR+"/"+TMP+"."+ADECK)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK+" "+ADIR+ADECK)
 	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
-	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
+	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
+	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | tac | " \
+	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N)
 else
 	print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+"/"+ADECK)
 	print("WARNING: This is OK, but graphics will be incomplete.")
@@ -1532,16 +1538,20 @@ if(.not.ismissing(SID_OLD))then
 		print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK_OLD)
 		system("cp "+ADECK_DIR+"/"+ADECK_OLD+" "+ADIR+ADECK_OLD)
 		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
-		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-	                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
+		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+	        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
+		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | tac | " \
+		       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N_OLD)
 	else if(fileexists(ADIR+ADECK_OLD))then
 		print("MSG: NHC A-DECK found in working directory --> "+ADIR+ADECK_OLD)
 		TMP := systemfunc("date +%N")
 		system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM_OLD+","+str_get_dq()+" "+ADIR+ADECK_OLD+" > "+ADIR+"/"+TMP+"."+ADECK_OLD)
 		system("mv "+ADIR+"/"+TMP+"."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
 		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
-		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
+		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+                ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
+		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | tac | " \
+		       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N_OLD)
 	else
 		print("WARNING: NHC A-DECK not found --> "+ADECK_DIR+"/"+ADECK_OLD)
 		print("WARNING: This is OK, but graphics will be incomplete.")
@@ -1552,10 +1562,12 @@ if(.not.ismissing(SID_OLD))then
 	TMP := systemfunc("date +%N")
 	system("sed 's/"+str_upper(BASIN2)+", "+TC_NUM_OLD+",/"+str_upper(BASIN2)+", "+TC_NUM+",/g' "+ADIR+ADECK_N_OLD+" > "+ADIR+"/"+TMP+"."+ADECK_N_OLD)
 	;system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"/"+TMP+"."+ADECK_N)
-	system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+	;system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+	system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | tac | " \
+	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_N)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
-	system("rm -f "+ADIR+"/"+TMP+"."+ADECK_N_OLD)
+	system("rm -f "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+"/"+TMP+"."+ADECK_N)
 end if
 
 
@@ -1578,8 +1590,10 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 		system("mv "+ADIR+"/"+TMP+"."+ADECK_T+" "+ADIR+ADECK_T)
 	end if
 	;system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
-	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+	;system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | tac | " \
+	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_N)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
 end if
 
@@ -1655,9 +1669,11 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 		TMP := systemfunc("date +%N")
 		;system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
 		;       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
-		system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+" | " \
-			+"sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        	        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+		;system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+" | " \
+		;	+"sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        	;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
+                system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+" | tac | " \
+                       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_N)
 		system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
 		system("sed '/"+MCODEI+"/p' "+INTERP_FILE+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_I)
 	end if
@@ -1694,8 +1710,10 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 
 	TMP := systemfunc("date +%N")
 	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
-	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
+	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
+        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
+	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | tac | " \
+	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 	if(.not.fileexists(ODIR_ADECK+"/"+TMP+"."+ADECK_N))then
 		print("ERROR: File does not exist --> "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 	end if
@@ -2235,8 +2253,10 @@ print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 ; Workstation Resources
 wtype	= "png"
 ;wtype	= "x11"
-wtype@wkWidth = 2048
-wtype@wkHeight = 2048
+;wtype@wkWidth = 2048
+wtype@wkWidth = 2560
+;wtype@wkHeight = 2048
+wtype@wkHeight = 2560
 
 
 ; General Track Resources
@@ -2294,6 +2314,7 @@ xyres@xyMarkerThicknessF= 8.0
 ;xyres@mpShapeMode	= "FreeAspect"
 xyres@vpWidthF		= 0.8
 xyres@vpHeightF		= 0.4
+xyres@vpYF		= 0.7
 xyres@tiMainFont	= 22
 xyres@tiMainFontHeightF	= 0.025
 xyres@tiMainOffsetYF	= 0.05
@@ -3039,7 +3060,6 @@ if(DO_LI_GUIDE)then
 
 
 		; Remove white space on plot
-		;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 		if (DO_RMWHITE .and. DO_CONVERTGIF) then
 		    system("convert -trim "+OFILE+".png"+" +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
 		else if (DO_CONVERTGIF) then
@@ -4731,9 +4751,12 @@ if(DO_VERIFICATION)then
 	TCSsout2	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".earlyINT"
 	TCSsout3	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".lateTRK"
 	TCSsout4	= ODIR+"mettc/tcstat.summary."+SID+"."+IDATE+".lateINT"
+	TCP_WRAPPER	= ODIR+"/mettc/tc_pairs_wrapper."+SID+"."+IDATE+".sh"
+	TCF_WRAPPER	= ODIR+"/mettc/tc_statf_wrapper."+SID+"."+IDATE+".sh"
+	TCS_WRAPPER	= ODIR+"/mettc/tc_stats_wrapper."+SID+"."+IDATE+".sh"
 	MET_PATH	= "/lfs1/projects/dtc-hurr/MET/MET_releases/8.0/bin"
 	MET_LIB		= "/lfs1/projects/dtc-hurr/MET/MET_releases/external_libs/lib"
-	SH_SHEBANG	= "#!/bin/sh --login"
+	SH_SHEBANG	= "#!/bin/sh"
 
 
 	; 2. set up files and directories
@@ -4885,12 +4908,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_end =.*/init_end = "+initEnd+"/g' "+TCPconf)
 		
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCP_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCP_WRAPPER)
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
-		       " -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
+		       " -out "+TCPout3+" -log "+TCPout3+".log"+str_get_dq()+" >> "+TCP_WRAPPER)
+		system("chmod +x "+TCP_WRAPPER)
+		system(TCP_WRAPPER+" >> "+str_sub_str(TCP_WRAPPER,".sh",".log"))
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for late track models.")
@@ -4904,12 +4927,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_STAT with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCF_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCF_WRAPPER)
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout3+".tcst -config "+TCSconf_f+str_get_dq()+\
-		       " >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
+		       " >> "+TCF_WRAPPER)
+		system("chmod +x "+TCF_WRAPPER)
+		system(TCF_WRAPPER+" >> "+str_sub_str(TCF_WRAPPER,".sh",".log"))
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for late track models. Will loop over all lead times.")
@@ -4928,12 +4951,12 @@ if(DO_VERIFICATION)then
 			system("sed -i 's/lead       =.*/lead       = ["+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create shell script to run TC_STAT with shell options (better)
-			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCS_WRAPPER)
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCS_WRAPPER)
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout3+".tcst -config "+TCSconf_s+\
-			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
+			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+TCS_WRAPPER)
+			system("chmod +x "+TCS_WRAPPER)
+			system(TCS_WRAPPER+" >> "+str_sub_str(TCS_WRAPPER,".sh",".log"))
 	
 			; Read and categorize the output of the TC-STAT output
 			data	:= asciiread(tmp,-1,"string")
@@ -5165,6 +5188,13 @@ if(DO_VERIFICATION)then
 	;     can be controlled in the master namelist.
 	if(DO_LI_VER)then
 
+	        ; Update the status file.
+	        system("lockfile -r-1 -l 180 "+LOCK_FILE)
+	        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+	        system("echo 'working' > "+STATUS_FILE)
+	        system("rm -f "+LOCK_FILE)
+	        print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 		; Get model information
 		LIcolors    = getModelInfo(liModels,"color")
 		LImarkers   = getModelInfo(liModels,"marker")
@@ -5176,12 +5206,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCP_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCP_WRAPPER)
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+TCPconf+\
-		       " -out "+TCPout4+" -log "+TCPout4+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
+		       " -out "+TCPout4+" -log "+TCPout4+".log"+str_get_dq()+" >> "+TCP_WRAPPER)
+		system("chmod +x "+TCP_WRAPPER)
+		system(TCP_WRAPPER+" >> "+str_sub_str(TCP_WRAPPER,".sh",".log"))
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for late intensity models.")
@@ -5195,12 +5225,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCF_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCF_WRAPPER)
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout4+".tcst -config "+TCSconf_f+\
-		       str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
+		       str_get_dq()+" >> "+TCF_WRAPPER)
+		system("chmod +x "+TCF_WRAPPER)
+		system(TCF_WRAPPER+" >> "+str_sub_str(TCF_WRAPPER,".sh",".log"))
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for late intensity models.")
@@ -5218,12 +5248,12 @@ if(DO_VERIFICATION)then
 			system("sed -i 's/lead       = .*/lead       = ["+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 			
 			; Create a shell script to run TC_STAT with shell options.
-			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCS_WRAPPER)
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCS_WRAPPER)
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout4+".tcst -config "+TCSconf_s+\
-			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
+			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+TCS_WRAPPER)
+			system("chmod +x "+TCS_WRAPPER)
+			system(TCS_WRAPPER+" >> "+str_sub_str(TCS_WRAPPER,".sh",".log"))
 	
 			; Read and categorize the output of the TC-STAT output
 			data	:= asciiread(tmp,-1,"string")
@@ -5389,6 +5419,13 @@ if(DO_VERIFICATION)then
 	;     can be controlled in the master namelist.
 	if(DO_ET_VER)then
 
+                ; Update the status file.
+                system("lockfile -r-1 -l 180 "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+                system("echo 'working' > "+STATUS_FILE)
+                system("rm -f "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 		; Get model information
 		ETcolors    = getModelInfo(etModels,"color")
 		ETmarkers   = getModelInfo(etModels,"marker")
@@ -5400,12 +5437,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCP_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCP_WRAPPER)
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+\
-		       TCPconf+" -out "+TCPout1+" -log "+TCPout1+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
+		       TCPconf+" -out "+TCPout1+" -log "+TCPout1+".log"+str_get_dq()+" >> "+TCP_WRAPPER)
+		system("chmod +x "+TCP_WRAPPER)
+		system(TCP_WRAPPER+" >> "+str_sub_str(TCP_WRAPPER,".sh",".log"))
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for early track models.")
@@ -5419,12 +5456,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCF_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCF_WRAPPER)
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout1+".tcst -config "+TCSconf_f+\
-		       str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
+		       str_get_dq()+" >> "+TCF_WRAPPER)
+		system("chmod +x "+TCF_WRAPPER)
+		system(TCF_WRAPPER+" >> "+str_sub_str(TCF_WRAPPER,".sh",".log"))
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for early track models.")
@@ -5443,12 +5480,12 @@ if(DO_VERIFICATION)then
 			system("sed -i 's/^lead       = .*/lead       = ["+str_get_dq()+sprinti("%0.3i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create a shell script to run TC_STAT with shell options.
-			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCS_WRAPPER)
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCS_WRAPPER)
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout1+".tcst -config "+TCSconf_s+" -out "+\
-			       tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
+			       tmp+" -log "+tmp2+str_get_dq()+" >> "+TCS_WRAPPER)
+			system("chmod +x "+TCS_WRAPPER)
+			system(TCS_WRAPPER+" >> "+str_sub_str(TCS_WRAPPER,".sh",".log"))
 	
 			; Read and categorize the output of the TC-STAT output.
 			data	:= asciiread(tmp,-1,"string")
@@ -5677,6 +5714,13 @@ if(DO_VERIFICATION)then
 	;     can be controlled in the master namelist.
 	if(DO_EI_VER)then
 
+                ; Update the status file.
+                system("lockfile -r-1 -l 180 "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
+                system("echo 'working' > "+STATUS_FILE)
+                system("rm -f "+LOCK_FILE)
+                print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
+
 		; Get model information
 		EIcolors    = getModelInfo(eiModels,"color")
 		EImarkers   = getModelInfo(eiModels,"marker")
@@ -5688,12 +5732,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_end = .*/init_end = "+initEnd+"/g' "+TCPconf)
 
 		; b. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCP_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCP_WRAPPER)
 		system("echo "+str_get_dq()+"tc_pairs -v 0 -adeck "+adeckFile+" -bdeck "+bdeckFile+" -config "+\
-		       TCPconf+" -out "+TCPout2+" -log "+TCPout2+".log"+str_get_dq()+" >> "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_pairs_wrapper.sh")
-		system(ODIR+"/mettc/tc_pairs_wrapper.sh >> "+ODIR+"/mettc/tc_pairs_wrapper.log")
+		       TCPconf+" -out "+TCPout2+" -log "+TCPout2+".log"+str_get_dq()+" >> "+TCP_WRAPPER)
+		system("chmod +x "+TCP_WRAPPER)
+		system(TCP_WRAPPER+" >> "+str_sub_str(TCP_WRAPPER,".sh",".log"))
 
 		; c. Run TC_STAT in filter mode
 		print("MSG: Running TC_STAT in filter mode for early intensity models.")
@@ -5707,12 +5751,12 @@ if(DO_VERIFICATION)then
 		system("sed -i 's/^init_str_val  =.*/init_str_val  = "+NHCStrVal+"/g' "+TCSconf_f)
 
 		; d. Create shell script to run TC_PAIRS with shell options (better)
-		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
+		system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCF_WRAPPER)
+		system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCF_WRAPPER)
 		system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCPout2+".tcst -config "+\
-		       TCSconf_f+str_get_dq()+" >> "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system("chmod +x "+ODIR+"/mettc/tc_statf_wrapper.sh")
-		system(ODIR+"/mettc/tc_statf_wrapper.sh >> "+ODIR+"/mettc/tc_statf_wrapper.log")
+		       TCSconf_f+str_get_dq()+" >> "+TCF_WRAPPER)
+		system("chmod +x "+TCF_WRAPPER)
+		system(TCF_WRAPPER+" >> "+str_sub_str(TCF_WRAPPER,".sh",".log"))
 
 		; e. Run TC_STAT in summary mode
 		print("MSG: Running TC_STAT in summary mode for early intensity models.")
@@ -5730,12 +5774,12 @@ if(DO_VERIFICATION)then
 			system("sed -i 's/^lead       = .*/lead       = ["+str_get_dq()+sprinti("%0.2i",XYHrs(fff))+"0000"+str_get_dq()+"];/g' "+TCSconf_s)
 	
 			; Create a shell script to run TC_STAT with shell options.
-			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
+			system("echo "+str_get_dq()+SH_SHEBANG+str_get_dq()+" > "+TCS_WRAPPER)
+			system("echo "+str_get_dq()+"source "+MOD_FILE+str_get_dq()+" >> "+TCS_WRAPPER)
 			system("echo "+str_get_dq()+"tc_stat -v 0 -lookin "+TCSfout2+".tcst -config "+TCSconf_s+\
-			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system("chmod +x "+ODIR+"/mettc/tc_stats_wrapper.sh")
-			system(ODIR+"/mettc/tc_stats_wrapper.sh >> "+ODIR+"/mettc/tc_stats_wrapper.log")
+			       " -out "+tmp+" -log "+tmp2+str_get_dq()+" >> "+TCS_WRAPPER)
+			system("chmod +x "+TCS_WRAPPER)
+			system(TCS_WRAPPER+" >> "+str_sub_str(TCS_WRAPPER,".sh",".log"))
 	
 			; Read and categorize the output of the TC-STAT output.
 			data	:= asciiread(tmp,-1,"string")
