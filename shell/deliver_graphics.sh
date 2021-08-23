@@ -111,7 +111,8 @@ for D in ${ALL_DIRS[@]}; do
     echo "MSG: Delivering graphics to this path --> ${ODIR_FULL}"
 
     # Copy all modified files.
-    ${X_RSYNC} -zav --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
+    #${X_RSYNC} -zav --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
+    ${X_RSYNC} -zauv --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
 
 done
 

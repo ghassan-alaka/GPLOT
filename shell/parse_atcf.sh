@@ -24,7 +24,7 @@ AAA="$7"
 #ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
 #BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
 MMIN="-720"
-SID_FILE="${GPLOT_DIR}/tbl/SIDs_Old_New.dat"
+SID_FILE="/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
 
 mkdir -p ${ODIR}
 cd ${ODIR}
@@ -87,179 +87,193 @@ for ADECK in ${ALL_ADECKS[@]}; do
         for CYCLE in ${ALL_CYCLES[@]}; do
             echo "MSG: Found this cycle --> ${CYCLE}"
             # Get basin and year information. This will help build the output ATCF
-            BASIN="`cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u`"
+            ALL_BASINS=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u` )
+
             YEAR="`echo "${CYCLE}" | cut -c1-4`"
             YMD="`echo "${CYCLE}" | cut -c1-8`"
             HHHH="`echo "${CYCLE}" | cut -c9-10`00"
 
-            # Check that the B-Deck is available
-            BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
-            if [ -f ${BDECK} ]; then
-               echo "MSG: B-Deck file found --> ${BDECK}"
-            else
-               echo "WARNING: B-Deck file not found --> ${BDECK}"
-               BDECK=
-            fi
+            for BASIN in ${ALL_BASINS[@]}; do
+                echo "MSG: Found this basin --> ${BASIN^^}"
 
-            # Check that TCVitals is available.
-            SYNDAT="${TCVDIR}/syndat_tcvitals.${YEAR}"
-            if [ -f ${SYNDAT} ]; then
-                echo "MSG: TCVitals file found --> ${SYNDAT}"
-            else
-               echo "WARNING: TCVitals file not found --> ${SYNDAT}"
-               SYNDAT=
-            fi
-
-            # Get the TC name. This is for the Parsed ATCF file name
-            TCNAME=""
-
-
-            # First, try to get the TC name from the Best Track entry in the B-Deck
-            if [ -z "${TCNAME}" ]; then
-                if [ ! -z "${BDECK}" ]; then
-                    TCNAME="`awk -v CYCLE="${CYCLE}" '$3~CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | awk '{$1=$1};1'`"
-                fi
-            fi
-
-            # Second, try to get the TC name from the TCVItals entry
-            if [ -z "${TCNAME}" ]; then
-                if [ ! -z "${SYNDAT}" ]; then
-                    TCNAME="`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`"
-                fi
-            fi
-
-            # Third, try to get the TC name from the CARQ entry in the A-Deck
-            if [ -z "${TCNAME}" ]; then
-                TCNAME="`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`"
-            fi
-
-            # If TCNAME still is not set, set it to something generic like "INVEST" (for SNUM=90-99) or "STORM"
-            if [ -z "${TCNAME}" ]; then
-                echo "WARNING: TC Name not found for ${CYCLE}"
-                if [ "$(echo ${SNUM} | cut -c1)" == "9" ]; then
-                    TCNAME="INVEST"
+                # Check that the B-Deck is available
+                BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
+                if [ -f ${BDECK} ]; then
+                   echo "MSG: B-Deck file found --> ${BDECK}"
                 else
-                    TCNAME="STORM"
+                   echo "WARNING: B-Deck file not found --> ${BDECK}"
+                   BDECK=
                 fi
-            fi
-
-            echo "MSG: TCNAME=${TCNAME}"
-
-            # Get the first latitude and longitude from the B-Deck file
-            if [ -f "${BDECK}" ]; then
-                MY_DECK="${BDECK}"
-            else
-                MY_DECK="${ADECK}"
-            fi
-            MLON="1"
-            if [ "$(awk -F',' 'NR==1{print $8}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c1)" == "W" ]; then
-                MLON="-1"
-            fi
-            LON="$(expr ${MLON} \* $(awk -F',' 'NR==1{print $8}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c2- | rev) )"
-            MLAT="1"
-            if [ "$(awk -F',' 'NR==1{print $7}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c1)" == "S" ]; then
-                MLAT="-1"
-            fi
-            LAT="$(expr ${MLAT} \* $(awk -F',' 'NR==1{print $7}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c2- | rev) )"
-
-
-
-            # Parse only these basins
-            if [ "${BASIN,,}" = "al" ]; then
-                BASIN2="l"
-                echo "MSG: ATCF basin --> North Atlantic Ocean"
-            elif [ "${BASIN,,}" = "ep" ]; then
-                BASIN2="e"
-                echo "MSG: ATCF basin --> eastern North Pacific Ocean"
-            elif [ "${BASIN,,}" = "cp" ]; then
-                BASIN2="c"
-                echo "MSG: ATCF basin --> central North Pacific Ocean"
-            elif [ "${BASIN,,}" = "wp" ]; then
-                BASIN2="w"
-                echo "MSG: ATCF basin --> western North Pacific Ocean"
-            elif [ "${BASIN,,}" = "io" ]; then
-                if [ "${LON}" -ge "800" ]; then
-                    echo "MSG: ATCF basin --> Bay of Bengal (North Indian Ocean)"
-                    BASIN2="b"
+    
+                # Check that TCVitals is available.
+                SYNDAT="${TCVDIR}/syndat_tcvitals.${YEAR}"
+                if [ -f ${SYNDAT} ]; then
+                    echo "MSG: TCVitals file found --> ${SYNDAT}"
                 else
-                    echo "MSG: ATCF basin --> Arabian Sea (North Indian Ocean)"
-                    BASIN2="a"
+                   echo "WARNING: TCVitals file not found --> ${SYNDAT}"
+                   SYNDAT=
                 fi
-                echo "MSG: ATCF basin --> North Indian Ocean"
-            elif [ "${BASIN,,}" = "sh" ]; then
-                if [ "${LON}" -ge "1350" ] || [ "${LON}" -le "-1200" ] ; then
-                    echo "MSG: ATCF basin --> South Pacific Ocean (Southern Hemisphere)"
-                    BASIN2="p"
+    
+                # Get the TC name. This is for the Parsed ATCF file name
+                TCNAME=""
+    
+    
+                # First, try to get the TC name from the Best Track entry in the B-Deck
+                if [ -z "${TCNAME}" ]; then
+                    if [ ! -z "${BDECK}" ]; then
+                        TCNAME="`awk -v CYCLE="${CYCLE}" '$3~CYCLE' ${BDECK} | head -1 | cut -d "," -f28 | awk '{$1=$1};1'`"
+                    fi
+                fi
+    
+                # Second, try to get the TC name from the TCVItals entry
+                if [ -z "${TCNAME}" ]; then
+                    if [ ! -z "${SYNDAT}" ]; then
+                        TCNAME="`awk -v YMD="${YMD}" -v HHHH="${HHHH}" -v SID="${SID}" -F ' ' '$4==YMD && $5==HHHH && $2==SID' ${SYNDAT} | head -1 | awk '{print $3}' | sed -e 's/^[[:space:]]*//'`"
+                    fi
+                fi
+    
+                # Third, try to get the TC name from the CARQ entry in the A-Deck
+                if [ -z "${TCNAME}" ]; then
+                    TCNAME="`cat ${ADECK} | tr -d "[:blank:]" | awk -v CYCLE="${CYCLE}" -F, '$3==CYCLE && $5=="CARQ"' | head -1 | cut -d "," -f28`"
+                fi
+    
+                # If TCNAME still is not set, set it to something generic like "INVEST" (for SNUM=90-99) or "STORM"
+                if [ -z "${TCNAME}" ]; then
+                    echo "WARNING: TC Name not found for ${CYCLE}"
+                    if [ "$(echo ${SNUM} | cut -c1)" == "9" ]; then
+                        TCNAME="INVEST"
+                    else
+                        TCNAME="STORM"
+                    fi
+                fi
+    
+                echo "MSG: TCNAME=${TCNAME}"
+    
+                # Get the first latitude and longitude from the B-Deck file
+                if [ -f "${BDECK}" ]; then
+                    MY_DECK="${BDECK}"
                 else
-                    echo "MSG: ATCF basin --> South Indian Ocean (Southern Hemisphere)"
-                    BASIN2="s"
+                    MY_DECK="${ADECK}"
                 fi
-            else
-                echo "WARNING: ATCF basin not recognized. Skipping."
-                continue
-            fi
-
-            # Define the Storm ID (SID)
-            SID="${SNUM}${BASIN2^^}"
-
-            # If applicable, get the old SID
-            SID_OLD=""
-            if [ -f "${SID_FILE}" ]; then
-                SID_OLD=`grep "${BASIN^^}${SNUM}${YEAR}" ${SID_FILE} | awk '{ print $4 }'`
-            fi
-            if [ ! -z "${SID_OLD}" ]; then
-                echo "MSG: Found this old Storm ID --> ${SID_OLD}"
-            fi
-
-
-            # Copy this entry to the new parsed ATCF
-            OFILE="${ODIR}/${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            OFILE2="${ODIR}/${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            OFILE3="${ODIR}/invest${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            TMPFILE="${ODIR}/$(date +%N).${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
-            #echo "OFILE2 = ${OFILE2}"
-            if [ -z "${SID_OLD}" ]; then
-                echo "WARNING: Old Storm ID not found. This might be OK."
-            elif [ "${TCNAME,,}" != "invest" ]; then
-                echo "MSG: TC name is ${TCNAME,,}. Ignoring old SID (${SID_OLD})."
-                rm -f ${OFILE2} ${OFILE3}
-            elif [ -f ${OFILE2} ]; then
-                echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
-                rm -f ${OFILE}
-                continue
-            elif [ -f "${OFILE3}" ]; then
-                echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE3}"
-                rm -f ${OFILE}
-                continue
-            fi
-            if [ -f ${OFILE} ]; then
-                #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
-                #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
-                #grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
-                grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
-                if diff -q "${OFILE}" "${TMPFILE}" ; then
-                    echo "MSG: Parsed A-Deck has not changed --> ${OFILE}"
-                    rm -f ${TMPFILE}
+                MLON="1"
+                if [ "$(awk -F',' 'NR==1{print $8}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c1)" == "W" ]; then
+                    MLON="-1"
+                fi
+                LON="$(expr ${MLON} \* $(awk -F',' 'NR==1{print $8}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c2- | rev) )"
+                MLAT="1"
+                if [ "$(awk -F',' 'NR==1{print $7}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c1)" == "S" ]; then
+                    MLAT="-1"
+                fi
+                LAT="$(expr ${MLAT} \* $(awk -F',' 'NR==1{print $7}' ${MY_DECK} | tr -d "[:blank:]" | rev | cut -c2- | rev) )"
+    
+    
+    
+                # Parse only these basins
+                if [ "${BASIN,,}" = "al" ]; then
+                    BASIN2="l"
+                    echo "MSG: ATCF basin --> North Atlantic Ocean"
+                elif [ "${BASIN,,}" = "ep" ]; then
+                    BASIN2="e"
+                    echo "MSG: ATCF basin --> eastern North Pacific Ocean"
+                elif [ "${BASIN,,}" = "cp" ]; then
+                    BASIN2="c"
+                    echo "MSG: ATCF basin --> central North Pacific Ocean"
+                elif [ "${BASIN,,}" = "wp" ]; then
+                    BASIN2="w"
+                    echo "MSG: ATCF basin --> western North Pacific Ocean"
+                elif [ "${BASIN,,}" = "io" ]; then
+                    if [ "${LON}" -ge "800" ]; then
+                        echo "MSG: ATCF basin --> Bay of Bengal (North Indian Ocean)"
+                        BASIN2="b"
+                    else
+                        echo "MSG: ATCF basin --> Arabian Sea (North Indian Ocean)"
+                        BASIN2="a"
+                    fi
+                    echo "MSG: ATCF basin --> North Indian Ocean"
+                elif [ "${BASIN,,}" = "sh" ]; then
+                    if [ "${LON}" -ge "1350" ] || [ "${LON}" -le "-1200" ] ; then
+                        echo "MSG: ATCF basin --> South Pacific Ocean (Southern Hemisphere)"
+                        BASIN2="p"
+                    else
+                        echo "MSG: ATCF basin --> South Indian Ocean (Southern Hemisphere)"
+                        BASIN2="s"
+                    fi
                 else
-                    echo "MSG: Parsed A-Deck has changed. Copying new version --> ${OFILE}"
-                    mv ${TMPFILE} ${OFILE}
+                    echo "WARNING: ATCF basin not recognized. Skipping."
+                    continue
                 fi
-            else
-                #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
-                #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
-                grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
-                echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
+    
+                # Define the Storm ID (SID)
+                SID="${SNUM}${BASIN2^^}"
+    
+                # If applicable, get the old SID
+                SID_OLD=""
+                if [ -f "${SID_FILE}" ]; then
+                    SID_OLD=`grep "${BASIN^^}${SNUM}${YEAR}" ${SID_FILE} | awk '{ print $4 }'`
+                fi
+                if [ ! -z "${SID_OLD}" ]; then
+                    echo "MSG: Found this old Storm ID --> ${SID_OLD}"
+                fi
+    
+    
+                # Copy this entry to the new parsed ATCF
+                OFILE="${ODIR}/${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+                OFILE2="${ODIR}/${TCNAME,,}${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+                OFILE3="${ODIR}/invest${SID_OLD,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+                TMPFILE="${ODIR}/$(date +%N).${TCNAME,,}${SID,,}.${CYCLE}.trak.${MODEL,,}.atcfunix"
+                #echo "OFILE2 = ${OFILE2}"
+                if [ -z "${SID_OLD}" ]; then
+                    echo "WARNING: Old Storm ID not found. This might be OK."
+                elif [ "${TCNAME,,}" != "invest" ]; then
+                    echo "MSG: TC name is ${TCNAME,,}. Ignoring old SID (${SID_OLD})."
+                    echo "MSG: Removing this old SID ATCF --> ${OFILE2}"
+                    echo "MSG: Removing this old SID ATCF --> ${OFILE3}"
+                    rm -f ${OFILE2} ${OFILE3}
+                elif [ -f ${OFILE2} ]; then
+                    echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE2}"
+                    rm -f ${OFILE}
+                    continue
+                elif [ -f "${OFILE3}" ]; then
+                    echo "MSG: ATCF already exists for the old SID (${SID_OLD}) --> ${OFILE3}"
+                    rm -f ${OFILE}
+                    continue
+                fi
+                if [ -f ${OFILE} ]; then
+                    #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                    #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                    #grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${TMPFILE}
+                    #grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
+                    #grep "${MODEL}," ${ADECK} | awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$1==BASIN && $2==SNUM && $3==CYCLE' | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
+                    tac ${ADECK} | awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -v MODEL="${MODEL^^}" -F ',[ \t]*' \
+                                   '$1==BASIN && $2==SNUM && $3==CYCLE && $5==MODEL' | \
+                                   sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
+                    if diff -q "${OFILE}" "${TMPFILE}" ; then
+                        echo "MSG: Parsed A-Deck has not changed --> ${OFILE}"
+                        rm -f ${TMPFILE}
+                    else
+                        echo "MSG: Parsed A-Deck has changed. Copying new version --> ${OFILE}"
+                        mv ${TMPFILE} ${OFILE}
+                    fi
+                else
+                    #awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$5==MODEL && $2==SNUM && $3==CYCLE' ${ADECK} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                    #grep "${MODEL}," ${ADECK} | grep "${SNUM}," | grep "${CYCLE}," | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                    #grep "${MODEL}," ${ADECK} | awk -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                    #grep "${MODEL}," ${ADECK} | awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F ', ' '$1==BASIN && $2==SNUM && $3==CYCLE' | sort -u | sort -k3,3 -k5,5 -k6,6n > ${OFILE}
+                    tac ${ADECK} | awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -v MODEL="${MODEL^^}" -F ',[ \t]*' \
+                                   '$1==BASIN && $2==SNUM && $3==CYCLE && $5==MODEL' | \
+                                   sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${OFILE}
+                    echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
+                fi
+                #if [ -f ${OFILE} ] && [ -f ${OFILE2} ]; then
+                #    echo "MSG: Removing ATCF that was found for the old SID (${SID_OLD}) --> ${OFILE2}"
+                #    rm -f ${OFILE2}
+                #fi
+                #if [ -f ${OFILE} ] && [ -f ${OFILE3} ]; then
+                #    echo "MSG: Removing ATCF that was found for the old SID (${SID_OLD}) --> ${OFILE3}"
+                #    rm -f ${OFILE3}
+                #fi
 
-            fi
-            #if [ -f ${OFILE} ] && [ -f ${OFILE2} ]; then
-            #    echo "MSG: Removing ATCF that was found for the old SID (${SID_OLD}) --> ${OFILE2}"
-            #    rm -f ${OFILE2}
-            #fi
-            #if [ -f ${OFILE} ] && [ -f ${OFILE3} ]; then
-            #    echo "MSG: Removing ATCF that was found for the old SID (${SID_OLD}) --> ${OFILE3}"
-            #    rm -f ${OFILE3}
-            #fi
-
+            done
         done
     done
 done
