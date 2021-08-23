@@ -504,6 +504,21 @@ else				val := ind(isStrSubset2(data,"DO_CONVERTGIF ="))
 				end if
 end if
 
+; The maximum number of files to process.
+if(isvar("NMAX_MAPS"))then	print("MSG: Detected command line variable: NMAX_MAPS")
+else				val := ind(isStrSubset2(data,"NMAX_MAPS ="))
+				if(ismissing(val(0)))then
+					print("WARNING: NMAX_MAPS should be supplied via the command line or namelist.")
+					print("WARNING: Assuming NMAX_MAPS = 100")
+					NMAX = 100
+				else
+					NMAX = data(val(0))
+					NMAX := str_squeeze(str_split(NMAX," = "))
+					NMAX := toint(NMAX(1))
+				end if
+end if
+
+
 
 
 ; Correct IDATE so that it is only the date.
@@ -1010,7 +1025,7 @@ LONGSID_LIST = str_sub_str(LONGSID_LIST," ",", ")
 ; 7. Update the final forecast hour string for storm-centered domains
 ;    Also, update the final forecase hour
 SC_FHR = True
-if(SC_DOMAIN .and. DOMAIN.ne."hwrf")then
+if(SC_DOMAIN .and. .not.any((/"hwrf"/).eq.DOMAIN))then
 	FNL_HR = max(tcFHR)
 	if(all(ismissing(tcFHR)))then   SC_FHR = False   end if
 end if
@@ -3328,22 +3343,41 @@ do fff = 0,nFiles-1
 	;================================================================
         if(FILE_DONE(fff))then
                 print("MSG: All graphics found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
-                
+       
+		; Get the Input File base name
+		IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+		IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+
+		NATCF_NOW = 0
+		if(.not.all(ismissing(ndtooned(tcFHR))))then
+			do sss = 0,NATCF-1
+				vals1 = ind(tcFHR(sss,:).eq.FHR(fff))
+				if(.not.ismissing(vals1(0)))then
+					if(.not.ismissing(tcLats(sss,vals1)))then
+						NATCF_NOW = NATCF_NOW+1
+					end if
+				else if(FNL_ATCF(sss))then
+					NATCF_NOW = NATCF_NOW+1
+				end if  end if
+			end do
+		end if
+			
                 ;if(ATCF_REQD .and. ALL_ATCF)then
                 if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
                         if(fileexists(PLOTTED_FILES))then
-                                system("echo "+iFiles(myInd(0))+" >> "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+iFiles(myInd(0))+" > "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
-                end if
-                if(.not.ATCF_REQD)
+                else if(.not.ATCF_REQD)
                         if(fileexists(PLOTTED_FILES))then
-                                system("echo "+iFiles(myInd(0))+" >> "+PLOTTED_FILES)
+				system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
                         else
-                                system("echo "+iFiles(myInd(0))+" > "+PLOTTED_FILES)
+				system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
                         end if
-                end if
+                end if  end if
                 system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
                 system("mv "+PLOTTED_FILES+".TMP "+PLOTTED_FILES)
         end if
