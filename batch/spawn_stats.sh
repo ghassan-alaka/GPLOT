@@ -193,13 +193,17 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 ################################
 # PREPARE THE LIST OF ATCF FILES
 
+# Get the current date in YYYYMMDDHH format
+DATE_NOW="`date +'%Y%m%d%H'`"
+
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
-ATCF_TMP=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -25` )
-ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP=()
 if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
     ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 fi
+ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
+ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 ATCF_ALL=()
 for ATCF in "${ATCF_TMP[@]}"; do
     ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
@@ -207,6 +211,8 @@ for ATCF in "${ATCF_TMP[@]}"; do
         ATCF_ALL+=( "${ATCF}" )
     fi
 done
+#printf '%s\n' "${ATCF_ALL[@]}"
+
 
 # Limit the ATCF list based on NMAX
 NATCF="${#ATCF_ALL[*]}"
@@ -324,7 +330,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Computes dates in YYYYMMDDHH format. This will be used to determine if
         # production for the current cycle should be forced.
-        DATE_NOW="`date +'%Y%m%d%H'`"
+        #DATE_NOW="`date +'%Y%m%d%H'`"
         DATE_CUT="`date -d "${CYCLE2} UTC + ${FNL_HR} hours" +'%Y%m%d%H'`"
 
         # Process this ATCF only if the cycle is found in IDATE
@@ -399,8 +405,19 @@ if [ "${DO_STATS}" = "True" ]; then
         echo "MSG: Found this status --> ${CASE_STATUS}"
 
 
+        # If the current date is more recent than the date for the final lead time (DATE_CUT)
+        # do NOT force production.
+        if [ "$DATE_CUT" -ge "$DATE_NOW" ] && [ "${CASE_STATUS}" == "complete" ]; then
+            echo "MSG: The cutoff date ($DATE_CUT) is more recent than the current date ($DATE_NOW). Forcing delayed production."
+            FORCE="Delay"
+        else
+            echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production yet."
+            FORCE="False"
+        fi
+
+
         # If the ATCF is new enough, force production.
-        test=$(find ${ATCF} -mmin -30 2>/dev/null)
+        test=$(find ${ATCF} -mmin -60 2>/dev/null)
         if [[ -n $test ]]; then
             echo "MSG: This ATCF is not old enough. Forcing production."
             FORCE="True"
@@ -410,7 +427,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # If the BDECK is new enough, force production.
         if [ -f "${BDECK}" ]; then
             echo "MSG: Found this B-Deck --> $BDECK"
-            test=$(find ${BDECK} -mmin -30 2>/dev/null)
+            test=$(find ${BDECK} -mmin -60 2>/dev/null)
             if [[ -n $test ]]; then
                 echo "MSG: This BDECK is not old enough. Forcing production."
                 FORCE="True"
@@ -418,17 +435,15 @@ if [ "${DO_STATS}" = "True" ]; then
         fi
 
 
-        # If the current date is more recent than the date for the final lead time (DATE_CUT)
-        # do NOT force production.
-        if [ "${FORCE}" == "True" ]; then
-            if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
-                echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
-                FORCE="False"
+        #if [ "${FORCE}" == "True" ]; then
+        #    if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
+        #        echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
+        #        FORCE="False"
             #else
             #    echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
             #    FORCE="Delay"
-            fi
-        fi
+        #    fi
+        #fi
 
 
         # Check the status and update it if necessary.
@@ -439,6 +454,27 @@ if [ "${DO_STATS}" = "True" ]; then
             lockfile -r-1 -l 180 "${LOCK_FILE}"
             echo "start" > ${STATUS_FILE}
             rm -f "${LOCK_FILE}"
+        elif [ "$CASE_STATUS" == "delayed start 1" ]; then
+            echo "MSG: Status suggests a delayed start."
+            echo "MSG: Changing the status to 'delayed start 2'."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "delayed start 2" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+            continue
+        elif [ "$CASE_STATUS" == "delayed start 2" ]; then
+            echo "MSG: Status suggests a delayed start."
+            echo "MSG: Changing the status to 'delayed start 3'."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "delayed start 3" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+            continue
+        elif [ "$CASE_STATUS" == "delayed start 3" ]; then
+            echo "MSG: Status suggests delayed start is ready."
+            echo "MSG: Changing the status to 'update request 1'."
+            lockfile -r-1 -l 180 "${LOCK_FILE}"
+            echo "update request 1" > ${STATUS_FILE}
+            rm -f "${LOCK_FILE}"
+            continue
         elif [ "$CASE_STATUS" == "update request 1" ]; then
             echo "MSG: Status suggests an update is requested."
             echo "MSG: Changing the status to 'update request 2'."
@@ -456,7 +492,7 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "MSG: Forcing delayed production."
             echo "MSG: Changing the status to 'update request 1'."
             lockfile -r-1 -l 180 "${LOCK_FILE}"
-            echo "update request 1" > ${STATUS_FILE}
+            echo "delayed start 1" > ${STATUS_FILE}
             rm -f "${LOCK_FILE}"
             continue
         elif [ "$CASE_STATUS" == "complete" ]; then
