@@ -15,7 +15,7 @@
 EXPT = HAFSV0.2A_2021_RT
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
-DO_MAPS = False
+DO_MAPS = True
 DO_STATS = True
 DO_SHIPS = False
 DO_POLAR = False
@@ -97,7 +97,7 @@ QOS = batch
 DOMAIN = wlant elant gom d01 d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1 Tier2
+TIER = Tier2
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
