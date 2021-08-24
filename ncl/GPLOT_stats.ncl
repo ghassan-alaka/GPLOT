@@ -1267,6 +1267,10 @@ INTERP_NML = "intrfcst.input"
 SID_OLD = getInvestSID(YYYY,SID)
 
 
+; Set a flag for graphic production failures
+GRAPHIC_FAIL = False
+
+
 
 ;================================================================;
 ;============================STEP ONE============================;
@@ -1302,10 +1306,12 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	if(ismissing(val(0)))then
 		print("ERROR: Could not find matching ATCF in "+ODIR+"ATCF_FILES.dat")
 		exit
-	end if
+	else if(dimsizes(val).gt.1)then
+		print("WARNING: Expected 1 matching ATCF file, but found "+dimsizes(val)+". I will only read the first ATCF.")
+	end if  end if
 	
 	; If the code gets here, we're good to go!
-	ATCF_FILE := ATCF_FILE(val)
+	ATCF_FILE := ATCF_FILE(val(0))
 else
 	;Add functionality to automatically search for ATCFs as a back up?
 	print("MSG: Could not find list of ATCF files. Searching based on namelist.")
@@ -1480,9 +1486,6 @@ if(.not.ismissing(test(0)))then
 	TMP := systemfunc("date +%N")
 	system(ADECK_EXE+" "+ADIR+" "+ATCF_DIR+"*"+str_lower(SID)+"* >/dev/null 2>&1")
 	system("mv "+ADIR+ADECK+" "+ADIR+ADECK_M)
-	;system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_M)
-	;system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-	;	+"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_M)
 	system("cat "+ATCF_FILE+" "+ADIR+ADECK_M+" | tac | " \
 	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_M)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK_M+" "+ADIR+ADECK_M)
@@ -1499,9 +1502,6 @@ if(MORIG.ne.MCODE)then   system("sed -i 's/"+MORIG+"/"+MCODE+"/g' "+ADIR+ADECK_M
 if(fileexists(ADECK_DIR+"/"+ADECK))then
 	print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK)
 	system("cp "+ADECK_DIR+"/"+ADECK+" "+ADIR+ADECK)
-	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
-	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | tac | " \
 	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N)
 else if(fileexists(ADIR+ADECK))then
@@ -1509,9 +1509,6 @@ else if(fileexists(ADIR+ADECK))then
 	TMP := systemfunc("date +%N")
 	system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM+","+str_get_dq()+" "+ADIR+ADECK+" > "+ADIR+"/"+TMP+"."+ADECK)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK+" "+ADIR+ADECK)
-	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N)
-	;system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N)
 	system("cat "+ADIR+ADECK+" "+ADIR+ADECK_M+" | tac | " \
 	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N)
 else
@@ -1537,9 +1534,6 @@ if(.not.ismissing(SID_OLD))then
 	if(fileexists(ADECK_DIR+"/"+ADECK_OLD))then
 		print("MSG: NHC A-DECK found in namelist location --> "+ADECK_DIR+"/"+ADECK_OLD)
 		system("cp "+ADECK_DIR+"/"+ADECK_OLD+" "+ADIR+ADECK_OLD)
-		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
-		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-	        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
 		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | tac | " \
 		       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N_OLD)
 	else if(fileexists(ADIR+ADECK_OLD))then
@@ -1547,9 +1541,6 @@ if(.not.ismissing(SID_OLD))then
 		TMP := systemfunc("date +%N")
 		system("grep "+str_get_dq()+str_upper(BASIN2)+", "+TC_NUM_OLD+","+str_get_dq()+" "+ADIR+ADECK_OLD+" > "+ADIR+"/"+TMP+"."+ADECK_OLD)
 		system("mv "+ADIR+"/"+TMP+"."+ADECK_OLD+" > "+ADIR+ADECK_OLD)
-		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+ADECK_N_OLD)
-		;system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-                ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+ADECK_N_OLD)
 		system("cat "+ADIR+ADECK_OLD+" "+ADIR+ADECK_M_OLD+" | tac | " \
 		       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+ADECK_N_OLD)
 	else
@@ -1561,9 +1552,6 @@ if(.not.ismissing(SID_OLD))then
 
 	TMP := systemfunc("date +%N")
 	system("sed 's/"+str_upper(BASIN2)+", "+TC_NUM_OLD+",/"+str_upper(BASIN2)+", "+TC_NUM+",/g' "+ADIR+ADECK_N_OLD+" > "+ADIR+"/"+TMP+"."+ADECK_N_OLD)
-	;system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"/"+TMP+"."+ADECK_N)
-	;system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
 	system("cat "+ADIR+"/"+TMP+"."+ADECK_N_OLD+" "+ADIR+ADECK_N+" | tac | " \
 	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_N)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
@@ -1589,9 +1577,6 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 		system("awk '!(/"+MCODEI+"/ && /"+IDATE06+"/)' "+ADIR+ADECK_T+" > "+ADIR+"/"+TMP+"."+ADECK_T)
 		system("mv "+ADIR+"/"+TMP+"."+ADECK_T+" "+ADIR+ADECK_T)
 	end if
-	;system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ADIR+"TMP."+ADECK_N)
-	;system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
 	system("cat "+ADIR+ADECK_T +" "+ADIR+ADECK_N+" | tac | " \
 	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_N)
 	system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
@@ -1600,7 +1585,6 @@ end if
 
 ; Remove any blank lines from ADECK_N
 TMP := systemfunc("date +%N")
-;system("sed -i '/^$/d' "+ADIR+ADECK_N)
 system("awk -F',' 'NF > 12 {print}' "+ADIR+ADECK_N+" > "+ADIR+"/"+TMP+"."+ADECK_N)
 system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
 
@@ -1667,11 +1651,6 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	
 	if(fileexists(INTERP_FILE))then
 		TMP := systemfunc("date +%N")
-		;system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+\
-		;       "| sort -u | sort -k3,3 -k5,5 -k6,6n  > "+ADIR+"TMP."+ADECK_N)
-		;system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+" | " \
-		;	+"sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        	;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ADIR+"/"+TMP+"."+ADECK_N)
                 system("cat "+ADIR+ADECK_N+" "+INTERP_FILE+" | tac | " \
                        +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ADIR+"/"+TMP+"."+ADECK_N)
 		system("mv "+ADIR+"/"+TMP+"."+ADECK_N+" "+ADIR+ADECK_N)
@@ -1709,9 +1688,6 @@ if(fileexists(ODIR_ADECK+ADECK_N))then
 	end if
 
 	TMP := systemfunc("date +%N")
-	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -u | sort -k3,3 -k5,5 -k6,6n > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
-	;system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | "\
-        ;        +"sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 	system("cat "+ADIR+ADECK_N+" "+ODIR_ADECK+ADECK_N+" | tac | " \
 	       +"sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > "+ODIR_ADECK+"/"+TMP+"."+ADECK_N)
 	if(.not.fileexists(ODIR_ADECK+"/"+TMP+"."+ADECK_N))then
@@ -2476,7 +2452,7 @@ if(DO_LT_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= ODIR+"TrackGuidance."+LONGSID+"."+IDATE+".late"
+		OFILE	= ODIR+"/TrackGuidance."+LONGSID+"."+IDATE+".late"
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
 		setvalues NhlGetWorkspaceObjectId()
@@ -2644,6 +2620,12 @@ if(DO_LT_GUIDE)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Late Track Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end if ;DO_THIS
 
@@ -2855,6 +2837,12 @@ if(DO_ET_GUIDE)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Early Track Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 
 	end if ;DO_THIS
@@ -3068,6 +3056,12 @@ if(DO_LI_GUIDE)then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
 
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Late Intensity Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
+
 
 	end if ;DO_THIS
 
@@ -3278,6 +3272,12 @@ if(DO_EI_GUIDE)then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
 
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Early Intensity Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
+
 	end if ;DO_THIS
 
 end if ;DO_EI_GUIDE
@@ -3483,6 +3483,12 @@ if(DO_LP_GUIDE)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+OFILE+".png"+" "+OFILE+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+OFILE+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Late Pressure Guidance graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end if ;DO_THIS
 
@@ -3749,6 +3755,12 @@ if(DO_LT_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Track Trend graphic for "+thisModel+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 		
 		
 		; Mark that a trend graphic has been produced
@@ -3969,6 +3981,12 @@ if(DO_LT_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Lifetime Tracks graphic for "+TRKmodelsT(mmm)+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end do ;mmm
 
@@ -4240,6 +4258,13 @@ if(DO_LI_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Intensity Trend  graphic for "+thisModel+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
+
 		
 		; Mark that a trend graphic has been produced
 		DO_LI_TREND = True
@@ -4467,7 +4492,12 @@ if(DO_LI_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
-	
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Lifetime Intensity graphic for "+INTmodelsT(mmm)+" not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 	
 	end do ;mmm
 
@@ -4697,6 +4727,12 @@ if(DO_LP_TREND)then
 		else if (DO_RMWHITE) then
 		    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 		end if  end if  end if
+
+                ; Check that the graphic was produced.
+                chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                if(ismissing(chk(0)))then       print("ERROR: Pressure Trend graphic not produced.")
+                                                GRAPHIC_FAIL = True
+                end if
 
 	end if ;DO_THIS
 
@@ -5058,6 +5094,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;TK_ERR
 
 		; g. Produce the graphic for late along-track models.
@@ -5118,6 +5160,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Along Track Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;ALTK_ERR
 
 		; h. Produce graphic for late cross-track models.
@@ -5177,6 +5225,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Cross Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if
 
@@ -5349,6 +5403,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Intensity Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;ABS_WIND_ERR
 
 
@@ -5408,6 +5468,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Late Intensity Bias Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if ;WIND_ERR
 
@@ -5584,6 +5650,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;TK_ERR
 
 		; g. Produce graphic for early along-track errors.
@@ -5642,6 +5714,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Along Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if ;ALTK_ERR
 
@@ -5703,6 +5781,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Cross Track Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
 
 		end if ;CRTK_ERR
 
@@ -5873,6 +5957,12 @@ if(DO_VERIFICATION)then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
 
+                        ; Check that the graphic was produced.
+                        chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+                        if(ismissing(chk(0)))then       print("ERROR: Early Intensity Error Verification graphic not produced.")
+                                                        GRAPHIC_FAIL = True
+                        end if
+
 		end if ;ABS_WIND_ERR
 
 
@@ -5933,6 +6023,12 @@ if(DO_VERIFICATION)then
 			else if (DO_RMWHITE) then
 			    system("convert -trim "+oFile+".png"+" "+oFile+".png")
 			end if  end if  end if
+
+			; Check that the graphic was produced.
+			chk := systemfunc("ls "+oFile+"* 2>/dev/null")
+			if(ismissing(chk(0)))then	print("ERROR: Early Intensity Bias Verification graphic not produced.")
+							GRAPHIC_FAIL = True
+			end if
 
 		end if ;WIND_ERR
 
@@ -6041,9 +6137,10 @@ STATUS_FILE = ODIR+"status."+LONGSID+".log"
 LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
-if(FNL_ATCF)then	system("echo 'complete' > "+STATUS_FILE)
+if(GRAPHIC_FAIL)then    system("echo 'incomplete' > "+ODIR+"/status."+LONGSID+".log")
+else if(FNL_ATCF)then	system("echo 'complete' > "+STATUS_FILE)
 else			system("echo 'incomplete' > "+STATUS_FILE)
-end if
+end if  end if
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
 

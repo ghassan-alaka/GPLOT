@@ -21,10 +21,10 @@ if [ -z "${GPLOT_DIR}" ]; then
 fi
 
 # Define important GPLOT directories
-NMLIST_DIR="${GPLOT_DIR}/nmlist/"
-BATCH_DIR="${GPLOT_DIR}/batch/"
-NCL_DIR="${GPLOT_DIR}/ncl/"
-TBL_DIR="${GPLOT_DIR}/tbl/"
+NMLIST_DIR="${GPLOT_DIR}/nmlist"
+BATCH_DIR="${GPLOT_DIR}/batch"
+NCL_DIR="${GPLOT_DIR}/ncl"
+TBL_DIR="${GPLOT_DIR}/tbl"
 
 # Get the namelist, could be from command line
 NMLIST="${1:-namelist.input.default}"
@@ -32,7 +32,7 @@ NMLIST="${1:-namelist.input.default}"
 # Check if the namelist exists. If not, exit.
 if [ ! -f ${NMLIST} ]; then
     echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
-    NMLIST="${NMLIST_DIR}${NMLIST}"
+    NMLIST="${NMLIST_DIR}/${NMLIST}"
     if [ ! -f ${NMLIST} ]; then
         echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
         echo "ERROR: I can't proceed without a namelist."
@@ -267,7 +267,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
         # Get the cycle prefix from a table and define CYCLE_STR
         # CYCLE_STR should be used in file paths.
         if [ -z "$CPREFIX" ]; then
-            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
+            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/CyclePrefix.dat`
         fi
         CYCLE_STR="${CPREFIX}${CYCLE}"
 
@@ -357,35 +357,35 @@ if [ "${DO_SHIPS}" = "True" ]; then
                 #echo "MSG: Current domain --> ${DMN}"
 
                 # Get nest information from GPLOT table
-                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
+                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
                 if [ -z "$NEST" ]; then
-                    #echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
+                    #echo "MSG: Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
                     #echo "MSG: Assuming NEST=1."
                     NEST=1
                 fi
 
                 # Get file prefix information from table or namelist
                 if [ -z "$ITAG" ]; then
-                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}FilePrefix.dat`
+                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}/FilePrefix.dat`
                 else
                     FPREFIX="$ITAG"
                 fi
                 if [ -z "$FPREFIX" ]; then
                     echo "ERROR: File prefix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FilePrefix.dat."
                     echo "ERROR: Or define ITAG in the namelist."
                     exit
                 fi
 
                 # Get file hour string information from table or namelist
                 if [ -z "$FHRSTR" ]; then
-                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileTimeFormat.dat`
+                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileTimeFormat.dat`
                 else
                     FHRSTR="$FHRSTR"
                 fi
                 if [ -z "$FHRSTR" ]; then
                     echo "ERROR: File hour string not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                     echo "ERROR: Or define FHRSTR in the namelist."
                     exit
                 fi
@@ -393,26 +393,26 @@ if [ "${DO_SHIPS}" = "True" ]; then
                 # Get file hour format information from table or namelist
                 FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
                 if [ -z "$FHRFMT" ]; then
-                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
+                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}/FileTimeFormat.dat`d"
                 else
                     FHRFMT="%0${FHRFMT}d"
                 fi
                 if [ -z "$FHRFMT" ]; then
                     echo "ERROR: File hour format not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                     echo "ERROR: Or define FHRFMT in the namelist."
                     exit
                 fi
 
                 # Get file extension information from table or namelist
                 if [ -z "$EXT" ]; then
-                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileSuffix.dat`
+                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileSuffix.dat`
                 else
                     FSUFFIX="$EXT"
                 fi
                 if [ -z "$FSUFFIX" ]; then
                     echo "ERROR: File suffix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileSuffix.dat."
                     echo "ERROR: Or define EXT in the namelist."
                     exit
                 fi
@@ -547,9 +547,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
                                 if [ -z "$FSUFFIX" ]; then
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 else
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
+                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
                                 fi
                                 if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
                                     IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
@@ -577,8 +577,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)
                         # Define the file that contains the status (STATUS_FILE)
-                        PLOTTED_FILE="${ODIR_FULL}PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                        STATUS_FILE="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
+                        PLOTTED_FILE="${ODIR_FULL}/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        STATUS_FILE="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
                         LOCK_FILE="${STATUS_FILE}.lock"
 
 
@@ -626,12 +626,17 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                #CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(grep "$FILE" ${PLOTTED_FILE})
+                                CFILE=`echo "$TMP" | cut -d' ' -f1`
+                                NATCF=`echo "$TMP" | cut -d' ' -f2`
                                 if [[ -n "$CFILE" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        unset 'IFILES[$i]'
-                                        unset 'IFHRS[$i]'
+                                        if [ "${#CYCLE_ATCF[@]}" -eq ${NATCF} ]; then
+                                            unset 'IFILES[$i]'
+                                            unset 'IFHRS[$i]'
+                                        fi
                                     fi
                                 fi
                             fi
@@ -641,11 +646,15 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             if [ "$BROKEN_LINK" == "YES" ]; then
                                 echo "WARNING: No files to process, but broken links were detected."
                                 echo "WARNING: Marking status as broken. It should be double-checked."
+                                lockfile -r-1 -l 180 "${LOCK_FILE}"
                                 echo "broken" > ${STATUS_FILE}
+                                rm -f "${LOCK_FILE}"
                             else
                                 echo "MSG: All available input files have been processed."
                                 echo "MSG: Marking status as complete."
+                                lockfile -r-1 -l 180 "${LOCK_FILE}"
                                 echo "complete" > ${STATUS_FILE}
+                                rm -f "${LOCK_FILE}"
                             fi
                             echo ""
                             continue
@@ -666,7 +675,6 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         # Check the status and update it if necessary.
                         # This logic will allow work to start on this case
                         # or will move on to the next case.
-                        LOCK_FILE="${STATUS_FILE}.lock"
                         if [ "$CASE_STATUS" == "force" ]; then
                             echo "MSG: Forcing production. Ignoring status file."
                             lockfile -r-1 -l 180 "${LOCK_FILE}"
@@ -759,8 +767,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
 
                         # Write existing IFILES out to UNPLOTTED_FNAME log for use in plotting scripts
-                        UNPLOTTED_FILE="${ODIR_FULL}UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                        FHR_FILE="${ODIR_FULL}AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
+                        UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        FHR_FILE="${ODIR_FULL}/AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
                         if [ -f "${UNPLOTTED_FILE}" ]; then
                             rm -f "${UNPLOTTED_FILE}"
                         fi
@@ -802,7 +810,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
 
                         # Check if a similar job is already submitted
-                        echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
+                        echo "MSG: The batch file --> ${BATCH_DIR}/{BATCHFILE}"
                         JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
                         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
                             JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
@@ -818,7 +826,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
        
                             # Submit the batch job.
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}/${NCLFILE} ${LOGFILE1} ${NMLIST}"
                             FULL_CMD="${FULL_CMD} ${ENSID} ${CYCLE} ${STORM} ${FORCE} ${DMN} ${TR}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
