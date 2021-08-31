@@ -103,7 +103,7 @@ CPU_ACCT = hur-aoml
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = global basin atl epac wlant elant gom cpac wpac nio sio d03
+DOMAIN = global basin atl epac wlant elant gom cpac wpac nio sio spac d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1 Tier2 Tier3
@@ -165,8 +165,7 @@ DO_INTERP = False
 ;================================================================
 
 PYTHONFILE = make_rz_plots.nodbz.py
-RESOLUTION = 1.5
+RESOLUTION = 25
 RMAX = 600
-MODELTAG = hwrfprs.storm.0p015
-LEVS = 46
+LEVS = 57
 
