@@ -239,11 +239,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			xoffset = None
 			NL = yoffset-1
 			while not xoffset:
-				NL = NL+1
 				if NL > 25:
 					print(f'ERROR: YOU NEED A BIGGER BOX THAN {NL} DEGREES. rmax={rmax}, test={test}, centerlat={centerlat}')
 					sys.exit(1)
-				test = np.cos((abs(centerlat+yoffset)*3.14159/180)*111.1*NL
+				NL = NL+1
+				test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
 				if test > rmax:  xoffset = NL
 			print(f'MSG: Will use a box with side of {NL} degrees.')
 
