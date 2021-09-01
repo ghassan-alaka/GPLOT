@@ -403,17 +403,19 @@ undef("adeckRead")
 function adeckRead (atcfFile[1]:string,IMODEL[1]:string,INFO[*]:string)
 local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, IDATE, SNUM, SBAS,\
       allDates, allModels, allStorms, allBasins, testA, testB, testC, testD,\
-      testE, vals, N, IDATE2
+      testE, vals, N, IDATE2, PIV_LON
 begin
 
+	; *******************
 	; 1. Read the ATCF data
-	fileChk		= systemfunc("ls "+atcfFile+" 2>/dev/null")
+	fileChk	= systemfunc("ls "+atcfFile+" 2>/dev/null")
 	if(ismissing(fileChk(0)))then	print("ERROR: adeckRead: ATCF file not found.")
 					print("ERROR: adeckRead: "+atcfFile)
 	end if
-	DATA		:= asciiread(atcfFile,-1,"string")
+	DATA	:= asciiread(atcfFile,-1,"string")
 
 
+	; *******************
 	; 2. Get Wind Radii - only keep indices for 34 kts.
         IDATE = INFO(0)
         if(dimsizes(INFO).ge.2)then   SNUM = INFO(1)
@@ -424,17 +426,21 @@ begin
 	end if
 
 
+	; *******************
 	; 3. Read important columns from the ATCF data.
-	windRad		:= toint(str_squeeze(str_get_field(DATA,12,",")))
-	allDates	:= str_squeeze(str_get_field(DATA,3,","))
-	allModels	:= str_squeeze(str_get_field(DATA,5,","))
-	allStorms	:= str_squeeze(str_get_field(DATA,2,","))
-	allBasins	:= str_squeeze(str_get_field(DATA,1,","))
+	windRad	  := toint(str_squeeze(str_get_field(DATA,12,",")))
+	allDates  := str_squeeze(str_get_field(DATA,3,","))
+	allModels := str_squeeze(str_get_field(DATA,5,","))
+	allStorms := str_squeeze(str_get_field(DATA,2,","))
+	allBasins := str_squeeze(str_get_field(DATA,1,","))
 
 
+	; *******************
 	; 4. Create boolean arrays to find lines that satisfy all requirements.
-	testA		= where(windRad.le.34,True,False)
-	testB		= isStrSubset2(allModels,IMODEL)
+	testA = where(windRad.le.34,True,False)
+	if(IMODEL.eq."")then	testB	= testA
+	else			testB	= isStrSubset2(allModels,IMODEL)
+	end if
 	if(IDATE.eq."")then	testC = testA
 				IDATE2 = tostring(remove_duplicates(toint(allDates)))
 	else			testC = where(allDates.eq.IDATE,True,False)
@@ -448,38 +454,53 @@ begin
 	end if
 
 
+	; *******************
 	; 5. Find all indices that match the requirements.
 	vals	= ind(testA .and. testB .and. testC .and. testD .and. testE)
 	N	= dimsizes(vals)
-	BLOCK	= new((/4,N/),"float")
+	BLOCK	= new((/5,N/),"float")
 	if(ismissing(vals(0)))then	print("ERROR: adeckRead: No valid entries found.")
 					return(BLOCK)
 	end if
 	
 
+	; *******************
 	; 6. Parse out relevant data
 	; Get Latitude
 	tmp		:= str_squeeze(str_get_field(DATA(vals),7,","))
 	NStag		= where(isStrSubset2(tmp,"N"),"N","S")
 	BLOCK(0,:)	= where(NStag.eq."N",1.*tofloat(str_sub_str(tmp,"N",""))/10.,-1.*tofloat(str_sub_str(tmp,"S",""))/10.)
+
 	; Get Longitude
 	tmp		:= str_squeeze(str_get_field(DATA(vals),8,","))
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
+	if(BLOCK(1,0).ge.0)then		PIV_LON = BLOCK(1,0) - 180.
+					BLOCK(1,:) = where(BLOCK(1,:).le.PIV_LON, BLOCK(1,:)+360., BLOCK(1,:))
+	else				PIV_LON = BLOCK(1,0) + 180.
+					BLOCK(1,:) = where(BLOCK(1,:).ge.PIV_LON, BLOCK(1,:)-360., BLOCK(1,:))
+	end if
+
 	; Get Lead Time
-	BLOCK(2,:)	= toint(str_squeeze(str_get_field(DATA(vals),6,",")))
-	; Get Intensity
-	BLOCK(3,:)	= toint(str_squeeze(str_get_field(DATA(vals),9,",")))
+	BLOCK(2,:)	= tofloat(toint(str_squeeze(str_get_field(DATA(vals),6,","))))
+
+	; Get Maximum Wind
+	BLOCK(3,:)	= tofloat(toint(str_squeeze(str_get_field(DATA(vals),9,","))))
+
+	; Get Minimum Pressure
+	BLOCK(4,:)	= tofloat(toint(str_squeeze(str_get_field(DATA(vals),10,","))))
+
 	; Data Labels
-	BLOCK@data	= (/"latitude","longitude","lead_time","intensity"/)
+	BLOCK@data	= (/"latitude","longitude","lead_time","max_wind","min_pressure"/)
 	BLOCK@N		= N
 	BLOCK@models	= str_squeeze(str_get_field(DATA(vals),5,","))
+	BLOCK@all_init_date = str_squeeze(str_get_field(DATA(vals),3,","))
 	BLOCK@init_date	= IDATE2
 	BLOCK@SID = str_squeeze(str_get_field(DATA(vals(0)),1,",")) + str_squeeze(str_get_field(DATA(vals(0)),2,","))
 	
 	
-	
-	; 4. Return BLOCK to caller.
+	; *******************
+	; 7. Return BLOCK to caller.
 	return(BLOCK)
 		
 end

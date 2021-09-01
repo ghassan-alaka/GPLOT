@@ -361,24 +361,23 @@ for TR in ${TIER[@]}; do
             # Increase the storm counter
             ((NSTORM=NSTORM+1))
 
-            # Find the forecast hours from the ATCF for thie particular storm
+            # Find the forecast hours from the ATCF for this particular storm
             STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[*]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
             if [ -z "${STORM_ATCF[*]}" ]; then
                 echo "WARNING: No ATCF found for ${STORM}. This might be OK."
             else
                 echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
             fi
 
-            #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
-            NEW_ATCF_FHRS=()
-            for FHR in ${ATCF_FHRS[@]}; do
-                if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
-                    NEW_ATCF_FHRS+=( $FHR )
-                fi
-            done
-            ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
-
+            # Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
+            #NEW_ATCF_FHRS=()
+            #for FHR in ${ATCF_FHRS[@]}; do
+            #    if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
+            #        NEW_ATCF_FHRS+=( $FHR )
+            #    fi
+            #done
+            #ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
 
             #########################
             # LOOP OVER MAP DOMAINS #
@@ -541,13 +540,13 @@ for TR in ${TIER[@]}; do
                         echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
                         echo "WARNING: But, found no matching ATCF files. Skipping to next."
                         continue
-                    elif [ -z "${ATCF_FHRS[*]}" ]; then
-                        echo ""
-                        echo "MSG: Current cycle       --> $CYCLE"
-                        echo "MSG: Current storm       --> $STORM"
-                        echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
-                        echo "WARNING: ATCF was found for this storm, but no forecast hours were found."
-                        continue
+                    #elif [ -z "${ATCF_FHRS[*]}" ]; then
+                    #    echo ""
+                    #    echo "MSG: Current cycle       --> $CYCLE"
+                    #    echo "MSG: Current storm       --> $STORM"
+                    #    echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                    #    echo "WARNING: ATCF was found for this storm, but no forecast hours were found."
+                    #    continue
                     fi
                 fi
 
@@ -605,24 +604,31 @@ for TR in ${TIER[@]}; do
 
                     # Find the forecast hours from the ATCF for this particular model
                     # MODEL_ATCF1: list of ATCF files filtered by Storm & Cycle
-                    # MODEL_ATCF2: list of ATCF files filtered by Cycle 
+                    # MODEL_ATCF2: list of ATCF files filtered by Cycle
+                    MODEL_ATCF1=( "" )
                     if [ ! -z "${STORM_ATCF[*]}" ]; then
                         MODEL_ATCF1=( `grep -l "${MODEL^^}" ${STORM_ATCF[*]}` )
-                    else
-                        MODEL_ATCF1=( "" )
                     fi
+                    MODEL_ATCF2=( "" )
                     if [ ! -z "${CYCLE_ATCF[*]}" ]; then
                         MODEL_ATCF2=( `grep -l "${MODEL^^}" ${CYCLE_ATCF[*]}` )
-                    else
-                        MODEL_ATCF2=( "" )
                     fi
-                    if [ -z "${MODEL_ATCF2[*]}" ] ; then
-                        echo "WARNING: No matching ATCFs found for ${MODEL}. This might be OK."
-                    elif [ "$SC" == "False" ]; then
+                    ATCF_FHRS=()
+                    if [ -z "${MODEL_ATCF1[*]}" ] && [ -z "${MODEL_ATCF2[*]}" ]; then
+                        echo "WARNING: No matching ATCFs found for MODEL=${MODEL}. This might be OK."
+                    elif [ "${SC}" == "True" ] && [ -f ${MODEL_ATCF1[0]} ]; then
+                        echo "MSG: ATCF(s) found for ${MODEL} --> ${MODEL_ATCF1[*]}"
+                        ATCF_FHRS=( `cat ${MODEL_ATCF1[*]} | tr -d "[:blank:]" | awk -v MODEL="${MODEL^^}" -F, '$5==MODEL { printf("%03d\n", $6) }' | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
+                    elif [ "${SC}" == "False" ] && [ -f ${MODEL_ATCF2[0]} ]; then
                         echo "MSG: ATCF(s) found for ${MODEL} --> ${MODEL_ATCF2[*]}"
-                        ATCF_FHRS=( `cat ${MODEL_ATCF2[*]} | awk -F',' '{ printf("%03d\n", $6) }' | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
+                        ATCF_FHRS=( `cat ${MODEL_ATCF2[*]} | tr -d "[:blank:]" | awk -v MODEL="${MODEL^^}" -F, '$5==MODEL { printf("%03d\n", $6) }' | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
+                    else
+                        if [ "${SC}" == "True" ]; then
+                            echo "WARNING: ATCF information for MODEL=${MODEL} could not be extracted from ${MODEL_ATCF1[*]}"
+                        else
+                            echo "WARNING: ATCF information for MODEL=${MODEL} could not be extracted from ${MODEL_ATCF2[*]}"
+                        fi
                     fi
-    
                     # Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
                     NEW_ATCF_FHRS=()
                     for FHR in ${ATCF_FHRS[@]}; do
@@ -655,21 +661,33 @@ for TR in ${TIER[@]}; do
                     if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
                         PREV_ATCF=()
                         PREV_ATCF=( `cat ${ODIR_FULL}ATCF_FILES.dat` )
-                        if [ "${PREV_ATCF[*]}" == "NONE" ] && [ "${#CYCLE_ATCF[@]}" -gt "0" ]; then
-                            echo "MSG: Found ATCFs this time around. No ATCF found previously. Forcing production."
-                            FORCE="True"
-                        elif [ "${#PREV_ATCF[@]}" -lt "${#CYCLE_ATCF[@]}" ]; then
-                            echo "MSG: Found more ATCFs this time around. Forcing production."
-                            FORCE="True"
-                        elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
-                            for ATCF in ${PREV_ATCF[@]}; do
-                                test=$(find ${ATCF} -mmin -60 2>/dev/null)
-                                if [[ -n $test ]]; then
-                                    echo "MSG: This ATCF is not old enough. Forcing production."
-                                    FORCE="True"
-                                    break
-                                fi
-                            done
+                        if [ "$SC" == "False" ]; then
+                            if [ "${PREV_ATCF[*]}" == "NONE" ] && [ "${#CYCLE_ATCF[@]}" -gt "0" ]; then
+                                echo "MSG: Found ${#CYCLE_ATCF[@]} ATCFs this time. No ATCF found last time."
+                                echo "MSG: Forcing production."
+                                FORCE="True"
+                            elif [ "${#PREV_ATCF[@]}" -lt "${#CYCLE_ATCF[@]}" ]; then
+                                echo "MSG: Found more ATCFs this time (${#CYCLE_ATCF[@]}) than last time (${#PREV_ATCF[@]})."
+                                echo "MSG: Forcing production."
+                                FORCE="True"
+                            elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
+                                for ATCF in ${PREV_ATCF[@]}; do
+                                    test=$(find ${ATCF} -mmin -60 2>/dev/null)
+                                    if [[ -n $test ]]; then
+                                        echo "MSG: This ATCF is not old enough --> ${ATCF}"
+                                        echo "MSG: Forcing production."
+                                        FORCE="True"
+                                        break
+                                    fi
+                                done
+                            fi
+                        elif [ ! -z "${STORM_ATCF[*]}" ]; then
+                            test=$(find ${STORM_ATCF[0]} -mmin -60 2>/dev/null)
+                            if [[ -n $test ]]; then
+                                echo "MSG: This ATCF is not old enough --> ${ATCF}"
+                                echo "MSG: Forcing production."
+                                FORCE="True"
+                            fi
                         fi
                     fi
 
@@ -696,6 +714,7 @@ for TR in ${TIER[@]}; do
                     else
                         FILE_FHRS=( ${FHRS[@]} )
                     fi
+                    echo "MSG: I will only look for these forecast lead times --> ${FILE_FHRS[*]}"
 
                     # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                     # If a match is found, write lead time to a data file "AllForecastHours"
