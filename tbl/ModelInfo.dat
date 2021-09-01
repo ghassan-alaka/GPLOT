@@ -71,6 +71,7 @@ HFJI,     HFJI: Interp. HAFS-J, 16,                gold,                        
 UCS1,           UCS1: FV3-RRFS, 10,            hotpink4,                2020 FV3GFS w/ RRFS Physics v1
 UCSI,       UCSI: Interp. UCS1, 10,            hotpink4,        2020 FV3GFS w/ RRFS Physics v1 (Early)
 HFMN,     HFMN: HAFSV0.2E(avg), 16,             sienna4,   Hurricane Analysis and Forecast System V0.2E (avg)
+HFMI,       HFMI: Interp. HFMN, 16,             sienna4,   Hurricane Analysis and Forecast System V0.2E (avg)
 HF00,      HF00: HAFSV0.2E(00),  1,             hotpink,   Hurricane Analysis and Forecast System V0.2E (00)
 HF01,      HF01: HAFSV0.2E(01),  1,             maroon1,   Hurricane Analysis and Forecast System V0.2E (01)
 HF02,      HF02: HAFSV0.2E(02),  1,                 red,   Hurricane Analysis and Forecast System V0.2E (02)
@@ -82,7 +83,7 @@ HF07,      HF07: HAFSV0.2E(07),  1,              yellow,   Hurricane Analysis an
 HF08,      HF08: HAFSV0.2E(08),  1,     darkolivegreen2,   Hurricane Analysis and Forecast System V0.2E (08)
 HF09,      HF09: HAFSV0.2E(09),  1,               green,   Hurricane Analysis and Forecast System V0.2E (09)
 HF10,      HF10: HAFSV0.2E(10),  1,           seagreen2,   Hurricane Analysis and Forecast System V0.2E (10)
-HF11,      HF11: HAFSV0.2E(12),  1,             skyblue,   Hurricane Analysis and Forecast System V0.2E (12)
+HF11,      HF11: HAFSV0.2E(11),  1,             skyblue,   Hurricane Analysis and Forecast System V0.2E (11)
 HF12,      HF12: HAFSV0.2E(12),  1,          cadetblue2,   Hurricane Analysis and Forecast System V0.2E (12)
 HF13,      HF13: HAFSV0.2E(13),  1,          dodgerblue,   Hurricane Analysis and Forecast System V0.2E (13)
 HF14,      HF14: HAFSV0.2E(14),  1,          royalblue2,   Hurricane Analysis and Forecast System V0.2E (14)
