@@ -147,10 +147,23 @@ print("MSG: Verbose level = "+tostring(verbose))
 ; 1. Set the namelist path.
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
-if(.not.isvar("MASTER_NML_IN"))then		MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
+if(.not.isvar("MASTER_NML_IN"))then
+	if(fileexists(GPLOT_DIR+"/nmlist/namelist.master.default"))then
+		MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
+	else
+		print("ERROR: Can't find master namelist --> "+GPLOT_DIR+"/nmlist/namelist.master.default")
+		exit
+	end if
 else
 	if(fileexists(MASTER_NML_IN))then	MASTER_NML = MASTER_NML_IN
-	else					MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+	else
+		if(fileexists(GPLOT_DIR+"/nmlist/"+MASTER_NML_IN))then
+			MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+		else
+			print("ERROR: Can't find master namelist --> "+GPLOT_DIR+"/nmlist/"+MASTER_NML_IN)
+			print("ERROR:                            --> "+MASTER_NML_IN)
+			exit
+		end if
 	end if
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
