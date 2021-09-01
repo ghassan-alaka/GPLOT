@@ -235,30 +235,18 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			ga('open '+CTL_FILE)
 			env = ga.env()
 
-
 			#Define how big of a box you want, based on lat distance
-			yoffset = 7
-			test7 = np.cos((centerlat+7)*3.14159/180)*111.1*7
-			test8 = np.cos((centerlat+8)*3.14159/180)*111.1*8
-			test9 = np.cos((centerlat+9)*3.14159/180)*111.1*9
-			test10 = np.cos((centerlat+10)*3.14159/180)*111.1*10
-			test11 = np.cos((centerlat+11)*3.14159/180)*111.1*11
-			test12 = np.cos((centerlat+12)*3.14159/180)*111.1*12
-
-			if (test7 > rmax):
-				xoffset = 7
-			elif (test8 > rmax):
-				xoffset = 8
-			elif (test9 > rmax):
-				xoffset = 9
-			elif (test10 > rmax):
-				xoffset = 10
-			elif (test11 > rmax):
-				xoffset = 11
-			elif (test12 > rmax):
-				xoffset = 12
-			else:
-				print('YOU NEED A BIGGER BOX THAN 12 DEGREES')
+			yoffset = 6
+			xoffset = None
+			NL = yoffset-1
+			while not xoffset:
+				if NL > 25:
+					print(f'ERROR: YOU NEED A BIGGER BOX THAN {NL} DEGREES. rmax={rmax}, test={test}, centerlat={centerlat}')
+					sys.exit(1)
+				NL = NL+1
+				test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
+				if test > rmax:  xoffset = NL
+			print(f'MSG: Will use a box with side of {NL} degrees.')
 
 
 			#Get lat, lon, levs

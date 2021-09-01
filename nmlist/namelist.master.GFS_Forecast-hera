@@ -170,8 +170,7 @@ DO_INTERP = False
 ;================================================================
 
 PYTHONFILE = make_rz_plots.nodbz.py
-RESOLUTION = 1.5
+RESOLUTION = 25
 RMAX = 600
-MODELTAG = hwrfprs.storm.0p015
-LEVS = 46
+LEVS = 57
 
