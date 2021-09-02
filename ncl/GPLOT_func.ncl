@@ -400,63 +400,110 @@ end
 ; adeckRead
 
 undef("adeckRead")
-function adeckRead (atcfFile[1]:string,IMODEL[1]:string,IDATE[1]:string)
-local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag
+function adeckRead (atcfFile[1]:string,IMODEL[1]:string,INFO[*]:string)
+local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, IDATE, SNUM, SBAS,\
+      allDates, allModels, allStorms, allBasins, testA, testB, testC, testD,\
+      testE, vals, N, IDATE2, PIV_LON
 begin
 
+	; *******************
 	; 1. Read the ATCF data
-	fileChk		= systemfunc("ls "+atcfFile+" 2>/dev/null")
-	if(ismissing(fileChk(0)))then	print("ERROR: atcfRead: ATCF file not found.")
-					print("ERROR: atcfRead: "+atcfFile)
+	fileChk	= systemfunc("ls "+atcfFile+" 2>/dev/null")
+	if(ismissing(fileChk(0)))then	print("ERROR: adeckRead: ATCF file not found.")
+					print("ERROR: adeckRead: "+atcfFile)
 	end if
-	DATA		:= asciiread(atcfFile,-1,"string")
+	DATA	:= asciiread(atcfFile,-1,"string")
 
 
-	; 2. Get Wind Radii - only keep indices for 34 kts.
-	windRad		:= toint(str_squeeze(str_get_field(DATA,12,",")))
-	allDates	:= str_squeeze(str_get_field(DATA,3,","))
-	allModels	:= str_squeeze(str_get_field(DATA,5,","))
-	if(IDATE.eq."")then
-		vals	= ind(windRad.le.34 .and. isStrSubset2(allModels,IMODEL))
-	else
-		vals	= ind(windRad.le.34 .and. allDates.eq.IDATE .and. isStrSubset2(allModels,IMODEL))
+	; *******************
+	; 2. Read the INFO variable, which could include:
+	;	- model initialization time (IDATE)
+	;	- storm number (SNUM)
+	;	- storm basin (SBAS)
+        IDATE = INFO(0)
+        if(dimsizes(INFO).ge.2)then   SNUM = INFO(1)
+	else			      SNUM = ""
 	end if
-	N		= dimsizes(vals)
-	BLOCK		= new((/4,N/),"float")
-	if(ismissing(vals(0)))then	print("ERROR: atcfRead: No valid entries found.")
+        if(dimsizes(INFO).ge.3)then   SBAS = INFO(2)
+	else			      SBAS = ""
+	end if
+
+
+	; *******************
+	; 3. Read important columns from the ATCF data.
+	windRad	  := toint(str_squeeze(str_get_field(DATA,12,",")))
+	allDates  := str_squeeze(str_get_field(DATA,3,","))
+	allModels := str_squeeze(str_get_field(DATA,5,","))
+	allStorms := str_squeeze(str_get_field(DATA,2,","))
+	allBasins := str_squeeze(str_get_field(DATA,1,","))
+
+
+	; *******************
+	; 4. Create boolean arrays to find lines that satisfy all requirements.
+	testA = where(windRad.le.34,True,False)
+	if(IMODEL.eq."")then	testB	= testA
+	else			testB	= isStrSubset2(allModels,IMODEL)
+	end if
+	if(IDATE.eq."")then	testC = testA
+				IDATE2 = tostring(remove_duplicates(toint(allDates)))
+	else			testC = where(allDates.eq.IDATE,True,False)
+				IDATE2 = IDATE
+	end if
+	if(SNUM.eq."")then	testD = testA
+	else			testD = where(allStorms.eq.SNUM,True,False)
+	end if
+	if(SBAS.eq."")then	testE = testA
+	else			testE = where(allBasins.eq.SBAS,True,False)
+	end if
+
+
+	; *******************
+	; 5. Find all indices that match the requirements.
+	vals	= ind(testA .and. testB .and. testC .and. testD .and. testE)
+	N	= dimsizes(vals)
+	BLOCK	= new((/5,N/),"float")
+	if(ismissing(vals(0)))then	print("ERROR: adeckRead: No valid entries found.")
 					return(BLOCK)
 	end if
 	
-	if(IDATE.eq."")then
-		IDATE2	= tostring(remove_duplicates(toint(allDates)))
-	else
-		IDATE2	= IDATE
-	end if
 
-
-	; 3. Parse out relevant data
+	; *******************
+	; 6. Parse out relevant data
 	; Get Latitude
 	tmp		:= str_squeeze(str_get_field(DATA(vals),7,","))
 	NStag		= where(isStrSubset2(tmp,"N"),"N","S")
 	BLOCK(0,:)	= where(NStag.eq."N",1.*tofloat(str_sub_str(tmp,"N",""))/10.,-1.*tofloat(str_sub_str(tmp,"S",""))/10.)
+
 	; Get Longitude
 	tmp		:= str_squeeze(str_get_field(DATA(vals),8,","))
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
+	if(BLOCK(1,0).ge.0)then		PIV_LON = BLOCK(1,0) - 180.
+					BLOCK(1,:) = where(BLOCK(1,:).le.PIV_LON, BLOCK(1,:)+360., BLOCK(1,:))
+	else				PIV_LON = BLOCK(1,0) + 180.
+					BLOCK(1,:) = where(BLOCK(1,:).ge.PIV_LON, BLOCK(1,:)-360., BLOCK(1,:))
+	end if
+
 	; Get Lead Time
-	BLOCK(2,:)	= toint(str_squeeze(str_get_field(DATA(vals),6,",")))
-	; Get Intensity
-	BLOCK(3,:)	= toint(str_squeeze(str_get_field(DATA(vals),9,",")))
+	BLOCK(2,:)	= tofloat(toint(str_squeeze(str_get_field(DATA(vals),6,","))))
+
+	; Get Maximum Wind
+	BLOCK(3,:)	= tofloat(toint(str_squeeze(str_get_field(DATA(vals),9,","))))
+
+	; Get Minimum Pressure
+	BLOCK(4,:)	= tofloat(toint(str_squeeze(str_get_field(DATA(vals),10,","))))
+
 	; Data Labels
-	BLOCK@data	= (/"latitude","longitude","lead_time","intensity"/)
+	BLOCK@data	= (/"latitude","longitude","lead_time","max_wind","min_pressure"/)
 	BLOCK@N		= N
 	BLOCK@models	= str_squeeze(str_get_field(DATA(vals),5,","))
+	BLOCK@all_init_date = str_squeeze(str_get_field(DATA(vals),3,","))
 	BLOCK@init_date	= IDATE2
 	BLOCK@SID = str_squeeze(str_get_field(DATA(vals(0)),1,",")) + str_squeeze(str_get_field(DATA(vals(0)),2,","))
 	
 	
-	
-	; 4. Return BLOCK to caller.
+	; *******************
+	; 7. Return BLOCK to caller.
 	return(BLOCK)
 		
 end
@@ -469,8 +516,8 @@ end
 ; atcfRead
 
 undef("atcfRead")
-function atcfRead (atcfFile[1]:string)
-local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, iii, NEQ, windInt
+function atcfRead (atcfFile[1]:string,CYCLE[1]:string,MID[1]:string)
+local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, iii, NEQ, windInt, vals
 begin
 
 	; 1. Read the ATCF data
@@ -480,7 +527,6 @@ begin
 	end if
 	DATA		:= asciiread(atcfFile,-1,"string")
 
-
 	; 2. Find NEQ entry to determine where the Wind Radii data are stored
     iii = 0
     windInt = -999
@@ -489,18 +535,33 @@ begin
         if(any(NEQ.eq."NEQ"))then   windInt := toint(iii-1)   end if
         iii = iii+1
     end do
+
+   
         
-    
-        
-    ; 2. Get Wind Radii - only keep indices for 34 kts.
+    ; 2. Get Wind Radii - only keep indices for 34/0 kt.
 	windRad		:= toint(str_squeeze(str_get_field(DATA,windInt,",")))
-	vals		= ind(windRad.eq.34)
+	TEST_A = where(windRad.eq.34 .or. windRad.eq.0,True,False)
+
+	; 3) Filter by models, if applicable
+	if(MID.eq."")then	TEST_B = TEST_A
+				TEST_B = True
+	else			MODELS = str_squeeze(str_get_field(DATA,windInt-7,","))
+				TEST_B = where(MODELS.eq.MID,True,False)
+	end if
+
+	; 4) Filter by forecast cycle, if applicable
+	if(CYCLE.eq."")then	TEST_C = TEST_A
+				TEST_C = True
+	else			CYCLES = str_squeeze(str_get_field(DATA,windInt-9,","))
+				TEST_C = where(CYCLES.eq.CYCLE,True,False)
+	end if
+
+	vals	= ind(TEST_A .and. TEST_B .and. TEST_C)
 	N		= dimsizes(vals)
 	BLOCK		= new((/4,100/),"float")
 	if(ismissing(vals(0)))then	print("ERROR: atcfRead: No valid entries found.")
 					exit
 	end if
-
 
 	; 3. Parse out relevant data
 	; Get Latitude
@@ -535,7 +596,8 @@ end
 
 undef("bdeckRead")
 function bdeckRead (bestFile[1]:string,IDATE[1]:string)
-local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, tunits, utc0, utc, bbb
+local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, tunits, \
+      utc0, utc, bbb, PIV_LON
 begin
 
 	; 1. Read the ATCF data
@@ -579,12 +641,17 @@ begin
 	tmp		:= str_squeeze(str_get_field(DATA(vals),8,","))
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
+	if(BLOCK(1,0).ge.0)then		PIV_LON = BLOCK(1,0) - 180.
+					BLOCK(1,:) = where(BLOCK(1,:).le.PIV_LON, BLOCK(1,:)+360., BLOCK(1,:))
+	else				PIV_LON = BLOCK(1,0) + 180.
+					BLOCK(1,:) = where(BLOCK(1,:).ge.PIV_LON, BLOCK(1,:)-360., BLOCK(1,:))
+	end if
 	; Get Intensity
 	BLOCK(3,:)	= toint(str_squeeze(str_get_field(DATA(vals),9,",")))
 	; Get Pressure
 	BLOCK(4,:)	= toint(str_squeeze(str_get_field(DATA(vals),10,",")))
 	; Data Labels
-	BLOCK@data	= (/"latitude","longitude","lead_time","intensity","pressure"/)
+	BLOCK@data	= (/"latitude","longitude","lead_time","max_wind","min_pressure"/)
 	BLOCK@N		= N
 	BLOCK@type	= str_squeeze(str_get_field(DATA(vals),11,","))
 	BLOCK@valid_times = allDates
@@ -612,7 +679,7 @@ begin
 	; New boundaries
 	BDS = BOCO
 
-        ; Check that the model domain and the graphic domain overlap.
+	; Check that the model domain and the graphic domain overlap.
 	if(.not.all(BDS(0:1).eq.0.))then
 	        if(max(f->$DIM$).lt.BDS(1))then		LAT = fval
 							LAT@_FillValue = fval
@@ -736,7 +803,7 @@ begin
 
 	; New boundaries
 	BDS = BOCO
-
+	
 	; Get the pivot longitude, if applicable
 	if(isatt(BOCO,"PivotLon"))then	PIV = BOCO@PivotLon
 	else				PIV = 180.
@@ -755,6 +822,7 @@ begin
 						;			   lonFlip(f->$DIM$))/)
 						LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
+						if(BDS(2).gt.0)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF 	= (/f->$DIM$/)
 						flipFlag= False
@@ -1561,9 +1629,120 @@ begin
 			tmpV!1 = "lon"
 			tmpV&lat = f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})
 			tmpV&lon = f->$nDims@dNames(lonIND)$
-			V	= uv2vr_cfd(tmpU,tmpV,f->$nDims@dNames(latIND)$({iBds(0):iBds(1)}),f->$nDims@dNames(lonIND)$,2)
+
+			; Calculate the Relative Vorticity using a center-difference method.
+			V = uv2vr_cfd(tmpU,tmpV,f->$nDims@dNames(latIND)$({iBds(0):iBds(1)}),f->$nDims@dNames(lonIND)$,2)
+
+			; Calculate the Absolute Vorticity by adding the planetary vorticity and the relative vorticity.
+			if(varInfo(0).eq."AVO")then
+				V := V + conform(V,2.*omega*sin(d2r*f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})),0)
+			end if
 			V@units = "s-1"
 			delete([/tmpU,tmpV/])
+
+		else if(varInfo(0).eq."PV")then
+
+			; First, read or compute the Absolute Vorticity.
+			if(isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+				if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
+					AVO = f->$findVarName(dSource,"AVO",varInfo(1))$({iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
+					AVO = f->$findVarName(dSource,"AVO",varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. timeDim)then
+					AVO = f->$findVarName(dSource,"AVO",varInfo(1))$(tIND,{mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else
+					print("ERROR: getVar2d: To compute PV, absolute vort. must have latitude and longitude dimensions.")
+					print("ERROR: getVar2d: latitude = "+latIND)
+					print("ERROR: getVar2d: longitude = "+lonIND)
+				end if  end if  end if
+
+                                if(flipFlag)then        AVO     := lonPivot(AVO,PIV)
+                                                        xAdd    = -360.
+                                else                    xAdd    = 0.
+                                end if
+			else
+				if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
+					tmpU	= f->$findVarName(dSource,"U",varInfo(1))$({iBds(0):iBds(1)},:)
+					tmpV    = f->$findVarName(dSource,"V",varInfo(1))$({iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
+					tmpU	= f->$findVarName(dSource,"U",varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+					tmpV	= f->$findVarName(dSource,"V",varInfo(1))$({mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else if(latDim .and. lonDim .and. levDim .and. timeDim)then
+					tmpU    = f->$findVarName(dSource,"U",varInfo(1))$(tIND,{mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+					tmpV    = f->$findVarName(dSource,"V",varInfo(1))$(tIND,{mf*tofloat(varInfo(1))},{iBds(0):iBds(1)},:)
+				else
+					print("ERROR: getVar2d: To compute PV, U-wind and V-wind must have latitude and longitude dimensions.")
+					print("ERROR: getVar2d: latitude = "+latIND)
+					print("ERROR: getVar2d: longitude = "+lonIND)
+				end if  end if  end if
+
+				if(flipFlag)then	tmpU    := lonPivot(tmpU,PIV)
+	                                                tmpV    := lonPivot(tmpV,PIV)
+	                                                xAdd    = -360.
+	                        else                    xAdd    = 0.
+	                        end if
+
+				; Update the metadata.
+	                        tmpU!0 = "lat"
+	                        tmpU!1 = "lon"
+	                        tmpU&lat = f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})
+	                        tmpU&lon = f->$nDims@dNames(lonIND)$
+	                        tmpV!0 = "lat"
+        	                tmpV!1 = "lon"
+	                        tmpV&lat = f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})
+	                        tmpV&lon = f->$nDims@dNames(lonIND)$
+
+				; Calculate the Relative Vorticity using a center-difference method.
+				; Then, add the Planetary Vorticity to compute Absolute Vorticity.
+	                        AVO = uv2vr_cfd(tmpU,tmpV,f->$nDims@dNames(latIND)$({iBds(0):iBds(1)}),f->$nDims@dNames(lonIND)$,2)
+				AVO = AVO + conform(AVO,2.*omega*sin(d2r*f->$nDims@dNames(latIND)$({iBds(0):iBds(1)})),0)
+
+			end if
+
+			; Second, get information about pressure levels to compute potential temperature & center-difference.
+			tmpLev = f->$nDims@dNames(levIND)$
+			val	:= ind(tmpLev.eq.mf*tofloat(varInfo(1)))
+			if(tmpLev(0).lt.tmpLev(1))then	LevUp	= tmpLev(val-1)
+							LevDown	= tmpLev(val+1)
+			else				LevUp	= tmpLev(val+1)
+							LevDown	= tmpLev(val-1)
+			end if
+			LevDiff	= LevUp-LevDown
+			LevRef = max(tmpLev)
+
+			; Third, read the air temperature at the +1 and -1 levels and compute
+			; potential temperature.
+			if(latDim .and. lonDim .and. levDim .and. .not.timeDim)then
+				ThUp	= f->$findVarName(dSource,"T",varInfo(1))$({LevUp},{iBds(0):iBds(1)},:)
+				ThDown	= f->$findVarName(dSource,"T",varInfo(1))$({LevDown},{iBds(0):iBds(1)},:)
+			else if(latDim .and. lonDim .and. levDim .and. timeDim)then
+				ThUp    = f->$findVarName(dSource,"T",varInfo(1))$(tIND,{LevUp},{iBds(0):iBds(1)},:)
+				ThDown  = f->$findVarName(dSource,"T",varInfo(1))$(tIND,{LevDown},{iBds(0):iBds(1)},:)
+			else
+				print("ERROR: getVar2d: To compute PV, temperature must have level, latitude, and longitude dimensions.")
+				print("ERROR: getVar2d: level = "+levIND)
+				print("ERROR: getVar2d: latitude = "+latIND)
+				print("ERROR: getVar2d: longitude = "+lonIND)
+				exit
+			end if  end if
+			ThUp    = ThUp*(LevRef/LevUp)^0.286
+			ThDown  = ThDown*(LevRef/LevDown)^0.286
+
+                        if(flipFlag)then        ThUp    := lonPivot(ThUp,PIV)
+                                                ThDown  := lonPivot(ThDown,PIV)
+                                                xAdd    = -360.
+                        else                    xAdd    = 0.
+                        end if
+
+			; Fourth, compute Potential Vorticity.
+			V = -1.*g*AVO*(ThUp-ThDown)/(LevDiff)
+			V@units = "K m2 kg-1 s-1"
+
+			; Placeholder for vortex removal.
+			if(rmVortex)then	print("WARNING: Vortex removal not supported for potential vorticity.")
+						rmVortex = False
+			end if
+
 		else
 			if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
 				V = f->$findVarName(dSource,varInfo(0),varInfo(1))$({iBds(0):iBds(1)},:)
@@ -1589,7 +1768,7 @@ begin
 			if(isfilevaratt(f,findVarName(dSource,varInfo(0),varInfo(1)),"units"))then
 				V@units = f->$findVarName(dSource,varInfo(0),varInfo(1))$@units
 			end if
-		end if  end if
+		end if  end if  end if
 	end if
 
 	
@@ -1609,12 +1788,17 @@ begin
 
 	; Correct units
 	if(.not.isatt(V,"units"))then   V@units = ""   end if
-	if(varInfo(0).eq."RVO" .and. V@units.eq."s-1")then
-		V	= 100000.*(V - conform(V,2.*omega*sin(d2r*V&lat),0))
+	if(any((/"RVO","AVO"/).eq.varInfo(0)) .and. V@units.eq."s-1" .and. \
+	   .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		V	= 100000.*V
 		V@units	= "10^-5 s-1"
+	else if(varInfo(0).eq."RVO" .and. V@units.eq."s-1" .and. \
+	        isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		V	= 100000.*(V - conform(V,2.*omega*sin(d2r*V&lat),0))
+		V@units = "10^-5 s-1"
 	else if(any((/"UV","U","V"/).eq.varInfo(0)) .and. any((/"m s-1","m/s"/).eq.V@units))then
 		V	= ms2kts*V
-		V@units	= "kts"
+		V@units	= "kt"
 	else if(varInfo(0).eq."HGT" .and. any((/"m","gpm"/).eq.V@units))then
 		V	= 0.1*V
 		V@units	= "dam"
@@ -1627,7 +1811,11 @@ begin
 	else if(varInfo(0).eq."MSLP" .and. V@units.eq."Pa")then
 		V	= 0.01*V
 		V@units	= "hPa"
-	end if  end if  end if  end if  end if  end if
+	else if(varInfo(0).eq."PV" .and. V@units.eq."K m2 kg-1 s-1")then
+		V	= 1000000.*V
+		V@units	= "10^-6 K m2 kg-1 s-1"
+	end if  end if  end if  end if
+	end if  end if  end if  end if
 	
 	
 	; Add information about lonFlip and rmVortex

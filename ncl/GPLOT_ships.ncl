@@ -676,7 +676,8 @@ SID_OLD = getInvestSID(YYYY,SID)
 			
 
 ; Read the ATCF data
-data	:= atcfRead(ATCF_FILES)
+;data	:= atcfRead(ATCF_FILES)
+data := adeckRead(ATCF_FILES,"",IDATE)
 do fff = 0,nFHR-1		
 	val	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
 	if(fff.eq.nFHR-1)then	val1	= default_fillvalue("integer")
