@@ -416,7 +416,10 @@ begin
 
 
 	; *******************
-	; 2. Get Wind Radii - only keep indices for 34 kts.
+	; 2. Read the INFO variable, which could include:
+	;	- model initialization time (IDATE)
+	;	- storm number (SNUM)
+	;	- storm basin (SBAS)
         IDATE = INFO(0)
         if(dimsizes(INFO).ge.2)then   SNUM = INFO(1)
 	else			      SNUM = ""
@@ -593,7 +596,8 @@ end
 
 undef("bdeckRead")
 function bdeckRead (bestFile[1]:string,IDATE[1]:string)
-local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, tunits, utc0, utc, bbb
+local fileChk, DATA, windRad, tmp, BLOCK, NStag, EWtag, tunits, \
+      utc0, utc, bbb, PIV_LON
 begin
 
 	; 1. Read the ATCF data
@@ -637,14 +641,17 @@ begin
 	tmp		:= str_squeeze(str_get_field(DATA(vals),8,","))
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
-	if(BLOCK(1,0).ge.0)then   BLOCK(1,:) = where(BLOCK(1,:).lt.0,BLOCK(1,:)+360.,BLOCK(1,:))   end if
-	if(BLOCK(1,0).lt.0)then	  BLOCK(1,:) = where(BLOCK(1,:).gt.0,BLOCK(1,:)-360.,BLOCK(1,:))   end if
+	if(BLOCK(1,0).ge.0)then		PIV_LON = BLOCK(1,0) - 180.
+					BLOCK(1,:) = where(BLOCK(1,:).le.PIV_LON, BLOCK(1,:)+360., BLOCK(1,:))
+	else				PIV_LON = BLOCK(1,0) + 180.
+					BLOCK(1,:) = where(BLOCK(1,:).ge.PIV_LON, BLOCK(1,:)-360., BLOCK(1,:))
+	end if
 	; Get Intensity
 	BLOCK(3,:)	= toint(str_squeeze(str_get_field(DATA(vals),9,",")))
 	; Get Pressure
 	BLOCK(4,:)	= toint(str_squeeze(str_get_field(DATA(vals),10,",")))
 	; Data Labels
-	BLOCK@data	= (/"latitude","longitude","lead_time","intensity","pressure"/)
+	BLOCK@data	= (/"latitude","longitude","lead_time","max_wind","min_pressure"/)
 	BLOCK@N		= N
 	BLOCK@type	= str_squeeze(str_get_field(DATA(vals),11,","))
 	BLOCK@valid_times = allDates
@@ -671,7 +678,17 @@ begin
 
 	; New boundaries
 	BDS = BOCO
-	
+
+	; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(0:1).eq.0.))then
+	        if(max(f->$DIM$).lt.BDS(1))then		LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        else if(min(f->$DIM$).gt.BDS(0))then	LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        end if  end if
+	end if
 
 	; TYPE 0: take the boundaries as provided
 	; TYPE 1: Take the entire latitude dimension from the file
@@ -821,6 +838,17 @@ begin
 	LONF!0 = "lon"
 	LONF&lon = LONF
 	LONF@units = "degrees_east"
+
+        ; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(2:3).eq.0.))then
+	        if(max(LONF).lt.BDS(2))then		LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		else if(min(LONF).gt.BDS(3))then	LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		end if  end if
+	end if
 
 	; TYPE 0: take the boundaries as provided (no action needed)
 	; TYPE 1: Take the entire latitude dimension from the file
