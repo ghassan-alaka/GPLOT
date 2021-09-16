@@ -11,7 +11,7 @@
 ; Written By:     Ghassan Alaka, Jr.
 ;
 ; Created:        September 2, 2015
-; Last Modified:  August 28, 2017
+; Last Modified:  September 16, 2021
 ;
 ; Last MK Modified: 13 Jun 2018 (getModelInfo and getExptInfo)
 ; Last Lew.Gramer@noaa.gov modifications: 23 Oct 2019 (air-sea variables)
@@ -36,9 +36,10 @@
 ; 16) level_convert
 ; 17) printMaxMin
 ; 18) remove_duplicates
-; 19) testPlot_2d_map
-; 20) testPlot_map
-; 21) testPlot_contour
+; 19) StatPlotRes
+; 20) testPlot_2d_map
+; 21) testPlot_map
+; 22) testPlot_contour
 ;
 ;
 ;
@@ -3281,6 +3282,196 @@ begin
 	retVal = data(uniqueInd) 
 	return(retVal) 
 end ; remove_duplicates
+
+
+
+;
+;================================================================
+; StatPlotRes
+;
+undef("StatPlotRes")
+function StatPlotRes (type:integer)
+local res
+begin
+
+
+	res = True
+
+	; type=1 for map resources
+	;	 (used for track maps)
+	if(type.eq.1)then
+
+		res@gsnDraw                   = False
+		res@gsnFrame                  = False
+		res@gsnMaximize               = False
+		res@mpLimitMode               = "LatLon"
+		res@mpFillOn                  = False
+		res@mpDataBaseVersion         = "MediumRes"
+		res@mpDataSetName             = "Earth..4"
+		res@mpDataResolution          = "Coarsest"
+		res@mpOutlineDrawOrder        = "PreDraw"
+		res@mpOutlineBoundarySets     = "AllBoundaries"
+		res@mpOutlineSpecifiers       = "United States : States"
+		res@mpGeophysicalLineColor    = "gray20"
+		res@mpGeophysicalLineThicknessF= 1.5
+		res@mpNationalLineColor       = "gray20"
+		res@mpNationalLineThicknessF  = 1.5
+		res@mpUSStateLineColor        = "gray20"
+		res@mpUSStateLineThicknessF   = 1.5
+		res@mpShapeMode               = "FreeAspect"
+		res@vpWidthF                  = 0.8
+		res@vpHeightF                 = 0.4
+		res@vpYF                      = 0.6
+		res@tmXBMajorLengthF          = 0.005
+		res@tmXBMajorOutwardLengthF   = 0.0
+		res@tmXBMinorLengthF          = 0.0025
+		res@tmXBMinorOutwardLengthF   = 0.0
+		res@tmYLMajorLengthF          = 0.005
+		res@tmYLMajorOutwardLengthF   = 0.0
+		res@tmYLMinorLengthF          = 0.0025
+		res@tmYLMinorOutwardLengthF   = 0.0
+
+
+	; type=2 for general XY resources
+	; 	 (used for intensity/pressure/verification line plots)
+	else if(type.eq.2)then
+
+		res@gsnDraw           = False
+		res@gsnFrame          = False
+		res@gsnMaximize       = False
+		res@xyDashPattern     = 0
+		res@xyLineThicknessF  = 10.0
+		res@xyMarkLineMode    = "MarkLines"
+		res@xyMarkerColor     = "black"
+		res@xyMarkerSizeF     = 0.020
+		res@xyMarkerThicknessF= 8.0
+		res@vpWidthF          = 0.8
+		res@vpHeightF         = 0.4
+		res@vpYF              = 0.7
+		res@tiMainFont        = 22
+		res@tiMainFontHeightF = 0.025
+		res@tiMainOffsetYF    = 0.05
+		res@tiXAxisString     = "Forecast Lead Time [h]"
+		res@tiXAxisOffsetYF   = 0.015
+		res@tiYAxisOffsetXF   = 0.015
+
+	; General text resources (A)
+	else if(type.eq.3)then
+
+		res@txFontHeightF    = 0.009
+		res@txJust           = "CenterLeft"
+
+	; General text resources (B)
+	else if(type.eq.4)then
+
+		res@txJust           = "CenterLeft"
+		res@txFont           = 25
+		res@txFontColor      = "black"
+		res@txFontHeightF    = 0.009
+
+	; Text Resources for map main title
+	else if(type.eq.5)then
+
+		res@txFontHeightF    = 0.020
+		res@txJust           = "CenterCenter"
+		res@txFontColor      = "black"
+		res@txFont           = 25
+
+	; Text Resources for map sub-title
+	else if(type.eq.6)then
+
+		res@txFontHeightF    = 0.015
+		res@txJust           = "CenterCenter"
+		res@txFontColor      = "black"
+		res@txFont           = 25
+
+	; Text Resources for forecast hour labels
+	else if(type.eq.7)then
+
+		res@txJust           = "CenterLeft"
+		res@txFontHeightF    = 0.005
+
+	; Text Resources for legend labels
+	else if(type.eq.8)then
+
+		res@txJust           = "CenterLeft"
+		res@txFontHeightF    = 0.009
+
+	; Text Resources for XY main title
+	else if(type.eq.9)then
+
+		res@txFontHeightF    = 0.025
+		res@txJust           = "CenterCenter"
+		res@txFontColor      = "black"
+		res@txFont           = 25
+
+	; Text Resources for XY sub-title
+	else if(type.eq.10)then
+
+		res@txFontHeightF    = 0.018
+		res@txJust           = "CenterCenter"
+		res@txFontColor      = "black"
+		res@txFont           = 25
+
+	; Polyline Resources for best track
+	else if(type.eq.11)then
+
+		res@gsLineThicknessF = 15.0
+
+	; Polyline Resources for legend
+	else if(type.eq.12)then
+
+		res@gsLineThicknessF = 5.0
+
+	; Polyline Resources for models
+	else if(type.eq.13)then
+
+		res@gsLineThicknessF = 8.0
+
+	; Polyline Resources for XY 0-line
+	else if(type.eq.14)then
+
+		res@gsLineThicknessF = 5.0
+		res@gsLineColor      = "black"
+		res@gsLineDashPattern= 0
+		res@tfPolyDrawOrder  = "PreDraw"
+
+	; Polyline Resources for XY major lines
+	else if(type.eq.15)then
+
+		res@gsLineThicknessF = 1.5
+		res@gsLineDashPattern= 11
+		res@gsLineColor      = "grey70"
+		res@tfPolyDrawOrder  = "PreDraw"
+
+	; Marker Resources for best track
+	else if(type.eq.16)then
+
+		res@gsMarkerSizeF            = 12.0
+		res@gsMarkerThicknessF       = 5.0
+
+	; Marker Resources for legend
+	else if(type.eq.17)then
+	
+		res@gsMarkerSizeF            = 8.0
+		res@gsMarkerThicknessF       = 3.0
+
+	; Marker Resources for XY legend
+	else if(type.eq.18)then
+
+		res@gsMarkerSizeF            = 10.0
+		res@gsMarkerThicknessF       = 3.0
+
+	end if  end if  end if  end if  end if
+	end if  end if  end if  end if  end if
+	end if  end if  end if  end if  end if
+	end if  end if  end if
+
+
+	; Return the resource object
+	return(res)
+
+end
 
 
 

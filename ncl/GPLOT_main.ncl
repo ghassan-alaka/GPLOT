@@ -676,142 +676,133 @@ begin
 					NML@MORIG := NML@MORIG(1)
 	end if
 
-	; al. TRKmodels00 --> 00Z/12Z late track models
-	val := ind(isStrSubset2(NML,"TRKM00 ="))
-	if(ismissing(val(0)))then	val := ind(isStrSubset2(NML,"TRKM ="))   end if
-	if(ismissing(val(0)))then	NML@TRKmodels00 = NML@MCODE
-	else				NML@TRKmodels00 = NML(val(0))
-					NML@TRKmodels00 := str_squeeze(str_split(NML@TRKmodels00," = "))
-					NML@TRKmodels00 := array_append_record(NML@MCODE,NML@TRKmodels00(1:),0)
+	; al. TRKmodels --> Late track models
+	val := ind(isStrSubset2(NML,"TRKM ="))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"TRKM00 ="))
+		if(ismissing(val(0)))then	NML@TRKmodels = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@TRKmodels = NML(val(0))
+					NML@TRKmodels := str_squeeze(str_split(NML@TRKmodels," = "))
+					NML@TRKmodels := NML@TRKmodels(1:)
 	end if
 
-	; am. TRKmodels06 --> 06Z/18Z late track models
-	val := ind(isStrSubset2(NML,"TRKM06 ="))
-	if(ismissing(val(0)))then	val := ind(isStrSubset2(NML,"TRKM ="))   end if
-	if(ismissing(val(0)))then	NML@TRKmodels06 = NML@MCODE
-	else				NML@TRKmodels06 = NML(val(0))
-					NML@TRKmodels06 := str_squeeze(str_split(NML@TRKmodels06," = "))
-					NML@TRKmodels06 := array_append_record(NML@MCODE,NML@TRKmodels06(1:),0)
+	; al. TRKINTmodels --> Late track/intensity models
+	val := ind(isStrSubset2(NML,"TRKINTM ="))
+	if(ismissing(val(0)))then	NML@TRKINTmodels = "MISSING"
+	else				NML@TRKINTmodels = NML(val(0))
+					NML@TRKINTmodels := str_squeeze(str_split(NML@TRKINTmodels," = "))
+					NML@TRKINTmodels := NML@TRKINTmodels(1:)
 	end if
 
-	; an. INTmodels --> The late intensity models
+
+	; am. INTmodels --> Late intensity models
 	val := ind(isStrSubset2(NML,"INTM ="))
-	if(ismissing(val(0)))then	NML@INTmodels = NML@MCODE
-	else				NML@INTmodels = NML(val(0))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"INTM00 ="))
+		if(ismissing(val(0)))then	NML@INTmodels = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@INTmodels = NML(val(0))
 					NML@INTmodels := str_squeeze(str_split(NML@INTmodels," = "))
-					NML@INTmodels := array_append_record(NML@MCODE,NML@INTmodels(1:),0)
+					NML@INTmodels := NML@INTmodels(1:)
 	end if
 
-	; ao. PRSmodels --> The late pressure models
+	; an. PRSmodels --> Late pressure models
 	val := ind(isStrSubset2(NML,"PRSM ="))
-	if(ismissing(val(0)))then	NML@PRSmodels = NML@MCODE
-	else				NML@PRSmodels = NML(val(0))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"PRSM00 ="))
+		if(ismissing(val(0)))then	NML@PRSmodels = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@PRSmodels = NML(val(0))
 					NML@PRSmodels := str_squeeze(str_split(NML@PRSmodels," = "))
-					NML@PRSmodels := array_append_record(NML@MCODE,NML@PRSmodels(1:),0)
+					NML@PRSmodels := NML@PRSmodels(1:)
 	end if
 
-	; ap. TRKmodelsI00 --> 00Z/12Z early track models
-	val := ind(isStrSubset2(NML,"TRKMI00 ="))
-	if(ismissing(val(0)))then	val := ind(isStrSubset2(NML,"TRKMI ="))   end if
-	if(ismissing(val(0)))then	if(NML@MCODEI.eq."MISSING")then	NML@TRKmodelsI00 = "MISSING"
-				        else                            NML@TRKmodelsI00 = MCODEI
-					end if
-	else				NML@TRKmodelsI00 = NML(val(0))
-					NML@TRKmodelsI00 := str_squeeze(str_split(NML@TRKmodelsI00," = "))
-					if(NML@MCODEI.eq."MISSING")then	NML@TRKmodelsI00 := NML@TRKmodelsI00(1:)
-					else                            NML@TRKmodelsI00 := array_append_record(NML@MCODEI,NML@TRKmodelsI00(1:),0)
-					end if
+	; ao. TRKmodelsI --> Early track models
+	val := ind(isStrSubset2(NML,"TRKMI ="))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"TRKMI00 ="))
+		if(ismissing(val(0)))then	NML@TRKmodelsI = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@TRKmodelsI = NML(val(0))
+					NML@TRKmodelsI := str_squeeze(str_split(NML@TRKmodelsI," = "))
+					NML@TRKmodelsI := NML@TRKmodelsI(1:)
 	end if
 
-	; aq. TRKmodelsI06 --> 06Z/18Z early track models
-	val := ind(isStrSubset2(NML,"TRKMI06 ="))
-	if(ismissing(val(0)))then	val := ind(isStrSubset2(NML,"TRKMI ="))	end if
-	if(ismissing(val(0)))then	if(NML@MCODEI.eq."MISSING")then	NML@TRKmodelsI06 = "MISSING"
-					else                            NML@TRKmodelsI06 = NML@MCODEI
-					end if
-	else				NML@TRKmodelsI06 = NML(val(0))
-					NML@TRKmodelsI06 := str_squeeze(str_split(NML@TRKmodelsI06," = "))
-					if(NML@MCODEI.eq."MISSING")then	NML@TRKmodelsI06 := NML@TRKmodelsI06(1:)
-					else                            NML@TRKmodelsI06 := array_append_record(NML@MCODEI,NML@TRKmodelsI06(1:),0)
-					end if
-	end if
-
-	; ar. INTmodelsI --> The early intensity models
+	; ap. INTmodelsI --> Early intensity models
 	val := ind(isStrSubset2(NML,"INTMI ="))
-	if(ismissing(val(0)))then	if(NML@MCODEI.eq."MISSING")then	NML@INTmodelsI = "MISSING"
-					else                            NML@INTmodelsI = NML@MCODEI
-					end if
-	else				NML@INTmodelsI = NML(val(0))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"INTMI00 ="))
+		if(ismissing(val(0)))then	NML@INTmodelsI = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@INTmodelsI = NML(val(0))
 					NML@INTmodelsI := str_squeeze(str_split(NML@INTmodelsI," = "))
-					if(NML@MCODEI.eq."MISSING")then	NML@INTmodelsI := NML@INTmodelsI(1:)
-					else                            NML@INTmodelsI := array_append_record(NML@MCODEI,NML@INTmodelsI(1:),0)
-					end if
+					NML@INTmodelsI := NML@INTmodelsI(1:)
 	end if
 
-	; as. TRKmodelsT00 --> 00Z/12Z late track trend models
-	val := ind(isStrSubset2(NML,"TRKMT00 ="))
-	if(ismissing(val(0)))then	val := ind(isStrSubset2(NML,"TRKMT ="))	end if
-	if(ismissing(val(0)))then	NML@TRKmodelsT00 = NML@MCODE
-	else				NML@TRKmodelsT00 = NML(val(0))
-					NML@TRKmodelsT00 := str_squeeze(str_split(NML@TRKmodelsT00," = "))
-					NML@TRKmodelsT00 := array_append_record(NML@MCODE,NML@TRKmodelsT00(1:),0)
+	; aq. TRKmodelsT --> Late track trend models
+	val := ind(isStrSubset2(NML,"TRKMT ="))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"TRKMT00 ="))
+		if(ismissing(val(0)))then	NML@TRKmodelsT = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@TRKmodelsT = NML(val(0))
+					NML@TRKmodelsT := str_squeeze(str_split(NML@TRKmodelsT," = "))
+					NML@TRKmodelsT := NML@TRKmodelsT(1:)
 	end if
 
-	; at. TRKmodelsT06 --> 06Z/18Z late track trend models
-	val := ind(isStrSubset2(NML,"TRKMT06 ="))
-	if(ismissing(val(0)))then	val := ind(isStrSubset2(NML,"TRKMT ="))	end if
-	if(ismissing(val(0)))then	NML@TRKmodelsT06 = NML@MCODE
-	else				NML@TRKmodelsT06 = NML(val(0))
-					NML@TRKmodelsT06 := str_squeeze(str_split(NML@TRKmodelsT06," = "))
-					NML@TRKmodelsT06 := array_append_record(NML@MCODE,NML@TRKmodelsT06(1:),0)
-	end if
-
-	; au. INTmodelsT --> The late intensity trend models
+	; ar. INTmodelsT --> Late intensity trend models
 	val := ind(isStrSubset2(NML,"INTMT ="))
-	if(ismissing(val(0)))then	NML@INTmodelsT = NML@MCODE
-	else				NML@INTmodelsT = NML(val(0))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"INTMT00 ="))
+		if(ismissing(val(0)))then	NML@INTmodelsT = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@INTmodelsT = NML(val(0))
 					NML@INTmodelsT := str_squeeze(str_split(NML@INTmodelsT," = "))
-					NML@INTmodelsT := array_append_record(NML@MCODE,NML@INTmodelsT(1:),0)
+					NML@INTmodelsT := NML@INTmodelsT(1:)
 	end if
 
-	; av. etModels --> The early track models for verification
+	; as. PRSmodelsT --> Late pressure trend models
+	val := ind(isStrSubset2(NML,"PRSMT ="))
+	if(ismissing(val(0)))then
+		val := ind(isStrSubset2(NML,"PRSMT00 ="))
+		if(ismissing(val(0)))then	NML@PRSmodelsT = "MISSING"	end if
+	end if
+	if(.not.ismissing(val(0)))then	NML@PRSmodelsT = NML(val(0))
+					NML@PRSmodelsT := str_squeeze(str_split(NML@INTmodelsT," = "))
+					NML@PRSmodelsT := NML@INTmodelsT(1:)
+	end if
+
+	; at. etModels --> The early track models for verification
 	val := ind(isStrSubset2(NML,"ETM ="))
-	if(ismissing(val(0)))then	if(NML@MCODEI.eq."MISSING")then	NML@etModels = "MISSING"
-					else                            NML@etModels = NML@MCODEVI
-					end if
+	if(ismissing(val(0)))then	NML@etModels = "MISSING"
 	else				NML@etModels = NML(val(0))
 					NML@etModels := str_squeeze(str_split(NML@etModels," = "))
-					if(NML@MCODEI.eq."MISSING")then	NML@etModels := NML@etModels(1:)
-					else                            NML@etModels := array_append_record(NML@MCODEVI,NML@etModels(1:),0)
-					end if
+					NML@etModels := NML@etModels(1:)
 	end if
 
 	; aw. eiModels --> The early intensity models for verification
 	val := ind(isStrSubset2(NML,"EIM ="))
-	if(ismissing(val(0)))then	if(NML@MCODEI.eq."MISSING")then	NML@eiModels = "MISSING"
-					else                            NML@eiModels = NML@MCODEVI
-					end if
+	if(ismissing(val(0)))then	NML@eiModels = "MISSING"
 	else				NML@eiModels = NML(val(0))
 					NML@eiModels := str_squeeze(str_split(NML@eiModels," = "))
-					if(NML@MCODEI.eq."MISSING")then	NML@eiModels := NML@eiModels(1:)
-					else                            NML@eiModels := array_append_record(NML@MCODEVI,NML@eiModels(1:),0)
-					end if
+					NML@eiModels := NML@eiModels(1:)
 	end if
 
 	; ax. ltModels --> The late track models for verification
 	val := ind(isStrSubset2(NML,"LTM ="))
-	if(ismissing(val(0)))then	NML@ltModels = NML@MCODEV
+	if(ismissing(val(0)))then	NML@ltModels = "MISSING"
 	else				NML@ltModels = NML(val(0))
 					NML@ltModels := str_squeeze(str_split(NML@ltModels," = "))
-					NML@ltModels := array_append_record(NML@MCODEV,NML@ltModels(1:),0)
+					NML@ltModels := NML@ltModels(1:)
 	end if
 
 	; ay. liModels --> The late intensity models for verification
 	val := ind(isStrSubset2(NML,"LIM ="))
-	if(ismissing(val(0)))then	NML@liModels = NML@MCODEV
+	if(ismissing(val(0)))then	NML@liModels = "MISSING"
 	else				NML@liModels = NML(val(0))
 					NML@liModels := str_squeeze(str_split(NML@liModels," = "))
-					NML@liModels := array_append_record(NML@MCODEV,NML@liModels(1:),0)
+					NML@liModels := NML@liModels(1:)
 	end if
 
 	; az. LEAD_TIMES --> Lead times for X-axis tick marks and verification.
