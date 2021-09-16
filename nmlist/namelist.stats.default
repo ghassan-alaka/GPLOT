@@ -4,6 +4,7 @@ TRENDS                True
 VERIFICATION          True
 
 LATE_TK_GUIDE         True
+LATE_TKINT_GUIDE      True
 EARLY_TK_GUIDE        True
 LATE_INT_GUIDE        True
 EARLY_INT_GUIDE       True
