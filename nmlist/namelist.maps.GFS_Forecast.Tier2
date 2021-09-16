@@ -8,10 +8,10 @@ True      UV             05000850d     N/A          N/A     N/A          N/A    
 True      UV             07000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          07000850d     SHSL
 True      PV             200           N/A          N/A     N/A          N/A         UV           200         MSLP         N/A     N/A         N/A           PV200_UV200_MSLP
 True      CAPE           N/A           HLCY         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           CAPE_HLCY_MSLP
-False     T              2             N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           T2
-True      PRCP           24            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           PRCP24_MSLP
+True      T              2             N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           T2
+False     PRCP           24            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           PRCP24_MSLP
 True      HGT            200           N/A          N/A     N/A          N/A         UV           200         MSLP         N/A     N/A         N/A           HGT200_UV200_MSLP
-False     SST            N/A           T            2       N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            SST_T2
+True      SST            N/A           T            2       N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            SST_T2
 False     DPT            2             SST          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            DPT2_SST
 False     LHFLX          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            LHFLX_MSLP
 False     SHFLX          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            SHFLX_MSLP

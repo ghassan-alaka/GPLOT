@@ -1851,11 +1851,11 @@ begin
 			;exptind=str_match_ind(masterExpt,EXPT)
 			exptind:=ind(masterExpt.eq.EXPT)
 			if(dimsizes(exptind).gt.1)then
-				print("ERROR: getExptInfo: More than one matching experiment found:")
-				print("ERROR: getExptInfo: "+masterInfo(exptind))
-				exit
+				print("WARNING: getExptInfo: More than one matching entry was found:")
+				print("WARNING: getExptInfo: "+masterInfo(exptind))
+				print("WARNING: Going with the last entry by default.")
 			end if
-			EXPTINFO(aaa)=str_squeeze(str_get_field(masterInfo(exptind),typeind,","))
+			EXPTINFO(aaa)=str_squeeze(str_get_field(masterInfo(exptind(dimsizes(exptind)-1)),typeind,","))
 		end if
 	end do
 

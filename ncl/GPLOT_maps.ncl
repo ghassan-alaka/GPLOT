@@ -638,7 +638,8 @@ do sss = 0,NATCF-1
         ALL_SNUM(sss)   = toint(systemfunc("echo "+ALL_SID(sss)+" | rev | cut -c1-2 | rev"))
                         
         ; c. Read the ATCF data
-        data := atcfRead(ATCF_FILES(sss),IDATE,str_upper(MODELID))
+        ;data := atcfRead(ATCF_FILES(sss),IDATE,str_upper(MODELID))
+	data := adeckRead(ATCF_FILES(sss),str_upper(MODELID),IDATE)
         
         ; d. Loop over all forecast hours (from input files)
         do fff = 0,nFHR-1               
