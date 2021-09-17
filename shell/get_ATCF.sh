@@ -49,6 +49,7 @@ ODIR="$4"
 BASIN="$5"
 SNUM="$6"
 YYYY="$7"
+NHCDIR="$8"
 
 if [ "$DECK_TYPE" != "realtime" ] && [ "$DECK_TYPE" != "archive" ] && \
    [ "$DECK_TYPE" != "archplus" ] && [ "$DECK_TYPE" != "archinvest" ]; then
@@ -78,6 +79,10 @@ if [ "$YYYY" == "all" ] || [ -z "$YYYY" ]; then
     YYYY="[0-9][0-9][0-9][0-9]"
 fi
 
+if [ -z "${NHCDIR}" ]; then
+    NHCDIR="NHC"
+fi
+
 
 # 2. Get A-Decks
 if [ "$ADECK_ON" == "1" ]; then
@@ -85,9 +90,9 @@ if [ "$ADECK_ON" == "1" ]; then
 
     # Define, Create, & Change directories
     ADIR="${ODIR}/adeck"
-    NHCDIR="${ODIR}/adeck/NHC"
+    NHCPATH="${ODIR}/adeck/${NHCDIR}"
     WORKDIR="${ODIR}/adeck/TMP.$(date +%N)"
-    mkdir -p ${NHCDIR}
+    mkdir -p ${NHCPATH}
     mkdir -p ${WORKDIR}
     cd ${ADIR}
     if [ "${ARCHIVE}" == "NO" ]; then
@@ -112,20 +117,20 @@ if [ "$ADECK_ON" == "1" ]; then
             INVEST="YES"
         fi
 
-        # Decide if/how to copy the file to NHCDIR
-        if [ -f ${NHCDIR}/${D} ]; then
-            DIFF=$(diff ${NHCDIR}/${D} ${WORKDIR}/${D})
+        # Decide if/how to copy the file to NHCPATH
+        if [ -f ${NHCPATH}/${D} ]; then
+            DIFF=$(diff ${NHCPATH}/${D} ${WORKDIR}/${D})
             if [ "${DIFF}" != "" ] &&[ "${INVEST}" == "YES" ]; then
-                cat ${NHCDIR}/${D} ${WORKDIR}/${D} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${WORKDIR}/TMP.${D}
-                DIFF=$(diff ${NHCDIR}/${D} ${WORKDIR}/TMP.${D})
+                cat ${NHCPATH}/${D} ${WORKDIR}/${D} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${WORKDIR}/TMP.${D}
+                DIFF=$(diff ${NHCPATH}/${D} ${WORKDIR}/TMP.${D})
                 if [ "${DIFF}" != "" ]; then
-                    mv ${WORKDIR}/TMP.${D} ${NHCDIR}/${D}
+                    mv ${WORKDIR}/TMP.${D} ${NHCPATH}/${D}
                 fi
             elif [ "${DIFF}" != "" ] && [ "${INVEST}" == "NO" ]; then
-                cp -p ${WORKDIR}/${D} ${NHCDIR}/.
+                cp -p ${WORKDIR}/${D} ${NHCPATH}/.
             fi
         else
-            cp -p ${WORKDIR}/${D} ${NHCDIR}/.
+            cp -p ${WORKDIR}/${D} ${NHCPATH}/.
         fi
 
     done
@@ -156,14 +161,14 @@ if [ "$ADECK_ON" == "1" ]; then
             cat ${WORKDIR}/${FIN} | sort -u | sort -k3,3 -k5,5 -k6,6n > ${WORKDIR}/${FOUT}
             sed -i 's/, [A-Z]'"${SDIG2}"',/, '"${SNUM2}"',/g' ${WORKDIR}/${FOUT}
 
-            # Decide if/how to copy the file to NHCDIR
-            if [ -f ${NHCDIR}/${FOUT} ]; then
-                DIFF=$(diff ${NHCDIR}/${FOUT} ${WORKDIR}/${FOUT})
+            # Decide if/how to copy the file to NHCPATH
+            if [ -f ${NHCPATH}/${FOUT} ]; then
+                DIFF=$(diff ${NHCPATH}/${FOUT} ${WORKDIR}/${FOUT})
                 if [ "${DIFF}" != "" ]; then
-                    cp -p ${WORKDIR}/${FOUT} ${NHCDIR}/.
+                    cp -p ${WORKDIR}/${FOUT} ${NHCPATH}/.
                 fi
             else
-                cp -p ${WORKDIR}/${FOUT} ${NHCDIR}/.
+                cp -p ${WORKDIR}/${FOUT} ${NHCPATH}/.
             fi
         done
     fi
@@ -211,7 +216,7 @@ if [ "$BDECK_ON" == "1" ]; then
             INVEST="YES"
         fi
 
-        # Decide if/how to copy the file to NHCDIR
+        # Decide if/how to copy the file to BDIR
         if [ -f ${BDIR}/${D} ]; then
             DIFF=$(diff ${BDIR}/${D} ${WORKDIR}/${D})
             if [ "${DIFF}" != "" ] && [ "${INVEST}" == "YES" ]; then
