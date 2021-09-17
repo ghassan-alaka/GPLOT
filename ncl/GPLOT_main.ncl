@@ -688,7 +688,7 @@ begin
 	end if
 
 	; al. TRKINTmodels --> Late track/intensity models
-	val := ind(isStrSubset2(NML,"TRKINTM ="))
+	val := ind(isStrSubset2(NML,"TRKIM ="))
 	if(ismissing(val(0)))then	NML@TRKINTmodels = "MISSING"
 	else				NML@TRKINTmodels = NML(val(0))
 					NML@TRKINTmodels := str_squeeze(str_split(NML@TRKINTmodels," = "))
