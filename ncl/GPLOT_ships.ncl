@@ -133,389 +133,42 @@ print("MSG: Using this master namelist:  "+MASTER_NML)
 
 
 ; 2. Read the master namelist into NCL
-data = asciiread(MASTER_NML,-1,"string")
-
+;data = asciiread(MASTER_NML,-1,"string")
+NML = Read_Master_Namelist(MASTER_NML)
 
 ; 3. Get basic variables from the master namelist:
-
-; a. DOMAIN --> the map domain with hard-coded boundaries.
-if(isvar("DOMAIN"))then         print("MSG: Detected command line variable: DOMAIN")
-else                            val := ind(isStrSubset2(data,"DOMAIN ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: DOMAIN should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming DOMAIN='atl'.")
-                                        DOMAIN  = "atl"
-                                else
-                                        DOMAIN  = data(val(0))
-                                        DOMAIN  := str_squeeze(str_split(DOMAIN," = "))
-                                        DOMAIN  := DOMAIN(1)
-                                end if
+if(.not.isvar("DOMAIN"))then            DOMAIN = NML@DOMAIN                     end if
+if(.not.isvar("TIER"))then              TIER = NML@TIER                         end if
+if(.not.isvar("DSOURCE"))then           DSOURCE = NML@DSOURCE                   end if
+if(.not.isvar("MACHINE"))then           MACHINE = NML@MACHINE                   end if
+if(.not.isvar("IDATE"))then             IDATE = NML@IDATE                       end if
+if(.not.isvar("SID"))then               SID = NML@SID                           end if
+if(.not.isvar("MODELID"))then           MODELID = NML@MODELID                   end if
+if(.not.isvar("ATCF_REQD"))then         ATCF_REQD = NML@ATCF_REQD               end if
+if(.not.isvar("EXPT"))then              EXPT = NML@EXPT                         end if
+if(.not.isvar("IDIR"))then              IDIR = NML@IDIR                         end if
+if(.not.isvar("ITAG"))then              ITAG = NML@ITAG                         end if
+if(.not.isvar("EXT"))then               EXT = NML@EXT                           end if
+if(.not.isvar("ODIR"))then              ODIR = NML@ODIR                         end if
+if(.not.isvar("ODIR_TYPE"))then         ODIR_TYPE = NML@ODIR_TYPE               end if
+if(.not.isvar("INIT_HR"))then           INIT_HR = NML@INIT_HR                   end if
+if(.not.isvar("FNL_HR"))then            FNL_HR = NML@FNL_HR                     end if
+if(.not.isvar("FMT_HR"))then            FMT_HR = NML@FMT_HR                     end if
+if(.not.isvar("DT"))then                DT = NML@DT                             end if
+if(.not.isvar("IS_MSTORM"))then         IS_MSTORM = NML@IS_MSTORM               end if
+if(.not.isvar("DO_RMWHITE"))then        DO_RMWHITE = NML@DO_RMWHITE             end if
+if(.not.isvar("DO_SRCLBL"))then         DO_SRCLBL = NML@DO_SRCLBL               end if
+if(.not.isvar("PIV"))then               PIV = NML@MAP_PIV                       end if
+if(.not.isvar("DO_CONVERTGIF"))then     DO_CONVERTGIF = NML@DO_CONVERTGIF       end if
+if(.not.isvar("DO_PDF"))then		DO_PDF = NML@DO_PDF			end if
+if(.not.isvar("FORCE"))then		FORCE = NML@FORCE
+else					FORCE := where(FORCE.eq."True",True,False)
 end if
 
-; b. TIER --> the priority of current batch of graphics.
-if(isvar("TIER"))then           print("MSG: Detected command line variable: TIER")
-else                            val := ind(isStrSubset2(data,"TIER ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: TIER should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming TIER='Tier1'.")
-                                        TIER    = "Tier1"
-                                else
-                                        TIER    = data(val(0))
-                                        TIER    := str_squeeze(str_split(TIER," = "))
-                                        TIER    := TIER(1)
-                                end if
-end if
-
-; c. DSOURCE --> the data source (not the experiment!)
-if(isvar("DSOURCE"))then        print("MSG: Detected command line variable: DSOURCE")
-else                            val := ind(isStrSubset2(data,"DSOURCE ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: DSOURCE should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming DSOURCE='HAFS'.")
-                                        DSOURCE = "HAFS"
-                                else
-                                        DSOURCE = data(val(0))
-                                        DSOURCE := str_squeeze(str_split(DSOURCE," = "))
-                                        DSOURCE := DSOURCE(1)
-                                end if
-end if
-
-; d. MACHINE --> the system environment (e.g., JET, HERA, ORION)
-if(isvar("MACHINE"))then        print("MSG: Detected command line variable: MACHINE")
-else                            val := ind(isStrSubset2(data,"MACHINE ="))
-                                if(ismissing(val(0)))then
-					val := ind(isStrSubset2(data,"SYS_ENV ="))
-					if(ismissing(val(0)))then
-	                                        print("WARNING: MACHINE should be supplied via command line or namelist.")
-	                                        print("WARNING: Assuming MACHINE='JET'.")
-	                                        MACHINE = "JET"
-					else
-						MACHINE = data(val(dimsizes(val)-1))
-						MACHINE := str_squeeze(str_split(MACHINE," = "))
-						MACHINE := MACHINE(1)
-					end if
-                                else
-                                        MACHINE = data(val(dimsizes(val)-1))
-                                        MACHINE := str_squeeze(str_split(MACHINE," = "))
-                                        MACHINE := MACHINE(1)
-                                end if
-end if
-
-; e. IDATE --> the forecast cycle (YYYYMMDDHH)
-if(isvar("IDATE"))then          print("MSG: Detected command line variable: IDATE")
-else                            val := ind(isStrSubset2(data,"IDATE ="))
-                                if(ismissing(val(0)))then
-                                        print("ERROR: IDATE must be supplied via command line or namelist.")
-                                        exit
-                                else
-                                        IDATE   = data(val(0))
-                                        IDATE   := str_squeeze(str_split(IDATE," = "))
-                                        if(dimsizes(IDATE).eq.2)then    IDATE := IDATE(1)
-                                        else                            IDATE := ""
-                                        end if
-                                end if
-end if
-
-; f. SID --> the Storm identifier (e.g., 00L)
-if(isvar("SID"))then            print("MSG: Detected command line variable: SID")
-else                            val := ind(isStrSubset2(data,"SID ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: SID should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming SID='NONE'.")
-                                        SID     = "NONE"
-                                else
-                                        SID     = data(val(0))
-                                        SID     := str_squeeze(str_split(SID," = "))
-                                        if(dimsizes(SID).eq.2)then      SID := SID(1)
-                                        else                            SID := ""
-                                        end if
-                                end if
-end if
-
-; g. MODELID --> the model identifier (e.g., HAFS, HWRF, AVNO, ,etc.)
-if(isvar("MODELID"))then        print("MSG: Detected command line variable: MODELID")
-else                            val := ind(isStrSubset2(data,"MID ="))
-                                if(ismissing(val(0)))then
-                                        MODELID = ""
-                                else
-                                        MODELID = data(val(0))
-                                        MODELID := str_squeeze(str_split(MODELID," = "))
-                                        if(dimsizes(MODELID).gt.2)then
-                                                print("MSG: More than one MODELID found. I will take only the first one.")
-                                                MODELID := MODELID(1)
-                                        else if(dimsizes(MODELID).eq.2)then
-                                                MODELID := MODELID(1)
-                                        else
-                                                MODELID=""
-                                        end if  end if
-                                end if
-end if
-
-; h. ATCF_REQD --> 'True' if the ATCF is required.
-if(isvar("ATCF_REQD"))then      print("MSG: Detected command line variable: ATCF_REQD")
-else                            val := ind(isStrSubset2(data,"ATCF_REQD ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: ATCF_REQD should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming ATCF_REQD='True'.")
-                                        ATCF_REQD       := True
-                                else
-                                        ATCF_REQD       = data(val(0))
-                                        ATCF_REQD       := str_squeeze(str_split(ATCF_REQD," = "))
-                                        ATCF_REQD       := where(ATCF_REQD(1).eq."True",True,False)
-                                end if
-end if
-
-; i. EXPT --> the experiment name (not the data source!)
-if(isvar("EXPT"))then           print("MSG: Detected command line variable: EXPT")
-else                            val := ind(isStrSubset2(data,"EXPT ="))
-                                if(ismissing(val(0)))then
-                                        print("ERROR: EXPT must be supplied via command line or namelist.")
-                                        exit
-                                else
-                                        EXPT    = data(val(0))
-                                        EXPT    := str_squeeze(str_split(EXPT," = "))
-                                        EXPT    := EXPT(1)
-                                end if
-end if
-
-; j. IDIR --> the top-level input data path
-if(isvar("IDIR"))then           print("MSG: Detected command line variable: IDIR")
-else                            val := ind(isStrSubset2(data,"IDIR ="))
-                                if(ismissing(val(0)))then
-                                        print("ERROR: IDIR must be supplied via command line or namelist.")
-                                        exit
-                                else
-                                        IDIR    = data(val(0))
-                                        IDIR    := str_squeeze(str_split(IDIR," = "))
-                                        IDIR    := IDIR(1)
-                                end if
-end if
-
-; k. ITAG --> the file name tag for input data.
-if(isvar("ITAG"))then           print("MSG: Detected command line variable: ITAG")
-else                            val := ind(isStrSubset2(data,"ITAG ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: ITAG should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming ITAG=''.")
-                                        ITAG = ""
-                                else
-                                        ITAG    = data(val(0))
-                                        ITAG    := str_squeeze(str_split(ITAG," = "))
-                                        if(dimsizes(ITAG).eq.1)then     ITAG = ""
-                                        else                            ITAG := ITAG(1)
-                                                                        ITAG := str_squeeze(str_split(ITAG," "))
-                                        end if
-                                end if
-end if
-
-; l. EXT --> the extension of the input data files.
-if(isvar("EXT"))then            print("MSG: Detected command line variable: EXT")
-else                            val := ind(isStrSubset2(data,"EXT ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: EXT should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming EXT=''.")
-                                else
-                                        EXT     = data(val(0))
-                                        EXT     := str_squeeze(str_split(EXT," = "))
-                                        if(dimsizes(EXT).eq.1)then      EXT = ""
-                                        else                            EXT := EXT(1)
-                                                                        EXT := str_squeeze(str_split(EXT," "))
-                                        end if
-                                end if
-end if
-
-; m. ODIR --> the top-level output data path
-if(isvar("ODIR"))then           print("MSG: Detected command line variable: ODIR")
-else                            val := ind(isStrSubset2(data,"ODIR ="))
-                                if(ismissing(val(0)))then
-                                        print("ERROR: ODIR must be supplied via command line or namelist.")
-                                        exit
-                                else
-                                        ODIR    = data(val(0))
-                                        ODIR    := str_squeeze(str_split(ODIR," = "))
-                                        ODIR    := ODIR(1)
-                                end if
-end if
-
-; n. ODIR_TYPE --> special option to modify ODIR
-if(isvar("ODIR_TYPE"))then      print("MSG: Detected command line variable: ODIR_TYPE")
-else                            val := ind(isStrSubset2(data,"ODIR_TYPE ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: ODIR_TYPE should be supplied via command line or namelist.")
-                                        ODIR_TYPE = 0
-                                else
-                                        ODIR_TYPE       = data(val(0))
-                                        ODIR_TYPE       := str_squeeze(str_split(ODIR_TYPE," = "))
-                                        ODIR_TYPE       := toint(ODIR_TYPE(1))
-                                end if
-end if
-if(ODIR_TYPE.eq.1)then  ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/","//","/")
-else                    ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
+if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/","//","/")
+else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
 end if
 print("MSG: I will place graphics in this location --> "+ODIR)
-
-; o. INIT_HR --> the initial forecast hour for which graphics will be produced.
-if(isvar("INIT_HR"))then        print("MSG: Detected command line variable: INIT_HR")
-else                            val := ind(isStrSubset2(data,"INIT_HR ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: INIT_HR should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming INIT_HR=0")
-                                        INIT_HR = 0
-                                else
-                                        INIT_HR = data(val(0))
-                                        INIT_HR := str_squeeze(str_split(INIT_HR," = "))
-                                        INIT_HR := toint(tofloat(INIT_HR(1)))
-                                end if
-end if
-
-; p. FNL_HR --> the final forecast hour for which graphics will be produced.
-;               value may change based on the availability of ATCF data.
-if(isvar("FNL_HR"))then         print("MSG: Detected command line variable: FNL_HR")
-else                            val := ind(isStrSubset2(data,"FNL_HR ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: FNL_HR should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming FNL_HR=126")
-                                        FNL_HR = 126
-                                else
-                                        FNL_HR  = data(val(0))
-                                        FNL_HR  := str_squeeze(str_split(FNL_HR," = "))
-                                        FNL_HR  := toint(tofloat(FNL_HR(1)))
-                                end if
-end if
-
-; q. FMT_HR --> the format code for the forecast hour used in the input file name
-if(isvar("FMT_HR"))then         print("MSG: Detected command line variable: FMT_HR")
-else                            val := ind(isStrSubset2(data,"FMT_HR ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: FMT_HR should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming FMT_HR='%0.3i'")
-                                        FMT_HR = "%0.3i"
-                                else
-                                        FMT_HR  = data(val(0))
-                                        FMT_HR  := str_squeeze(str_split(FMT_HR," = "))
-                                        FMT_HR  := "%0."+FMT_HR(1)+"i"
-                                end if
-end if
-
-; r. DT --> the time step between forecast hours
-if(isvar("DT"))then             print("MSG: Detected command line variable: DT")
-else                            val := ind(isStrSubset2(data,"DT ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: DT should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming DT=3")
-                                        DT = 3
-                                else
-                                        DT      = data(val(0))
-                                        DT      := str_squeeze(str_split(DT," = "))
-                                        DT      := toint(tofloat(DT(1)))
-                                end if
-end if
-
-; s. IS_MSTORM --> 'True' if the data contains forecasts for multiple TCs
-;                  This variable determines if the case is from Basin-Scale HWRF.
-;                  It is important because that means multiple high-res domains
-;                  could exist. Domains that are not storm-centered should be not
-;                  be linked to a specific storm. The Operational HWRF is storm-
-;                  centered, so it is always linked to a specific storm.
-if(isvar("IS_MSTORM"))then      print("MSG: Detected command line variable: IS_MSTORM")
-else                            val := ind(isStrSubset2(data,"IS_MSTORM ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: IS_MSTORM should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming IS_MSTORM=False")
-                                        IS_MSTORM = False
-                                else
-                                        IS_MSTORM = data(val(0))
-                                        IS_MSTORM := str_squeeze(str_split(IS_MSTORM," = "))
-                                        IS_MSTORM := where(IS_MSTORM(1).eq."True",True,False)
-                                end if
-end if
-
-; t. DO_RMWHITE --> 'True' if the white space should be trimmed from graphics.
-if(isvar("DO_RMWHITE"))then     print("MSG: Detected command line variable: DO_RMWHITE")
-else                            val := ind(isStrSubset2(data,"DO_RMWHITE ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: DO_RMWHITE should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming DO_RMWHITE=False")
-                                        DO_RMWHITE = False
-                                else
-                                        DO_RMWHITE      = data(val(0))
-                                        DO_RMWHITE      := str_squeeze(str_split(DO_RMWHITE," = "))
-                                        DO_RMWHITE      := where(DO_RMWHITE(1).eq."True",True,False)
-                                end if
-end if
-
-; u. DO_SRCLBL --> 'True' if the data source should be added to the graphic title.
-if(isvar("DO_SRCLBL"))then      print("MSG: Detected command line variable: DO_SRCLBL")
-else                            val := ind(isStrSubset2(data,"DO_SRCLBL ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: DO_SRCLBL should be supplied via command line or namelist.")
-                                        print("WARNING: Assuming DO_SRCLBL=False")
-                                        DO_SRCLBL = False
-                                else
-                                        DO_SRCLBL       = data(val(0))
-                                        DO_SRCLBL       := str_squeeze(str_split(DO_SRCLBL," = "))
-                                        DO_SRCLBL       := where(DO_SRCLBL(1).eq."True",True,False)
-                                end if
-end if
-
-; v. PIV --> the pivot longitude for regional domains.
-;            For strange regional domains (e.g., HWRF-B), the longitude array must be reordered.
-if(isvar("PIV"))then            print("MSG: Detected command line variable: PIV")
-else                            val := ind(isStrSubset2(data,"PIV ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: PIV should be supplied via the command line or namelist.")
-                                        print("WARNING: Assuming PIV=180")
-                                        PIV = 180
-                                else
-                                        PIV = data(val(0))
-                                        PIV := str_squeeze(str_split(PIV," = "))
-                                        PIV := tofloat(PIV(1))
-                                end if
-end if
-
-; w. DO_CONVERTGIF --> 'True' ifPNG files should be converted to GIF and remove PNG files.
-if(isvar("DO_CONVERTGIF"))then  print("MSG: Detected command line variable: DO_CONVERTGIF")
-else                            val := ind(isStrSubset2(data,"DO_CONVERTGIF ="))
-                                if(ismissing(val(0)))then
-                                        print("WARNING: DO_CONVERTGIF should be supplied via the command line or namelist.")
-                                        print("WARNING: Assuming DO_CONVERTGIF=False")
-                                        DO_CONVERTGIF = False
-                                else
-                                        DO_CONVERTGIF      = data(val(0))
-                                        DO_CONVERTGIF      := str_squeeze(str_split(DO_CONVERTGIF," = "))
-                                        DO_CONVERTGIF      := where(DO_CONVERTGIF(1).eq."True",True,False)
-                                end if
-end if
-
-; x. DO_PDF --> If True, PDF files are created.
-;               Also, DO_CONVERTGIF and DO_RMWHITE are set to False
-val := ind(isStrSubset2(data,"DO_PDF ="))
-if(.not.ismissing(val(0)))then  DO_PDF       = data(val)
-                                DO_PDF       := str_squeeze(str_split(DO_PDF," = "))
-                                DO_PDF       := where(DO_PDF(1).eq."True",True,False)
-else                            DO_PDF       := False
-end if
-if(DO_PDF)then		DO_CONVERTGIF = False
-			DO_RMWHITE = False
-end if
-
-; y. FORCE --> If True, force certain actions
-if(isvar("FORCE"))then          print("MSG: Detected command line variable: FORCE")
-else                            val := ind(isStrSubset2(data,"FORCE ="))
-                                if(.not.ismissing(val(0)))then  FORCE   = data(val)
-                                                                FORCE   := str_squeeze(str_split(FORCE," = "))
-                                                                FORCE   := where(FORCE(1).eq."True",True,False)
-                                else                            FORCE   := False
-                                end if
-end if
-if(.not.isvar("FORCE"))then             FORCE = False
-else
-        if(FORCE.eq."")then             FORCE := False
-        else if(typeof(FORCE).eq."string")then
-                                        FORCE := where(FORCE.eq."True",True,False)
-        end if  end if
-end if
-
 
 
 
@@ -853,7 +506,8 @@ SID_OLD = getInvestSID(YYYY,SID)
 			
 
 ; Read the ATCF data
-data	:= atcfRead(ATCF_FILES,IDATE,"")
+;data	:= atcfRead(ATCF_FILES,IDATE,"")
+data := adeckRead(ATCF_FILES,"",IDATE)
 do fff = 0,nFHR-1		
 	val	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
 	if(fff.eq.nFHR-1)then	val1	= default_fillvalue("integer")
@@ -3093,7 +2747,6 @@ end if ; DO_PLOT
 ; IF YOU GOT HERE, THEN THE SCRIPT HAS FINISHED RUNNING WITHOUT
 ; FATAL, DEBILITATING ERRORS. WOW! I DIDN'T THINK ANYONE WOULD
 ; ACTUALLY GET THIS FAR. LET'S REJOICE! Cheers!
-LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 if(.not.FNL_ATCF)then

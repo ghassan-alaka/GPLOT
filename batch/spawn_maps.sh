@@ -817,12 +817,23 @@ for TR in ${TIER[@]}; do
                         # Only files that have not been modified in over 30 min are
                         # removed from the list.
                         if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                            CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                            #CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                            TMP=$(grep "$FILE" ${PLOTTED_FILE})
+                            CFILE=`echo "$TMP" | cut -d' ' -f1`
+                            NATCF=`echo "$TMP" | cut -d' ' -f2`
+                            ATCFDONE=`echo "$TMP" | cut -d' ' -f3`
+                            if [ $SC == "True" ]; then
+                                ATCF_EXP=1
+                            else
+                                ATCF_EXP=${#CYCLE_ATCF[@]}
+                            fi
                             if [[ -n "$CFILE" ]]; then
                                 test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
                                 if [[ -n ${test} ]]; then
-                                    unset 'IFILES[$i]'
-                                    unset 'IFHRS[$i]'
+                                    if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        unset 'IFILES[$i]'
+                                        unset 'IFHRS[$i]'
+                                    fi
                                 fi
                             fi
                         fi
@@ -1070,6 +1081,35 @@ for TR in ${TIER[@]}; do
         done #end of STORM loop
     done #end of CYCLE loop
 done #end of TR loop
+
+
+# Wait for all processes to finish. Check the exit code and update
+# the status file accordingly if the process failed. ${PIDS} is non-empty
+# only when the processes are submitted to the background
+#if [ ! -z "${PIDS[*]}" ]; then
+#    STILL_RUNNING=0
+#    while [[ $STILL_RUNNING -eq 0 ]]; do
+#        i=0
+#        for p in ${PIDS[@]}; do
+#            if ps | grep "^\s*${p}"; then
+#                STILL_RUNNING=0
+#                echo "MSG: The process (${p}) is still running."
+#            else
+#                STILL_RUNNING=1
+#                if wait ${p}; then
+#                    echo "MSG: The process (${p}) finished with an exit code of zero."
+#                else
+#                    echo "MSG: The process (${p}) finished with a non-zero exit code."
+#                    echo "MSG: Setting the status to failed in ${PSTATUS[i]}"
+#                    echo "failed" > ${PSTATUS[i]}
+#                fi
+#            fi
+#            ((i++))
+#        done
+#        sleep 30
+#    done
+#fi
+
 
 ###end of DO_MAPS###
 

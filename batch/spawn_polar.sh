@@ -337,12 +337,13 @@ if [ "${DO_POLAR}" = "True" ]; then
             # Never process the fake storm (00L)
             if [ "${STORM^^}" == "00L" ]; then
                 echo "MSG: Fake storm detected. Skipping."
+                continue
             fi
 
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}"` )
+            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1`)
             echo "MSG: The ATCF for this storm --> $STORM_ATCF"
             if [ -z "${STORM_ATCF[*]}" ]; then
                 echo "WARNING: No ATCF found for this storm. This might be OK."

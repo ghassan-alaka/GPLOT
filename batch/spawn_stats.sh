@@ -224,7 +224,7 @@ NATCF="${#ATCF_ALL[*]}"
 
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
-if [ "${ENSMEM[*]}" -eq 0 ] || [ -z ${ENSMEM} ]; then
+if [ "${ENSMEM[*]}" -eq 0 ] || [ -z "${ENSMEM[*]}" ]; then
     IS_ENS="False"
     ENSIDS=0
 else
@@ -434,16 +434,6 @@ if [ "${DO_STATS}" = "True" ]; then
             fi
         fi
 
-
-        #if [ "${FORCE}" == "True" ]; then
-        #    if [ "$DATE_CUT" -lt "$DATE_NOW" ]; then
-        #        echo "MSG: The current date ($DATE_NOW) is more recent than the cutoff date ($DATE_CUT). Not forcing production."
-        #        FORCE="False"
-            #else
-            #    echo "MSG: The current date ($DATE_NOW) is older than the cutoff date ($DATE_CUT). Forcing delayed production."
-            #    FORCE="Delay"
-        #    fi
-        #fi
 
 
         # Check the status and update it if necessary.
