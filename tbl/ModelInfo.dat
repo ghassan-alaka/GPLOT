@@ -1,5 +1,170 @@
+# OPERATIONAL MODELS #
 HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
 HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
+AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
+AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
+GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
+GFSI,        GFSI: Interp. GFS,  6,                blue.                Global Forecast System (Early)
+HMON,         HMON: Oper. HMON,  4,               green,                              Operational HMON
+HMNI,       HMNI: Interp. HMON,  4,               green,                      Operational HMON (Early)
+NVGM,       NVGM: Oper. NAVGEM, 11,               brown,                            Operational NAVGEM
+NVGI,       NVGI: Interp. NVGM, 11,               brown,                    Operational NAVGEM (Early)
+CTCX,          CTCX: COAMPS-TC,  8,                cyan,                              COAMPS-TC w/ GFS
+CTCI,       CTCI: Interp. CTCX,  8,                cyan,                               Early COAMPS-TC
+EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
+EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
+CMC,       CMC: Oper. Canadian,  3,                plum,     CMC Global Environmental Multiscale Model
+CMCI,        CMCI: Interp. CMC,  3,                plum, CMC Global Environmental Multiscale Model (Early)
+ECMO,          ECMO: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
+ECMI,       ECMI: Interp. ECMO,  8,               coral,      ECMWF Integrated Forecast System (Early)
+EMX,            EMX: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
+OFCL,       OFCL: NHC Official, 12,                 red,                         NHC Official Forecast
+OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
+DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
+LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,         Logistic Growth Equation Model (LGEM)
+IVCN,      IVCN: NHC Consensus, 10,              tomato,                       NHC Intensity Consensus
+TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                           NHC Track Consensus
+OCD5,    OCD5: Combined CLIPER,  4,       darkslategray,             Combined Track & Intensity CLIPER
+CLP5,       CLP5: Track CLIPER,  4,       darkslategray,                                  Track CLIPER
+SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                              Intensity CLIPER
+
+
+# EXPERIMENTAL MODELS #
+HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
+HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.2A (Early)
+HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
+HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
+HAFD,         HAFD: HAFS V0.2D,  7,                gold,   Hurricane Analysis and Forecast System V0.2D
+HFDI,     HFDI: Interp. HAFS-D,  7,                gold,                            HAFS V0.2D (Early)
+TH16,       TH16: GFSv16-Thomp, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
+TH6I,        TH6I: Interp TH16, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
+GF16,      GF16: GFSv16-GFconv, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
+GF6I,        GF6I: Interp GF16, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
+MY16,        MY16: GFSv16-MYNN, 11,             salmon4,       Global Forecast System (v16) w/ MYNN PBL
+MY6I,        MY6I: Interp MY16, 11,             salmon4,       Global Forecast System (v16) w/ MYNN PBL
+T21D,           T21D: T-SHiELD,  7,             magenta, Tropical System for High-res. prediction on Earth-to-Local Domains
+T21I,       T21I: Interp. T21D,  7,             magenta,                               T-SHiELD (Early)
+F206,             F206: SHiELD,  6,          goldenrod4, System for High-res. prediction on Earth-to-Local Domains
+F20I,       F20I: Interp. F206,  6,          goldenrod4,                                 SHiELD (Early)
+
+
+# HAFS ENSEMBLE #
+HFMN,     HFMN: HAFSV0.2E(avg), 16,             sienna4,   Hurricane Analysis and Forecast System V0.2E (avg)
+HFMI,       HFMI: Interp. HFMN, 16,             sienna4,   Hurricane Analysis and Forecast System V0.2E (avg)
+HF00,      HF00: HAFSV0.2E(00),  1,             hotpink,   Hurricane Analysis and Forecast System V0.2E (00)
+HF01,      HF01: HAFSV0.2E(01),  1,             maroon1,   Hurricane Analysis and Forecast System V0.2E (01)
+HF02,      HF02: HAFSV0.2E(02),  1,                 red,   Hurricane Analysis and Forecast System V0.2E (02)
+HF03,      HF03: HAFSV0.2E(03),  1,              tomato,   Hurricane Analysis and Forecast System V0.2E (03)
+HF04,      HF04: HAFSV0.2E(04),  1,           orangered,   Hurricane Analysis and Forecast System V0.2E (04)
+HF05,      HF05: HAFSV0.2E(05),  1,             orange1,   Hurricane Analysis and Forecast System V0.2E (05)
+HF06,      HF06: HAFSV0.2E(06),  1,          goldenrod2,   Hurricane Analysis and Forecast System V0.2E (06)
+HF07,      HF07: HAFSV0.2E(07),  1,              yellow,   Hurricane Analysis and Forecast System V0.2E (07)
+HF08,      HF08: HAFSV0.2E(08),  1,     darkolivegreen2,   Hurricane Analysis and Forecast System V0.2E (08)
+HF09,      HF09: HAFSV0.2E(09),  1,               green,   Hurricane Analysis and Forecast System V0.2E (09)
+HF10,      HF10: HAFSV0.2E(10),  1,           seagreen2,   Hurricane Analysis and Forecast System V0.2E (10)
+HF11,      HF11: HAFSV0.2E(11),  1,             skyblue,   Hurricane Analysis and Forecast System V0.2E (11)
+HF12,      HF12: HAFSV0.2E(12),  1,          cadetblue2,   Hurricane Analysis and Forecast System V0.2E (12)
+HF13,      HF13: HAFSV0.2E(13),  1,          dodgerblue,   Hurricane Analysis and Forecast System V0.2E (13)
+HF14,      HF14: HAFSV0.2E(14),  1,          royalblue2,   Hurricane Analysis and Forecast System V0.2E (14)
+HF15,      HF15: HAFSV0.2E(15),  1,       mediumpurple2,   Hurricane Analysis and Forecast System V0.2E (15)
+HF16,      HF16: HAFSV0.2E(16),  1,             purple2,   Hurricane Analysis and Forecast System V0.2E (16)
+HF17,      HF17: HAFSV0.2E(17),  1,              grey20,   Hurricane Analysis and Forecast System V0.2E (17)
+HF18,      HF18: HAFSV0.2E(18),  1,              grey40,   Hurricane Analysis and Forecast System V0.2E (18)
+HF19,      HF19: HAFSV0.2E(19),  1,              grey60,   Hurricane Analysis and Forecast System V0.2E (19)
+HF20,      HF20: HAFSV0.2E(20),  1,              grey80,   Hurricane Analysis and Forecast System V0.2E (20)
+
+
+# GFS ENSEMBLE #
+AEMN,          AEMN: GEFS Mean, 16,               pink4,           Global Ensemble Forecast System Mean
+AEMI,       AEMI: Interp. AEMN, 16,               pink4,   Global Ensemble Forecast System Mean (Early)
+AP00,           AP00: GEFS(00),  1,                 red,           Global Ensemble Forecast System (00)
+AP01,           AP01: GEFS(01),  1,                red2,           Global Ensemble Forecast System (01)
+AP02,           AP02: GEFS(02),  1,                red3,           Global Ensemble Forecast System (02)
+AP03,           AP03: GEFS(03),  1,                red4,           Global Ensemble Forecast System (03)
+AP04,           AP04: GEFS(04),  1,           rosybrown,           Global Ensemble Forecast System (04)
+AP05,           AP05: GEFS(05),  1,          rosybrown1,           Global Ensemble Forecast System (05)
+AP06,           AP06: GEFS(06),  1,          rosybrown2,           Global Ensemble Forecast System (06)
+AP07,           AP07: GEFS(07),  1,          rosybrown3,           Global Ensemble Forecast System (07)
+AP08,           AP08: GEFS(08),  1,          rosybrown4,           Global Ensemble Forecast System (08)
+AP09,           AP09: GEFS(09),  1,           royalblue,           Global Ensemble Forecast System (09)
+AP10,           AP10: GEFS(10),  1,          royalblue1,           Global Ensemble Forecast System (10)
+AP11,           AP11: GEFS(11),  1,          royalblue2,           Global Ensemble Forecast System (11)
+AP12,           AP12: GEFS(12),  1,          royalblue3,           Global Ensemble Forecast System (12)
+AP13,           AP13: GEFS(13),  1,          royalblue4,           Global Ensemble Forecast System (13)
+AP14,           AP14: GEFS(14),  1,         saddlebrown,           Global Ensemble Forecast System (14)
+AP15,           AP15: GEFS(15),  1,              salmon,           Global Ensemble Forecast System (15)
+AP16,           AP16: GEFS(16),  1,             salmon1,           Global Ensemble Forecast System (16)
+AP17,           AP17: GEFS(17),  1,             salmon2,           Global Ensemble Forecast System (17)
+AP18,           AP18: GEFS(18),  1,             salmon3,           Global Ensemble Forecast System (18)
+AP19,           AP19: GEFS(19),  1,             salmon4,           Global Ensemble Forecast System (19)
+AP20,           AP20: GEFS(20),  1,          sandybrown,           Global Ensemble Forecast System (20)
+AP21,           AP21: GEFS(21),  1,            seagreen,           Global Ensemble Forecast System (21)
+AP22,           AP22: GEFS(22),  1,           seagreen1,           Global Ensemble Forecast System (22)
+AP23,           AP23: GEFS(23),  1,           seagreen2,           Global Ensemble Forecast System (23)
+AP24,           AP24: GEFS(24),  1,           seagreen3,           Global Ensemble Forecast System (24)
+AP25,           AP25: GEFS(25),  1,           seagreen4,           Global Ensemble Forecast System (25)
+AP26,           AP26: GEFS(26),  1,               pink1,           Global Ensemble Forecast System (26)
+AP27,           AP27: GEFS(27),  1,               pink2,           Global Ensemble Forecast System (27)
+AP28,           AP28: GEFS(28),  1,          powderblue,           Global Ensemble Forecast System (28)
+AP29,           AP29: GEFS(29),  1,               plum2,           Global Ensemble Forecast System (29)
+AP30,           AP30: GEFS(30),  1,               plum3,           Global Ensemble Forecast System (30)
+
+
+# ECMWF ENSEMBLE #
+EEMN,           EEMN: EPS Mean, 16,           turquoise,             EC Ensemble Prediction System Mean
+EE01,            EE01: EPS(01),  1,               gray1,             EC Ensemble Prediction System (01)
+EE02,            EE02: EPS(02),  1,               gray2,             EC Ensemble Prediction System (02)
+EE03,            EE03: EPS(03),  1,               gray3,             EC Ensemble Prediction System (03)
+EE04,            EE04: EPS(04),  1,               gray4,             EC Ensemble Prediction System (04)
+EE05,            EE05: EPS(05),  1,               gray5,             EC Ensemble Prediction System (05)
+EE06,            EE06: EPS(06),  1,               gray6,             EC Ensemble Prediction System (06)
+EE07,            EE07: EPS(07),  1,               gray7,             EC Ensemble Prediction System (07)
+EE08,            EE08: EPS(08),  1,               gray8,             EC Ensemble Prediction System (08)
+EE09,            EE09: EPS(09),  1,               gray9,             EC Ensemble Prediction System (09)
+EE10,            EE10: EPS(10),  1,              gray10,             EC Ensemble Prediction System (10)
+EE11,            EE11: EPS(11),  1,              gray11,             EC Ensemble Prediction System (11)
+EE12,            EE12: EPS(12),  1,              gray12,             EC Ensemble Prediction System (12)
+EE13,            EE13: EPS(13),  1,              gray13,             EC Ensemble Prediction System (13)
+EE14,            EE14: EPS(14),  1,              gray14,             EC Ensemble Prediction System (14)
+EE15,            EE15: EPS(15),  1,              gray15,             EC Ensemble Prediction System (15)
+EE16,            EE16: EPS(16),  1,              gray16,             EC Ensemble Prediction System (16)
+EE17,            EE17: EPS(17),  1,              gray17,             EC Ensemble Prediction System (17)
+EE18,            EE18: EPS(18),  1,              gray18,             EC Ensemble Prediction System (18)
+EE19,            EE19: EPS(19),  1,              gray19,             EC Ensemble Prediction System (19)
+EE20,            EE20: EPS(20),  1,              gray20,             EC Ensemble Prediction System (20)
+EE21,            EE21: EPS(21),  1,              gray21,             EC Ensemble Prediction System (21)
+EE22,            EE22: EPS(22),  1,              gray22,             EC Ensemble Prediction System (22)
+EE23,            EE23: EPS(23),  1,              gray23,             EC Ensemble Prediction System (23)
+EE24,            EE24: EPS(24),  1,              gray24,             EC Ensemble Prediction System (24)
+EE25,            EE25: EPS(25),  1,              gray25,             EC Ensemble Prediction System (25)
+EE26,            EE26: EPS(26),  1,              gray26,             EC Ensemble Prediction System (26)
+EE27,            EE27: EPS(27),  1,              gray27,             EC Ensemble Prediction System (27)
+EE28,            EE28: EPS(28),  1,              gray28,             EC Ensemble Prediction System (28)
+EE29,            EE29: EPS(29),  1,              gray29,             EC Ensemble Prediction System (29)
+EE30,            EE30: EPS(30),  1,              gray30,             EC Ensemble Prediction System (30)
+EE31,            EE31: EPS(31),  1,              gray31,             EC Ensemble Prediction System (31)
+EE32,            EE32: EPS(32),  1,              gray32,             EC Ensemble Prediction System (32)
+EE33,            EE33: EPS(33),  1,              gray33,             EC Ensemble Prediction System (33)
+EE34,            EE34: EPS(34),  1,              gray34,             EC Ensemble Prediction System (34)
+EE35,            EE35: EPS(35),  1,              gray35,             EC Ensemble Prediction System (35)
+EE36,            EE36: EPS(36),  1,              gray36,             EC Ensemble Prediction System (36)
+EE37,            EE37: EPS(37),  1,              gray37,             EC Ensemble Prediction System (37)
+EE38,            EE38: EPS(38),  1,              gray38,             EC Ensemble Prediction System (38)
+EE39,            EE39: EPS(39),  1,              gray39,             EC Ensemble Prediction System (39)
+EE40,            EE40: EPS(40),  1,              gray40,             EC Ensemble Prediction System (40)
+EE41,            EE41: EPS(41),  1,              gray41,             EC Ensemble Prediction System (41)
+EE42,            EE42: EPS(42),  1,              gray42,             EC Ensemble Prediction System (42)
+EE43,            EE43: EPS(43),  1,              gray43,             EC Ensemble Prediction System (43)
+EE44,            EE44: EPS(44),  1,              gray44,             EC Ensemble Prediction System (44)
+EE45,            EE45: EPS(45),  1,              gray45,             EC Ensemble Prediction System (45)
+EE46,            EE46: EPS(46),  1,              gray46,             EC Ensemble Prediction System (46)
+EE47,            EE47: EPS(47),  1,              gray47,             EC Ensemble Prediction System (47)
+EE48,            EE48: EPS(48),  1,              gray48,             EC Ensemble Prediction System (48)
+EE49,            EE49: EPS(49),  1,              gray49,             EC Ensemble Prediction System (49)
+EE50,            EE50: EPS(50),  1,              gray50,             EC Ensemble Prediction System (50)
+
+
+# HWRF VERSIONS #
 H211,    H211: 2011 Oper. HWRF,  2,             magenta,                               2011 Oper. HWRF
 H11I,       H11I: Interp. H211,  2,             magenta,                       2011 Oper. HWRF (Early)
 H212,    H212: 2012 Oper. HWRF,  3,         deepskyblue,                               2012 Oper. HWRF
@@ -24,165 +189,12 @@ H1719I, H1719I: Interp H217-19, 16,                blue,                  2017-2
 180M,   180M, 3-h Run Avg HWRF,  7,              purple,                   3-hour Running Average HWRF
 360M,   360M: 6-h Run Avg HWRF,  6,                 red,                   6-hour Running Average HWRF
 540M,   540M: 9-h Run Avg HWRF,  9,               green,                   9-hour Running Average HWRF
-AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
-AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
-GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
-GFSI,        GFSI: Interp. GFS,  6,                blue.                Global Forecast System (Early)
-HMON,         HMON: Oper. HMON,  4,               green,                              Operational HMON
-HMNI,       HMNI: Interp. HMON,  4,               green,                      Operational HMON (Early)
-NVGM,       NVGM: Oper. NAVGEM, 11,               brown,                            Operational NAVGEM
-NVGI,       NVGI: Interp. NVGM, 11,               brown,                    Operational NAVGEM (Early)
-CTCX,          CTCX: COAMPS-TC,  8,                cyan,                              COAMPS-TC w/ GFS
-CTCI,       CTCI: Interp. CTCX,  8,                cyan,                               Early COAMPS-TC
-OFCL,       OFCL: NHC Official, 12,                 red,                         NHC Official Forecast
-OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
-DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
-LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,         Logistic Growth Equation Model (LGEM)
-IVCN,      IVCN: NHC Consensus, 10,              tomato,                       NHC Intensity Consensus
-TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                           NHC Track Consensus
-OCD5,    OCD5: Combined CLIPER,  4,       darkslategray,             Combined Track & Intensity CLIPER
-CLP5,       CLP5: Track CLIPER,  4,       darkslategray,                                  Track CLIPER
-SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                              Intensity CLIPER
-EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
-EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
-HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
-HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.2A (Early)
-HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
-HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
-HB19,    HB19: 2019 HWRF-Basin,  7,               brown,                         2019 Basin-Scale HWRF
-HB9I,       HB9I: Interp. HB19,  7,               brown,                 2019 Basin-Scale HWRF (Early)
-HNVI,     HNVI: 2019 HWRF-NoVI,  9,         deepskyblue,                             2019 No-V.I. HWRF
-HVII,       HVII: Interp. HNVI,  9,         deepskyblue,                     2019 No-V.I. HWRF (Early)
-HWFA,          HWFA: HWRF Kren,  7,               brown,                                   HWRF Andrew
-HWAI,       HWAI: Interp. HWFA,  7,               brown,                           HWRF Andrew (Early)
-HB0I,       HB0I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
-ECMO,          ECMO: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
-ECMI,       ECMI: Interp. ECMO,  8,               coral,      ECMWF Integrated Forecast System (Early)
-B20C,   B20C: 2020 HWRF-B Base,  8,         deepskyblue,                2020 Basin-Scale HWRF Baseline
-B20D, B20D: 2020 HWRF-B 18-6-2,  7,         deepskyblue,              2020 Basin-Scale HWRF (18-6-2km)
+
+
+# BASIN-SCALE HWRF #
 HB20,    HB20: 2020 HWRF-Basin,  7,               brown,                         2020 Basin-Scale HWRF
+HB0I,       HB0I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
 B220,  B220: 2020 HWRF-Basin-P,  4,                blue,              2020 Basin-Scale HWRF (Parallel)
 B20S,       B20S: HB20 1-Storm,  4,                blue,               2020 Basin-Scale HWRF (1-Storm)
 B20I,       B20I: Interp. HB20,  7,               brown,                 2020 Basin-Scale HWRF (Early)
-FV3R,     FV3R: FV3-RRFS Phys.,  4,            hotpink4,                   2020 FV3GFS w/ RRFS Physics
-F3RI,       F3RI: Interp. FV3R,  4,            hotpink4,           2020 FV3GFS w/ RRFS Physics (Early)
-HAFJ,     HAFJ: HAFS ESQ V0.1J, 16,                gold,   Hurricane Analysis and Forecast System V0.1J ESG
-HFJI,     HFJI: Interp. HAFS-J, 16,                gold,                            HAFS V0.1J (Early)
-UCS1,           UCS1: FV3-RRFS, 10,            hotpink4,                2020 FV3GFS w/ RRFS Physics v1
-UCSI,       UCSI: Interp. UCS1, 10,            hotpink4,        2020 FV3GFS w/ RRFS Physics v1 (Early)
-HFMN,     HFMN: HAFSV0.2E(avg), 16,             sienna4,   Hurricane Analysis and Forecast System V0.2E (avg)
-HFMI,       HFMI: Interp. HFMN, 16,             sienna4,   Hurricane Analysis and Forecast System V0.2E (avg)
-HF00,      HF00: HAFSV0.2E(00),  1,             hotpink,   Hurricane Analysis and Forecast System V0.2E (00)
-HF01,      HF01: HAFSV0.2E(01),  1,             maroon1,   Hurricane Analysis and Forecast System V0.2E (01)
-HF02,      HF02: HAFSV0.2E(02),  1,                 red,   Hurricane Analysis and Forecast System V0.2E (02)
-HF03,      HF03: HAFSV0.2E(03),  1,              tomato,   Hurricane Analysis and Forecast System V0.2E (03)
-HF04,      HF04: HAFSV0.2E(04),  1,           orangered,   Hurricane Analysis and Forecast System V0.2E (04)
-HF05,      HF05: HAFSV0.2E(05),  1,             orange1,   Hurricane Analysis and Forecast System V0.2E (05)
-HF06,      HF06: HAFSV0.2E(06),  1,          goldenrod2,   Hurricane Analysis and Forecast System V0.2E (06)
-HF07,      HF07: HAFSV0.2E(07),  1,              yellow,   Hurricane Analysis and Forecast System V0.2E (07)
-HF08,      HF08: HAFSV0.2E(08),  1,     darkolivegreen2,   Hurricane Analysis and Forecast System V0.2E (08)
-HF09,      HF09: HAFSV0.2E(09),  1,               green,   Hurricane Analysis and Forecast System V0.2E (09)
-HF10,      HF10: HAFSV0.2E(10),  1,           seagreen2,   Hurricane Analysis and Forecast System V0.2E (10)
-HF11,      HF11: HAFSV0.2E(11),  1,             skyblue,   Hurricane Analysis and Forecast System V0.2E (11)
-HF12,      HF12: HAFSV0.2E(12),  1,          cadetblue2,   Hurricane Analysis and Forecast System V0.2E (12)
-HF13,      HF13: HAFSV0.2E(13),  1,          dodgerblue,   Hurricane Analysis and Forecast System V0.2E (13)
-HF14,      HF14: HAFSV0.2E(14),  1,          royalblue2,   Hurricane Analysis and Forecast System V0.2E (14)
-HF15,      HF15: HAFSV0.2E(15),  1,       mediumpurple2,   Hurricane Analysis and Forecast System V0.2E (15)
-HF16,      HF16: HAFSV0.2E(16),  1,             purple2,   Hurricane Analysis and Forecast System V0.2E (16)
-HF17,      HF17: HAFSV0.2E(17),  1,              grey20,   Hurricane Analysis and Forecast System V0.2E (17)
-HF18,      HF18: HAFSV0.2E(18),  1,              grey40,   Hurricane Analysis and Forecast System V0.2E (18)
-HF19,      HF19: HAFSV0.2E(19),  1,              grey60,   Hurricane Analysis and Forecast System V0.2E (19)
-HF20,      HF20: HAFSV0.2E(20),  1,              grey80,   Hurricane Analysis and Forecast System V0.2E (20)
-HAFD,         HAFD: HAFS V0.2D,  7,                gold,   Hurricane Analysis and Forecast System V0.2D
-HFDI,     HFDI: Interp. HAFS-D,  7,                gold,                            HAFS V0.2D (Early)
-TH16,       TH16: GFSv16-Thomp, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
-TH6I,        TH6I: Interp TH16, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
-GF16,      GF16: GFSv16-GFconv, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
-GF6I,        GF6I: Interp GF16, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
-MY16,        MY16: GFSv16-MYNN, 11,             salmon4,       Global Forecast System (v16) w/ MYNN PBL
-MY6I,        MY6I: Interp MY16, 11,             salmon4,       Global Forecast System (v16) w/ MYNN PBL
-AP00,           AP00: GEFS(00),  1,                 red,           Global Ensemble Forecast System (00)
-AP01,           AP01: GEFS(01),  1,                 red,           Global Ensemble Forecast System (01)
-AP02,           AP02: GEFS(02),  1,                 red,           Global Ensemble Forecast System (02)
-AP03,           AP03: GEFS(03),  1,                 red,           Global Ensemble Forecast System (03)
-AP04,           AP04: GEFS(04),  1,                 red,           Global Ensemble Forecast System (04)
-AP05,           AP05: GEFS(05),  1,                 red,           Global Ensemble Forecast System (05)
-AP06,           AP06: GEFS(06),  1,                 red,           Global Ensemble Forecast System (06)
-AP07,           AP07: GEFS(07),  1,                 red,           Global Ensemble Forecast System (07)
-AP08,           AP08: GEFS(08),  1,                 red,           Global Ensemble Forecast System (08)
-AP09,           AP09: GEFS(09),  1,                 red,           Global Ensemble Forecast System (09)
-AP10,           AP10: GEFS(10),  1,                 red,           Global Ensemble Forecast System (10)
-AP11,           AP11: GEFS(11),  1,                 red,           Global Ensemble Forecast System (11)
-AP12,           AP12: GEFS(12),  1,                 red,           Global Ensemble Forecast System (12)
-AP13,           AP13: GEFS(13),  1,                 red,           Global Ensemble Forecast System (13)
-AP14,           AP14: GEFS(14),  1,                 red,           Global Ensemble Forecast System (14)
-AP15,           AP15: GEFS(15),  1,                 red,           Global Ensemble Forecast System (15)
-AP16,           AP16: GEFS(16),  1,                 red,           Global Ensemble Forecast System (16)
-AP17,           AP17: GEFS(17),  1,                 red,           Global Ensemble Forecast System (17)
-AP18,           AP18: GEFS(18),  1,                 red,           Global Ensemble Forecast System (18)
-AP19,           AP19: GEFS(19),  1,                 red,           Global Ensemble Forecast System (19)
-AP20,           AP20: GEFS(20),  1,                 red,           Global Ensemble Forecast System (20)
-AP21,           AP21: GEFS(21),  1,                 red,           Global Ensemble Forecast System (21)
-AP22,           AP22: GEFS(22),  1,                 red,           Global Ensemble Forecast System (22)
-AP23,           AP23: GEFS(23),  1,                 red,           Global Ensemble Forecast System (23)
-AP24,           AP24: GEFS(24),  1,                 red,           Global Ensemble Forecast System (24)
-AP25,           AP25: GEFS(25),  1,                 red,           Global Ensemble Forecast System (25)
-AP26,           AP26: GEFS(26),  1,                 red,           Global Ensemble Forecast System (26)
-AP27,           AP27: GEFS(27),  1,                 red,           Global Ensemble Forecast System (27)
-AP28,           AP28: GEFS(28),  1,                 red,           Global Ensemble Forecast System (28)
-AP29,           AP29: GEFS(29),  1,                 red,           Global Ensemble Forecast System (29)
-AP30,           AP30: GEFS(30),  1,                 red,           Global Ensemble Forecast System (30)
-EE01,          EE01: ECMWF(01),  1,               gray1,                  European Centre Ensemble (01)
-EE02,          EE02: ECMWF(02),  1,               gray2,                  European Centre Ensemble (02)
-EE03,          EE03: ECMWF(03),  1,               gray3,                  European Centre Ensemble (03)
-EE04,          EE04: ECMWF(04),  1,               gray4,                  European Centre Ensemble (04)
-EE05,          EE05: ECMWF(05),  1,               gray5,                  European Centre Ensemble (05)
-EE06,          EE06: ECMWF(06),  1,               gray6,                  European Centre Ensemble (06)
-EE07,          EE07: ECMWF(07),  1,               gray7,                  European Centre Ensemble (07)
-EE08,          EE08: ECMWF(08),  1,               gray8,                  European Centre Ensemble (08)
-EE09,          EE09: ECMWF(09),  1,               gray9,                  European Centre Ensemble (09)
-EE10,          EE10: ECMWF(10),  1,              gray10,                  European Centre Ensemble (10)
-EE11,          EE11: ECMWF(11),  1,              gray11,                  European Centre Ensemble (11)
-EE12,          EE12: ECMWF(12),  1,              gray12,                  European Centre Ensemble (12)
-EE13,          EE13: ECMWF(13),  1,              gray13,                  European Centre Ensemble (13)
-EE14,          EE14: ECMWF(14),  1,              gray14,                  European Centre Ensemble (14)
-EE15,          EE15: ECMWF(15),  1,              gray15,                  European Centre Ensemble (15)
-EE16,          EE16: ECMWF(16),  1,              gray16,                  European Centre Ensemble (16)
-EE17,          EE17: ECMWF(17),  1,              gray17,                  European Centre Ensemble (17)
-EE18,          EE18: ECMWF(18),  1,              gray18,                  European Centre Ensemble (18)
-EE19,          EE19: ECMWF(19),  1,              gray19,                  European Centre Ensemble (19)
-EE20,          EE20: ECMWF(20),  1,              gray20,                  European Centre Ensemble (20)
-EE21,          EE21: ECMWF(21),  1,              gray21,                  European Centre Ensemble (21)
-EE22,          EE22: ECMWF(22),  1,              gray22,                  European Centre Ensemble (22)
-EE23,          EE23: ECMWF(23),  1,              gray23,                  European Centre Ensemble (23)
-EE24,          EE24: ECMWF(24),  1,              gray24,                  European Centre Ensemble (24)
-EE25,          EE25: ECMWF(25),  1,              gray25,                  European Centre Ensemble (25)
-EE26,          EE26: ECMWF(26),  1,              gray26,                  European Centre Ensemble (26)
-EE27,          EE27: ECMWF(27),  1,              gray27,                  European Centre Ensemble (27)
-EE28,          EE28: ECMWF(28),  1,              gray28,                  European Centre Ensemble (28)
-EE29,          EE29: ECMWF(29),  1,              gray29,                  European Centre Ensemble (29)
-EE30,          EE30: ECMWF(30),  1,              gray30,                  European Centre Ensemble (30)
-EE31,          EE31: ECMWF(31),  1,              gray31,                  European Centre Ensemble (31)
-EE32,          EE32: ECMWF(32),  1,              gray32,                  European Centre Ensemble (32)
-EE33,          EE33: ECMWF(33),  1,              gray33,                  European Centre Ensemble (33)
-EE34,          EE34: ECMWF(34),  1,              gray34,                  European Centre Ensemble (34)
-EE35,          EE35: ECMWF(35),  1,              gray35,                  European Centre Ensemble (35)
-EE36,          EE36: ECMWF(36),  1,              gray36,                  European Centre Ensemble (36)
-EE37,          EE37: ECMWF(37),  1,              gray37,                  European Centre Ensemble (37)
-EE38,          EE38: ECMWF(38),  1,              gray38,                  European Centre Ensemble (38)
-EE39,          EE39: ECMWF(39),  1,              gray39,                  European Centre Ensemble (39)
-EE40,          EE40: ECMWF(40),  1,              gray40,                  European Centre Ensemble (40)
-EE41,          EE41: ECMWF(41),  1,              gray41,                  European Centre Ensemble (41)
-EE42,          EE42: ECMWF(42),  1,              gray42,                  European Centre Ensemble (42)
-EE43,          EE43: ECMWF(43),  1,              gray43,                  European Centre Ensemble (43)
-EE44,          EE44: ECMWF(44),  1,              gray44,                  European Centre Ensemble (44)
-EE45,          EE45: ECMWF(45),  1,              gray45,                  European Centre Ensemble (45)
-EE46,          EE46: ECMWF(46),  1,              gray46,                  European Centre Ensemble (46)
-EE47,          EE47: ECMWF(47),  1,              gray47,                  European Centre Ensemble (47)
-EE48,          EE48: ECMWF(48),  1,              gray48,                  European Centre Ensemble (48)
-EE49,          EE49: ECMWF(49),  1,              gray49,                  European Centre Ensemble (49)
-EE50,          EE50: ECMWF(50),  1,              gray50,                  European Centre Ensemble (50)
-T21D,           T21D: T-SHiELD,  7,             magenta, Tropical System for High-res. prediction on Earth-to-Local Domains
-T21I,       T21I: Interp. T21D,  7,             magenta,                               T-SHiELD (Early)
-F206,             F206: SHiELD,  6,          goldenrod4, System for High-res. prediction on Earth-to-Local Domains
-F20I,       F20I: Interp. F206,  6,          goldenrod4,                                 SHiELD (Early)
+
