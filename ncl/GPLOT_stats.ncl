@@ -2486,6 +2486,10 @@ if(DO_LI_GUIDE)then
                 if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
 			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
 		else
+			xyres2a@tmXBLabelFontHeightF = 0.018
+			xyres2a@tmYLLabelFontHeightF = 0.018
+			xyres2a@tiXAxisFontHeightF = 0.018
+			xyres2a@tiYAxisFontHeightF = 0.018
 			plot	:= gsn_csm_blank_plot(wks,xyres2a)
 		end if
 
