@@ -52,7 +52,7 @@ NAME_REGEX="${12}"
 EXT2=".dat"
 
 # Define executables
-X_CREATE="/home/Ghassan.Alaka/GPLOT/shell/create_adeck.sh"
+X_CREATE="/home/Ghassan.Alaka/GPLOT/shell/create_adeck.v2.sh"
 X_MERGE="/home/Ghassan.Alaka/Shell/ksh/atcfMerge.ksh"
 
 # Safety checks
@@ -152,7 +152,7 @@ for D in "${NHC_DECKS[@]}"; do
         lockfile -r-1 -l 180 ${LOCK_FILE}
 
         # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-        cat ${AOUT}/${D} ${ANHC}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
+        cat ${ANHC}/${D} ${AOUT}/${D} | tac | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
@@ -178,13 +178,11 @@ for D in "${NHC_DECKS[@]}"; do
         cp -p ${ANHC}/${D} ${AOUT}/${D}
     fi
 done
-#${X_MERGE} AVNO ${AOUT} ${EXT2} 1 ${ANHC}/*${YYYY}${EXT2}
 
 # Merge the model A-Deck
 echo ""
 echo "*********************************************"
 echo "MSG: PART TWO - MERGE THE MODEL A_DECK"
-#M_DECKS=( `find ${ATMP}/. -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -printf "%f\n" ` )
 M_DECKS=( `find ${ATMP}/ -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
 if [ -z "${M_DECKS}" ]; then
     echo "WARNING: Couldn't find any recent model a-decks. This might be OK."
@@ -216,8 +214,7 @@ for D in "${M_DECKS[@]}"; do
         lockfile -r-1 -l 180 ${LOCK_FILE}
 
         # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-        #cat ${AOUT}/${D} ${ATMP}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
-        cat ${ATMP}/${D} ${AOUT}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
+        cat ${AOUT}/${D} ${ATMP}/${D} | tac | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
         DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
         if [ "${DIFF}" != "" ]; then
@@ -252,7 +249,6 @@ for D in "${M_DECKS[@]}"; do
         INTERP_FILE="a${SID}.gun"
 
         # Link in A-Deck and B-Deck files
-        #ln -sf ${AOUT}/${D} ${INTERP_ADIR}/${D}
         ln -sf ${BNHC}/${B} ${INTERP_ADIR}/${B}
 
         # Find all cycles in the A-Deck
@@ -303,7 +299,7 @@ for D in "${M_DECKS[@]}"; do
             # Create an A-Deck with CARQ and the current model forecast.
             grep "${CYCLE}" ${AOUT}/${D} | grep "${MODOUT}" > ${INTERP_ADIR}/${TMP}
             grep "CARQ" ${AOUT}/${D} >> ${INTERP_ADIR}/${TMP}
-            sort -t, -k3,3 -k5,5 -k6,6n -k12,12 ${INTERP_ADIR}/${TMP} | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${INTERP_ADIR}/${D}
+            tac ${INTERP_ADIR}/${TMP} | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${INTERP_ADIR}/${D}
             rm -f ${INTERP_ADIR}/${TMP}
 
             # Run the interpolation software.
@@ -336,8 +332,7 @@ for D in "${M_DECKS[@]}"; do
                 lockfile -r-1 -l 180 ${LOCK_FILE}
 
                 # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-                #cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
-                cat ${INTERP_ADIR}/${INTERP_FILE} ${AOUT}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
+                cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | tac | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
                 DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
                 if [ "${DIFF}" != "" ]; then
@@ -386,8 +381,7 @@ for D in "${M_DECKS[@]}"; do
                 lockfile -r-1 -l 180 ${LOCK_FILE}
 
                 # Merge the existing A-Deck with the A-Deck for this experiment. Remove duplicate entries.
-                #cat ${AOUT}/${D} ${INTERP_ADIR}/${INTERP_FILE} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 | sort -r | sort -k3,3 -k5,5 -k6,6n -k12,12 -u -t, > ${AOUT}/${TMP}
-                cat ${INTERP_ADIR}/${INTERP_FILE} ${AOUT}/${D} | sort -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
+                cat ${INTERP_ADIR}/${INTERP_FILE} ${AOUT}/${D} | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${AOUT}/${TMP}
 
                 DIFF=$(diff ${AOUT}/${TMP} ${AOUT}/${D})
                 if [ "${DIFF}" != "" ]; then
