@@ -95,7 +95,7 @@ DO_CONVERTGIF = True
 DOMAIN = wlant elant gom d01 d03 epac wpac
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1 Tier2
+TIER = Tier1
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
@@ -151,7 +151,7 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots_heightcoordinates_research.py
+PYTHONFILE = make_rz_plots.py
 RESOLUTION = 3.0
 RMAX = 500
 LEVS = 46
