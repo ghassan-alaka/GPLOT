@@ -714,6 +714,7 @@ do fff = 0,nFiles-1
 			
 			; LONGITUDE
 			if(isStrSubset(dNames(ddd),"lon"))then
+				BOCO@PivotLon = PIV
 				lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons,tcLats,fff,B)
 				dx := abs(lon(1)-lon(0))
 				dxm := dx*111200.
