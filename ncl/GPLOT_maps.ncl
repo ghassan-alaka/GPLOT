@@ -2521,6 +2521,14 @@ do fff = 0,nFiles-1
                                         resOv4@cnLineLabelFontColor     = resOv4@cnLineColor
                                         resOv4@cnLineThicknessF         = 3.0
                                 end if
+                                if(G_OV4(0,ppp).eq."T" .and. G_OV4(1,ppp).eq."2")then ;LJG
+                                        resOv4@cnLevelSelectionMode     = "ExplicitLevels"
+                                        ;resOv4@cnLevels                 = fspan(280.,320.,21)
+                                        resOv4@cnLevels                 = fspan(290.,310.,6)
+                                        ;resOv4@cnLineLabelInterval      = 2
+                                        ;resOv4@cnLineThicknessF         = 1.5
+					if(verbose.ge.1)then   print("LJG: Narrow T2 range set.")   end if
+                                end if
                                 ;if(any((/"RH700_UV700_MSLP","RH700400_UV700400_MSLP","HGT500_MSLP"/).eq.FNAME(ppp)))then
                                 ;       resOv4@cnLineColor      = "white" ;"black"
                                 ;end if

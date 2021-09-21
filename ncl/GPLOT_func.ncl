@@ -1814,8 +1814,12 @@ begin
 	else if(varInfo(0).eq."PV" .and. V@units.eq."K m2 kg-1 s-1")then
 		V	= 1000000.*V
 		V@units	= "10^-6 K m2 kg-1 s-1"
+	else if(varInfo(0).eq."SST" .and. V@units.eq."K")then
+		V	= V - 273.14
+		V@units = "oC"
 	end if  end if  end if  end if
 	end if  end if  end if  end if
+	end if
 	
 	
 	; Add information about lonFlip and rmVortex

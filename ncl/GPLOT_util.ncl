@@ -893,7 +893,8 @@ begin
 		end if  end if
 
 	; For Sea Surface Temperature
-	else if(var.eq."SST")then	levels = fspan(285.,310.,26)
+	;else if(var.eq."SST")then	levels = fspan(285.,310.,26)
+	else if(var.eq."SST")then	levels = fspan(18.,32.,15)
 					levels@stride = 1
 
 	; For Latent Heat Flux
@@ -1655,7 +1656,7 @@ begin
 	MASTER_DOMAIN	= (/"hwrf",  "basin",\
 			    "atl",   "wlant",\
 			    "epac",  "cpac",\
-			    "wpac",  "gom",\
+			    "gom",\
 			    "d03",   "bob",\
 			    "nio",   "data",\
 			    "eus",   "fvgfs",\
