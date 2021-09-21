@@ -1655,7 +1655,7 @@ begin
 	MASTER_DOMAIN	= (/"hwrf",  "basin",\
 			    "atl",   "wlant",\
 			    "epac",  "cpac",\
-			    "gom",\
+			    "wpac",  "gom",\
 			    "d03",   "bob",\
 			    "nio",   "data",\
 			    "eus",   "fvgfs",\
