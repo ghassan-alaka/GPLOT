@@ -817,12 +817,9 @@ begin
 	; Check if the longitude coordinate is as expected.
 	; -180<->180 needs to be treated differently than 0<->360
 	if(min(f->$DIM$).eq.0.)then
-		if(DO_PIVOT)then		;LONF	= (/where(lonFlip(f->$DIM$).ge.180.,\
-						;			   lonFlip(f->$DIM$)-360.,\
-						;			   lonFlip(f->$DIM$))/)
-						LONF	= lonPivot(f->$DIM$,PIV)
+		if(DO_PIVOT)then		LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
-						if(BDS(2).gt.0)then   LONF := LONF+360.   end if
+						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF 	= (/f->$DIM$/)
 						flipFlag= False
@@ -832,8 +829,13 @@ begin
 	else if(max(f->$DIM$).gt.180. .and. \
 		min(f->$DIM$).gt.180.)then	LONF	= (/f->$DIM$ - 360./)
 						flipFlag= False
-	else					LONF	:= (/f->$DIM$/)
+	else
+		if(DO_PIVOT)then		LONF    = lonPivot(f->$DIM$,PIV)
+						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
+						flipFlag= True
+		else				LONF    := (/f->$DIM$/)
 						flipFlag= False
+		end if
 	end if  end if  end if
 	LONF!0 = "lon"
 	LONF&lon = LONF
