@@ -1150,7 +1150,9 @@ do fff = 0,nFiles-1
                                 if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
                                         x = ddd
 					BOCO@PivotLon = PIV
-                                        lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
+					if(SC_DOMAIN)then	lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
+					else			lon := get_dim_lon(f,dNames(ddd),BOCO,9.96921e+36,9.96921e+36,ti,B)
+					end if
 					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
                                         flipFlag = lon@flipFlag
