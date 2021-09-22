@@ -1849,8 +1849,7 @@ begin
 			if(fff.eq.1)then	rmVortex = flags(1)
 			else			rmVortex = False
 			end if
-		end if
-		end if
+		end if  end if
 	end do
 	if(.not.isvar("rmVortex"))then rmVortex = False end if
 	if(.not.isvar("flipFlag"))then flipFlag = False end if
@@ -1868,10 +1867,7 @@ begin
 				else if(dSource.eq."HWRF_Ens")then	N = 35
 				else if(dSource.eq."GFS_an")then	N = 15
 				else					N = 11
-				end if
-				end if
-				end if
-				end if
+				end if  end if  end if  end if
 				;N = 15
 	end if
 	
@@ -1952,8 +1948,7 @@ begin
                 V&lon = lon
                 V       := V(:,:,{iBds(2):iBds(3)})
                 V&lon   := lon({iBds(2):iBds(3)})
-        end if
-        end if
+        end if  end if
 
 
 	; Correct units
