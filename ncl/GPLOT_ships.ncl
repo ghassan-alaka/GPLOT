@@ -726,7 +726,7 @@ do fff = 0,nFiles-1
 				lonF!0 = "lon"
 				lonF&lon = lonF
 				lonF@units = "degrees_east"
-				delete(lon@LONF)
+				;delete(lon@LONF)
 			end if
 			
 			; ISOBARIC LEVELS
@@ -761,6 +761,7 @@ do fff = 0,nFiles-1
 		; BOCO is used to set the graphical bounds.
 		; Is BOCO2 necessary for the 'findCenter' function?
 		BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
+		BOCO2@PivotLon = PIV
 		
 		
 		;================================================================
@@ -1564,7 +1565,7 @@ do fff = 0,nFiles-1
 		; Get the TC centers based on the geopotential height centroid
 		else if(FNAME(ppp).eq."TCCEN")then
 			; 1) Use NCL & Fortran functions to find the TC centers
-			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,BOCO2,1)
+			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,lat,lonF,flipFlag,BOCO2,1)
 			;print(CTR@value)
 			;exit				
 			
