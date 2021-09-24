@@ -905,9 +905,17 @@ begin
 	else if(var.eq."SHFLX")then	levels = fspan(-50.,300.,11)
 					levels@stride = 1
 
+	; For Potential Vorticity
+	else if(var.eq."PV")then
+		if(lev.eq."200")then    levels = fspan(-5.,5.,41)
+					levels@stride = 4
+		else if(lev.eq."200diff")then
+					levels = fspan(-1.,1.,21)
+					levels@stride = 4
+
 	end if  end if  end if  end if  end if  end if  end if
 	end if  end if  end if  end if  end if  end if  end if
-	end if  end if  end if  end if
+	end if  end if  end if  end if  end if
 		
 	return(levels)
 
