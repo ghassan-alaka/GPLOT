@@ -20,9 +20,9 @@ figext = '.png'
 
 data = np.genfromtxt(datafile,delimiter=',',dtype='str')
 
-header = data[0,:]
+#header = data[0,:]
 
-data = data[1::,:]
+#data = data[1::,:]
 
 FCHR = data[:,0]
 VMAX = data[:,1].astype('float')
