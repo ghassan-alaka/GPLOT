@@ -912,7 +912,7 @@ begin
 		else if(lev.eq."200diff")then
 					levels = fspan(-1.,1.,21)
 					levels@stride = 4
-		end if
+		end if  end if
 
 	end if  end if  end if  end if  end if  end if  end if
 	end if  end if  end if  end if  end if  end if  end if
