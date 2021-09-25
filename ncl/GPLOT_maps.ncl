@@ -920,13 +920,18 @@ do fff = 0,nFiles-1
         ; 2. Determine which files apply to this forecast hour.
         ;================================================================
         myInd := new((/dimsizes(ITAG)/),"integer")
+	myIndPrev := new((/dimsizes(ITAG)/),"integer")
         do aaa = 0,dimsizes(ITAG)-1
                 if(.not.ONE_FILE)then   myInd(aaa) = ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff)))\
-                                                          .and. isStrSubset2(iFiles,ITAG(0)))
+                                                          .and. isStrSubset2(iFiles,ITAG(aaa)))
+					myIndPrev(aaa) = ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff)-DT))\
+							     .and. isStrSubset2(iFiles,ITAG(aaa)))
                 else                    myInd(aaa) = aaa
+					myIndPrev(aaa) = aaa
                 end if
         end do
-        myInd   := myInd(ind(.not.ismissing(myInd)))
+        myInd := myInd(ind(.not.ismissing(myInd)))
+	myIndPrev := myIndPrev(ind(.not.ismissing(myIndPrev)))
         
         
         ;================================================================
@@ -1294,6 +1299,12 @@ do fff = 0,nFiles-1
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
 					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
+
+					; Full latitude array
+					latF := lat@LATF
+					latF!0 = "lat"
+					latF&lat = latF
+					latF@units = "degrees_north"
                                 end if
                         
                                 ; 2. X-COORDINATE --> LONGITUDE
@@ -1723,39 +1734,40 @@ do fff = 0,nFiles-1
                         end if
 			
 			
-			; For DSOURCE=GFS, the total precipitation variable (TPRCP) only reflects the precipitation
+			; For DSOURCE=HAFS, the total precipitation variable (TPRCP) only reflects the precipitation
 			; that accumulated since the previous output file. To get the total precip over the entire
 			; forecast, the total precip from all previous forecast lead times must be added to the
 			; total precip from the current lead time.
 			if(G_BASE(0,ppp).eq."TPRCP" .and. any((/"HAFS"/).eq.DSOURCE))then
-				;if(FHR3(ttt).eq.0)then	print("MSG: No precipitation data at 0-h. Skipping...")
-				;			continue
-				;end if
-				system("mkdir -p "+ODIR+"PRCPDATA")
+
+				Vfull := getVar2d(f,DSOURCE,(/G_BASE(0,ppp),G_BASE(1,ppp),tostring(ttt)/),nDims,\
+						  (/max(latF),min(latF),min(lonF),max(lonF)/),mf,myFlags,lonF)
+				PRCPDIR = ODIR+"../PRCPDATA/"
+				system("mkdir -p "+PRCPDIR)
 				if(FHR3(ttt).ge.(DT*2) .and. FHR3(ttt)%DT.eq.0)then
-					if(.not.fileexists(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc"))then
+					if(.not.fileexists(PRCPDIR+"TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc"))then
 						continue
 					end if
-					f2 := addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc","r")
-					Vbase	= Vbase + (/f2->TPRCP/)
-					Vbase!0 = "lat"
-					Vbase!1 = "lon"
-					Vbase&lat = lat
-					Vbase&lon = lon
-					Vbase@units = "mm h-1"
+					fP := addfile(PRCPDIR+"TPRCP.f"+sprinti("%0.3i",FHR3(ttt)-DT)+".nc","r")
+					Vfull	= Vfull + (/fP->TPRCP/)
+					Vbase = Vfull({BOCO2(0):BOCO2(1)},{BOCO2(2):BOCO2(3)})
 				end if
 				
-				; Write TPRCP data to simple NC file for easy access. Only for GFS.	
-				system("/bin/rm -f "+ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
-				FOUT = addfile(ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
-				fAtt = True
-				fAtt@title = DSOURCE+" Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
-				fAtt@source_file = iFiles(myInd)
-				fAtt@creation_date = systemfunc("date")
-				fileattdef(FOUT,fAtt)
-				FOUT->TPRCP = Vbase
-				FOUT->lat = lat
-				FOUT->lon = lon
+				; Write TPRCP data to simple NC file for easy access.
+				if(FHR3(ttt).gt.0 .and. .not.fileexists(PRCPDIR+"TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc"))then
+					;system("/bin/rm -f "+ODIR+"PRCPDATA/TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc")
+					FOUT = addfile(PRCPDIR+"TPRCP.f"+sprinti("%0.3i",FHR3(ttt))+".nc","c")
+					fAtt = True
+					fAtt@title = DSOURCE+" Total Precipitation as of f"+sprinti("%0.3i",FHR3(ttt))
+					fAtt@source_file = iFiles(myInd)
+					fAtt@creation_date = systemfunc("date")
+					fileattdef(FOUT,fAtt)
+					FOUT->TPRCP = Vfull
+					FOUT->lat = latF
+					FOUT->lon = lonF
+				end if
+
+				delete(Vfull)
 			end if
                                 
                         ;================================================================
