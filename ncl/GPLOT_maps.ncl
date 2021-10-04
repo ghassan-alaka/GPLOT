@@ -920,18 +920,13 @@ do fff = 0,nFiles-1
         ; 2. Determine which files apply to this forecast hour.
         ;================================================================
         myInd := new((/dimsizes(ITAG)/),"integer")
-	myIndPrev := new((/dimsizes(ITAG)/),"integer")
         do aaa = 0,dimsizes(ITAG)-1
                 if(.not.ONE_FILE)then   myInd(aaa) = ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff)))\
                                                           .and. isStrSubset2(iFiles,ITAG(aaa)))
-					myIndPrev(aaa) = ind(isStrSubset2(iFiles,"f"+sprinti(FMT_HR,FHR(fff)-DT))\
-							     .and. isStrSubset2(iFiles,ITAG(aaa)))
                 else                    myInd(aaa) = aaa
-					myIndPrev(aaa) = aaa
                 end if
         end do
         myInd := myInd(ind(.not.ismissing(myInd)))
-	myIndPrev := myIndPrev(ind(.not.ismissing(myIndPrev)))
         
         
         ;================================================================
