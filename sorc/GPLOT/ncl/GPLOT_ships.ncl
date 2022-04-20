@@ -726,7 +726,6 @@ do fff = 0,nFiles-1
 				lonF!0 = "lon"
 				lonF&lon = lonF
 				lonF@units = "degrees_east"
-				;delete(lon@LONF)
 			end if
 			
 			; ISOBARIC LEVELS
@@ -2683,6 +2682,7 @@ do fff = 0,nFiles-1
 				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".gif"
 			else
 				if(FHR(fff).ne.max(FHR))then   continue   end if
+				if(FHR(fff).eq.0 .and. dimsizes(FHR).eq.1)then   continue   end if
 				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".gif"
 			end if
 			p := systemfunc("ls "+PNG_FILE+" 2>/dev/null")

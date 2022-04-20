@@ -104,7 +104,7 @@ PARTITION = hera
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac d03
+DOMAIN = basin atl epac wlant elant eus gom cpac nio sio spac d01 d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1

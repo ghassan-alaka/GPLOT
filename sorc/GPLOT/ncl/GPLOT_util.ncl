@@ -921,7 +921,7 @@ begin
 		end if  end if
 
 	; For Sea Surface Temperature
-	else if(var.eq."SST")then	levels = fspan(285.,310.,26)
+	else if(var.eq."SST")then	levels = fspan(18.,32.,15)
 					levels@stride = 1
 
 	; For Latent Heat Flux
@@ -2966,9 +2966,9 @@ begin
 
                 ; For air-sea variables
                 else if(short_name.eq."DPT2_SST")then
-			List_Title	= "2m DwPt. (K; shaded), SST (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
+			List_Title	= "2m DwPt. (K; shaded), SST (oC; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
 		else if(short_name.eq."SST_T2")then
-			List_Title	= "SST (K; shaded), 2m Temp. (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
+			List_Title	= "SST (oC; shaded), 2m Temp. (K; lines), 10m Wind (kt;stmlines), MSLP (mb; centers)"
 		else if(short_name.eq."LHFLX_MSLP")then
 			List_Title	= "Latent Ht. Flx (Wm~S~-2~N~; shaded), 10m Wind (kt; stmlines), MSLP (mb; centers)"
 		else if(short_name.eq."SHFLX_MSLP")then

@@ -790,11 +790,11 @@ if(TRKmodelsT(0).eq."MISSING" .and. DO_LT_TREND)then
 end if
 if(INTmodelsT(0).eq."MISSING" .and. DO_LI_TREND)then
 	print("WARNING: Late max. intensity trend guidance turned OFF because no models were found (INTMT).")
-	DO_LT_TREND = False
+	DO_LI_TREND = False
 end if
 if(PRSmodelsT(0).eq."MISSING" .and. DO_LP_TREND)then
 	print("WARNING: Late min. pressure trend guidance turned OFF because no models were found (PRSMT).")
-	DO_LT_TREND = False
+	DO_LP_TREND = False
 end if
 if(ltModels(0).eq."MISSING" .and. DO_LT_VER)then
 	print("WARNING: Late track verification turned OFF because no models were found (LTM).")
@@ -2486,6 +2486,10 @@ if(DO_LI_GUIDE)then
                 if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
 			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
 		else
+			xyres2a@tmXBLabelFontHeightF = 0.018
+			xyres2a@tmYLLabelFontHeightF = 0.018
+			xyres2a@tiXAxisFontHeightF = 0.018
+			xyres2a@tiYAxisFontHeightF = 0.018
 			plot	:= gsn_csm_blank_plot(wks,xyres2a)
 		end if
 
