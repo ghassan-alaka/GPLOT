@@ -790,11 +790,11 @@ if(TRKmodelsT(0).eq."MISSING" .and. DO_LT_TREND)then
 end if
 if(INTmodelsT(0).eq."MISSING" .and. DO_LI_TREND)then
 	print("WARNING: Late max. intensity trend guidance turned OFF because no models were found (INTMT).")
-	DO_LT_TREND = False
+	DO_LI_TREND = False
 end if
 if(PRSmodelsT(0).eq."MISSING" .and. DO_LP_TREND)then
 	print("WARNING: Late min. pressure trend guidance turned OFF because no models were found (PRSMT).")
-	DO_LT_TREND = False
+	DO_LP_TREND = False
 end if
 if(ltModels(0).eq."MISSING" .and. DO_LT_VER)then
 	print("WARNING: Late track verification turned OFF because no models were found (LTM).")

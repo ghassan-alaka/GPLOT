@@ -165,6 +165,6 @@ DO_INTERP = False
 
 PYTHONFILE = make_rz_plots.py
 RESOLUTION = 2.0
-RMAX = 600
+RMAX = 300
 LEVS = 46
 

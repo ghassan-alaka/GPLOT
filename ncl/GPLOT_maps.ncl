@@ -835,7 +835,7 @@ do fff = 0,nFiles-1
         ;================================================================
  
         if(.not.ONE_FILE)then
-                if(SC_GRAPHICS)then
+                if(SC_GRAPHICS .and. DOMAIN.ne."hwrf")then
                         myFHR := ind(tcFHR(0,:).eq.FHR(fff))
                         if(ismissing(myFHR(0)))then
                                 print("WARNING: No ATCF entry for "+sprinti(FMT_HR,FHR(fff)))
@@ -1137,6 +1137,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ; xi. Read dimension data (only for available dims)
                         ;================================================================
+			if(any((/"HWRF","HMON"/).eq.DSOURCE) .and. DOMAIN.eq."d03")then   BOCO@doPivot = False   end if
                         do ddd = 0,nDims-1
                                 ; 1. Y-DOORDINATE --> LATITUDE
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
@@ -1150,7 +1151,9 @@ do fff = 0,nFiles-1
                                 if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
                                         x = ddd
 					BOCO@PivotLon = PIV
-                                        lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
+					if(SC_DOMAIN)then	lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
+					else			lon := get_dim_lon(f,dNames(ddd),BOCO,9.96921e+36,9.96921e+36,ti,B)
+					end if
 					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
                                         flipFlag = lon@flipFlag
@@ -2391,6 +2394,11 @@ do fff = 0,nFiles-1
                                         resOv4@cnLineLabelFontColor     = resOv4@cnLineColor
                                         resOv4@cnLineThicknessF         = 3.0
                                 end if
+                                if(G_OV4(0,ppp).eq."T" .and. G_OV4(1,ppp).eq."2")then ;LJG
+                                        resOv4@cnLevelSelectionMode     = "ExplicitLevels"
+                                        resOv4@cnLevels                 = fspan(290.,310.,6)
+					if(verbose.gt.1)then   print("LJG: Narrow T2 range set.")  end if
+				end if
                                 ;if(any((/"RH700_UV700_MSLP","RH700400_UV700400_MSLP","HGT500_MSLP"/).eq.FNAME(ppp)))then
                                 ;       resOv4@cnLineColor      = "white" ;"black"
                                 ;end if

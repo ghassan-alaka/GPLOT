@@ -714,6 +714,7 @@ do fff = 0,nFiles-1
 			
 			; LONGITUDE
 			if(isStrSubset(dNames(ddd),"lon"))then
+				BOCO@PivotLon = PIV
 				lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons,tcLats,fff,B)
 				dx := abs(lon(1)-lon(0))
 				dxm := dx*111200.
@@ -725,7 +726,6 @@ do fff = 0,nFiles-1
 				lonF!0 = "lon"
 				lonF&lon = lonF
 				lonF@units = "degrees_east"
-				delete(lon@LONF)
 			end if
 			
 			; ISOBARIC LEVELS
@@ -760,6 +760,7 @@ do fff = 0,nFiles-1
 		; BOCO is used to set the graphical bounds.
 		; Is BOCO2 necessary for the 'findCenter' function?
 		BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
+		BOCO2@PivotLon = PIV
 		
 		
 		;================================================================
@@ -1563,7 +1564,7 @@ do fff = 0,nFiles-1
 		; Get the TC centers based on the geopotential height centroid
 		else if(FNAME(ppp).eq."TCCEN")then
 			; 1) Use NCL & Fortran functions to find the TC centers
-			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,BOCO2,1)
+			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,lat,lonF,flipFlag,BOCO2,1)
 			;print(CTR@value)
 			;exit				
 			
@@ -2681,6 +2682,7 @@ do fff = 0,nFiles-1
 				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".gif"
 			else
 				if(FHR(fff).ne.max(FHR))then   continue   end if
+				if(FHR(fff).eq.0 .and. dimsizes(FHR).eq.1)then   continue   end if
 				PNG_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".gif"
 			end if
 			p := systemfunc("ls "+PNG_FILE+" 2>/dev/null")

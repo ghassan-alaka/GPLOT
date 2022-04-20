@@ -817,12 +817,9 @@ begin
 	; Check if the longitude coordinate is as expected.
 	; -180<->180 needs to be treated differently than 0<->360
 	if(min(f->$DIM$).eq.0.)then
-		if(DO_PIVOT)then		;LONF	= (/where(lonFlip(f->$DIM$).ge.180.,\
-						;			   lonFlip(f->$DIM$)-360.,\
-						;			   lonFlip(f->$DIM$))/)
-						LONF	= lonPivot(f->$DIM$,PIV)
+		if(DO_PIVOT)then		LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
-						if(BDS(2).gt.0)then   LONF := LONF+360.   end if
+						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF 	= (/f->$DIM$/)
 						flipFlag= False
@@ -832,8 +829,13 @@ begin
 	else if(max(f->$DIM$).gt.180. .and. \
 		min(f->$DIM$).gt.180.)then	LONF	= (/f->$DIM$ - 360./)
 						flipFlag= False
-	else					LONF	:= (/f->$DIM$/)
+	else
+		if(DO_PIVOT)then		LONF    = lonPivot(f->$DIM$,PIV)
+						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
+						flipFlag= True
+		else				LONF    := (/f->$DIM$/)
 						flipFlag= False
+		end if
 	end if  end if  end if
 	LONF!0 = "lon"
 	LONF&lon = LONF
@@ -1814,8 +1816,12 @@ begin
 	else if(varInfo(0).eq."PV" .and. V@units.eq."K m2 kg-1 s-1")then
 		V	= 1000000.*V
 		V@units	= "10^-6 K m2 kg-1 s-1"
+	else if(varInfo(0).eq."SST" .and. V@units.eq."K")then
+		V	= V - 273.14
+		V@units = "oC"
 	end if  end if  end if  end if
 	end if  end if  end if  end if
+	end if
 	
 	
 	; Add information about lonFlip and rmVortex
@@ -1847,8 +1853,7 @@ begin
 			if(fff.eq.1)then	rmVortex = flags(1)
 			else			rmVortex = False
 			end if
-		end if
-		end if
+		end if  end if
 	end do
 	if(.not.isvar("rmVortex"))then rmVortex = False end if
 	if(.not.isvar("flipFlag"))then flipFlag = False end if
@@ -1866,10 +1871,7 @@ begin
 				else if(dSource.eq."HWRF_Ens")then	N = 35
 				else if(dSource.eq."GFS_an")then	N = 15
 				else					N = 11
-				end if
-				end if
-				end if
-				end if
+				end if  end if  end if  end if
 				;N = 15
 	end if
 	
@@ -1950,8 +1952,7 @@ begin
                 V&lon = lon
                 V       := V(:,:,{iBds(2):iBds(3)})
                 V&lon   := lon({iBds(2):iBds(3)})
-        end if
-        end if
+        end if  end if
 
 
 	; Correct units

@@ -76,52 +76,6 @@ begin
 	nDims	:= dimsizes(getfilevardimsizes(f,findVarName(dSource,var,levCode)))
 	dNames	:= getfilevardims(f,findVarName(dSource,var,levCode))
 		nDims@dNames = dNames
-	do ddd = 0,nDims-1
-	
-		; PRESSURE LEVELS
-		; This is the input variable "LEV"
-		
-		; LATITUDE
-		if(isStrSubset(dNames(ddd),"lat"))then
-			y	= ddd
-			;LAT	= fspan(60.,-10.,141)
-			LAT	:= f->$dNames(ddd)$({Bds(0):Bds(1)})
-			ny	= dimsizes(LAT)
-			reso	= abs(LAT(0)-LAT(1))
-		end if
-		
-		; LONGITUDE
-		if(isStrSubset(dNames(ddd),"lon"))then
-			x	= ddd
-			;LON	= fspan(-100.,-20.,161)
-			if(min(f->$dNames(ddd)$).eq.0.)then
-				LONF	:= (/where(lonFlip(f->$dNames(ddd)$).ge.180.,lonFlip(f->$dNames(ddd)$)-360.,lonFlip(f->$dNames(ddd)$))/)
-				flipFlag = True
-			else if(max(f->$dNames(ddd)$).gt.360.)
-				LONF	:= (/f->$dNames(ddd)$ - 360./)
-				flipFlag = False
-			else if(max(f->$dNames(ddd)$).gt.180. .and. \
-				min(f->$dNames(ddd)$).gt.180.)then
-				LONF	:= (/f->$dNames(ddd)$ - 360./)
-				flipFlag = False
-			else
-				LONF	:= (/f->$dNames(ddd)$/)
-				flipFlag = False
-			end if  end if  end if
-                        if(Bds(2).lt.min(LONF))then
-				LONF = LONF - 360.
-                        else if(Bds(3).gt.max(LONF))then
-				LONF = LONF + 360.
-			end if  end if
-			LONF!0 = "lon"
-			LONF!0 = "lon"
-			LONF&lon = LONF
-			LONF@units = "degrees_east"
-	
-			LON	:= LONF({Bds(2):Bds(3)})
-			nx	= dimsizes(LON)
-		end if
-	end do
 
 	; 4) Set variables based on 'var'
 	;    b = centroid type
