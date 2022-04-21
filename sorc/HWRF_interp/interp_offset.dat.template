@@ -1,0 +1,17 @@
+# Input file for interpolator. Contains a list of all
+# aids that use a variable offset for the intensities.
+# Aids that don't appear in this list have the full
+# offset applied at all taus. 
+#
+# Column 1 is the aid name
+# Column 2 is the last time in the interpolated aid
+#          where the full offset is applied.
+# Column 3 is the when the applied offset goes to 0.
+#
+# A linear variation is applied between the two.    
+#
+##EXAMPLE:
+AAAA 018 030
+BBBB 018 030
+CCCC 018 030
+STOP

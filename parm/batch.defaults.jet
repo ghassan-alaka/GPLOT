@@ -1,0 +1,6 @@
+# Default batch information for RDHPCS Jet
+CPU_ACCT = hur-aoml
+QOS = batch
+PARTITION = tjet,ujet,sjet,vjet,xjet,kjet
+sbatch = /apps/slurm/default/bin/sbatch
+squeue = /apps/slurm/default/bin/squeue

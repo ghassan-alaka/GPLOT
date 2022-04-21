@@ -1,0 +1,14 @@
+PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3        OV_VC_WIND   LEV4        OV_MAX_MIN   LEV5    OV_STLINE   LEV6          FILE_NAME
+True      UV             10            N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            UV10_MSLP
+True      RVO            850           HGT          850     N/A          N/A         UV           850         N/A          N/A     N/A         N/A           RVO850_Z850_UV850
+True      RVO            850           N/A          N/A     N/A          N/A         UV           200         N/A          N/A     N/A         N/A           RVO850_UV200
+True      RVO            700           HGT          700     N/A          N/A         UV           700         N/A          N/A     N/A         N/A           RVO700_Z700_UV700
+True      RH             700           MSLP         N/A     N/A          N/A         UV           700         MSLP         N/A     N/A         N/A           RH700_UV700_MSLP
+True      PRATE          N/A           MSLP         N/A     HGT          05001000d   N/A          N/A         MSLP         N/A     N/A         N/A           PRCP_MSLP_Z1000500
+True      HGT            500           MSLP         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           HGT500_MSLP
+True      TPW            N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPW_MSLP
+True      UV             02000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          02000850d     SHDL
+True      REFL           N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           REFL_MSLP
+True      TPRCP          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPRCP_MSLP
+True      MSLP           N/A           MSLP         N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           MSLP
+
