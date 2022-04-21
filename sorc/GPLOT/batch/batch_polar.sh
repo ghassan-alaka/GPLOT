@@ -97,7 +97,6 @@ fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-#${PYTHONEXE} ${PYTHONDIR}${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGDIR}${LOGFILE}
 python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
 
 wait

@@ -29,18 +29,18 @@ limit core 0
 
 # Load modules
 module purge
+module load intel/2022.1.2
 module load wgrib/1.8.1.0b
-module load wgrib2/0.1.9.6a
-module load intel/18.0.5.274
-module load netcdf/4.6.1
-if ( "${A}" == "0" ) then
+module load wgrib2/2.0.8
+if [ "${A}" -eq 0 ]; then
+    module load netcdf/4.6.1
     module load hdf5/1.10.4
     module load intelpython/3.6.5
     module use -a /contrib/met/modulefiles
-    module load met/9.0
-endif
-module load ncl/6.5.0
-module load grads/2.0.2
+    module load met/10.1.0
+fi
+module load ncl/6.6.2
+module load grads/2.2.1
 
 # NCL
 setenv NCARG_COLORMAPS "${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"

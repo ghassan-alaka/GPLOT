@@ -17,7 +17,7 @@ import scipy #Used for interpolation to polar coordinates
 from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
 import sys #To change the path 
-sys.path.append(GPLOT_DIR+'/python/modules')
+sys.path.append(GPLOT_DIR+'/sorc/GPLOT/python/modules')
 import centroid
 import glob
 import cmath
@@ -62,18 +62,19 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-NMLDIR = GPLOT_DIR+'/nmlist'
+NMLDIR = GPLOT_DIR+'/parm'
 if os.path.exists(NMLIST):
 	MASTER_NML_IN = NMLIST
-elif os.path.exists(GPLOT_DIR+'/nmlist/'+NMLIST):
+elif os.path.exists(GPLOT_DIR+'/parm/'+NMLIST):
 	MASTER_NML_IN = NML_DIR+'/'+NMLIST
 else:
 	print("ERROR: I couldn't find the Master Namelist.")
 	sys.exit()
 PYTHONDIR = sys.argv[11]
 if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
-	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/python'
+	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
 
+>>>>>>> develop:sorc/GPLOT/python/make_rz_plots.py
 
 # Read the master namelist
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
@@ -119,7 +120,7 @@ zsize = np.int(LEVS)
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
 if ATCF_LIST.size > 1:
 	print('Found multiple ATCFs')
-	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID).lower() in s][:]][0]
+	ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID+'.').lower() in s][:]][0]
 else:
 	ATCF = ATCF_LIST
 print('MSG: Found this ATCF --> '+str(ATCF))
@@ -146,7 +147,7 @@ if (FHR_LIST.size == 1):
 	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
 # Define executables
-X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
+X_G2CTL = GPLOT_DIR+'/sorc/GPLOT/grads/g2ctl.pl'
 
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
@@ -191,6 +192,15 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
+
+	# IS THIS IMPORTANT FOR REAL-TIME??
+	#if ( centerlat > 50.0):
+	#	# Write the input file to a log to mark that it has ben processed
+	#	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+	#	os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+	#	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
+	#	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+	#	break
 
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
@@ -1313,9 +1323,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			figfname = ODIR+'/'+LONGSID.lower()+'.dbz_750_wind_750_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
 			plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 			plt.close()
-			ga('close 1')
 			if ( DO_CONVERTGIF ):
 				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+
+
+			# Close the GrADs control file
+			ga('close 1')
 
 			
 	# Write the input file to a log to mark that it has ben processed

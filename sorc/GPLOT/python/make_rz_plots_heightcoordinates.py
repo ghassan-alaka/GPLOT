@@ -19,7 +19,7 @@ import scipy #Used for interpolation to polar coordinates
 from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
 import sys #To change the path 
-sys.path.append(GPLOT_DIR+'/python/modules')
+sys.path.append(GPLOT_DIR+'/sorc/GPLOT/python/modules')
 import centroid
 import glob
 import cmath
@@ -64,17 +64,17 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-NMLDIR = GPLOT_DIR+'/nmlist'
+NMLDIR = GPLOT_DIR+'/parm'
 if os.path.exists(NMLIST):
 	MASTER_NML_IN = NMLIST
-elif os.path.exists(GPLOT_DIR+'/nmlist/'+NMLIST):
+elif os.path.exists(GPLOT_DIR+'/parm/'+NMLIST):
 	MASTER_NML_IN = NML_DIR+'/'+NMLIST
 else:
 	print("ERROR: I couldn't find the Master Namelist.")
 	sys.exit()
 PYTHONDIR = sys.argv[11]
 if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
-	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/python'
+	PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
 
 
 # Read the master namelist
@@ -149,7 +149,7 @@ if (FHR_LIST.size == 1):
 	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
 # Define executables
-X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
+X_G2CTL = GPLOT_DIR+'/sorc/GPLOT/grads/g2ctl.pl'
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
@@ -190,11 +190,18 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		centerlat = float(latstr1)/10
 	else:
 		centerlat = -1*float(latstr1)/10
-	#centerlon = 360-(np.char.strip(lonstr,'W').astype(np.float)/10)
-	#centerlat = np.char.strip(latstr,'N').astype(np.float)/10
 	forecastinit = ATCF_DATA[list(FHRIND),2][0]
 	maxwind = ATCF_DATA[list(FHRIND),8][0]
 	minpressure = ATCF_DATA[list(FHRIND),9][0]
+
+	# IS THIS IMPORTANT FOR REAL-TIME?
+	#if ( centerlat > 50.0):
+	#	# Write the input file to a log to mark that it has ben processed
+	#	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+	#	os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+	#	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
+	#	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+	#	break
 
 	figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
 	if (figuretest < 1):
@@ -329,9 +336,6 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			#Define the polar coordinates needed
 			r = np.linspace(0,rmax,(np.int(rmax//resolution)+1))
-			#r = np.linspace(0,600,201)
-			#print(r)
-			#sys.exit()
 			pi = np.arccos(-1)
 			theta = np.arange(0,2*pi+pi/36,pi/36)
 			R, THETA = np.meshgrid(r, theta)
@@ -1325,9 +1329,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			figfname = ODIR+'/'+LONGSID.lower()+'.dbz_2km_wind_5km_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
 			plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 			plt.close()
-			ga('close 1')
 			if ( DO_CONVERTGIF ):
 				os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+
+			# Close the GrADs control file
+			ga('close 1')
 
 			
 	# Write the input file to a log to mark that it has ben processed

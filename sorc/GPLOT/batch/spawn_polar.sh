@@ -26,10 +26,10 @@ if [ -z "${GPLOT_DIR}" ]; then
 fi
 
 # Define important GPLOT directories
-NMLIST_DIR="${GPLOT_DIR}/nmlist/"
-BATCH_DIR="${GPLOT_DIR}/batch/"
-PYTHON_DIR="${GPLOT_DIR}/python/"
-TBL_DIR="${GPLOT_DIR}/tbl/"
+NMLIST_DIR="${GPLOT_DIR}/nmlist"
+BATCH_DIR="${GPLOT_DIR}/batch"
+PYTHON_DIR="${GPLOT_DIR}/python"
+TBL_DIR="${GPLOT_DIR}/tbl"
 
 # Get the namelist, could be from command line
 NMLIST="${1:-namelist.input.default}"
@@ -45,7 +45,6 @@ if [ ! -f ${NMLIST} ]; then
     fi
 fi
 echo "MSG: Found this namelist --> ${NMLIST}"
-
 
 # Pull important variables from the namelist
 DO_POLAR="`sed -n -e 's/^.*DO_POLAR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -283,7 +282,7 @@ if [ "${DO_POLAR}" = "True" ]; then
         # Get the cycle prefix from a table and define CYCLE_STR
         # CYCLE_STR should be used in file paths.
         if [ -z "$CPREFIX" ]; then
-            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
+            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/CyclePrefix.dat`
         fi
         CYCLE_STR="${CPREFIX}${CYCLE}"
 
@@ -300,7 +299,7 @@ if [ "${DO_POLAR}" = "True" ]; then
         fi
 
         # Second, try to get STORMS from the ATCF files
-        if [ -z "$STORMS" ]; then
+        if [ -z "${STORMS[*]}" ]; then
             for ATCF in ${CYCLE_ATCF}; do
                 STORMS+=(`basename $ATCF | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
             done
@@ -308,25 +307,21 @@ if [ "${DO_POLAR}" = "True" ]; then
 
         # Third, try to get STORMS from the HWRF file path.
         # This is hard-coded and might not work.
-        if [ -z "$STORMS" ]; then
-            if [ ! -z $(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
-                STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+        if [ -z "${STORMS[*]}" ]; then
+            if [ ! -z $(ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
+                STORMS+=(`ls -d ${IDIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
             fi
         fi
 
-        # Fourth, if STORMS is still undefined, then set it to "NONE"
-        # Large-scale graphics may still proceed.
-        # Storm-centered graphics will be skipped.
-        if [ -z "$STORMS" ]; then
-            STORMS+=("NONE")
-        fi
+        # Fourth, remove duplicate storms, if applicable.
+        STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
 
-
-        # Fifth, append Fake Storm (00L) is IS_MSTORM=True and if other storms
-        # were found, i.e., STORMS != NONE
-        if [ "$IS_MSTORM" == "True" ] && [ "$STORMS" != "NONE" ]; then
+        # Fifth, append Fake Storm (00L) if IS_MSTORM=True
+        if [ "$IS_MSTORM" == "True" ]; then
             STORMS+=("00L")
         fi
+
+        echo "MSG: Found these storms: ${STORMS[*]}"
 
 
         ####################
@@ -343,7 +338,7 @@ if [ "${DO_POLAR}" = "True" ]; then
             echo "MSG: Current storm --> $STORM"
 
             # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1`)
+            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
             echo "MSG: The ATCF for this storm --> $STORM_ATCF"
             if [ -z "${STORM_ATCF[*]}" ]; then
                 echo "WARNING: No ATCF found for this storm. This might be OK."
@@ -372,35 +367,35 @@ if [ "${DO_POLAR}" = "True" ]; then
                 echo "MSG: Current domain --> $DMN"
 
                 # Get nest information from GPLOT table
-                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}DomainInfo.dat`
+                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
                 if [ -z "$NEST" ]; then
-                    echo "MSG: Domain $DMN not found in ${TBL_DIR}DomainInfo.dat."
+                    echo "MSG: Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
                     echo "MSG: Assuming NEST=1."
                     NEST=1
                 fi
 
                 # Get file prefix information from table or namelist
                 if [ -z "$ITAG" ]; then
-                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}FilePrefix.dat`
+                    FPREFIX=`awk -v DSRC=$DSOURCE -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}/FilePrefix.dat`
                 else
                     FPREFIX="$ITAG"
                 fi
                 if [ -z "$FPREFIX" ]; then
                     echo "ERROR: File prefix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FilePrefix.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FilePrefix.dat."
                     echo "ERROR: Or define ITAG in the namelist."
                     exit
                 fi
 
                 # Get file hour string information from table or namelist
                 if [ -z "$FHRSTR" ]; then
-                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileTimeFormat.dat`
+                    FHRSTR=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileTimeFormat.dat`
                 else
                     FHRSTR="$FHRSTR"
                 fi
                 if [ -z "$FHRSTR" ]; then
                     echo "ERROR: File hour string not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                     echo "ERROR: Or define FHRSTR in the namelist."
                     exit
                 fi
@@ -408,26 +403,26 @@ if [ "${DO_POLAR}" = "True" ]; then
                 # Get file hour format information from table or namelist
                 FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
                 if [ -z "$FHRFMT" ]; then
-                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
+                    FHRFMT="%0`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $3 }' ${TBL_DIR}/FileTimeFormat.dat`d"
                 else
                     FHRFMT="%0${FHRFMT}d"
                 fi
                 if [ -z "$FHRFMT" ]; then
                     echo "ERROR: File hour format not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileTimeFormat.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                     echo "ERROR: Or define FHRFMT in the namelist."
                     exit
                 fi
 
                 # Get file extension information from table or namelist
                 if [ -z "$EXT" ]; then
-                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}FileSuffix.dat`
+                    FSUFFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileSuffix.dat`
                 else
                     FSUFFIX="$EXT"
                 fi
                 if [ -z "$FSUFFIX" ]; then
                     echo "ERROR: File suffix not found for $DSOURCE."
-                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}FileSuffix.dat."
+                    echo "ERROR: Please add your DSOURCE to ${TBL_DIR}/FileSuffix.dat."
                     echo "ERROR: Or define EXT in the namelist."
                     exit
                 fi
@@ -449,7 +444,6 @@ if [ "${DO_POLAR}" = "True" ]; then
                     echo ""
                     continue
                 fi
-
 
 
                 ###########################
@@ -520,9 +514,9 @@ if [ "${DO_POLAR}" = "True" ]; then
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
                                 if [ -z "$FSUFFIX" ]; then
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 else
-                                    FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
+                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
                                 fi
                                 if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
                                     IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
@@ -566,19 +560,19 @@ if [ "${DO_POLAR}" = "True" ]; then
 
 
                         # Print some information
-                        if [ "$FORCE" == "False" ]; then
-                            echo "MSG: Using this file of processed files --> ${PLOTTED_FILE}"
-                            echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
-                            echo "MSG: To manually force reprocessing of all files, delete this file."
-                        else
-                            echo "MSG: Graphic production will be forced."
-                            echo "MSG: Deleting this file of processed files --> ${PLOTTED_FILE}"
-                            rm -f ${PLOTTED_FILE}
-                            CASE_PLOTTED=()
-                            CASE_STATUS="force"
-                        fi
-                        echo "MSG: Using this status file --> ${STATUS_FILE}"
-                        echo "MSG: Found this status --> ${CASE_STATUS}"
+                        #if [ "$FORCE" == "False" ]; then
+                        #    echo "MSG: Using this file of processed files --> ${PLOTTED_FILE}"
+                        #    echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
+                        #    echo "MSG: To manually force reprocessing of all files, delete this file."
+                        #else
+                        #    echo "MSG: Graphic production will be forced."
+                        #    echo "MSG: Deleting this file of processed files --> ${PLOTTED_FILE}"
+                        #    rm -f ${PLOTTED_FILE}
+                        #    CASE_PLOTTED=()
+                        #    CASE_STATUS="force"
+                        #fi
+                        #echo "MSG: Using this status file --> ${STATUS_FILE}"
+                        #echo "MSG: Found this status --> ${CASE_STATUS}"
 
 
                         # Loop through IFILES and retain only valid entries
@@ -599,9 +593,12 @@ if [ "${DO_POLAR}" = "True" ]; then
                             # Only files that have not been modified in over 30 min are
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
-                                CFILE=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                #TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
+                                TMP=$(grep "$FILE" ${PLOTTED_FILE})
+                                CFILE=`echo $TMP | cut -d' ' -f1`
+                                NATCF=`echo $TMP | cut -d' ' -f2`
                                 if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +30 2>/dev/null)
+                                    test=$(find ${IDIR_FULL} -name "`basename $CFILE`" -mmin +15 2>/dev/null)
                                     if [[ -n ${test} ]]; then
                                         unset 'IFILES[$i]'
                                         unset 'IFHRS[$i]'
@@ -746,8 +743,8 @@ if [ "${DO_POLAR}" = "True" ]; then
                         fi
 
                         # Write existing IFILES out to UNPLOTTED_FNAME log for use in plotting scripts
-                        UNPLOTTED_FILE="${ODIR_FULL}UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
-                        FHR_FILE="${ODIR_FULL}AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
+                        UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        FHR_FILE="${ODIR_FULL}/AllForecastHours.${DMN}.${TR}${STORMTAG}.log"
                         if [ -f "${UNPLOTTED_FILE}" ]; then
                             rm -f "${UNPLOTTED_FILE}"
                         fi
@@ -830,6 +827,9 @@ if [ "${DO_POLAR}" = "True" ]; then
                         else
                             echo "MSG: Found matching GPLOT batch job. Skipping submission."
                         fi #if [ -z "$JOB_TEST" ]; then else
+
+                        # Sleep to allow the current job to get started
+                        sleep 10
 
                     done #end of ID loop
                 done #end of TR loop

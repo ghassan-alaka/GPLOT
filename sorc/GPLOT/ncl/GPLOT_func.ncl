@@ -782,6 +782,7 @@ begin
 	LAT@BOCO	= BDS
 	LAT@long_name	= "Latitude"
 	LAT@units	= "degrees_north"
+	LAT@LATF	= (/f->$DIM$/)
 	LAT!0		= "lat"
 	LAT&lat		= LAT
 	

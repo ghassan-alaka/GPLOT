@@ -77,7 +77,7 @@ else:
 	sys.exit()
 PYTHONDIR = sys.argv[11]
 if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
-	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/python'
+	PYTHONDIR = GPLOT_DIR+'/python'
 
 
 # Read the master namelist

@@ -200,8 +200,9 @@ if(.not.isvar("PIV"))then		PIV = NML@MAP_PIV			end if
 if(.not.isvar("DO_CONVERTGIF"))then	DO_CONVERTGIF = NML@DO_CONVERTGIF	end if
 if(.not.isvar("MAP_NMAX"))then		NMAX = NML@MAP_NMAX			end if
 
-; Correct IDATE so that it is only the date.
-; For example, strip "gfs." from GFS input, if applicable.
+
+; 5. Correct IDATE so that it is only the date.
+;    For example, strip "gfs." from GFS input, if applicable.
 if(DSOURCE.eq."GFS")then   IDATE = str_sub_str(IDATE,"gfs.","")   end if
 
 
@@ -219,6 +220,14 @@ else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE
 end if
 print("MSG: I will place graphics in this location --> "+ODIR)
 
+
+; The maximum number of files to process.
+val := ind(isStrSubset2(data,"NMAX_MAPS"))
+if(.not.ismissing(val(0)))then	NMAX = data(val)
+				NMAX := str_squeeze(str_split(NMAX," = "))
+				NMAX := toint(NMAX(1))
+else				NMAX = 100
+end if
 
 
 
@@ -515,7 +524,7 @@ nFiles  := dimsizes(iFiles)
 ;    If any files meet this criteria, then final status can't be "complete".
 FNL_IFILES = new(nFiles,logical)
 do fff = 0,nFiles-1
-        IFILES_MOD := systemfunc("find "+iFiles(fff)+" -mmin +30")
+        IFILES_MOD := systemfunc("find "+iFiles(fff)+" -mmin +10")
         if(ismissing(IFILES_MOD(0)))then        FNL_IFILES(fff) = False
         else                                    FNL_IFILES(fff) = True
         end if
@@ -551,6 +560,12 @@ STATUS_FILE = ODIR+"status."+DOMAIN+"."+TIER+SIDtag+".log"
 LOCK_FILE = STATUS_FILE+".lock"
 print("MSG: GPLOT Status file is "+STATUS_FILE)
 
+
+; 6. Limit the total number of files to process, if required.
+if(nFiles.gt.NMAX)then
+	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
+	nFiles = NMAX
+end if
 
 
 
@@ -638,7 +653,6 @@ do sss = 0,NATCF-1
         ALL_SNUM(sss)   = toint(systemfunc("echo "+ALL_SID(sss)+" | rev | cut -c1-2 | rev"))
                         
         ; c. Read the ATCF data
-        ;data := atcfRead(ATCF_FILES(sss),IDATE,str_upper(MODELID))
 	data := adeckRead(ATCF_FILES(sss),str_upper(MODELID),IDATE)
         
         ; d. Loop over all forecast hours (from input files)
@@ -689,7 +703,7 @@ do sss = 0,NATCF-1
         ;    storm-centered graphics because they are not necessarily 
         ;    tied to a particular storm. So, graphics may still be
         ;    produced even if there is no ATCF entry.
-        ATCF_MOD := systemfunc("find "+ATCF_FILES(sss)+" -mmin +120")
+        ATCF_MOD := systemfunc("find "+ATCF_FILES(sss)+" -mmin +10")
         if(ismissing(ATCF_MOD(0)))then  FNL_ATCF(sss) = False
         else                            FNL_ATCF(sss) = True
         end if
@@ -1145,6 +1159,12 @@ do fff = 0,nFiles-1
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
 					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
+
+					; Full latitude array
+					latF := lat@LATF
+					latF!0 = "lat"
+					latF&lat = latF
+					latF@units = "degrees_north"
                                 end if
                         
                                 ; 2. X-COORDINATE --> LONGITUDE
@@ -2530,7 +2550,7 @@ do fff = 0,nFiles-1
 							; Eliminate MSLP values less than or equal to 0
 							VOv5    = where(VOv5.le.0,fval3,VOv5)
 							; Do not mark H/L above .9 sigma surface
-							VOv5B   = where(PSFC/VOv5.le.0.90,fval3,VOv5B)
+							VOv5B	= where(PSFC/VOv5.le.0.90,fval3,VOv5B)
 				end if
 				if(lat(0).ne.VOv5B&lat(0))then   VOv5B := VOv5B(::--1,:)   end if
 				if(lon(0).ne.VOv5B&lon(0))then   VOv5B := VOv5B(:,::--1)   end if

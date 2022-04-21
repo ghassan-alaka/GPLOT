@@ -186,7 +186,7 @@ print("MSG:   Forecast Cycle:     "+IDATE)
 print("MSG:   Storm ID:           "+SID)
 print("MSG:   Domain/Region:      "+DOMAIN)
 print("MSG:   Graphics Tier:      "+TIER)
-if(ENSID.ne."")then	print("MSG:   Ensemble Member:    "+ENSID)	end if
+if(ENSID.ne."")then     print("MSG:   Ensemble Member:    "+ENSID)      end if
 print("MSG:   Input Directory:    "+IDIR)
 print("MSG:   Output Directory:   "+ODIR)
 print("MSG:   System Environment: "+MACHINE)
@@ -197,11 +197,11 @@ print("MSG:   Time Step [h]:      "+DT)
 if(DO_RMWHITE)then	print("MSG:   Trim graphics:      ON")
 else			print("MSG:   Trim graphics:      OFF")
 end if
-if(DO_SRCLBL)then	print("MSG:   Source Labels:      ON")
-else			print("MSG:   Source Labels:      OFF")
+if(DO_SRCLBL)then       print("MSG:   Source Labels:      ON")
+else                    print("MSG:   Source Labels:      OFF")
 end if
-if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
-else			print("MSG:   Convert to GIF:     OFF")
+if(DO_CONVERTGIF)then   print("MSG:   Convert to GIF:     ON")
+else                    print("MSG:   Convert to GIF:     OFF")
 end if
 
 
@@ -215,8 +215,8 @@ end if
 
 ; 1. We require DOMAIN="ships"
 ;    This should be identical to "d03"
-if(DOMAIN.ne."ships")then	print("MSG: Updating DOMAIN to 'ships'. Might not work.")
-				DOMAIN = "ships"
+if(DOMAIN.ne."ships")then       print("MSG: Updating DOMAIN to 'ships'. Might not work.")
+                                DOMAIN = "ships"
 end if
 
 
@@ -229,8 +229,8 @@ system("mkdir -p "+ODIR)
 ;    Ex: (/lat_north, lat_south, lon_west, lon_east/)
 ;    To add a new domain, please add it to GPLOT_func.ncl
 ;    BOCO will be updated for storm-centered domains.
-;BOCO	= (/0.,0.,0.,0./)
-BOCO	= getDmnBds(DOMAIN,DSOURCE)
+;BOCO   = (/0.,0.,0.,0./)
+BOCO    = getDmnBds(DOMAIN,DSOURCE)
 
 
 ; 5. Check if this configuration is storm-centric.
@@ -506,7 +506,6 @@ SID_OLD = getInvestSID(YYYY,SID)
 			
 
 ; Read the ATCF data
-;data	:= atcfRead(ATCF_FILES,IDATE,"")
 data := adeckRead(ATCF_FILES,"",IDATE)
 do fff = 0,nFHR-1		
 	val	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
@@ -556,7 +555,7 @@ end do ;fff
 ; storm-centered graphics because they are not necessarily 
 ; tied to a particular storm. So, graphics may still be
 ; produced even if there is no ATCF entry.
-ATCF_MOD := systemfunc("find "+ATCF_FILES+" -mmin +120")
+ATCF_MOD := systemfunc("find "+ATCF_FILES+" -mmin +20")
 if(ismissing(ATCF_MOD(0)))then	FNL_ATCF = False
 else				FNL_ATCF = True
 end if
@@ -1338,17 +1337,17 @@ do fff = 0,nFiles-1
 			V1	:= avg(V1)
 			copy_VarAtts(V,V1)
 
-			; 5) Append new entry
+			; 7) Append new entry
 			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
-			; 6) Write data block to .DAT file
+			; 8) Write data block to .DAT file
 			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
-			; 7) Update the title
+			; 9) Update the title
 			TITLE = TITLE+" ["+V1@units+"]"	
 			
 		else if(any((/"R000"/).eq.FNAME(ppp)))then				
@@ -2825,3 +2824,4 @@ print("MSG: GPLOT_ships.ncl succeeded at "+systemfunc("date"))
 exit
 
 end
+

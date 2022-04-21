@@ -20,24 +20,25 @@ echo "MSG: shell scripts for each component of GPLOT."
 # as an environmental variable. If not, the script will attempt to
 
 # Determine the GPLOT source code directory
-if [ -z "${GPLOT_DIR}" ]; then
-    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev | sed s#//*#/#g)"
+if [ -z "${HOMEgplot}" ]; then
+    export HOMEgplot="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev | sed s#//*#/#g)"
 fi
-echo "MSG: Setting GPLOT_DIR --> ${GPLOT_DIR}"
+if [ -z "${SORCgplot}" ]; then
+    export SORCgplot="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev | sed s#//*#/#g)"
+fi
+echo "MSG: Setting HOMEgplot --> ${HOMEgplot}"
 
 
-# Test that GPLOT_DIR actually exists. If not, we can't continue.
-if [ ! -d "${GPLOT_DIR}" ]; then
-    echo "ERROR: GPLOT_DIR not found. Can't continue."
+# Test that HOMEgplot actually exists. If not, we can't continue.
+if [ ! -d "${HOMEgplot}" ]; then
+    echo "ERROR: HOMEgplot not found. Can't continue."
     exit
 fi
 
 
 # Create variables for GPLOT subdirectories.
-NMLDIR="${GPLOT_DIR}/nmlist/"
-NMLDIR="$(echo "${NMLDIR}" | sed s#//*#/#g)"
-BATCHDIR="${GPLOT_DIR}/batch/"
-BATCHDIR="$(echo "${BATCHDIR}" | sed s#//*#/#g)"
+NMLgplot="$(echo "${HOMEgplot}/parm/" | sed s#//*#/#g)"
+BATCHgplot="$(echo "${SORCgplot}/batch/" | sed s#//*#/#g)"
 
 
 # Store all experiments in the EXPT variable. The user should submit all
@@ -51,9 +52,9 @@ BATCHDIR="$(echo "${BATCHDIR}" | sed s#//*#/#g)"
 #                                 fvGFS_ATL HB18_v2_forecast"
 if [ $# -eq 0 ]; then
     echo "MSG: No experiments found via the command line."
-    NML_LIST=( "/home/Ghassan.Alaka/GPLOT/nmlist/namelist.master.GFS_Forecast" \
-               "/home/Ghassan.Alaka/GPLOT/nmlist/namelist.master.HWRF_Forecast" \
-               "/home/Ghassan.Alaka/GPLOT/nmlist/namelist.master.HMON_Forecast" )
+    NML_LIST=( "${NMLgplot}namelist.master.GFS_Forecast" \
+               "${NMLgplot}namelist.master.HWRF_Forecast" \
+               "${NMLgplot}namelist.master.HMON_Forecast" )
 else
     echo "MSG: Experiment found via the command line."
     NML_LIST=( "$@" )
@@ -74,9 +75,9 @@ for NML in "${NML_LIST[@]}"; do
     # If this namelist is not found in $GPLOT_DIR/nmlist/,
     # the submission will fail.
     if [ ! -f "${NML}" ]; then
-        NML2="${NMLDIR}${NML}"
+        NML2="${NMLgplot}${NML}"
 	if [ ! -f "${NML2}" ]; then
-            NML2="${NMLDIR}namelist.master.${NML}"
+            NML2="${NMLgplot}namelist.master.${NML}"
             if [ ! -f "${NML2}" ]; then
                 echo "WARNING: Master namelist could not be found."
                 echo "WARNING: Can't submit anything for this experiment."
@@ -138,7 +139,7 @@ for NML in "${NML_LIST[@]}"; do
 
     # Define extra variables for batch submissions ($BATCH_MODE="SBATCH")
     if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
-        BATCH_DFLTS="${NMLDIR}batch.defaults.${MACHINE,,}"
+        BATCH_DFLTS="${NMLgplot}batch.defaults.${MACHINE,,}"
 
         # Get the CPU account
         CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NML} | sed 's/^\t*//'`"
@@ -189,7 +190,7 @@ for NML in "${NML_LIST[@]}"; do
     for M in "${GPMODLIST[@]}"; do
         echo "****************"
         echo "MSG: Submission for GPLOT module ${M^^} is turned on."
-        SPAWNFILE="${BATCHDIR}spawn_${M,,}.sh"
+        SPAWNFILE="${BATCHgplot}spawn_${M,,}.sh"
         SPAWNLOG1="${LOGDIR}spawn_${M,,}.${EXPT}.log"
         SPAWNLOG2="${LOGDIR}spawn_${M,,}.${EXPT}.out"
         JOBNAME="GPLOT.spawn_${M,,}.${EXPT}"
