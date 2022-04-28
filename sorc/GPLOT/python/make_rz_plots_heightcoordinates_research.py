@@ -19,7 +19,7 @@ import scipy #Used for interpolation to polar coordinates
 from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
 import sys #To change the path 
-sys.path.append(GPLOT_DIR+'/python/modules')
+sys.path.append(GPLOT_DIR+'/sorc/GPLOT/python/modules')
 import skewTmodelTCpolar
 import shearandrhplot
 import centroid
@@ -67,17 +67,17 @@ NMLIST = sys.argv[10]
 if NMLIST == 'MISSING':
 	print("ERROR: Master Namelist can't be MISSING.")
 	sys.exit()
-NMLDIR = GPLOT_DIR+'/nmlist'
+NMLDIR = GPLOT_DIR+'/parm'
 if os.path.exists(NMLIST):
 	MASTER_NML_IN = NMLIST
-elif os.path.exists(GPLOT_DIR+'/nmlist/'+NMLIST):
+elif os.path.exists(GPLOT_DIR+'/parm/'+NMLIST):
 	MASTER_NML_IN = NML_DIR+'/'+NMLIST
 else:
 	print("ERROR: I couldn't find the Master Namelist.")
 	sys.exit()
 PYTHONDIR = sys.argv[11]
 if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
-	PYTHONDIR = GPLOT_DIR+'/python'
+	PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
 
 
 # Read the master namelist
@@ -152,7 +152,7 @@ if (FHR_LIST.size == 1):
 	UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
 
 # Define executables
-X_G2CTL = GPLOT_DIR+'/grads/g2ctl.pl'
+X_G2CTL = GPLOT_DIR+'/sorc/GPLOT/grads/g2ctl.pl'
 
 for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
@@ -1508,43 +1508,43 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,np.float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
 
 			#Load the colormaps needed
-			color_data_vt = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
+			color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
 			colormap_vt = matplotlib.colors.ListedColormap(color_data_vt)
 			levs_vt = np.linspace(0,80,41,endpoint=True)
 			norm_vt = colors.BoundaryNorm(levs_vt,256)
 
-			color_data_ur = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
+			color_data_ur = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
 			colormap_ur = matplotlib.colors.ListedColormap(color_data_ur)
 			levs_ur = np.linspace(-30,30,31,endpoint=True)
 			norm_ur = colors.BoundaryNorm(levs_ur,256)
 
-			color_data_w = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
+			color_data_w = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
 			colormap_w = matplotlib.colors.ListedColormap(color_data_w)
 			levs_w = np.linspace(-5,5,41,endpoint=True)
 			norm_w = colors.BoundaryNorm(levs_w,256)
 
-			color_data_dbz = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_radar.txt')
+			color_data_dbz = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_radar.txt')
 			colormap_dbz = matplotlib.colors.ListedColormap(color_data_dbz)
 			levs_dbz = np.linspace(0,80,41,endpoint=True)
 			norm_dbz = colors.BoundaryNorm(levs_dbz,256)
 
-			color_data_rh = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_brown_to_green.txt')
+			color_data_rh = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_brown_to_green.txt')
 			colormap_rh = matplotlib.colors.ListedColormap(color_data_rh)
 			levs_rh = np.linspace(0,100,41,endpoint=True)
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
 
 
-			color_data_wind = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
+			color_data_wind = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
 			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 			norm_wind = colors.BoundaryNorm(levs_wind,256)
 
-			color_data_vt_budget = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
+			color_data_vt_budget = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
 			colormap_vt_budget = matplotlib.colors.ListedColormap(color_data_vt_budget)
 			levs_vt_budget = np.linspace(-10,10,81,endpoint=True)
 			norm_vt_budget = colors.BoundaryNorm(levs_vt_budget,256)
 
-			color_data_vort_budget = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
+			color_data_vort_budget = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
 			colormap_vort_budget = matplotlib.colors.ListedColormap(color_data_vort_budget)
 			levs_vort_budget = np.linspace(-40,40,41,endpoint=True)
 			norm_vort_budget = colors.BoundaryNorm(levs_vort_budget,256)

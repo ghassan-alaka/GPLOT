@@ -36,7 +36,7 @@ module load ncl/6.6.2
 module load grads/2.2.1
 
 # NCAR Command Language (NCL)
-export NCARG_COLORMAPS="${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 
 # Model Evaluation Tools (MET)
 

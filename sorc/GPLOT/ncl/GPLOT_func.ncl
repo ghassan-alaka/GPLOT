@@ -49,10 +49,10 @@
 ; Universal Constants
 ;================================================================
 
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
 
-external MWAVG    "$GPLOT_DIR/ncl/wrapit/mwavg.so"
-external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
+external MWAVG    "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/mwavg.so"
+external HBFILTER "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/hbfilter.so"
 
 g		= 9.80665
 pi		= 3.14159265359

@@ -26,10 +26,10 @@ if [ -z "${GPLOT_DIR}" ]; then
 fi
 
 # Define important GPLOT directories
-NMLIST_DIR="${GPLOT_DIR}/nmlist"
-BATCH_DIR="${GPLOT_DIR}/batch"
-PYTHON_DIR="${GPLOT_DIR}/python"
-TBL_DIR="${GPLOT_DIR}/tbl"
+NMLIST_DIR="${GPLOT_DIR}/parm/"
+BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
+PYTHON_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
+TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
 NMLIST="${1:-namelist.input.default}"

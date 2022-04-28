@@ -42,9 +42,9 @@
 ; Load scripts
 ;================================================================
 
-load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_func.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_main.ncl"
 
 
 
@@ -129,10 +129,10 @@ print("MSG: Verbose level = "+tostring(verbose))
 ; 1. Set the namelist path.
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
-if(.not.isvar("MASTER_NML_IN"))then             MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
+if(.not.isvar("MASTER_NML_IN"))then             MASTER_NML = GPLOT_DIR+"/parm/namelist.master.default"
 else
         if(fileexists(MASTER_NML_IN))then       MASTER_NML = MASTER_NML_IN
-        else                                    MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+        else                                    MASTER_NML = GPLOT_DIR+"/parm/"+MASTER_NML_IN
         end if
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
@@ -293,10 +293,10 @@ system("mkdir -p "+ODIR_ADECK)
 ; Graphics Namelist
 ; Comment this to set default namelist.
 if(.not.isvar("VAR_NML"))then   
-	if(fileexists(GPLOT_DIR+"/nmlist/namelist.stats."+EXPT))then
-		VAR_NML = GPLOT_DIR+"/nmlist/namelist.stats."+EXPT
-	else if(fileexists(GPLOT_DIR+"/nmlist/namelist.stats.default"))then
-		VAR_NML = GPLOT_DIR+"/nmlist/namelist.stats.default"
+	if(fileexists(GPLOT_DIR+"/parm/namelist.stats."+EXPT))then
+		VAR_NML = GPLOT_DIR+"/parm/namelist.stats."+EXPT
+	else if(fileexists(GPLOT_DIR+"/parm/namelist.stats.default"))then
+		VAR_NML = GPLOT_DIR+"/parm/namelist.stats.default"
 	else
 		print("ERROR: Default variable namelist not available.")
 		exit
@@ -4336,15 +4336,15 @@ if(DO_VERIFICATION)then
 
 	; 2. set up files and directories
 	system("mkdir -p "+ODIR+"mettc/")
-	system("cp "+GPLOT_DIR+"/mettc/config/TCPairsConfig_match "+TCPconf)
+	system("cp "+GPLOT_DIR+"/parm/mettc/config/TCPairsConfig_match "+TCPconf)
 	if(.not.fileexists(TCPconf))then	print("ERROR: TC_PAIRS config file not found.")
 						exit
 	end if
-	system("cp "+GPLOT_DIR+"/mettc/config/TCStatConfig_filter "+TCSconf_f)
+	system("cp "+GPLOT_DIR+"/parm/mettc/config/TCStatConfig_filter "+TCSconf_f)
 	if(.not.fileexists(TCSconf_f))then	print("ERROR: TC_STAT filter config file not found.")
 						exit
 	end if
-	system("cp "+GPLOT_DIR+"/mettc/config/TCStatConfig_summary "+TCSconf_s)
+	system("cp "+GPLOT_DIR+"/parm/mettc/config/TCStatConfig_summary "+TCSconf_s)
 	if(.not.fileexists(TCSconf_s))then	print("ERROR: TC_STAT summary config file not found.")
 						exit
 	end if

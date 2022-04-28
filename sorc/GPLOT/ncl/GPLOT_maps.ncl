@@ -40,16 +40,12 @@
 ; Load scripts
 ;================================================================
 
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_func.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_main.ncl"
 
 ;external FILTER121 "$GPLOT_DIR/ncl/wrapit/filter121.so"
-external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
+external SPH2CART "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/sph2cart.so"
 ;external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
 
 
@@ -221,15 +217,6 @@ end if
 print("MSG: I will place graphics in this location --> "+ODIR)
 
 
-; The maximum number of files to process.
-val := ind(isStrSubset2(data,"NMAX_MAPS"))
-if(.not.ismissing(val(0)))then	NMAX = data(val)
-				NMAX := str_squeeze(str_split(NMAX," = "))
-				NMAX := toint(NMAX(1))
-else				NMAX = 100
-end if
-
-
 
 
 ;================================================================
@@ -371,36 +358,36 @@ OUT_OF_BDS = False
 ;VAR_NML                = GPLOT_DIR+"/nmlist/namelist.maps.test"
 if(isvar("VAR_NML"))then
         print("MSG: Detected custom graphics namelist. Will try that first.")
-        if(fileexists(GPLOT_DIR+"/nmlist/"+VAR_NML))then
-                VAR_NML = GPLOT_DIR+"/nmlist/"+VAR_NML
+        if(fileexists(GPLOT_DIR+"/parm/"+VAR_NML))then
+                VAR_NML = GPLOT_DIR+"/parm/"+VAR_NML
         else
                 print("WARNING: Custom graphics namelist not found. Trying defaults.")
                 delete(VAR_NML)
         end if
 end if
 if(.not.isvar("VAR_NML"))then   
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then   
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps."+DOMAIN+"."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps."+DOMAIN+"."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps."+DOMAIN+"."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps."+DOMAIN+"."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps.default."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps.default."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps.default."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps.default."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps.default"))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps.default"
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps.default"))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps.default"
         end if
 end if
 if(.not.isvar("VAR_NML"))then   print("ERROR: Graphics namelist not available. Something went wrong.")
