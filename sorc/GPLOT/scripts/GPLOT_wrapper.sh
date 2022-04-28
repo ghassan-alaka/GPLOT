@@ -22,6 +22,7 @@ echo "MSG: shell scripts for each component of GPLOT."
 # Determine the GPLOT source code directory
 if [ -z "${HOMEgplot}" ]; then
     export HOMEgplot="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev | sed s#//*#/#g)"
+    export GPLOT_DIR="${HOMEgplot}"
 fi
 if [ -z "${SORCgplot}" ]; then
     export SORCgplot="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev | sed s#//*#/#g)"
