@@ -21,10 +21,10 @@ if [ -z "${GPLOT_DIR}" ]; then
 fi
 
 # Define important GPLOT directories
-NMLIST_DIR="${GPLOT_DIR}/nmlist"
-BATCH_DIR="${GPLOT_DIR}/batch"
-NCL_DIR="${GPLOT_DIR}/ncl"
-TBL_DIR="${GPLOT_DIR}/tbl"
+NMLIST_DIR="${GPLOT_DIR}/parm/"
+BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
+NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
 NMLIST="${1:-namelist.input.default}"
@@ -32,7 +32,7 @@ NMLIST="${1:-namelist.input.default}"
 # Check if the namelist exists. If not, exit.
 if [ ! -f ${NMLIST} ]; then
     echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
-    NMLIST="${NMLIST_DIR}/${NMLIST}"
+    NMLIST="${NMLIST_DIR}${NMLIST}"
     if [ ! -f ${NMLIST} ]; then
         echo "WARNING: Couldn't find this namelist --> ${NMLIST}"
         echo "ERROR: I can't proceed without a namelist."

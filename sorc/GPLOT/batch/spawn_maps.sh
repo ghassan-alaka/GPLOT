@@ -25,9 +25,9 @@ fi
 
 # Define important GPLOT directories
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
-NMLIST_DIR="${GPLOT_DIR}/nmlist/"
-BATCH_DIR="${GPLOT_DIR}/batch/"
-NCL_DIR="${GPLOT_DIR}/ncl/"
+NMLIST_DIR="${GPLOT_DIR}/parm/"
+BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
+NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
