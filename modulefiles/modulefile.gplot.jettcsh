@@ -32,18 +32,18 @@ module purge
 module load intel/2022.1.2
 module load wgrib/1.8.1.0b
 module load wgrib2/2.0.8
-if [ "${A}" -eq 0 ]; then
+if ( "${A}" == "0" ) then
     module load netcdf/4.6.1
     module load hdf5/1.10.4
     module load intelpython/3.6.5
     module use -a /contrib/met/modulefiles
     module load met/10.1.0
-fi
+endif
 module load ncl/6.6.2
 module load grads/2.2.1
 
 # NCL
-setenv NCARG_COLORMAPS "${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then

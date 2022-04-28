@@ -29,41 +29,29 @@ limit core 0
 
 # Load modules
 module purge
-module load intel/18.0.5.274
+module load intel/2022.1.2
 module load wgrib/1.8.1.0b
 module load wgrib2/2.0.8
 if ( "${A}" == "0" ) then
     module use -a /contrib/anaconda/modulefiles
     module load anaconda/latest
     module use -a /contrib/met/modulefiles
-    module load met/9.0_anacondal
+    module load met/10.1.0
 endif
-module load ncl/6.5.0
-module load grads/2.0.2
+module load ncl/6.6.2
+module load grads/2.2.1
 
 # NCL
-<<<<<<< HEAD
-setenv NCARG_COLORMAPS ${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps
-
-# Python 3 Anaconda
-if ( "${A}" == "1" ) then
-    PYDIR "/scratch2/AOML/aoml-hafs1/Ghassan.Alaka/anaconda3"
-=======
-setenv NCARG_COLORMAPS "${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then
     setenv PYDIR "/scratch2/AOML/aoml-hafs1/Ghassan.Alaka/anaconda3"
->>>>>>> develop
     # Python 3 Anaconda
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
     if ( -f "${PYDIR}/etc/profile.d/conda.csh" ) then
-<<<<<<< HEAD
-        source "${PYDIR}/etc/profile.d/conda.csh" &> /dev/null
-=======
         source "${PYDIR}/etc/profile.d/conda.csh" >& /dev/null
->>>>>>> develop
     else
         setenv PATH "${PYDIR}/bin:$PATH"
     endif
