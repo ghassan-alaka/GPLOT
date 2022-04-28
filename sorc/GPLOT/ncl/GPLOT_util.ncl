@@ -2546,12 +2546,12 @@ begin
                 if(.not.any(masterModel.eq.MODEL))then
                         print("WARNING: getModelInfo: MODEL '"+MODEL+"' not recognized. Assigning missing value.")
 		else
-			modelind=str_match_ind(masterModel,MODEL)
+			modelind := str_match_ind(masterModel,MODEL)
 			if (vartype.eq."string") then
-				MODELINFO(aaa)=str_squeeze(str_get_field(masterInfo(modelind),typeind,","))
+				MODELINFO(aaa)=str_squeeze(str_get_field(masterInfo(modelind(0)),typeind,","))
 			else if (vartype.eq."integer") then
 				;print(str_get_field(masterInfo(modelind),typeind,", "))
-				MODELINFO(aaa)=toint(str_squeeze(str_get_field(masterInfo(modelind),typeind,",")))
+				MODELINFO(aaa)=toint(str_squeeze(str_get_field(masterInfo(modelind(0)),typeind,",")))
 			end if  end if
                 end if
 
