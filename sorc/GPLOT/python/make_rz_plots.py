@@ -623,33 +623,33 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			print('Doing Plots Now')
 
 			#Load the colormaps needed
-			color_data_vt = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
+			color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
 			colormap_vt = matplotlib.colors.ListedColormap(color_data_vt)
 			levs_vt = np.linspace(0,80,41,endpoint=True)
 			norm_vt = colors.BoundaryNorm(levs_vt,256)
 
-			color_data_ur = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
+			color_data_ur = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
 			colormap_ur = matplotlib.colors.ListedColormap(color_data_ur)
 			levs_ur = np.linspace(-30,30,31,endpoint=True)
 			norm_ur = colors.BoundaryNorm(levs_ur,256)
 
-			color_data_w = np.genfromtxt(GPLOT_DIR+'/python/colormaps/bluewhitered.txt')
+			color_data_w = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
 			colormap_w = matplotlib.colors.ListedColormap(color_data_w)
 			levs_w = np.linspace(-5,5,41,endpoint=True)
 			norm_w = colors.BoundaryNorm(levs_w,256)
 
-			color_data_dbz = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_radar.txt')
+			color_data_dbz = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_radar.txt')
 			colormap_dbz = matplotlib.colors.ListedColormap(color_data_dbz)
 			levs_dbz = np.linspace(0,80,41,endpoint=True)
 			norm_dbz = colors.BoundaryNorm(levs_dbz,256)
 
-			color_data_rh = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_brown_to_green.txt')
+			color_data_rh = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_brown_to_green.txt')
 			colormap_rh = matplotlib.colors.ListedColormap(color_data_rh)
 			levs_rh = np.linspace(0,100,41,endpoint=True)
 			norm_rh = colors.BoundaryNorm(levs_rh,256)
 
 
-			color_data_wind = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
+			color_data_wind = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
 			colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 			levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 			norm_wind = colors.BoundaryNorm(levs_wind,256)
