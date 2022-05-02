@@ -10,6 +10,6 @@ GFS           pgrb2.0p25              pgrb2.0p25                 pgrb2.0p25
 HFVGFS        nest02_nested_ltd       nest02_nested_ltd          nest02_nested_ltd
 fvGFS_ATL     nest02_nested_ltd       nest02_nested_ltd          nest02_nested_ltd
 GEFS          gep                     gep                        gep
-HAFS          hafsprs.synoptic.0p03   hafsprs.synoptic.0p03      hafsprs.synoptic.0p03
+HAFS          hafs.grid01             hafs.grid02                hafs.grid02
 ECMWF         global.0p5              global.0p5                 global.0p5
 HMON          hmonprs.d1.0p20         hmonprs.d2.0p06            hmonprs.d3.0p02
