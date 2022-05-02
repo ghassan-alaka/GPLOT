@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Check that GPLOT_DIR is defined in the environment.
-import os, time
+import os, time, warnings
 GPLOT_DIR = os.environ['GPLOT_DIR']
 print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
 
@@ -85,7 +85,7 @@ DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PI
 EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
 try:
-	ODIR_TYPE = np.int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
+	ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
 except:
 	ODIR_TYPE = 0
 if ODIR_TYPE == 1:
@@ -116,9 +116,9 @@ ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
 
 
 #Get parameters from input file
-resolution = np.float(RESOLUTION)
-rmax = np.float(RMAX)
-zsize_pressure = np.int(LEVS)
+resolution = float(RESOLUTION)
+rmax = float(RMAX)
+zsize_pressure = int(LEVS)
 
 # Get the ATCF file.
 ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
@@ -202,7 +202,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	if ( centerlat > 50.0):
 		# Write the input file to a log to mark that it has ben processed
 		PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-		os.system('echo "'+np.str(FILE)+'" >> '+PLOTTED_FILES)
+		os.system('echo "'+str(FILE)+'" >> '+PLOTTED_FILES)
 		os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 		os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 		break
@@ -218,7 +218,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 		if (gribfiletest < 1):
 
-			# Create the GrADs control file, if is hasn't already been created.
+			# Create the GrADs control file, if it hasn't already been created.
 			CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
 			IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
 			LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
@@ -226,8 +226,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
 				time.sleep(5)
 				LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
-				if LOCK_TEST:
-					os.system('rm -f '+LOCK_FILE)
+				if LOCK_TEST:  os.system('rm -f '+LOCK_FILE)
 
 			if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
 				print('MSG: GrADs control file not found. Creating it now.')
@@ -267,13 +266,13 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			latmax = centerlat + yoffset
 			lonmin = centerlon - xoffset
 			latmin = centerlat - yoffset
-			lonstring = 'set lon '+np.str(lonmin)+' '+np.str(lonmax)
-			latstring = 'set lat '+np.str(latmin)+' '+np.str(latmax)
+			lonstring = 'set lon '+str(lonmin)+' '+str(lonmax)
+			latstring = 'set lat '+str(latmin)+' '+str(latmax)
 			ga(lonstring)
 			ga(latstring)
 			lats = ga.exp('lat')
 			lons = ga.exp('lon')
-			zstring = 'set z 1 '+np.str(zsize_pressure)
+			zstring = 'set z 1 '+str(zsize_pressure)
 			ga(zstring)
 			levs = ga.exp('lev')
 		
@@ -286,7 +285,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				z[i] = levs[1,1,i]
 
 			#Get data
-			print('Getting Data Now. Using an xoffset of '+np.str(xoffset)+' degrees')
+			print('Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
 			uwind = ga.exp('ugrdprs')
 			vwind = ga.exp('vgrdprs')
 			omega = ga.exp('vvelprs')
@@ -342,7 +341,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			y_sr = lat_sr*111.1e3
 
 			#Define the polar coordinates needed
-			r = np.linspace(0,rmax,(np.int(rmax//resolution)+1))
+			r = np.linspace(0,rmax,(int(rmax//resolution)+1))
 			#r = np.linspace(0,600,201)
 			#print(r)
 			#sys.exit()
@@ -527,10 +526,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			#Two Metrics: 200 km - RMAX average, 0-500 km/rmax with vortex removed
 			
 			#First Do the 200 km - rmax average
-			u850_p_ring = u850_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
-			v850_p_ring = v850_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
-			u200_p_ring = u200_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
-			v200_p_ring = v200_p[:,np.int(np.round(200/resolution)):np.int(np.round(rmax/resolution))]
+			u850_p_ring = u850_p[:,int(np.round(200/resolution)):int(np.round(rmax/resolution))]
+			v850_p_ring = v850_p[:,int(np.round(200/resolution)):int(np.round(rmax/resolution))]
+			u200_p_ring = u200_p[:,int(np.round(200/resolution)):int(np.round(rmax/resolution))]
+			v200_p_ring = v200_p[:,int(np.round(200/resolution)):int(np.round(rmax/resolution))]
 
 			u850_p_ring_mean = np.nanmean(np.nanmean(u850_p_ring))
 			v850_p_ring_mean = np.nanmean(np.nanmean(v850_p_ring))
@@ -542,7 +541,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			shearmag = np.hypot(ushear1,vshear1)
 			sheardir = np.arctan2(vshear1,ushear1)*180.0/pi
-			shearstring = np.str(np.int(np.round(shearmag*1.94,0)))
+			shearstring = str(int(np.round(shearmag*1.94,0)))
 
 			#Convert shear to meteorological convention
 			if sheardir <=90:
@@ -560,7 +559,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			sheardir_5deg = (np.round((sheardir_math/5))*5)
 
 			#Get index for shear
-			sheardir_index = np.int(sheardir_5deg/5)
+			sheardir_index = int(sheardir_5deg/5)
 
 			vt_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 			ur_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
@@ -645,17 +644,20 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			v850_p_rot = np.roll(v850_p,[-sheardir_index, 0],axis=(0,1))
 
 			#Calculate azimuthal means
-			vt_p_mean = np.nanmean(vt_p,0)
-			ur_p_mean = np.nanmean(ur_p,0)
-			w_p_mean = np.nanmean(w_p,0)
-			dbz_p_mean = np.nanmean(dbz_p,0)
-			temp_p_mean = np.nanmean(temp_p,0)
-			q_p_mean = np.nanmean(q_p,0)
-			rh_p_mean = np.nanmean(rh_p,0)
-			pressure_p_mean = np.nanmean(pressure_p,0)
+			with warnings.catch_warnings():
+				warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 
-			vt_pbl_p_mean = np.nanmean(vt_pbl_p,0)
-			ur_pbl_p_mean = np.nanmean(ur_pbl_p,0)
+				vt_p_mean = np.nanmean(vt_p,0)
+				ur_p_mean = np.nanmean(ur_p,0)
+				w_p_mean = np.NaN if np.isnan(w_p).all() else np.nanmean(w_p,0)
+				dbz_p_mean = np.nanmean(dbz_p,0)
+				temp_p_mean = np.nanmean(temp_p,0)
+				q_p_mean = np.nanmean(q_p,0)
+				rh_p_mean = np.nanmean(rh_p,0)
+				pressure_p_mean = np.nanmean(pressure_p,0)
+	
+				vt_pbl_p_mean = np.nanmean(vt_pbl_p,0)
+				ur_pbl_p_mean = np.nanmean(ur_pbl_p,0)
 
 			#Calculate upshear, downshear, right of shear, and left of shear
 			ur_p_downshear = np.concatenate((ur_p_rot[1:9,:,:],ur_p_rot[63:72,:,:]),axis=0)
@@ -679,25 +681,28 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			rh_p_rightshear = rh_p_rot[45:63,:,:]
 
 			#Calculate shear-relative means
-			ur_p_downshear_mean = np.nanmean(ur_p_downshear,0)
-			w_p_downshear_mean = np.nanmean(w_p_downshear,0)
-			dbz_p_downshear_mean = np.nanmean(dbz_p_downshear,0)
-			rh_p_downshear_mean = np.nanmean(rh_p_downshear,0)
+			with warnings.catch_warnings():
+				warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 
-			ur_p_upshear_mean = np.nanmean(ur_p_upshear,0)
-			w_p_upshear_mean = np.nanmean(w_p_upshear,0)
-			dbz_p_upshear_mean = np.nanmean(dbz_p_upshear,0)
-			rh_p_upshear_mean = np.nanmean(rh_p_upshear,0)
+				ur_p_downshear_mean = np.nanmean(ur_p_downshear,0)
+				w_p_downshear_mean = np.nanmean(w_p_downshear,0)
+				dbz_p_downshear_mean = np.nanmean(dbz_p_downshear,0)
+				rh_p_downshear_mean = np.nanmean(rh_p_downshear,0)
 
-			ur_p_leftshear_mean = np.nanmean(ur_p_leftshear,0)
-			w_p_leftshear_mean = np.nanmean(w_p_leftshear,0)
-			dbz_p_leftshear_mean = np.nanmean(dbz_p_leftshear,0)
-			rh_p_leftshear_mean = np.nanmean(rh_p_leftshear,0)
+				ur_p_upshear_mean = np.nanmean(ur_p_upshear,0)
+				w_p_upshear_mean = np.nanmean(w_p_upshear,0)
+				dbz_p_upshear_mean = np.nanmean(dbz_p_upshear,0)
+				rh_p_upshear_mean = np.nanmean(rh_p_upshear,0)
 
-			ur_p_rightshear_mean = np.nanmean(ur_p_rightshear,0)
-			w_p_rightshear_mean = np.nanmean(w_p_rightshear,0)
-			dbz_p_rightshear_mean = np.nanmean(dbz_p_rightshear,0)
-			rh_p_rightshear_mean = np.nanmean(rh_p_rightshear,0)
+				ur_p_leftshear_mean = np.nanmean(ur_p_leftshear,0)
+				w_p_leftshear_mean = np.nanmean(w_p_leftshear,0)
+				dbz_p_leftshear_mean = np.nanmean(dbz_p_leftshear,0)
+				rh_p_leftshear_mean = np.nanmean(rh_p_leftshear,0)
+
+				ur_p_rightshear_mean = np.nanmean(ur_p_rightshear,0)
+				w_p_rightshear_mean = np.nanmean(w_p_rightshear,0)
+				dbz_p_rightshear_mean = np.nanmean(dbz_p_rightshear,0)
+				rh_p_rightshear_mean = np.nanmean(rh_p_rightshear,0)
 
 			#Calculate wavenumber-0,1,2 fits for both rotated and non-rotated grids 
 			dbz5_p = dbz_p[:,:,10]
@@ -731,7 +736,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				dbz5_p_w1[:,j] = A1_dbz*np.cos(theta) + B1_dbz*np.sin(theta)
 				dbz5_p_w2[:,j] = A2_dbz*np.cos(2*theta) + B2_dbz*np.sin(2*theta)
 				dbz5_p_whigher[:,j] = 0
-				for h in range (2,np.int((np.shape(theta)[0]+1)/2)):
+				for h in range (2,int((np.shape(theta)[0]+1)/2)):
 					A = 2*np.real(fourier_dbz[h])
 					B = -2*np.imag(fourier_dbz[h])
 					dbz5_p_whigher[:,j] = dbz5_p_whigher[:,j]+A*np.cos(h*theta) + B*np.sin(h*theta)
@@ -758,7 +763,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				vt10_p_w1[:,j] = A1_vt10*np.cos(theta) + B1_vt10*np.sin(theta)
 				vt10_p_w2[:,j] = A2_vt10*np.cos(2*theta) + B2_vt10*np.sin(2*theta)
 				vt10_p_whigher[:,j] = 0
-				for h in range (2,np.int((np.shape(theta)[0]+1)/2)):
+				for h in range (2,int((np.shape(theta)[0]+1)/2)):
 					A = 2*np.real(fourier_vt10[h])
 					B = -2*np.imag(fourier_vt10[h])
 					vt10_p_whigher[:,j] = vt10_p_whigher[:,j]+A*np.cos(h*theta) + B*np.sin(h*theta)
@@ -785,12 +790,12 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			rmw_2km = rmw_mean[4]
 			vt_p_mean_max = np.max(vt_p_mean,0)
 			vt_p_mean_max_2km = vt_p_mean_max[4]
-			rmwstring = np.str(np.int(np.round(rmw_2km*0.54,0)))
-			vmaxstring = np.str(np.int(np.round(vt_p_mean_max_2km*1.94,0)))
+			rmwstring = str(int(np.round(rmw_2km*0.54,0)))
+			vmaxstring = str(int(np.round(vt_p_mean_max_2km*1.94,0)))
 
 			if rmax/rmw_2km < np.max(rnorm): #Quick Fix For Big RMWs
 				rnorm_max = np.round(rmax/rmw_2km,2)-math.fmod(np.round(rmax/rmw_2km,2),0.05)
-				rnorm = np.linspace(0,rnorm_max,(np.int(rnorm_max/0.05))+1)
+				rnorm = np.linspace(0,rnorm_max,(int(rnorm_max/0.05))+1)
 				Rnorm, THETAnorm = np.meshgrid(rnorm,theta)
 				XInorm = Rnorm * np.cos(THETAnorm)
 				YInorm = Rnorm * np.sin(THETAnorm)
@@ -883,7 +888,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			#Term4 (Vertical Advection of Eddy Tangential Momentum)
 			d_vt_p_perturbation_dz = metpy.calc.first_derivative(vt_p_perturbation,axis=2,delta=500)
 			vertical_eddy_advection_p = w_p_perturbation*d_vt_p_perturbation_dz
-			vertical_eddy_advection_p_mean = np.nanmean(vertical_eddy_advection_p,0)
+			with warnings.catch_warnings():
+				warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+				vertical_eddy_advection_p_mean = np.nanmean(vertical_eddy_advection_p,0)
 			term4_vt_tendency_vertical_eddy_advection = -vertical_eddy_advection_p_mean
 			term4_vt_tendency_vertical_eddy_advection[:,0] = np.nan
 			term4_vt_tendency_vertical_eddy_advection[0,:] = np.nan
@@ -985,16 +992,19 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				stretching_convergence_p[:,:,k] = f_stretching_convergence((YI,XI),method='linear')
 				tilting_p[:,:,k] = f_tilting((YI,XI),method='linear')
 
-			term1_vort_tendency_horizontal_advection = np.nanmean(horizontal_advection_p,0)
+			with warnings.catch_warnings():
+				warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+				term1_vort_tendency_horizontal_advection = np.nanmean(horizontal_advection_p,0)
+				term2_vort_tendency_vertical_advection = np.nanmean(vertical_advection_p,0)
+				term3_vort_tendency_stretching_convergence = np.nanmean(stretching_convergence_p,0)
+				term4_vort_tendency_tilting = np.nanmean(tilting_p,0)
+
 			term1_vort_tendency_horizontal_advection[:,0] = np.nan
 			term1_vort_tendency_horizontal_advection[0,:] = np.nan
-			term2_vort_tendency_vertical_advection = np.nanmean(vertical_advection_p,0)
 			term2_vort_tendency_vertical_advection[:,0] = np.nan
 			term2_vort_tendency_vertical_advection[0,:] = np.nan
-			term3_vort_tendency_stretching_convergence = np.nanmean(stretching_convergence_p,0)
 			term3_vort_tendency_stretching_convergence[:,0] = np.nan
 			term3_vort_tendency_stretching_convergence[0,:] = np.nan
-			term4_vort_tendency_tilting = np.nanmean(tilting_p,0)
 			term4_vort_tendency_tilting[:,0] = np.nan
 			term4_vort_tendency_tilting[0,:] = np.nan
 
@@ -1341,7 +1351,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 				#Rossby Number
 				rmw_mean_10m = rmw_mean[0]
-				rmw_mean_index_10m = np.int(rmw_mean_index[0])
+				rmw_mean_index_10m = int(rmw_mean_index[0])
 				vt10_p_mean = np.nanmean(vt10_p,0)
 				coriolis = 2*7.292e-5*np.sin(centerlat*3.14159/180)
 				rossby = vt10_p_mean[rmw_mean_index_10m]/(rmw_mean_10m*1000*coriolis)
@@ -1385,7 +1395,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				#Calculate Local Shear
 				if ( np.min(threshold_vort) > 0):
 					rmaxlocal = 102
-					rlocal = np.linspace(0,rmaxlocal,(np.int(rmaxlocal//resolution)+1))
+					rlocal = np.linspace(0,rmaxlocal,(int(rmaxlocal//resolution)+1))
 					Rlocal, THETAlocal = np.meshgrid(rlocal, theta)
 					XIlocal = Rlocal * np.cos(THETAlocal)
 					YIlocal = Rlocal * np.sin(THETAlocal)
@@ -1479,7 +1489,10 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			
 			#Make Plots
 			print('Doing Plots Now')
-			namelist_structure_vars = np.genfromtxt(NMLDIR+'/namelist.polar.structure',delimiter=',',dtype='str')
+			if os.path.exists(f'{NMLDIR}/namelist.polar.structure.{EXPT}'):
+				namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure.{EXPT}',delimiter=',',dtype='str')
+			else:
+				namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure',delimiter=',',dtype='str')
 			do_ur_mean = namelist_structure_vars[0,1]
 			do_vt_mean = namelist_structure_vars[1,1]
 			do_w_mean = namelist_structure_vars[2,1]
@@ -1505,7 +1518,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 
 			#Do the Sounding Plots First Since Those Call an External Function      
 			if ( do_soundings == 'Y'):
-				skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,np.float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
+				skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
 
 			#Load the colormaps needed
 			color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -1549,331 +1562,377 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 			levs_vort_budget = np.linspace(-40,40,41,endpoint=True)
 			norm_vort_budget = colors.BoundaryNorm(levs_vort_budget,256)
 
-			#First do Azimuthal Mean Radial Wind
-			if ( do_ur_mean == 'Y'):	
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(ur_p_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-				plt.grid()
-				plt.xlim(0,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.ur_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+			# FIGURE 1: Azimuthal Mean Radial Wind
+			if do_ur_mean == 'Y':
+				fig1 = plt.figure(figsize=(20.5, 10.5))
+				ax1 = fig1.add_subplot(1, 1, 1)
+				co1 = ax1.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_mean,1)), levs_ur, \
+						  cmap=colormap_ur, norm=norm_ur, extend='both')
+				ax1.set_xlim(0,rmax)
+				ax1.set_xticks(np.linspace(0,rmax,11))
+				ax1.set_xticklabels([str(int(x)) for x in np.linspace(0,rmax,11)], fontsize=24)
+				ax1.set_xlabel('Radius (km)', fontsize=24)
+				ax1.set_ylim(0,18)
+				ax1.invert_yaxis()
+				ax1.set_yticks(np.linspace(0,18,10))
+				ax1.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax1.set_ylabel('Height (km)', fontsize=24)
+				cbar1 = plt.colorbar(co1, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
+				cbar1.ax.tick_params(labelsize=24)
+				ax1.grid()
+				ax1.set_title(EXPT.strip()+'\n'+ r'Azimuthal Mean Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=24, weight = 'bold',loc='left')
+				ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.ur_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-			
-			if ( do_vt_mean == 'Y'):
-				#Next do azimuthal mean tangential wind
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(vt_p_mean,1)),levs_vt,cmap=colormap_vt,norm=norm_vt,extend='max')
-				plt.grid()
-				plt.xlim(0,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Tangential Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.vt_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 2: Azimuthal Mean Tangential Wind
+			if do_vt_mean == 'Y':
+				fig2 = plt.figure(figsize=(20.5, 10.5))
+				ax2 = fig2.add_subplot(1, 1, 1)
+				co2 = ax2.contourf(r, heightlevs/1000, np.flipud(np.rot90(vt_p_mean, 1)), levs_vt, \
+						   cmap=colormap_vt, norm=norm_vt, extend='max')
+				ax2.set_xlim(0,rmax)
+				ax2.set_xticks(np.linspace(0,rmax,11))
+				ax2.set_xticklabels([str(int(x)) for x in np.linspace(0,rmax,11)], fontsize=24)
+				ax2.set_xlabel('Radius (km)', fontsize=24)
+				ax2.set_ylim(0,18)
+				ax2.invert_yaxis()
+				ax2.set_yticks(np.linspace(0,18,10))
+				ax2.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax2.set_ylabel('Height (km)', fontsize=24)
+				cbar2 = plt.colorbar(co2, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
+				cbar2.ax.tick_params(labelsize=24)
+				ax2.grid()
+				ax2.set_title(EXPT.strip()+'\n'+ r'Azimuthal Mean Tangential Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=24, weight = 'bold',loc='left')
+				ax2.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.vt_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig2.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-			
-			if ( do_w_mean == 'Y'):
-				#Next do azimuthal mean vertical velocity
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(w_p_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-				plt.grid()
-				plt.xlim(0,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean W ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.w_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 3: Azimuthal Mean Vertical Velocity
+			if do_w_mean == 'Y':
+				fig3 = plt.figure(figsize=(20.5, 10.5))
+				ax3 = fig3.add_subplot(1, 1, 1)
+				co3 = ax3.contourf(r, heightlevs/1000, np.flipud(np.rot90(w_p_mean, 1)), levs_w, \
+						   cmap=colormap_w, norm=norm_w, extend='both')
+				ax3.set_xlim(0,rmax)
+				ax3.set_xticks(np.linspace(0,rmax,11))
+				ax3.set_xticklabels([str(int(x)) for x in np.linspace(0,rmax,11)], fontsize=24)
+				ax3.set_xlabel('Radius (km)', fontsize=24)
+				ax3.set_ylim(0,18)
+				ax3.invert_yaxis()
+				ax3.set_yticks(np.linspace(0,18,10))
+				ax3.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax3.set_ylabel('Height (km)', fontsize=24)
+				cbar3 = plt.colorbar(co3, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
+				cbar3.ax.tick_params(labelsize=24)
+				ax3.grid()
+				ax3.set_title(EXPT.strip()+'\n'+ r'Azimuthal Mean W ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax3.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.w_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig3.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-			
-			if ( do_dbz_mean == 'Y'):
-				#Next do azimuthal mean reflectivity
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(dbz_p_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-				plt.grid()
-				plt.xlim(0,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 4: Azimuthal Mean Reflectivity
+			if do_dbz_mean == 'Y':
+				fig4 = plt.figure(figsize=(20.5, 10.5))
+				ax4 = fig4.add_subplot(1, 1, 1)
+				co4 = ax4.contourf(r, heightlevs/1000, np.flipud(np.rot90(dbz_p_mean, 1)), levs_dbz, \
+						   cmap=colormap_dbz, norm=norm_dbz, extend='max')
+				ax4.set_xlim(0,rmax)
+				ax4.set_xticks(np.linspace(0,rmax,11))
+				ax4.set_xticklabels([str(int(x)) for x in np.linspace(0,rmax,11)], fontsize=24)
+				ax4.set_xlabel('Radius (km)', fontsize=24)
+				ax4.set_ylim(0,18)
+				ax4.invert_yaxis()
+				ax4.set_yticks(np.linspace(0,18,10))
+				ax4.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax4.set_ylabel('Height (km)', fontsize=24)
+				cbar4 = plt.colorbar(co4, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
+				cbar4.ax.tick_params(labelsize=24)
+				ax4.grid()
+				ax4.set_title(EXPT.strip()+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax4.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig4.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-			
-			if ( do_rh_mean == 'Y'):
-				#Next do azimuthal mean RH
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(rh_p_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='max')
-				plt.grid()
-				plt.xlim(0,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(0,rmax+1,50),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Relative Humidity ($\%$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.rh_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 5: Azimuthal Mean Relative Humidity
+			if do_rh_mean == 'Y':
+				fig5 = plt.figure(figsize=(20.5, 10.5))
+				ax5 = fig5.add_subplot(1, 1, 1)
+				co5 = ax5.contourf(r, heightlevs/1000, np.flipud(np.rot90(rh_p_mean, 1)), levs_rh, \
+						   cmap=colormap_rh, norm=norm_rh, extend='max')
+				ax5.set_xlim(0,rmax)
+				ax5.set_xticks(np.linspace(0,rmax,11))
+				ax5.set_xticklabels([str(int(x)) for x in np.linspace(0,rmax,11)], fontsize=24)
+				ax5.set_xlabel('Radius (km)', fontsize=24)
+				ax5.set_ylim(0,18)
+				ax5.invert_yaxis()
+				ax5.set_yticks(np.linspace(0,18,10))
+				ax5.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax5.set_ylabel('Height (km)', fontsize=24)
+				cbar5 = plt.colorbar(co5, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
+				cbar5.ax.tick_params(labelsize=24)
+				ax5.grid()
+				ax5.set_title(EXPT.strip()+'\n'+ r'Azimuthal Mean Relative Humidity ($\%$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax5.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.rh_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig5.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-			
-			if ( do_dbz_alongshear == 'Y'):
-				#Next do along-shear reflectivity
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(dbz_p_downshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(dbz_p_upshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Along-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 6: Along-Shear Reflectivity
+			if do_dbz_alongshear == 'Y':
+				fig6 = plt.figure(figsize=(20.5, 10.5))
+				ax6 = fig6.add_subplot(1, 1, 1)
+				co6 = ax6.contourf(r, heightlevs/1000, np.flipud(np.rot90(dbz_p_downshear_mean, 1)), levs_dbz, \
+						   cmap=colormap_dbz, norm=norm_dbz, extend='max')
+				ax6.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_upshear_mean, 1)), levs_dbz, \
+					     cmap=colormap_dbz, norm=norm_dbz, extend='max')
+				ax6.set_xlim(-rmax,rmax)
+				ax6.set_xticks(np.linspace(-rmax,rmax,11))
+				ax6.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax6.set_xlabel('Radius (km)', fontsize=24)
+				ax6.set_ylim(0,18)
+				ax6.invert_yaxis()
+				ax6.set_yticks(np.linspace(0,18,10))
+				ax6.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax6.set_ylabel('Height (km)', fontsize=24)
+				cbar6 = plt.colorbar(co6, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
+				cbar6.ax.tick_params(labelsize=24)
+				ax6.grid()
+				ax6.text(0.05,0.95, 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax6.text(0.05,0.95, 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax6.set_title(EXPT.strip()+'\n'+ r'Along-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax6.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.dbz_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig6.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-			
-			if ( do_ur_alongshear == 'Y'):
-				#Next do along-shear radial wind
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(ur_p_downshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Along-Shear Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.ur_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 7: Along-Shear Radial Wind
+			if do_ur_alongshear == 'Y':
+				fig7 = plt.figure(figsize=(20.5, 10.5))
+				ax7 = fig7.add_subplot(1, 1, 1)
+				co7 = ax7.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_downshear_mean, 1)), levs_ur, \
+						   cmap=colormap_ur, norm=norm_ur, extend='both')
+				ax7.contourf(-r,heightlevs/1000,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
+				ax7.set_xlim(-rmax,rmax)
+				ax7.set_xticks(np.linspace(-rmax,rmax,11))
+				ax7.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax7.set_xlabel('Radius (km)', fontsize=24)
+				ax7.set_ylim(0,18)
+				ax7.invert_yaxis()
+				ax7.set_yticks(np.linspace(0,18,10))
+				ax7.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax7.set_ylabel('Height (km)', fontsize=24)
+				cbar7 = plt.colorbar(co7, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
+				cbar7.ax.tick_params(labelsize=24)
+				ax7.grid()
+				ax7.text(0.05,0.95, 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax7.text(0.05,0.95, 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax7.set_title(EXPT.strip()+'\n'+ r'Along-Shear Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax7.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.ur_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig7.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-	
-			if ( do_w_alongshear == 'Y'):
-				#Next do along-shear vertical velocity
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(w_p_downshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(w_p_upshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Along-Shear W ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.w_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+
+			# FIGURE 8: Along-Shear Vertical Velocity
+			if do_w_alongshear == 'Y':
+				fig8 = plt.figure(figsize=(20.5, 10.5))
+				ax8 = fig8.add_subplot(1, 1, 1)
+				co8 = ax8.contourf(r, heightlevs/1000, np.flipud(np.rot90(w_p_downshear_mean, 1)), levs_w, \
+						   cmap=colormap_w, norm=norm_w, extend='both')
+				ax8.contourf(-r, heightlevs/1000, np.flipud(np.rot90(w_p_upshear_mean, 1)), levs_w, \
+					     cmap=colormap_w, norm=norm_w, extend='both')
+				ax8.set_xlim(-rmax,rmax)
+				ax8.set_xticks(np.linspace(-rmax,rmax,11))
+				ax8.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax8.set_xlabel('Radius (km)', fontsize=24)
+				ax8.set_ylim(0,18)
+				ax8.invert_yaxis()
+				ax8.set_yticks(np.linspace(0,18,10))
+				ax8.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax8.set_ylabel('Height (km)', fontsize=24)
+				cbar8 = plt.colorbar(co8, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
+				cbar8.ax.tick_params(labelsize=24)
+				ax8.grid()
+				ax8.text(0.05,0.95, 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax8.text(0.05,0.95, 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax8.set_title(EXPT.strip()+'\n'+ r'Along-Shear W ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax8.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.w_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig8.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
 
-			if ( do_rh_alongshear == 'Y'):
-				#Next do along-shear RH
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(rh_p_downshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(rh_p_upshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Upshear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Downshear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Along-Shear RH ($\%$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.rh_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
+
+			# FIGURE 9: Along-Shear Relative Humidity
+			if do_rh_alongshear == 'Y':
+				fig9 = plt.figure(figsize=(20.5, 10.5))
+				ax9 = fig9.add_subplot(1, 1, 1)
+				co9 = ax9.contourf(r, heightlevs/1000, np.flipud(np.rot90(rh_p_downshear_mean, 1)), levs_rh, \
+						   cmap=colormap_rh, norm=norm_rh, extend='both')
+				ax9.contourf(-r, heightlevs/1000, np.flipud(np.rot90(rh_p_upshear_mean, 1)), levs_rh, \
+					     cmap=colormap_rh, norm=norm_rh, extend='both')
+				ax9.set_xlim(-rmax,rmax)
+				ax9.set_xticks(np.linspace(-rmax,rmax,11))
+				ax9.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax9.set_xlabel('Radius (km)', fontsize=24)
+				ax9.set_ylim(0,18)
+				ax9.invert_yaxis()
+				ax9.set_yticks(np.linspace(0,18,10))
+				ax9.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax9.set_ylabel('Height (km)', fontsize=24)
+				cbar9 = plt.colorbar(co9, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
+				cbar9.ax.tick_params(labelsize=24)
+				ax9.grid()
+				ax9.text(0.05,0.95, 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax9.text(0.05,0.95, 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax9.set_title(EXPT.strip()+'\n'+ r'Along-Shear RH ($\%$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+				ax9.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
 				figfname = ODIR+'/'+LONGSID.lower()+'.rh_alongshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+				fig9.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
 
-			if ( do_dbz_acrossshear == 'Y'):
-				#Next do across-shear reflectivity
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(dbz_p_rightshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(dbz_p_leftshear_mean,1)),levs_dbz,cmap=colormap_dbz,norm=norm_dbz,extend='max')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Across-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-				figfname = ODIR+'/'+LONGSID.lower()+'.dbz_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+
+			# FIGURE 10: Across-Shear Reflectivity
+			if do_dbz_acrossshear == 'Y':
+				fig10 = plt.figure(figsize=(20.5, 10.5))
+				ax10 = fig10.add_subplot(1, 1, 1)
+				co10 = ax10.contourf(r, heightlevs/1000, np.flipud(np.rot90(dbz_p_rightshear_mean, 1)), levs_dbz, \
+						   cmap=colormap_dbz, norm=norm_dbz, extend='both')
+				ax10.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_leftshear_mean, 1)), levs_dbz, \
+					     cmap=colormap_dbz, norm=norm_dbz, extend='both')
+				ax10.set_xlim(-rmax,rmax)
+				ax10.set_xticks(np.linspace(-rmax,rmax,11))
+				ax10.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax10.set_xlabel('Radius (km)', fontsize=24)
+				ax10.set_ylim(0,18)
+				ax10.invert_yaxis()
+				ax10.set_yticks(np.linspace(0,18,10))
+				ax10.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax10.set_ylabel('Height (km)', fontsize=24)
+				cbar10 = plt.colorbar(co10, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
+				cbar10.ax.tick_params(labelsize=24)
+				ax10.grid()
+				ax10.text(0.05,0.95, 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax10.text(0.05,0.95, 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax10.set_title(EXPT.strip()+'\n'+ r'Across-Shear Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']', fontsize=24, weight='bold', loc='left')
+				ax10.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
+				figfname = ODIR+'/'+LONGSID.lower()+'.rh_acrossshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
+				fig10.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
 
-			if ( do_ur_acrossshear == 'Y'):
-				#Next do across-shear radial wind
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(ur_p_rightshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(ur_p_leftshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Across-Shear Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.ur_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-				figfname = ODIR+'/'+LONGSID.lower()+'.ur_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+
+			# FIGURE 11: Across-Shear Radiaul Wind
+			if do_ur_acrossshear == 'Y':
+				fig11 = plt.figure(figsize=(20.5, 10.5))
+				ax11 = fig11.add_subplot(1, 1, 1)
+				co11 = ax11.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_rightshear_mean, 1)), levs_ur, \
+						   cmap=colormap_ur, norm=norm_ur, extend='both')
+				ax11.contourf(-r, heightlevs/1000, np.flipud(np.rot90(ur_p_leftshear_mean, 1)), levs_ur, \
+					     cmap=colormap_ur, norm=norm_ur, extend='both')
+				ax11.set_xlim(-rmax,rmax)
+				ax11.set_xticks(np.linspace(-rmax,rmax,11))
+				ax11.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax11.set_xlabel('Radius (km)', fontsize=24)
+				ax11.set_ylim(0,18)
+				ax11.invert_yaxis()
+				ax11.set_yticks(np.linspace(0,18,10))
+				ax11.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax11.set_ylabel('Height (km)', fontsize=24)
+				cbar11 = plt.colorbar(co11, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
+				cbar11.ax.tick_params(labelsize=24)
+				ax11.grid()
+				ax11.text(0.05,0.95, 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax11.text(0.05,0.95, 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax11.set_title(EXPT.strip()+'\n'+ r'Across-Shear Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']', fontsize=24, weight='bold', loc='left')
+				ax11.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(), fontsize=24, color='brown', loc='right')
+				figfname = ODIR+'/'+LONGSID.lower()+'.ur_acrossshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
+				fig11.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
-			if ( do_w_acrossshear == 'Y'):
-				#Next do across-shear vertical velocity
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(w_p_rightshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(w_p_leftshear_mean,1)),levs_w,cmap=colormap_w,norm=norm_w,extend='both')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Across-Shear W ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.w_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-				figfname = ODIR+'/'+LONGSID.lower()+'.w_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+
+			# FIGURE 12: Across-Shear Vertical Velocity
+			if do_w_acrossshear == 'Y':
+				fig12 = plt.figure(figsize=(20.5, 10.5))
+				ax12 = fig12.add_subplot(1, 1, 1)
+				co12 = ax12.contourf(r, heightlevs/1000, np.flipud(np.rot90(w_p_rightshear_mean, 1)), levs_w, \
+						   cmap=colormap_w, norm=norm_w, extend='both')
+				ax12.contourf(-r, heightlevs/1000, np.flipud(np.rot90(w_p_leftshear_mean, 1)), levs_w, \
+					     cmap=colormap_w, norm=norm_w, extend='both')
+				ax12.set_xlim(-rmax,rmax)
+				ax12.set_xticks(np.linspace(-rmax,rmax,11))
+				ax12.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax12.set_xlabel('Radius (km)', fontsize=24)
+				ax12.set_ylim(0,18)
+				ax12.invert_yaxis()
+				ax12.set_yticks(np.linspace(0,18,10))
+				ax12.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax12.set_ylabel('Height (km)', fontsize=24)
+				cbar12 = plt.colorbar(co12, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
+				cbar12.ax.tick_params(labelsize=24)
+				ax12.grid()
+				ax12.text(0.05,0.95, 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax12.text(0.05,0.95, 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax12.set_title(EXPT.strip()+'\n'+ r'Across-Shear W ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']', fontsize=24, weight='bold', loc='left')
+				ax12.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(), fontsize=24, color='brown', loc='right')
+				figfname = ODIR+'/'+LONGSID.lower()+'.w_acrossshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
+				fig12.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
-			if ( do_rh_acrossshear == 'Y'):
-				#Next do across-shear RH
-				plt.figure()
-				plt.gcf().set_size_inches(20.5, 10.5)
-				plt.contourf(r,heightlevs/1000,np.flipud(np.rot90(rh_p_rightshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-				plt.contourf(-r,heightlevs/1000,np.flipud(np.rot90(rh_p_leftshear_mean,1)),levs_rh,cmap=colormap_rh,norm=norm_rh,extend='both')
-				plt.grid()
-				plt.xlim(-rmax,rmax)
-				plt.ylim(0,18)
-				cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
-				cbar.ax.tick_params(labelsize=24)
-				plt.xticks(np.arange(-rmax,rmax+1,100),fontsize=24)
-				plt.yticks(np.linspace(0,18,10),fontsize=24)
-				plt.xlabel('Radius (km)',fontsize=24)
-				plt.ylabel('Height (km)',fontsize=24)
-				plt.text(-rmax+50,17,'Left of shear',fontsize=22,horizontalalignment = 'left',style = 'italic', weight = 'bold')
-				plt.text(rmax-50,17,'Right of shear',fontsize=22,horizontalalignment = 'right',style = 'italic', weight = 'bold')
-				plt.title(EXPT.strip()+'\n'+ r'Across-Shear RH ($\%$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
-				plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
-				#plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.rh_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
-				figfname = ODIR+'/'+LONGSID.lower()+'.rh_acrosshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
-				plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-				plt.close()
+
+			# FIGURE 13: Across-Shear Relative Humidity
+			if do_rh_acrossshear == 'Y':
+				fig13 = plt.figure(figsize=(20.5, 10.5))
+				ax13 = fig13.add_subplot(1, 1, 1)
+				co13 = ax13.contourf(r, heightlevs/1000, np.flipud(np.rot90(rh_p_rightshear_mean, 1)), levs_rh, \
+						   cmap=colormap_rh, norm=norm_rh, extend='both')
+				ax13.contourf(-r, heightlevs/1000, np.flipud(np.rot90(rh_p_leftshear_mean, 1)), levs_rh, \
+					     cmap=colormap_rh, norm=norm_rh, extend='both')
+				ax13.set_xlim(-rmax,rmax)
+				ax13.set_xticks(np.linspace(-rmax,rmax,11))
+				ax13.set_xticklabels([str(int(x)) for x in np.linspace(-rmax,rmax,11)], fontsize=24)
+				ax13.set_xlabel('Radius (km)', fontsize=24)
+				ax13.set_ylim(0,18)
+				ax13.invert_yaxis()
+				ax13.set_yticks(np.linspace(0,18,10))
+				ax13.set_yticklabels([str(int(x)) for x in np.linspace(0,18,10)], fontsize=24)
+				ax13.set_ylabel('Height (km)', fontsize=24)
+				cbar13 = plt.colorbar(co13, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
+				cbar13.ax.tick_params(labelsize=24)
+				ax13.grid()
+				ax13.text(0.05,0.95, 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+				ax13.text(0.05,0.95, 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+				ax13.set_title(EXPT.strip()+'\n'+ r'Across-Shear RH ($\%$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']', fontsize=24, weight='bold', loc='left')
+				ax13.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(), fontsize=24, color='brown', loc='right')
+				figfname = ODIR+'/'+LONGSID.lower()+'.rh_acrossshear.'+forecastinit+'.polar.f'+format(FHR,'03d')
+				fig13.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-			
-			if ( do_dbz5km_wavenumber == 'Y'):
-				#Make a plot of wavenumber-0,1,2 components of 5-km reflectivity
+
+
+			# FIGURE 14: Wavenumber 0,1,2 components of 5-km Reflectivity
+			if do_dbz5km_wavenumber == 'Y':
 				plt.figure()
 				plt.gcf().set_size_inches(15,15)
 
@@ -1908,7 +1967,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
-				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+str(int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+str(int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
 				plt.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 				plt.subplot(223)
@@ -1950,8 +2009,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
-			if ( do_rh5km_wavenumber == 'Y'):
-				#Make a Wavenumber Plot of RH
+
+			# FIGURE 15: Wavenumber 0,1,2 components of 5-km Relative Humidity
+			if do_rh5km_wavenumber == 'Y':
 				plt.figure()
 				plt.gcf().set_size_inches(15,15)
 
@@ -1986,7 +2046,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
-				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+str(int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+str(int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
 				plt.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 				plt.subplot(223)
@@ -2028,11 +2088,11 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
-			if ( do_vt10_wavenumber == 'Y'):
-				#Make a Plot of vt10 wavenumber
+
+			# FIGURE 16: Wavenumber 0,1,2 components of 10-m Tangential Wind
+			if do_vt10_wavenumber == 'Y':
 				plt.figure()
 				plt.gcf().set_size_inches(15,15)
-
 
 				plt.subplot(221)
 				plt.contourf(XI,YI,vt10_p[:,:],levs_vt,cmap=colormap_vt,norm=norm_vt,extend='both')
@@ -2065,7 +2125,7 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				plt.arrow(0,0,(ushear1/25)*np.max(XI/2),(vshear1/25)*np.max(YI/2), linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
 				plt.gca().set_aspect('equal', adjustable='box')
 				plt.grid()
-				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+np.str(np.int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+np.str(np.int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+				plt.title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+str(int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+str(int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
 				plt.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 				plt.subplot(223)
@@ -2107,7 +2167,9 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 				if ( DO_CONVERTGIF ):
 					os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 
-			if ( do_vt_tendency == 'Y'):	
+
+			# FIGURE XX: Tangential Wind Tendency Terms
+			if do_vt_tendency == 'Y':	
 				#Plot Tangential Wind Tendency Terms	
 				plt.figure()
 				plt.gcf().set_size_inches(20.5, 10.5)
@@ -2570,8 +2632,8 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		
 	# Write the input file to a log to mark that it has ben processed
 	PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-	os.system("sed -i '/"+np.str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
-	os.system('echo "'+np.str(FILE)+' 1" >> '+PLOTTED_FILES)
+	os.system("sed -i '/"+str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
+	os.system('echo "'+str(FILE)+' 1" >> '+PLOTTED_FILES)
 	os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
 	os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 

@@ -35,7 +35,7 @@ def skewTmodelTCpolar(r_grid,theta_grid,p_sounding_polar,u_sounding_polar,v_soun
 
        #Let's Define Our Plotting Function First
 	def skewplot(sounding_p,sounding_t,sounding_td,sounding_u,sounding_v,location,GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF):
-		color_data_wind = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_wind.txt')
+		color_data_wind = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
 		colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 		levs_wind = np.linspace(0,160,41,endpoint=True)
 		norm_wind = colors.BoundaryNorm(levs_wind,256)
