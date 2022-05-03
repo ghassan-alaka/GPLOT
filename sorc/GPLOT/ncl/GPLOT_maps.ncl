@@ -549,8 +549,9 @@ print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
 ; 6. Limit the total number of files to process, if required.
+nFiles_all = nFiles
 if(nFiles.gt.NMAX)then
-	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
+	print("MSG: Will only process "+NMAX+" files to avoid memory constraints.")
 	nFiles = NMAX
 end if
 
@@ -3009,7 +3010,9 @@ do fff = 0,nFiles-1
 	;     missing graphics.
 	;================================================================
         print("MSG: Checking that all graphics were produced for current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
-        if(.not.isvar("FILE_DONE"))then   FILE_DONE = new(nFiles,logical)   end if
+        if(.not.isvar("FILE_DONE"))then FILE_DONE = new(nFiles_all,logical)
+					FILE_DONE = False
+	end if
         FILE_DONE(fff) = True
         do ppp = 0,dimsizes(FNAME2)-1
                 ; Skip variables that are not expected for current FHR
