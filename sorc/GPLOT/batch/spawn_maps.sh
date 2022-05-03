@@ -776,7 +776,6 @@ for TR in ${TIER[@]}; do
                     # Get the list of plotted files for this case
                     CASE_PLOTTED=(`cat ${PLOTTED_FILE} | sed 's#//*#/#g' 2>/dev/null`)
 
-
                     # Get the status for this case
                     lockfile -r-1 -l 180 "${LOCK_FILE}"
                     CASE_STATUS=`cat "${STATUS_FILE}" 2>/dev/null`
@@ -785,20 +784,24 @@ for TR in ${TIER[@]}; do
 
                     # Print some information
                     # This depends on whether or not forcing is turned on.
-                    if [ "$FORCE" == "False" ]; then
-                        echo "MSG: Processed files     --> ${PLOTTED_FILE}"
-                        echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
-                        echo "MSG: To manually force reprocessing of all files, delete this file."
-                    else
-                        # Don't do this if the status is working.
-                        if [ "$CASE_STATUS" != "working" ]; then
-                            echo "MSG: Graphic production will be forced."
-                            echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
-                            rm -f ${PLOTTED_FILE}
-                            CASE_PLOTTED=()
-                            CASE_STATUS="force"
+                    # Don't do this for the HAFS workflow (i.e., ODIR_TYPE=0)
+                    if [ "${ODIR_TYPE}" == "0" ]; then
+                        if [ "$FORCE" == "False" ]; then
+                            echo "MSG: Processed files     --> ${PLOTTED_FILE}"
+                            echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
+                            echo "MSG: To manually force reprocessing of all files, delete this file."
+                        else
+                            # Don't do this if the status is working.
+                            if [ "$CASE_STATUS" != "working" ]; then
+                                echo "MSG: Graphic production will be forced."
+                                echo "MSG: Ignoring processed files --> ${PLOTTED_FILE}"
+                                rm -f ${PLOTTED_FILE}
+                                CASE_PLOTTED=()
+                                CASE_STATUS="force"
+                            fi
                         fi
                     fi
+
                     echo "MSG: Status file         --> ${STATUS_FILE}"
                     echo "MSG: Found this status   --> ${CASE_STATUS}"
 
