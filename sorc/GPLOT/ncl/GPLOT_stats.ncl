@@ -614,8 +614,8 @@ XYHrs2	:= array_append_record((/-24,-12/),LEAD_TIMES,0)	; trends
 
 
 ; Define some executables
-ADECK_EXE = GPLOT_DIR+"/shell/createADeck.ksh"
-INTERP_HOME = GPLOT_DIR+"/NHC_interp/"
+ADECK_EXE = GPLOT_DIR+"/ush/createADeck.ksh"
+INTERP_HOME = GPLOT_DIR+"/sorc/NHC_interp/"
 INTERP_EXE = "run.sh"
 INTERP_NML = "intrfcst.input"
 
