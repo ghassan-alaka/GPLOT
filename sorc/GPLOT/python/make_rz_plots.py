@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Check that GPLOT_DIR is defined in the environment.
-import os, time
+import os, time, warnings
 GPLOT_DIR = os.environ['GPLOT_DIR']
 print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
 
@@ -592,13 +592,17 @@ for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 		
 			#Calculate the new centers at each height using the centroid function
 			threshold = np.ones(zsize)*np.nan
-			for k in range(zsize):
-				threshold[k] = np.nanmin(hgt[:,:,k])+0.2*(np.nanmax(hgt[:,:,k])-np.nanmin(hgt[:,:,k]))
+			with warnings.catch_warnings():
+				warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+				for k in range(zsize):
+					threshold[k] = np.nanmin(hgt[:,:,k])+0.2*(np.nanmax(hgt[:,:,k])-np.nanmin(hgt[:,:,k]))
 
 			wind = np.hypot(uwind,vwind)
 			threshold2 = np.ones(zsize)*np.nan
-			for k in range(zsize):
-				threshold2[k] = np.nanmax(wind[:,:,k])-0.05*(np.nanmax(wind[:,:,k])-np.nanmin(wind[:,:,k]))
+			with warnings.catch_warnings():
+				warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+				for k in range(zsize):
+					threshold2[k] = np.nanmax(wind[:,:,k])-0.05*(np.nanmax(wind[:,:,k])-np.nanmin(wind[:,:,k]))
 			center_z = np.ones((np.shape(hgt)[2],2),order='F').astype(np.int32)
 			center_z_2 = np.ones((np.shape(wind)[2],2),order='F').astype(np.int32)
 			centroid.centroid(hgt,center_z,threshold,-1,np.shape(hgt)[0],np.shape(hgt)[1],np.shape(hgt)[2])
