@@ -3649,7 +3649,7 @@ if(DO_LI_TREND)then
 	else if(1.2*rngInt3.ge.50. .and. 1.2*rngInt3.lt.100.)then
 		IntMjrGrd3 := ispan(toint(minInt3-(0.10*rngInt3)) - toint(minInt3-(0.10*rngInt3))%10 + 10,\
 				    toint(maxInt3+(0.10*rngInt3)) - toint(maxInt3+(0.10*rngInt3))%10,10)
-	else if(1.2*rngInt.lt.50.)then
+	else if(1.2*rngInt3.lt.50.)then
 		IntMjrGrd3 := ispan(toint(minInt3-(0.10*rngInt3)) - toint(minInt3-(0.10*rngInt3))%5 + 5,\
 				    toint(maxInt3+(0.10*rngInt3)) - toint(maxInt3+(0.10*rngInt3))%5,5)
 	end if  end if  end if
