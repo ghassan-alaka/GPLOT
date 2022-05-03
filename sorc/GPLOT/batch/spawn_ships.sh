@@ -372,6 +372,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
                     echo "ERROR: Or define ITAG in the namelist."
                     exit
                 fi
+                if [ "${IS_MSTORM}" == "False" ]; then
+                    FPREFIX="${STORM,,}*${FPREFIX}"
+                fi
 
                 # Get file hour string information from table or namelist
                 if [ -z "$FHRSTR" ]; then

@@ -476,6 +476,9 @@ for TR in ${TIER[@]}; do
                     echo "ERROR: Or define ITAG in the namelist."
                     exit
                 fi
+                if [ "${IS_MSTORM}" == "False" ]; then
+                    FPREFIX="${STORM,,}*${FPREFIX}"
+                fi
 
                 # Get file hour string information from table or namelist
                 if [ -z "$FHRSTR" ]; then
@@ -752,11 +755,12 @@ for TR in ${TIER[@]}; do
                             #exit
                         fi
                     done
-                    #if [ -z "${IFILES[*]}" ]; then
-                    #    echo "WARNING: No input files found. Skipping the rest of the ensemble IDs."
-                    #    break
-                    #fi
+                    if [ -z "${IFILES[*]}" ]; then
+                        echo "WARNING: No input files found. Skipping this case."
+                        continue
+                    fi
                     echo "MSG: Input directory     --> ${IDIR_FULL}"
+
 
                     # Mark that files have been found
                     FOUND_FILES="True"
