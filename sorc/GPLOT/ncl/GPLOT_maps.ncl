@@ -761,6 +761,10 @@ if(SC_FHR)then
 if(DO_PLOT)then
 do fff = 0,nFiles-1
 
+        ;psrep = systemfunc("ps u | grep ' ncl ' | head -1 | awk -F"+str_get_dq()+" "+str_get_dq()+" '{ print $5,$6 }'")
+        ;print("MEMORY CHECK 01: VSZ,RSS = "+psrep+" (Kb)")
+	;delete(psrep)
+
         ;================================================================
         ; 1. START WORKING ON THE NEXT INPUT FILE
         ;    Tell the STATUS file that we're still working...
@@ -1022,7 +1026,9 @@ do fff = 0,nFiles-1
 				else if(DSOURCE.eq."HAFS")then	G_BASE_LEVS := (/"","3h","6h"/)
 				else if(DSOURCE.eq."HWRF")then	G_BASE_LEVS := ""
 				else if(DSOURCE.eq."HMON")then	G_BASE_LEVS := (/"","3h","6h"/)
+				else if(DSOURCE.eq."ECMWF")then	G_BASE_LEVS := ""
 				end if  end if  end if  end if
+				end if
 			else
 				G_BASE_LEVS := G_BASE(1,ppp)
                         end if
