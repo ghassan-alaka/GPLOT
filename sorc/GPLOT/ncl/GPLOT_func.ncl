@@ -1160,7 +1160,6 @@ begin
 	end if
 	;print(rmVortex)
 
-
 	; Longer string means we are dealing with multiple vertical levels
 	; e.g., average, difference, etc.
 	if(strlen(varInfo(1)).gt.4)then
@@ -1591,7 +1590,9 @@ begin
 			else			V@units = "m s-1"
 			end if
 			delete([/tmpU,tmpV/])
-		else if(any((/"RVO","AVO"/).eq.varInfo(0)) .and. .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		;else if(any((/"RVO","AVO"/).eq.varInfo(0)) .and. .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		else if(varInfo(0).eq."RVO" .and. .not.isfilevar(f,findVarName(dSource,"RVO",varInfo(1))) \
+                        .or. varInfo(1).eq."AVO" .and. .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
 			if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
 				tmpU	= f->$findVarName(dSource,"U",varInfo(1))$({iBds(0):iBds(1)},:)
 				tmpV	= f->$findVarName(dSource,"V",varInfo(1))$({iBds(0):iBds(1)},:)
