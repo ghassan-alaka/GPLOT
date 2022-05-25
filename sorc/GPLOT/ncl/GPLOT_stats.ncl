@@ -1227,7 +1227,7 @@ end if
 
 ; EARLY TRACK GUIDANCE	
 if(DO_ET_GUIDE)then
-	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+	if(ODIR_TYPE.eq.0)then	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))  end if
 	print("MSG: Retrieving these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI))
 	aTRKI	= new((/dimsizes(TRKmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(TRKmodelsI)-1
@@ -1329,7 +1329,7 @@ end if
 
 ; EARLY INTENSITY GUIDANCE
 if(DO_EI_GUIDE)then
-	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+	if(ODIR_TYPE.eq.0)then  system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))  end if
 	print("MSG: Retrieving these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI))
 	aINTI	= new((/dimsizes(INTmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(INTmodelsI)-1
@@ -2227,7 +2227,9 @@ if(DO_ET_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		if(ODIR_TYPE.eq.1)then	OFILE = ODIR+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		else			OFILE = str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		end if
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2663,7 +2665,9 @@ if(DO_EI_GUIDE)then
 
 
 		; Setup the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		if(ODIR_TYPE.eq.1)then	OFILE = ODIR+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		else			OFILE = str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		end if
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -5232,7 +5236,9 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_ET_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		if(ODIR_TYPE.eq.1)then	chk := systemfunc("ls "+ODIR+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		else			chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		end if
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Guidance graphic ot produced.")
 						exit
 		end if
@@ -5242,7 +5248,9 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_EI_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		if(ODIR_TYPE.eq.1)then	chk := systemfunc("ls "+ODIR+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		else			chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		end if
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Guidance graphic not produced.")
 						exit
 		end if
