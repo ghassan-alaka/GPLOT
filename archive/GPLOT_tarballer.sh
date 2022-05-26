@@ -1,4 +1,14 @@
-#!/bin/sh
+#!/bin/sh --login
+#SBATCH --account=hur-aoml
+#SBATCH --nodes=1
+#SBATCH --time=07:59:00
+#SBATCH --partition=service
+#SBATCH --mail-type=FAIL
+#SBATCH --qos=batch
+#SBATCH --chdir=.
+#SBATCH --output=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/GPLOT_archive.log
+#SBATCH --error=/lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/GPLOT_archive.log
+#SBATCH --job-name="GPLOT_tarballer"
 
 ################################################################
 #

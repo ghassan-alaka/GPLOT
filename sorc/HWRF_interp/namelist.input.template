@@ -1,0 +1,9 @@
+  &tier1
+   fst_tech = "AAAA",
+   tech_06 = "BBBB",
+   tech_12 = "CCCC",
+   strmid = "stormid",
+   output_ext = "interp",
+   stm_path = "PATH",
+   adeck_ext = "EXT"
+  / 

@@ -1,10 +1,18 @@
-#!/bin/sh --login
+#!/bin/sh
 
 # MODULEFILE for JET (tcsh)
 
+# Read the first arg
 setenv A "$1"
 if ( "${A}" == "" ) then
     setenv A "0"
+endif
+
+# Determine the GPLOT source code directory
+if (! $?GPLOT_DIR) then
+    set called=($_)
+    set GPLOT_FILE = `readlink -f $called[2]`
+    set GPLOT_DIR = `dirname "${GPLOT_FILE}" | rev | cut -d'/' -f2- | rev`
 endif
 
 # Initialize 'module' command
@@ -12,33 +20,39 @@ eval module help >& /dev/null
 if ( $status == 1 ) then
     source /apps/lmod/lmod/init/csh
 endif
+if (! $?MODULEPATH) then
+    setenv MODULEPATH "/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles"
+endif
+
+# Turn off core dump files
+limit core 0
 
 # Load modules
 module purge
+module load intel/2022.1.2
 module load wgrib/1.8.1.0b
-module load wgrib2/0.1.9.6a
-module load intel/18.0.5.274
-module load netcdf/4.6.1
+module load wgrib2/2.0.8
 if ( "${A}" == "0" ) then
+    module load netcdf/4.6.1
     module load hdf5/1.10.4
     module load intelpython/3.6.5
     module use -a /contrib/met/modulefiles
-    module load met/9.0
+    module load met/10.1.0
 endif
-module load ncl/6.5.0
-module load grads/2.0.2
+module load ncl/6.6.2
+module load grads/2.2.1
 
 # NCL
-setenv NCARG_COLORMAPS $GPLOT_DIR/ncl/colormaps:$NCARG_ROOT/lib/ncarg/colormaps
+setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then
-    PYDIR "/lfs1/HFIP/hur-aoml/Ghassan.Alaka/anaconda3"
+    setenv PYDIR "/lfs1/HFIP/hur-aoml/Ghassan.Alaka/anaconda3"
     # Python 3 Anaconda
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
     if ( -f "${PYDIR}/etc/profile.d/conda.csh" ) then
-        source "${PYDIR}/etc/profile.d/conda.csh" &> /dev/null
+        source "${PYDIR}/etc/profile.d/conda.csh" >& /dev/null
     else
         setenv PATH "${PYDIR}/bin:$PATH"
     endif

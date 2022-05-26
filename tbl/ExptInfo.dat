@@ -1,15 +1,17 @@
                                   GFS_Forecast,                        Global Forecast System
-                                 HWRF_Forecast,                               2021 Oper. HWRF
+                             GFS_Forecast_2022,                        Global Forecast System
+                                 HWRF_Forecast,                                    Oper. HWRF
+                            HWRF_Forecast_2022,                                    Oper. HWRF
                                 ECMWF_Forecast,              ECMWF Integrated Forecast System
-                             HAFSV0.1A_2020_RT,   Hurricane Analysis and Forecast System V0.1A
-                           hafsv0p1acpl_202007,   Hurricane Analysis and Forecast System V0.1A
+                           ECMWF_Forecast_2022,              ECMWF Integrated Forecast System
+                                 HB20_Realtime,                         2020 Basin-Scale HWRF
+                                 HMON_Forecast,                                    Oper. HMON
+                            HMON_Forecast_2022,                                    Oper. HMON
                              HAFSV0.2A_2021_RT,   Hurricane Analysis and Forecast System V0.2A
-                              hafsv0p2a_2021rt,   Hurricane Analysis and Forecast System V0.2A
                              HAFSV0.2B_2021_RT,   Hurricane Analysis and Forecast System V0.2B
                              HAFSV0.2D_2021_RT,   Hurricane Analysis and Forecast System V0.2D
                               hafsv0p2d_2021rt,   Hurricane Analysis and Forecast System V0.2D
                              HAFSV0.2E_2021_RT,   Hurricane Analysis and Forecast System V0.2E
-                                 H221_ensemble,   Hurricane Analysis and Forecast System V0.2E
                               H221_ensemble_00,   Hurricane Analysis and Forecast System V0.2E(00)
                               H221_ensemble_01,   Hurricane Analysis and Forecast System V0.2E(01)
                               H221_ensemble_02,   Hurricane Analysis and Forecast System V0.2E(02)
@@ -31,4 +33,6 @@
                               H221_ensemble_18,   Hurricane Analysis and Forecast System V0.2E(18)
                               H221_ensemble_19,   Hurricane Analysis and Forecast System V0.2E(19)
                               H221_ensemble_20,   Hurricane Analysis and Forecast System V0.2E(20)
-
+                             TH16_GFS_Forecast,   Global Forecast System (v16; Thomp. substep)
+                             GF16_GFS_Forecast,    Global Forecast System (v16; GF convection)
+                             MY16_GFS_Forecast,         Global Forecast System (v16; MYNN PBL)
