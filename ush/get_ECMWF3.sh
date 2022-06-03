@@ -17,18 +17,19 @@ module load wgrib2/2.0.8
 ODIR="${1}"
 
 # Define important variables
-HTTP_DIR="https://data.ecmwf.int/forecasts"
-RESOL="0p4-beta"
-STREAM00="oper"
-STREAM06="scda"
-TYPE="fc"
+HTTP_DIR="${2:-"https://data.ecmwf.int/forecasts"}"
+RESOL="${3:-"0p4-beta"}"
+STREAM00="${4:-"oper"}"
+STREAM06="${5:-"scda"}"
+TYPE="${6:-"fc"}"
 FHR_LIST00=( $(seq 0 3 144) )
 FHR_LIST00+=( $(seq 150 6 240) )
 FHR_LIST06=( $(seq 0 3 90) )
 
 # Create and enter the output directory
-mkdir -p ${ODIR}
-cd ${ODIR}
+ODIR_FULL="${ODIR}/${RESOL}/${STREAM00}"
+mkdir -p ${ODIR_FULL}
+cd ${ODIR_FULL}
 
 YMDH_NOW="`date +'%Y%m%d%H'`"
 YMDH_OLD="`date --date="4 day ago" +'%Y%m%d%H'`"
