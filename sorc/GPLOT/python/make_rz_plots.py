@@ -74,7 +74,6 @@ PYTHONDIR = sys.argv[11]
 if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
 	PYTHONDIR = PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
 
->>>>>>> develop:sorc/GPLOT/python/make_rz_plots.py
 
 # Read the master namelist
 DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
