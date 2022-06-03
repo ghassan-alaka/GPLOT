@@ -3238,7 +3238,7 @@ if(DO_LT_TREND)then
 				; Add model tracks
 				do ttt = 0,nTrend-1
 	
-					; Check if the HWRF-B track is available
+					; Check if the track is available
 					if(all(ismissing(aTRK2(mmm,ttt,0,:))))then
 						print("WARNING: "+thisModel+" track is unavailable for "+IDATES(ttt)+".")
 						continue
@@ -3248,7 +3248,7 @@ if(DO_LT_TREND)then
 					tmp	:= toint(where(ismissing(aTRK2(mmm,ttt,2,:)), fval2, aTRK2(mmm,ttt,2,:)))
 					vals	:= ind(tmp%6.eq.0)
 					vals2	:= ind(tmp%12.eq.0)
-					;vals3	:= vals2(ind(.not.ismissing(aTRK2(mmm,ttt,0,vals2))))
+					if(ismissing(vals2(0)))then  vals2 := ind((tmp+6)%12.eq.0)  end if	;; extra step in case lead times are 6,18,30,42,...
 					if(ismissing(vals2(0)) .or. ismissing(vals(0)))then   continue   end if
 					if(dimsizes(vals).eq.1)then   continue   end if
 					vals3	:= vals2(ind(.not.ismissing(aTRK2(mmm,ttt,0,vals2))))
@@ -3649,7 +3649,7 @@ if(DO_LI_TREND)then
 	else if(1.2*rngInt3.ge.50. .and. 1.2*rngInt3.lt.100.)then
 		IntMjrGrd3 := ispan(toint(minInt3-(0.10*rngInt3)) - toint(minInt3-(0.10*rngInt3))%10 + 10,\
 				    toint(maxInt3+(0.10*rngInt3)) - toint(maxInt3+(0.10*rngInt3))%10,10)
-	else if(1.2*rngInt.lt.50.)then
+	else if(1.2*rngInt3.lt.50.)then
 		IntMjrGrd3 := ispan(toint(minInt3-(0.10*rngInt3)) - toint(minInt3-(0.10*rngInt3))%5 + 5,\
 				    toint(maxInt3+(0.10*rngInt3)) - toint(maxInt3+(0.10*rngInt3))%5,5)
 	end if  end if  end if
