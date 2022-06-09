@@ -1,27 +1,6 @@
 # OPERATIONAL MODELS #
 HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
 HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
-<<<<<<< HEAD
-H211,    H211: 2011 Oper. HWRF,  2,             magenta,                               2011 Oper. HWRF
-H11I,       H11I: Interp. H211,  2,             magenta,                       2011 Oper. HWRF (Early)
-H212,    H212: 2012 Oper. HWRF,  3,                 red,                               2012 Oper. HWRF
-H12I,       H12I: Interp. H212,  3,                 red,                       2012 Oper. HWRF (Early)
-H213,    H213: 2013 Oper. HWRF,  4,              orange,                               2013 Oper. HWRF
-H13I,       H13I: Interp. H213,  4,              orange,                       2013 Oper. HWRF (Early)
-H214,    H214: 2014 Oper. HWRF,  5,                gold,                               2014 Oper. HWRF
-H14I,       H14I: Interp. H214,  5,                gold,                       2014 Oper. HWRF (Early)
-H215,    H215: 2015 Oper. HWRF,  6,               green,                               2015 Oper. HWRF
-H15I,       H15I: Interp. H215,  6,               green,                       2015 Oper. HWRF (Early)
-H216,    H216: 2016 Oper. HWRF,  7,                blue,                               2016 Oper. HWRF
-H16I,       H16I: Interp. H216,  7,                blue,                       2016 Oper. HWRF (Early)
-H217,    H217: 2017 Oper. HWRF,  8,              purple,                               2017 Oper. HWRF
-H17I,       H17I: Interp. H217,  8,              purple,                       2017 Oper. HWRF (Early)
-H218,    H218: 2018 Oper. HWRF, 16,         deepskyblue,                               2018 Oper. HWRF
-H18I,       H18I: Interp. H218, 16,         deepskyblue,                       2018 Oper. HWRF (Early)
-H219,    H219: 2019 Oper. HWRF,  9,               brown,                               2019 Oper. HWRF
-H19I,       H19I: Interp. H219,  9,               brown,                       2019 Oper. HWRF (Early)
-=======
->>>>>>> develop
 AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
 AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
 GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
@@ -48,17 +27,17 @@ TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                        
 OCD5,    OCD5: Combined CLIPER,  4,       darkslategray,             Combined Track & Intensity CLIPER
 CLP5,       CLP5: Track CLIPER,  4,       darkslategray,                                  Track CLIPER
 SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                              Intensity CLIPER
-<<<<<<< HEAD
-FGFS,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
 EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
 =======
 
 
 # EXPERIMENTAL MODELS #
->>>>>>> develop
+HF3A,         HF3A: HAFS V0.3A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.3A
+HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.3A (Early)
+HF3S,         HF3S: HAFS V0.3S,  9,           orangered,   Hurricane Analysis and Forecast System V0.3S
+HFSI,     HFSI: Interp. HAFS-S,  9,           orangered,                            HAFS V0.3S (Early)
 HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
-HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.2A (Early)
 HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
 HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
 HAFD,         HAFD: HAFS V0.2D,  7,                gold,   Hurricane Analysis and Forecast System V0.2D
