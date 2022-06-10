@@ -685,7 +685,9 @@ end if
 print("MSG: Found this ATCF file --> "+ATCF_FILE)
 ATCF_BASE = systemfunc("basename "+ATCF_FILE)
 ATCF_DIR = str_sub_str(ATCF_FILE,ATCF_BASE,"")
-ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+if(ODIR_TYPE.eq.1)then	ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +20")
+else			ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+end if
 
 
 ; Check if the ATCF file is the final ATCF
