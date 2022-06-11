@@ -2991,13 +2991,13 @@ do fff = 0,nFiles-1
 			;================================================================
 			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
 			if (DO_RMWHITE .and. DO_CONVERTGIF) then
-                            sleep(3)
+                            sleep(5)
 			    system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
 			else if (DO_CONVERTGIF) then
-                            sleep(3)
+                            sleep(5)
 			    system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
 			else if (DO_RMWHITE) then
-                            sleep(3)
+                            sleep(5)
 			    system("convert -trim "+OFILE+".png "+OFILE+".png")
 			end if  end if  end if
 
