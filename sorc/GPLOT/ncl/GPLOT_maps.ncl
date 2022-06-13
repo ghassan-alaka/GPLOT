@@ -1130,7 +1130,7 @@ do fff = 0,nFiles-1
                         ;    'B' is used to determine how to set the figure domain size.
                         ;    Force B=1 to use the lat/lon provided by the BOCO.
                         ;================================================================
-                        B = getDmnInfo(DOMAIN,"bdstype",False)
+                        B = getDmnInfo(DOMAIN,DSOURCE,"bdstype",False)
                         if(SC_GRAPHICS .and. .not.ATCF_REQD .and. any((/ATCF_FILES(0),SID/).eq."NONE"))then
                                 B = 1
                         end if
@@ -2553,12 +2553,12 @@ do fff = 0,nFiles-1
 				;    llbox -  minimum distance that the closest High/Low can be
 				;    maxH -  maximum number of Highs to be marked on the map
 				;    maxL -  maximum number of Lows to be marked on the map
-				llbox = getDmnInfo(DOMAIN,"llbox",False)
+				llbox = getDmnInfo(DOMAIN,DSOURCE,"llbox",False)
 				dx = abs(lon(1)-lon(0))
 				dxi = floor(llbox/dx)
 				if(dxi.eq.0)then   print("WARNING: 'llbox' is smaller than 'dx'. Defaulting to 1.")   end if
-				maxH = getDmnInfo(DOMAIN,"maxH",False)
-				maxL = getDmnInfo(DOMAIN,"maxL",False)
+				maxH = getDmnInfo(DOMAIN,DSOURCE,"maxH",False)
+				maxL = getDmnInfo(DOMAIN,DSOURCE,"maxL",False)
 			end if
 			
 			;================================================================
@@ -2989,17 +2989,18 @@ do fff = 0,nFiles-1
                         ; NOTE: These are handled together, so we can call
                         ;  'convert' only once per plot when both are True
 			;================================================================
-			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
-			if (DO_RMWHITE .and. DO_CONVERTGIF) then
-                            sleep(5)
-			    system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_CONVERTGIF) then
-                            sleep(5)
-			    system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_RMWHITE) then
-                            sleep(5)
-			    system("convert -trim "+OFILE+".png "+OFILE+".png")
-			end if  end if  end if
+			if(DO_RMWHITE .or. DO_CONVERTGIF)then
+				CHK = 1
+				do while(CHK.ne.0)
+					CHK = toint(systemfunc("identify "+OFILE+".png >/dev/null 2>&1; echo $?"))
+					if(CHK.ne.0)then  sleep(1)  end if
+				end do
+
+				if(.not.DO_RMWHITE)then			system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				else if(.not.DO_CONVERTGIF)then		system("convert -trim "+OFILE+".png "+OFILE+".png")
+				else					system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				end if  end if
+			end if
 
 		end do ;ppp
         

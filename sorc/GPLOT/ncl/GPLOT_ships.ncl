@@ -692,7 +692,7 @@ do fff = 0,nFiles-1
 		nDims@dNames = dNames
 		
 		; Get info based on domain
-		B = getDmnInfo("ships","bdstype",False)
+		B = getDmnInfo("ships",DSOURCE,"bdstype",False)
 
 		; Loop over all available dimensions
 		; Only need to do this once

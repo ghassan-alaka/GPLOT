@@ -749,7 +749,16 @@ begin
 				end if
 				BDS(0) = TCLATS(i)+20.
 				BDS(1) = TCLATS(i)-20.
-	end if  end if  end if  end if  end if  end if  end if
+
+	; TYPE 8: Take +/- 6 degrees around a TC center	for the HAFSv0.3 moving nest
+	else if(TYPE.eq.8)then	if(ismissing(TCLATS(i)))then	print("ERROR: get_dim_lat: TC latitude not found.")
+								exit
+				end if
+				BDS(0) = TCLATS(i)+6.
+				BDS(1) = TCLATS(i)-6.
+
+	end if  end if  end if  end if
+	end if  end if  end if  end if
 	
 	
 	; Create LAT if not already defined using BDS
@@ -863,12 +872,6 @@ begin
 	else if(TYPE.eq.2)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-					LONF    = (/LONF - 360./)
-				else if(TCLONS(i).gt.max(LONF))then
-					LONF    = (/LONF + 360./)
-                                end if  end if
-                                
 				BDS(3) = TCLONS(i)+15.
 				BDS(2) = TCLONS(i)-15.
 	
@@ -876,11 +879,6 @@ begin
 	else if(TYPE.eq.3)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(i).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(i)+4.
 				BDS(2) = TCLONS(i)-4.
 
@@ -907,11 +905,6 @@ begin
 	else if(TYPE.eq.5)then	if(ismissing(TCLONS(0)))then	print("ERROR: get_dim_lon: Initial TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(0).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(0).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(0)+40.
 				BDS(2) = TCLONS(0)-40.
 	
@@ -919,11 +912,6 @@ begin
 	else if(TYPE.eq.6)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(i).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(i)+10.
 				BDS(2) = TCLONS(i)-10.
 	
@@ -931,17 +919,28 @@ begin
 	else if(TYPE.eq.7)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(i).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(i)+20.
 				BDS(2) = TCLONS(i)-20.
-	end if  end if  end if  end if  end if  end if  end if
+
+	; TYPE 8: Take +/- 6 degrees around a TC center (for HAFSv0.3 12x12 moving nest)
+	else if(TYPE.eq.8)then  if(ismissing(TCLONS(i)))then    print("ERROR: get_dim_lon: TC longitude not found.")
+                                                                exit
+				end if
+				BDS(3) = TCLONS(i)+6.
+				BDS(2) = TCLONS(i)-6.
+
+	end if  end if  end if  end if
+	end if  end if  end if  end if
 	LONF!0   = "lon"
 	LONF&lon = LONF
 	LONF@units = "degrees_east"
+
+	; Adjust the full longitude array based on the bounds
+	if(any((/2,3,5,6,7,8/).eq.TYPE))then
+		if(BDS(3).lt.min(LONF))then		LONF = (/LONF - 360./)
+		else if(BDS(2).gt.max(LONF))then	LONF = (/LONF + 360./)
+		end if  end if
+	end if
 
 	; Create LON if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LON, then adjust
@@ -977,7 +976,6 @@ begin
 	LON@units	= "degrees_east"
 	LON!0		= "lon"
 	LON&lon		= LON
-	
 
 	return(LON)
 
@@ -1196,11 +1194,7 @@ begin
 				JSZ	= dimsizes(tmpU1(:,0))
 				if(isatt(tmpU1,"units"))then   units = tmpU1@units   end if
 				
-				if(flipFlag)then	;tmpU1	:= lonFlip(tmpU1)
-							;tmpU2	:= lonFlip(tmpU2)
-							;tmpV1	:= lonFlip(tmpV1)
-							;tmpV2	:= lonFlip(tmpV2)
-							tmpU1	:= lonPivot(tmpU1,PIV)
+				if(flipFlag)then	tmpU1	:= lonPivot(tmpU1,PIV)
 							tmpU2	:= lonPivot(tmpU2,PIV)
 							tmpV1	:= lonPivot(tmpV1,PIV)
 							tmpV2	:= lonPivot(tmpV2,PIV)
