@@ -545,7 +545,11 @@ def main():
 	
 				shearmag = np.hypot(ushear1,vshear1)
 				sheardir = np.arctan2(vshear1,ushear1)*180.0/pi
-				shearstring = str(int(np.round(shearmag*1.94,0)))
+				if np.isnan(shearmag):
+					ga('close 1')
+					continue
+				else:
+					shearstring = str(int(np.round(shearmag*1.94,0)))
 	
 				#Convert shear to meteorological convention
 				if sheardir <=90:
@@ -794,8 +798,16 @@ def main():
 				rmw_2km = rmw_mean[4]
 				vt_p_mean_max = np.max(vt_p_mean,0)
 				vt_p_mean_max_2km = vt_p_mean_max[4]
-				rmwstring = str(int(np.round(rmw_2km*0.54,0)))
-				vmaxstring = str(int(np.round(vt_p_mean_max_2km*1.94,0)))
+				if np.isnan(rmw_2km):
+					ga('close 1')
+					continue
+				else:
+					rmwstring = str(int(np.round(rmw_2km*0.54,0)))
+				if np.isnan(vt_p_mean_max_2km):
+					ga('close 1')
+					continue
+				else:
+					vmaxstring = str(int(np.round(vt_p_mean_max_2km*1.94,0)))
 	
 				if rmax/rmw_2km < np.max(rnorm): #Quick Fix For Big RMWs
 					rnorm_max = np.round(rmax/rmw_2km,2)-math.fmod(np.round(rmax/rmw_2km,2),0.05)
