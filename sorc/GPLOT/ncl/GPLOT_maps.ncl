@@ -2993,7 +2993,7 @@ do fff = 0,nFiles-1
 				CHK = 1
 				do while(CHK.ne.0)
 					CHK = toint(systemfunc("identify "+OFILE+".png >/dev/null 2>&1; echo $?"))
-					if(CHK.ne.0)then  sleep(1)  end if
+					sleep(1)
 				end do
 
 				if(.not.DO_RMWHITE)then			system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
