@@ -20,13 +20,14 @@ ODIR="${4}"
 ADECKDIR="${5}"
 BDECKDIR="${6}"
 TCVDIR="${7}"
-TYPE="${8}"
-AAA="${9}"
+SID_FILE="${8:-/home/${USER}/GPLOT/tbl/SIDs_Old_New.dat}"
+TYPE="${9}"
+AAA="${10}"
 #ODIR="/lfs2/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/"
 #ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
 #BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
 MMIN="-720"
-SID_FILE="/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
+#SID_FILE="/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
 
 mkdir -p ${ODIR}
 cd ${ODIR}
