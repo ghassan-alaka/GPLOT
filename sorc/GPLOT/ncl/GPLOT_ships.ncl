@@ -278,6 +278,11 @@ MM	= systemfunc("echo "+IDATE+" | cut -c5-6")
 DD	= systemfunc("echo "+IDATE+" | cut -c7-8")
 HH	= systemfunc("echo "+IDATE+" | cut -c9-10")
 
+; 12. Determine the extension of post-processed graphics.
+if(DO_CONVERTGIF)then	wtype2 = "gif"
+else			wtype2 = wtype
+end if
+
 
 
 
@@ -636,7 +641,7 @@ do fff = 0,nFiles-1
 			end if  end if
 				
 			; 1) Check if the file exists, and if the data
-			; for this particular forecast hours has been written.
+			; for this particular forecast hour has been written.
 			if(fileexists(DAT_FILE))then
 				DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
 				if(ismissing(DAT_SZ(0)))then	FHRDONE = False
@@ -658,14 +663,14 @@ do fff = 0,nFiles-1
 			break
 		end if
 	end do
-	print("MSG: Made it! Does at least one graphic type requires more processing? "+FHRDONE)
+	print("MSG: Made it! Have all expected graphics been prduced for this lead time? "+FHRDONE)
 	if(.not.FORCE)then
 		if(FHRDONE .and. FHR(fff).ne.max(FHR))then
 			print("MSG: Data already completed for this forecast hour.")
 			continue
 		end if
 	end if
-	print("MSG: Yes, looks like at least one graphic type requires more processing for this lead time.")
+	if(.not.FHRDONE)then  print("MSG: I found at least one graphic type requires more processing for this lead time --> "+FNAME(ppp))  end if
 	
 
 	;================================================================
@@ -898,7 +903,7 @@ do fff = 0,nFiles-1
 			; 1) Check if the file exists. If YES, change the write option
 			;    from overwrite (w) to append (a). Check if the data for
 			;    this particular forecast hour has been written. 
-			if(fileexists(DAT_FILE) .and. fileexists(OFILE+"."+wtype))then
+			if(fileexists(DAT_FILE) .and. fileexists(OFILE+"."+wtype2))then
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
 				if(.not.FORCE)then
@@ -946,11 +951,16 @@ do fff = 0,nFiles-1
 			U1	= where(     sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.800.,\
 					U1,U1@_FillValue)
-			U1	:= avg(U1)
+
+			if(all(ismissing(U1)))then	U1 := U@_FillValue
+			else				U1 := avg(U1)
+			end if
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 					V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 
 			; 6) Calculate the variable here
 			if(any((/"SHRD","SHRS"/).eq.FNAME(ppp)))then
@@ -962,13 +972,15 @@ do fff = 0,nFiles-1
 			else if(any((/"SHTD","SHTS"/).eq.FNAME(ppp)))then
 				; 6) FOR WIND SHEAR DIRECTION
 				V1	:= C@r2d*atan2(U1,V1)
-				if(V1.lt.0)then   V1 = 360.+V1   end if
+				if(.not.ismissing(V1))then
+					if(V1.lt.0)then   V1 = 360.+V1   end if
+				end if
 				V1@units = "degrees"
 				V1@long_name = "VWS Direction"
 			end if  end if
-				
+
 			; 7) Write data to a .DAT file.
-			data	:= new((/1,2/),"float")
+			dat	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 			
 			; 8) Write data to table (if applicable)	
@@ -1019,13 +1031,19 @@ do fff = 0,nFiles-1
 
 			; 5) Average U & V in a 500km annulus (see SHIPS)
 			U1	= where(sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.500.,U1,U1@_FillValue)
-			U1	:= avg(U1)
+			if(all(ismissing(U1)))then	U1 := U@_FillValue
+			else				U1 := avg(U1)
+			end if
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 
 			; 6) FOR WIND SHEAR DIRECTION
 			V2	= C@r2d*atan2(U1,V1)
-			if(V2.lt.0)then   V2 = 360.+V2   end if
+			if(ismissing(V2))then
+				if(V2.lt.0)then   V2 = 360.+V2   end if
+			end if
 				
 			; 7) FOR WIND SHEAR MAGNITUDE
 			V3	= sqrt(U1^2. + V1^2.)
@@ -1083,7 +1101,9 @@ do fff = 0,nFiles-1
 			
 			; 2) Define MSLP
 			if(FNAME(ppp).eq."MSLP")then
-				V1	= min(V)
+				if(all(ismissing(V)))then	V1 := V@_FillValue
+				else				V1 := min(V)
+				end if
 				TITLE	= "Min. Mean Sea-Level Pressure"
 			
 			; or Define PENV
@@ -1100,7 +1120,9 @@ do fff = 0,nFiles-1
 				V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 						.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-				V1	:= avg(V1)
+				if(all(ismissing(V1)))then	V1 := V@_FillValue
+				else				V1 := avg(V1)
+				end if
 				TITLE	= "Environmental Surface Pressure"
 			end if  end if
 			copy_VarAtts(V,V1)
@@ -1138,7 +1160,9 @@ do fff = 0,nFiles-1
 			
 			; 2) Define VMAX
 			if(FNAME(ppp).eq."VMAX")then
-				V1	:= max(V)  ;MK
+				if(all(ismissing(V)))then	V1 := V@_FillValue
+				else				V1 := max(V)
+				end if
 				copy_VarAtts(V,V1)
 				V1@units = "kts"
 				V1@long_name = "Max. Intensity"
@@ -1218,7 +1242,9 @@ do fff = 0,nFiles-1
 				V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 						.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-				V1	:= avg(V1)
+				if(all(ismissing(V1)))then	V1 := V@_FillValue
+				else				V1 := avg(V1)
+				end if
 				TITLE	= "200 hPa Zonal Wind (200-800km)"
 			
 			; or Define U20C
@@ -1233,7 +1259,9 @@ do fff = 0,nFiles-1
 				
 				; 5) Average U in a 200-800km annulus (see SHIPS)
 				V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-				V1	:= avg(V1)
+				if(all(ismissing(V1)))then	V1 := V@_FillValue
+				else				V1 := avg(V1)
+				end if
 				TITLE	= "200 hPa Zonal Wind (0-500km)"
 			end if  end if
 			copy_VarAtts(V,V1)
@@ -1274,7 +1302,9 @@ do fff = 0,nFiles-1
 				
 			; 5) Average U & V in a 200-800km annulus (see SHIPS)
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 8) Append new entry
@@ -1330,7 +1360,9 @@ do fff = 0,nFiles-1
 			V1	= where(V1.gt.100. .or. V1.lt.0., V1@_FillValue, V1)
 
 			; 6) Average all non-missing values of V1
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 7) Append new entry
@@ -1373,7 +1405,9 @@ do fff = 0,nFiles-1
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 5) Append new entry
@@ -1419,7 +1453,9 @@ do fff = 0,nFiles-1
 				
 			; 5) Average U & V in a 200-800km annulus (see SHIPS)
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.1000.,V1,V1@_FillValue)
-			V1	:= 100.*avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := 100.*avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 			V1@units = "s-1 x 10**-7"
 
@@ -1493,7 +1529,9 @@ do fff = 0,nFiles-1
 				
 			; 4) Average U & V in a 200-800km annulus (see SHIPS)
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.1000.,V1,V1@_FillValue)
-			V1	:= 10000000.*avg(V1)/C@ms2kts
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := 10000000.*avg(V1)/C@ms2kts
+			end if
 			copy_VarAtts(V,V1)
 			V1@units = "s-1 x 10**-7"
 
@@ -1535,7 +1573,9 @@ do fff = 0,nFiles-1
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 8) Append new entry
@@ -2073,11 +2113,17 @@ do fff = 0,nFiles-1
 			U2	:= where(     sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).le.800.,\
 					U2,U2@_FillValue)
-			U2	:= dim_avg_n(U2,(/1,2/))
+			if(all(ismissing(U2)))then	U2 := new(dimsizes(LEVC),"float",U1@_FillValue)
+							U2 = U1@_FillValue
+			else				U2 := dim_avg_n(U2,(/1,2/))
+			end if
 			V2	:= where(     sqrt(conform(V2,X,2)^2.+conform(V2,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V2,X,2)^2.+conform(V2,Y,1)^2.).le.800.,\
 					V2,V2@_FillValue)
-			V2	:= dim_avg_n(V2,(/1,2/))
+			if(all(ismissing(V2)))then	V2 := new(dimsizes(LEVC),"float",V1@_FillValue)
+							V2 = V1@_FillValue
+			else				V2 := dim_avg_n(V2,(/1,2/))
+			end if
 
 			; 4D) FOR WIND MAGNITUDE
 			V3	:= sqrt(U2^2. + V2^2.)
@@ -2100,7 +2146,7 @@ do fff = 0,nFiles-1
 			data(:,1) = (/tofloat(LEVC)/)
 			data(:,2) = (/V3/)
 			data(:,3) = (/V4/)
-			
+
 			write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3)/], "%0.3i  %6.0i  %8.2f  %8.2f")
 			system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
 			system("mv "+DAT_FILE+".TMP "+DAT_FILE)
