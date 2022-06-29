@@ -547,6 +547,7 @@ def main():
 				sheardir = np.arctan2(vshear1,ushear1)*180.0/pi
 				if np.isnan(shearmag):
 					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 					continue
 				else:
 					shearstring = str(int(np.round(shearmag*1.94,0)))
@@ -800,11 +801,13 @@ def main():
 				vt_p_mean_max_2km = vt_p_mean_max[4]
 				if np.isnan(rmw_2km):
 					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 					continue
 				else:
 					rmwstring = str(int(np.round(rmw_2km*0.54,0)))
 				if np.isnan(vt_p_mean_max_2km):
 					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 					continue
 				else:
 					vmaxstring = str(int(np.round(vt_p_mean_max_2km*1.94,0)))
@@ -2486,11 +2489,11 @@ def main():
 					shearandrhplot.shearandrhplot(XI,YI,theta,r,ushear_p,vshear_p,np.nanmean(rh_p[:,:,6:10],2),'3km','5km',rmw_mean[6],rmw_mean[10],GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
 			
 		# Write the input file to a log to mark that it has ben processed
-		PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-		os.system("sed -i '/"+str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
-		os.system('echo "'+str(FILE)+' 1" >> '+PLOTTED_FILES)
-		os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
-		os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+		update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+		#os.system("sed -i '/"+str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
+		#os.system('echo "'+str(FILE)+' 1" >> '+PLOTTED_FILES)
+		#os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
+		#os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 	
 	print('MSG: DOING THE EXTRA STUFF')
 	combinedfile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.all.txt'
@@ -2585,6 +2588,18 @@ def axes_radhgt(ax, xmax, xmin, ymax=18, ymin=0):
 	ax.grid()
 
 	return ax
+
+
+def update_plottedfile(OFILE, IFILE):
+        """Update the GPLOT PlottedFiles file to mark a file as processed.
+        @param OFILE: the plotted file path as a string
+        @param IFILE: the model output file that was processed
+        """
+        os.system("sed -i '/"+str(os.path.basename(IFILE))+"/d' "+OFILE)
+        os.system('echo "'+str(IFILE)+' 1" >> '+OFILE)
+        os.system('sort -u '+OFILE+' > '+OFILE+'.TMP')
+        os.system('mv '+OFILE+'.TMP '+OFILE)
+
 
 
 ##############################
