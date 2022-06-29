@@ -18,7 +18,7 @@
  
 from __future__ import print_function
 import traceback
-import os, sys
+import os, re, sys
 import collections
  
 from eccodes import *
@@ -29,7 +29,54 @@ ODIR = sys.argv[2]
 VERBOSE = 1  # verbose error reporting
  
 data = collections.defaultdict(dict)
- 
+
+
+def find_number_name(N):
+    snum_dict = {
+        1 : 'one',
+        2 : 'two',
+        3 : 'three',
+        4 : 'four',
+        5 : 'five',
+        6 : 'six',
+        7 : 'seven',
+        8 : 'eight',
+        9 : 'nine',
+        10 : 'ten',
+        11 : 'eleven',
+        12 : 'twelve',
+        13 : 'thirteen',
+        14 : 'fourteen',
+        15 : 'fifteen',
+        16 : 'sixteen',
+        17 : 'seventeen',
+        18 : 'eighteen',
+        19 : 'nineteen',
+        20 : 'twenty',
+        21 : 'twentyone',
+        22 : 'twentytwo',
+        23 : 'twentythre',
+        24 : 'twentyfour',
+        25 : 'twentyfive',
+        26 : 'twentysix',
+        27 : 'twentyseve',
+        28 : 'twentyeigh',
+        29 : 'twentynine',
+        30 : 'thirty',
+        31 : 'thirtyone',
+        32 : 'thirtytwo',
+        33 : 'thirtythre',
+        34 : 'thirtyfour',
+        35 : 'thirtyfive',
+        36 : 'thirtysix',
+        37 : 'thirtyseve',
+        38 : 'thirtyeigh',
+        39 : 'thirtynine',
+        40 : 'forty'
+    }
+
+    return snum_dict[N]
+
  
 def example():
     # open BUFR file
@@ -62,8 +109,13 @@ def example():
 
         longStormName = codes_get(bufr, "longStormName").strip()
         stormIdentifier = codes_get(bufr, "stormIdentifier")
-        print(f'Storm : {longStormName} {stormIdentifier}')
         stormNumber = stormIdentifier[0:2]
+
+        pattern = re.compile("^[0-9][0-9][A-Za-z]$")
+        if pattern.match(longStormName):
+            longStormName = find_number_name(int(stormNumber))
+
+        print(f'Storm : {longStormName} {stormIdentifier}')
         if stormIdentifier[2] == 'L':
             basin='AL'
         elif stormIdentifier[2] == 'E':
