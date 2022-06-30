@@ -52,7 +52,7 @@ NAME_REGEX="${12}"
 EXT2=".dat"
 
 # Define executables
-X_CREATE="/home/Ghassan.Alaka/GPLOT/shell/create_adeck.v2.sh"
+X_CREATE="/home/Ghassan.Alaka/GPLOT/ush/create_adeck.v2.sh"
 X_MERGE="/home/Ghassan.Alaka/Shell/ksh/atcfMerge.ksh"
 
 # Safety checks
@@ -115,7 +115,7 @@ fi
 
 # Copy the interplation software and define required vars.
 if [ "${DO_INTERP}" == "YES" ]; then
-    cp -rp /home/Ghassan.Alaka/GPLOT/NHC_interp ${ATMP}/.
+    cp -rp /home/Ghassan.Alaka/GPLOT/sorc/NHC_interp ${ATMP}/.
     INTERP_NML="intrfcst.input"
     INTERP_EXE="run.sh"
     INTERP_DIR="${ATMP}/NHC_interp"

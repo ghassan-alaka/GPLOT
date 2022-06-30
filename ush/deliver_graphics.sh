@@ -61,7 +61,7 @@ if [ "${EXPT}" == "0" ]; then
 fi
 
 # Define the rsync executable
-X_RSYNC="/home/Ghassan.Alaka/GPLOT/shell/rsync_no_vanished.sh"
+X_RSYNC="/home/Ghassan.Alaka/GPLOT/ush/rsync_no_vanished.sh"
 
 # Find all matching input directories beneath IDIR
 echo "find ${IDIR} -type d -name \"${LOC}\""
@@ -112,7 +112,7 @@ for D in ${ALL_DIRS[@]}; do
 
     # Copy all modified files.
     #${X_RSYNC} -zav --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
-    ${X_RSYNC} -zauv --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
+    ${X_RSYNC} -zauv --include="*/" --include="*gif" --include="*ships.dat" --include="*structure*txt" --exclude="*" ${D}/* ${ODIR_FULL}
 
 done
 

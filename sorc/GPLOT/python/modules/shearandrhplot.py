@@ -56,7 +56,7 @@ def shearandrhplot(Xpolar,Ypolar,theta,r,ushear_polar,vshear_polar,rh_mean_polar
 	y = np.hypot(ushear_domain_mean,vshear_domain_mean)*1.94
 	z = rh_mean_domain_mean
 
-	color_data_rh_2 = np.genfromtxt(GPLOT_DIR+'/python/colormaps/colormap_brown_to_green_2.txt')
+	color_data_rh_2 = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_brown_to_green_2.txt')
 	colormap_rh_2 = matplotlib.colors.ListedColormap(color_data_rh_2)
 
 	fig = plt.figure(figsize=(16,8),constrained_layout=True)
