@@ -633,7 +633,7 @@ do fff = 0,nFiles-1
 		if(DATA_ON(ppp))then
 			DAT_FILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
 			;DAT_FILE2	= ODIR+str_lower(LONGSID)+".TC_CenterFix."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))+".dat"
-	
+
 			; Get the TC centers based on the geopotential height centroid
 			if(FNAME(ppp).eq."TCCEN")then		NCOL = 5
 			else if(FNAME(ppp).eq."TCHODO")then	NCOL = 4
@@ -671,7 +671,7 @@ do fff = 0,nFiles-1
 		end if
 	end if
 	if(.not.FHRDONE)then  print("MSG: I found at least one graphic type requires more processing for this lead time --> "+FNAME(ppp))  end if
-	
+
 
 	;================================================================
 	; Read the file
@@ -869,12 +869,11 @@ do fff = 0,nFiles-1
 
 		; IF APPLICABLE, compute values and write to a file for future use
 		; For simplicity, we will only do this for HWRF D03
-		print("MSG: Printing values for: "+FNAME(ppp))
-			
+		print("MSG: Processing this parameter: "+FNAME(ppp))
 			
 		; Find pre-written data for this variable
 		DAT_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
-		W	= "w"
+		W = "w"
 		if(.not.any((/"TCCEN","TCHODO"/).eq.FNAME(ppp)))then
 			OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN
 			NCOL := 2
@@ -885,7 +884,8 @@ do fff = 0,nFiles-1
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
 				; If the forecast hour exists in the file and is not the maximum hour.
-				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. FHR(fff).ne.max(FHR))then  
+				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. FHR(fff).ne.max(FHR))then
+					print("MSG: Skipping "+FNAME(ppp)+" because it has already been processed.")
 					continue  
 				; If the forecast hour exists in the file and is the maximum hour.
 				else if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. FHR(fff).eq.max(FHR))then
@@ -903,17 +903,23 @@ do fff = 0,nFiles-1
 			; 1) Check if the file exists. If YES, change the write option
 			;    from overwrite (w) to append (a). Check if the data for
 			;    this particular forecast hour has been written. 
-			if(fileexists(DAT_FILE) .and. fileexists(OFILE+"."+wtype2))then
+			if(fileexists(DAT_FILE))then
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
-				if(.not.FORCE)then
-					if(any(toint(data(:,0)).eq.FHR(fff)))then   continue   end if
-				end if
-				;system("rm -f "+tmpDir2+tmpFile2)
-				W	= "a"
+				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. fileexists(OFILE+"."+wtype2))then
+					print("MSG: Skipping "+FNAME(ppp)+" because it has already been processed.")
+					continue
+				else if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. .not.fileexists(OFILE+"."+wtype2))then
+					W = "NO"
+				else
+					W = "a"
+				end if  end if
+			end if
+			if(fileexists(OFILE+"."+wtype2))then	SKIP_PLOT = True
+			else					SKIP_PLOT = False
 			end if
 		end if
-			
+
 			
 		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		; Deep Layer Vertical Wind Shear (200-800km) ;
@@ -984,7 +990,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 			
 			; 8) Write data to table (if applicable)	
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1055,7 +1062,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V3/)
 			
 			; 9) Write data to table (if applicable)	
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1066,18 +1074,23 @@ do fff = 0,nFiles-1
 			;    this particular forecast hour has been written. Then, get
 			;    the data and write it to a .DAT file.
 			DAT_FILE2 = str_sub_str(DAT_FILE,FNAME(ppp),"SDDC")
-			;tmpFile2 = ODIR+str_lower(LONGSID)+".SDDC."+IDATE+"."+DOMAIN+".dat"
-			W	= "w"
+			W = "w"
 			if(fileexists(DAT_FILE2))then
 				NL	:= dimsizes(asciiread(DAT_FILE2,-1,"string"))
 				data	:= asciiread(DAT_FILE2,(/NL,NCOL/),"float")
-				W	= "a"
+				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)))then
+					W = "NO"
+				else
+					W = "a"
+				end if
 			end if
 			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V2/)
-			write_table(DAT_FILE2,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
-			system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE2+" > "+DAT_FILE2+".TMP")
-			system("mv "+DAT_FILE2+".TMP "+DAT_FILE2)
+			if(W.ne."NO")then	print("MSG: Printing values for: SDDC")
+						write_table(DAT_FILE2,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE2+" > "+DAT_FILE2+".TMP")
+						system("mv "+DAT_FILE2+".TMP "+DAT_FILE2)
+			end if
 			
 			; 9) Update the title for the graphic.
 			TITLE = "Deep Shear w/ Vortex Removed"
@@ -1132,7 +1145,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 4) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %10.3f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %10.3f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1207,7 +1221,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/(/tofloat(FHR(fff))/), (/V1/)/)
 				
 			; 4) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i%8.3f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i%8.3f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1271,7 +1286,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 4) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1312,7 +1328,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 9) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1370,7 +1387,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 8) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1415,7 +1433,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 6) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1464,7 +1483,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 7) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1540,7 +1560,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 6) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
@@ -1583,7 +1604,8 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 9) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
 						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 						
@@ -1612,11 +1634,14 @@ do fff = 0,nFiles-1
 			data(:,4)= (/where(CTR@use,1,0)/)
 				
 			; 3) Write data block to .DAT file
-			write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3), toint(data(:,4))/],"%0.3i  %6.0i  %9.3f  %10.3f  %0.1i")
-			system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
-			system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			if(W.ne."NO")then
+				print("MSG: Printing values for: "+FNAME(ppp))
+				write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3), toint(data(:,4))/],"%0.3i  %6.0i  %9.3f  %10.3f  %0.1i")
+				system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
+				system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
 				
-			if(PLOT_ON(ppp))then
+			if(PLOT_ON(ppp) .and. .not.SKIP_PLOT)then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
 				OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 				
@@ -2147,11 +2172,14 @@ do fff = 0,nFiles-1
 			data(:,2) = (/V3/)
 			data(:,3) = (/V4/)
 
-			write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3)/], "%0.3i  %6.0i  %8.2f  %8.2f")
-			system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
-			system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			if(W.ne."NO")then
+				print("MSG: Printing values for: "+FNAME(ppp))
+				write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3)/], "%0.3i  %6.0i  %8.2f  %8.2f")
+				system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
+				system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
 				
-			if(PLOT_ON(ppp))then
+			if(PLOT_ON(ppp) .and. .not.SKIP_PLOT)then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
 				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 			
