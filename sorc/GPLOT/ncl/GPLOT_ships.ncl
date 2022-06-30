@@ -980,7 +980,7 @@ do fff = 0,nFiles-1
 			end if  end if
 
 			; 7) Write data to a .DAT file.
-			dat	:= new((/1,2/),"float")
+			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 			
 			; 8) Write data to table (if applicable)	
