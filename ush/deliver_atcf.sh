@@ -34,26 +34,185 @@
 
 echo "MSG: deliver_atcf.sh started at `date`"
 
+#Parse input arguments
+while test $# -gt 0; do
+
+    case "${1}" in
+        -h|--help)
+            echo "Deliver ATCF -- Deliver model ATCF files to a common location for GPLOT"
+            echo " "
+            echo "deliver_atcf.sh -a1 <arga1> -a2 <arga2> -a3 <arga3> -a4 <arga4>"
+            echo "                -m1 <ABCD> -m2 <ABCD> [-m3 <ABCD> -m4 <ABCD> -b <argb>"
+            echo "                                       -y <YYYY> -f <000> -n <argn>"
+            echo "                                       --mmin <argmmin>]"
+            echo " "
+            echo "options:"
+            echo "-h, --help               show help"
+            echo "-a1, --input_dir         Input ATCF directory"
+            echo "-a2, --combine_dir       Combined ATCF directory"
+            echo "-a3, --output_dir        Output ATCF directory"
+            echo "-a4, --nhc_dir           NHC ATCF directory"
+            echo "-m1, --model_in          Input model ATCF identifier"
+            echo "-m2, --model_out         Output model ATCF identifier"
+            echo "-m3, --model_early       6-h interpolated model ATCF identifier"
+            echo "-m4, --model_12h         12-h interpolated model ATCF identifier"
+            echo "-b, --bdeck_dir          Best Track directory"
+            echo "-y, --year               4-digit year"
+            echo "-f, --final_hr           Final forecast lead time in hours"
+            echo "-n, --name_regex         File name in regex"
+            echo "--mmin                   maximum age in minutes"
+            exit 0
+            ;;
+        -a1|--input_dir)
+            shift
+            if test $# -gt 0; then
+                AIN="${1}"
+            else
+                echo "ERROR: Input ATCF directory must be provided."
+                exit 1
+            fi
+            shift
+            ;;
+        -a2|--combine_dir)
+            shift
+            if test $# -gt 0; then
+                ATMP="${1}"
+            else
+                echo "ERROR: Combined ATCF directory must be provided."
+                exit 1
+            fi
+            shift
+            ;;
+        -a3|--output_dir)
+            shift
+            if test $# -gt 0; then
+                AOUT="${1}"
+            else
+                echo "ERROR: Output ATCF directory must be provided."
+                exit 1
+            fi
+            shift
+            ;;
+        -a4|--nhc_dir)
+            shift
+            if test $# -gt 0; then
+                ANHC="${1}"
+            else
+                echo "ERROR: NHC ATCF directory must be provided."
+                exit 1
+            fi
+            shift
+            ;;
+        -m1|--model_in)
+            shift
+            if test $# -gt 0; then
+                MODIN="${1}"
+            else
+                echo "ERROR: Input model ATCF identifier must be provided."
+                exit 1
+            fi
+            shift
+            ;;
+        -m2|--model_out)
+            shift
+            if test $# -gt 0; then
+                MODOUT="${1}"
+            else
+                echo "ERROR: Output model ATCF identifier must be provided."
+                exit 1
+            fi
+            shift
+            ;;
+        -m3|--model_early)
+            shift
+            if test $# -gt 0; then
+                MODI="${1}"
+            else
+                MODI=""
+            fi
+            shift
+            ;;
+        -m4|--model_12h)
+            shift
+            if test $# -gt 0; then
+                MOD12="${1}"
+            else
+                MOD12=""
+            fi
+            shift
+            ;;
+        -b|--bdeck_dir)
+            shift
+            if test $# -gt 0; then
+                MODI="${1}"
+            else
+                if [ ! -z "${MODI}" ] || [ ! -z "${MOD12}" ]; then
+                    echo "ERROR: Best Track directory must be set when requesting interpolated model fields."
+                    exit 1
+                else
+                    BNHC=""
+                fi
+            fi
+            shift
+            ;;
+        -y|--year)
+            shift
+            if test $# -gt 0; then
+                YYYY="${1}"
+            else
+                YYYY="*"
+            fi
+            shift
+            ;;
+        -f|--final_hr)
+            shift
+            if test $# -gt 0; then
+                FNL_HR="${1}"
+            else
+                FNL_HR=""
+            fi
+            shift
+            ;;
+        -n|--name_regex)
+            shift
+            if test $# -gt 0; then
+                NAME_REGEX="${1}"
+            else
+                NAME_REGEX=""
+            fi
+            shift
+            ;;
+        --mmin)
+            shift
+            if test $# -gt 0; then
+                MMIN="${1}"
+            else
+                MMIN="-10800"
+            fi
+            shift
+            ;;
+        *)
+            break
+            ;;
+
+    esac
+
+done
+
 # Read command line arguments
-AIN="$1"
-ATMP="$2"
-AOUT="$3"
-ANHC="$4"
-MODIN="$5"
-MODOUT="$6"
-YYYY="$7"
-BNHC="$8"
-MODI="$9"
-MOD12="${10}"
-FNL_HR="${11}"
-NAME_REGEX="${12}"
+YYYY="${YYYY:-"*"}"
+MODI="${MODI:-""}"
+MOD12="${MOD12:-""}"
+FNL_HR="${FNL_HR:-126}"
+NAME_REGEX="${NAME_REGEX:-""}"
+MMIN="${MMIN:-"-10800"}"
 
 # Define other variables
 EXT2=".dat"
 
 # Define executables
-X_CREATE="/home/Ghassan.Alaka/GPLOT/ush/create_adeck.v2.sh"
-X_MERGE="/home/Ghassan.Alaka/Shell/ksh/atcfMerge.ksh"
+X_CREATE="${HOME}/GPLOT/ush/create_adeck.v2.sh"
+#X_MERGE="${HOME}/Shell/ksh/atcfMerge.ksh"
 
 # Safety checks
 if [ ! -d ${AIN} ]; then
@@ -63,18 +222,6 @@ fi
 if [ ! -d ${ANHC} ]; then
     echo "ERROR: The ATCF NHC directory (4th arg) must exist."
     exit 2
-fi
-if [ -z ${MODIN} ]; then
-    echo "ERROR: Input model code (5th arg) must be defined."
-    exit 3
-fi
-if [ -z ${MODOUT} ]; then
-    echo "ERROR: Output model code (6th arg) must be defined."
-    exit 4
-fi
-if [ -z ${YYYY} ]; then
-    echo "ERROR: Year (7th arg) must be defined."
-    exit 5
 fi
 if [ ! -z "${BNHC}" ]; then
     echo "MSG: Early forecasts will be produced via NHC interpolation software."
@@ -89,6 +236,9 @@ fi
 if [ -z "${NAME_REGEX}" ]; then
     NAME_REGEX=".*/[a-z]\+[0-9]\{2\}[a-z]\.[0-9]\{10\}\.trak\..*\.atcfunix"
 fi
+
+# Get the time zone
+TZ="`date '+%Z'`"
 
 # Create directory names
 mkdir -p ${ATMP}
@@ -115,7 +265,7 @@ fi
 
 # Copy the interplation software and define required vars.
 if [ "${DO_INTERP}" == "YES" ]; then
-    cp -rp /home/Ghassan.Alaka/GPLOT/sorc/NHC_interp ${ATMP}/.
+    cp -rp ${HOME}/GPLOT/sorc/NHC_interp ${ATMP}/.
     INTERP_NML="intrfcst.input"
     INTERP_EXE="run.sh"
     INTERP_DIR="${ATMP}/NHC_interp"
@@ -126,7 +276,7 @@ fi
 # Merge the NHC A-Deck
 echo "*********************************************"
 echo "MSG: PART ONE - MERGE THE NHC A_DECK"
-NHC_DECKS=( `find ${ANHC}/. -mmin -10080 -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
+NHC_DECKS=( `find ${ANHC}/. -mmin ${MMIN} -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
 if [ -z "${NHC_DECKS}" ]; then
     echo "WARNING: Couldn't find any recent NHC a-decks. This might be OK."
 fi
@@ -183,7 +333,7 @@ done
 echo ""
 echo "*********************************************"
 echo "MSG: PART TWO - MERGE THE MODEL A_DECK"
-M_DECKS=( `find ${ATMP}/ -maxdepth 1 -mmin -10080 -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
+M_DECKS=( `find ${ATMP}/ -maxdepth 1 -mmin ${MMIN} -type f -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
 if [ -z "${M_DECKS}" ]; then
     echo "WARNING: Couldn't find any recent model a-decks. This might be OK."
 fi
@@ -252,7 +402,7 @@ for D in "${M_DECKS[@]}"; do
         ln -sf ${BNHC}/${B} ${INTERP_ADIR}/${B}
 
         # Find all cycles in the A-Deck
-        ALL_CYCLES=( `awk -F ',' '{ print $3 }' ${AOUT}/${D} | tr -d ' ' | sort -u` )
+        ALL_CYCLES=( `awk -v MODEL="${MODOUT}" -F ',' '$5~MODEL { print $3 }' ${AOUT}/${D} | tr -d ' ' | sort -u` )
 
         # Update the namelist.
         cp -p ${INTERP_DIR}/${INTERP_NML}.template ${INTERP_DIR}/${INTERP_NML}
@@ -276,7 +426,7 @@ for D in "${M_DECKS[@]}"; do
             MM=`echo "${CYCLE}" | cut -c5-6`
             DD=`echo "${CYCLE}" | cut -c7-8`
             HH=`echo "${CYCLE}" | cut -c9-10`
-            CYCLE2="${YYYY}-${MM}-${DD} ${HH}:00 UTC"
+            CYCLE2="${YYYY}-${MM}-${DD} ${HH}:00 ${TZ}"
             CYCLE06="`date -d "${CYCLE2} + 6 hours" +'%Y%m%d%H'`"
             CYCLE12="`date -d "${CYCLE2} + 12 hours" +'%Y%m%d%H'`"
 
