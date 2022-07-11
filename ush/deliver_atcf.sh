@@ -144,7 +144,7 @@ while test $# -gt 0; do
         -b|--bdeck_dir)
             shift
             if test $# -gt 0; then
-                MODI="${1}"
+                BNHC="${1}"
             else
                 if [ ! -z "${MODI}" ] || [ ! -z "${MOD12}" ]; then
                     echo "ERROR: Best Track directory must be set when requesting interpolated model fields."
