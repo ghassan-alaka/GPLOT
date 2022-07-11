@@ -2696,9 +2696,9 @@ if(DO_EI_GUIDE)then
 	
 		; Plot the best track
 		if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
-			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
+			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2b)
 		else
-			plot	:= gsn_csm_blank_plot(wks,xyres2a)
+			plot	:= gsn_csm_blank_plot(wks,xyres2b)
 		end if
 
 		; Info about plot size
@@ -2765,7 +2765,6 @@ if(DO_EI_GUIDE)then
 	
 			plres2@gsLineColor   := INTcolorsI(ppp2)
 			txres4@txFontColor   := INTcolorsI(ppp2)
-	
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINTI(ppp2,1,vals),aINTI(ppp2,0,vals),xyres2b))
 
