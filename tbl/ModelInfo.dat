@@ -22,21 +22,20 @@ OFCL,       OFCL: NHC Official, 12,                 red,                        
 OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
 DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
 LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,         Logistic Growth Equation Model (LGEM)
-IVCN,      IVCN: NHC Consensus, 10,              tomato,                       NHC Intensity Consensus
+IVCN,      IVCN: NHC Consensus, 10,       darkslategray,                       NHC Intensity Consensus
 TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                           NHC Track Consensus
 OCD5,    OCD5: Combined CLIPER,  4,       darkslategray,             Combined Track & Intensity CLIPER
 CLP5,       CLP5: Track CLIPER,  4,       darkslategray,                                  Track CLIPER
 SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                              Intensity CLIPER
 EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
-=======
 
 
 # EXPERIMENTAL MODELS #
 HF3A,         HF3A: HAFS V0.3A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.3A
 HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.3A (Early)
-HF3S,         HF3S: HAFS V0.3S,  9,           orangered,   Hurricane Analysis and Forecast System V0.3S
-HFSI,     HFSI: Interp. HAFS-S,  9,           orangered,                            HAFS V0.3S (Early)
+HF3S,         HF3S: HAFS V0.3S,  8,              orange,   Hurricane Analysis and Forecast System V0.3S
+HFSI,     HFSI: Interp. HAFS-S,  8,              orange,                            HAFS V0.3S (Early)
 HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
 HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
 HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
