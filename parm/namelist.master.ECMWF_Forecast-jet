@@ -16,8 +16,8 @@ EXPT = ECMWF_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
-DO_STATS = False
-DO_SHIPS = False
+DO_STATS = True
+DO_SHIPS = True
 DO_POLAR = False
 
 ; 1C. DATA SOURCE
@@ -39,7 +39,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/ECMWF_0p4-beta/
+IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/ECMWF/0p4-beta/oper/
 ITAG =
 EXT = .grib2
 
@@ -48,9 +48,9 @@ ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
-ATCF1_TAG = trak.emx.atcfunix
+ATCF1_TAG = trak.ecmo.atcfunix
 ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
-ATCF2_TAG = trak.emx.atcfunix
+ATCF2_TAG = trak.ecmo.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC/
