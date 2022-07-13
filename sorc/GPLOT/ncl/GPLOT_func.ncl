@@ -765,13 +765,13 @@ begin
 	; If the BDS coordinates are not found exactly in LAT, then adjust
 	; to coordinates that are outside of BDS.
 	if(.not.isvar("LAT"))then
-		if(BDS(0).lt.max(f->$DIM$))then
+		if(BDS(0).lt.max(f->$DIM$) .and. BDS(0).ge.min(f->$DIM$))then
 			if(f->$DIM$({BDS(0)}).ne.BDS(0))then
 				IBDS0 = BDS(0)+abs(f->$DIM$(0) - f->$DIM$(1))
 			end if
 		end if
 		if(.not.isvar("IBDS0"))then   IBDS0 = BDS(0)   end if
-		if(BDS(1).gt.min(f->$DIM$))then
+		if(BDS(1).gt.min(f->$DIM$) .and. BDS(1).le.max(f->$DIM$))then
 			if(f->$DIM$({BDS(1)}).ne.BDS(1))then
 				IBDS1 = BDS(1)-abs(f->$DIM$(0) - f->$DIM$(1))
 			end if
@@ -935,6 +935,17 @@ begin
 	LONF&lon = LONF
 	LONF@units = "degrees_east"
 
+        ; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(2:3).eq.0.))then
+	        if(max(LONF).lt.BDS(2))then		LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		else if(min(LONF).gt.BDS(3))then	LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		end if  end if
+	end if
+
 	; Adjust the full longitude array based on the bounds
 	if(any((/2,3,5,6,7,8/).eq.TYPE))then
 		if(BDS(3).lt.min(LONF))then		LONF = (/LONF - 360./)
@@ -946,13 +957,13 @@ begin
 	; If the BDS coordinates are not found exactly in LON, then adjust
 	; to coordinates that are outside of BDS.
 	if(.not.isvar("LON"))then
-		if(BDS(3).lt.max(LONF))then
+		if(BDS(3).lt.max(LONF) .and. BDS(3).ge.min(LONF))then
 			if(LONF({BDS(3)}).ne.BDS(3))then
 				IBDS3 = BDS(3)+abs(LONF(0) - LONF(1))
 			end if
 		end if
 		if(.not.isvar("IBDS3"))then   IBDS3 = BDS(3)   end if
-		if(BDS(2).gt.min(LONF))then
+		if(BDS(2).gt.min(LONF) .and. BDS(2).le.max(LONF))then
 			if(LONF({BDS(2)}).ne.BDS(2))then
 				IBDS2 = BDS(2)-abs(LONF(0) - LONF(1))
 			end if
