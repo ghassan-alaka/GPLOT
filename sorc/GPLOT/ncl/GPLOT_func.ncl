@@ -759,7 +759,17 @@ begin
 
 	end if  end if  end if  end if
 	end if  end if  end if  end if
-	
+
+	; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(0:1).eq.0.))then
+	        if(max(f->$DIM$).lt.BDS(1))then		LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        else if(min(f->$DIM$).gt.BDS(0))then	LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        end if  end if
+	end if
 	
 	; Create LAT if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LAT, then adjust
