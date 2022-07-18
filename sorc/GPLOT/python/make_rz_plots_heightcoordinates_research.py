@@ -260,29 +260,47 @@ def main():
 						sys.exit(1)
 					NL = NL+1
 					test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
-					if test > rmax:  xoffset = NL
+					if test > rmax:  xoffset,yoffset = NL,NL
 				print(f'MSG: Will use a box with side of {NL} degrees.')
 	
 	
-				#Get lat, lon, levs
+				#Get lat, lon
 				ga('set z 1')
+
 				lonmax = centerlon + xoffset
-				latmax = centerlat + yoffset
 				lonmin = centerlon - xoffset
-				latmin = centerlat - yoffset
 				lonstring = 'set lon '+str(lonmin)+' '+str(lonmax)
-				latstring = 'set lat '+str(latmin)+' '+str(latmax)
 				ga(lonstring)
+				lons = ga.exp('lon')
+				lon = lons[0,:]
+
+				latmax = centerlat + yoffset
+				latmin = centerlat - yoffset
+				latstring = 'set lat '+str(latmin)+' '+str(latmax)
 				ga(latstring)
 				lats = ga.exp('lat')
-				lons = ga.exp('lon')
+				lat = lats[:,0]
+
+				# Check that lat & lon are the same size
+				if lon.shape < lat.shape:
+					centerlon = centerlon + 0.0001
+					lonmax,lonmin = centerlon + xoffset, centerlon - xoffset
+					lonstring = 'set lon '+str(lonmin)+' '+str(lonmax)
+					ga(lonstring)
+					lons = ga.exp('lon')
+					lon = lons[0,:]
+				elif lat.shape < lon.shape:
+					centerlat = centerlat + 0.0001
+					latmax,latmin = centerlat + yoffset, centerlat - yoffset
+					latstring = 'set lat '+str(latmin)+' '+str(latmax)
+					ga(latstring)
+					lats = ga.exp('lat')
+					lat = lats[:,0]
+					
+				# Get pressure levels
 				zstring = 'set z 1 '+str(zsize_pressure)
 				ga(zstring)
 				levs = ga.exp('lev')
-			
-				#Make them all a 1-d array
-				lon = lons[0,:]
-				lat = lats[:,0]
 				z = np.zeros((zsize_pressure,0))*np.nan
 				for i in range(zsize_pressure):
 					#print(i)
@@ -381,14 +399,17 @@ def main():
 				heightlevs = np.linspace(0,18000,37)
 				zsize = np.shape(heightlevs)[0] #Change zsize here
 	
-				uwind = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				vwind = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				wwind = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				dbz = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				temp = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				q = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				rh = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
-				pressure = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs)[0]))*np.nan
+				uwind = np.ones((np.shape(uwindT)[2],np.shape(uwindT)[1],np.shape(heightlevs)[0]))*np.nan
+				vwind = np.ones((np.shape(vwindT)[2],np.shape(vwindT)[1],np.shape(heightlevs)[0]))*np.nan
+				wwind = np.ones((np.shape(wwindT)[2],np.shape(wwindT)[1],np.shape(heightlevs)[0]))*np.nan
+				dbz = np.ones((np.shape(dbzT)[2],np.shape(dbzT)[1],np.shape(heightlevs)[0]))*np.nan
+				temp = np.ones((np.shape(tempT)[2],np.shape(tempT)[2],np.shape(heightlevs)[0]))*np.nan
+				q = np.ones((np.shape(qT)[2],np.shape(qT)[1],np.shape(heightlevs)[0]))*np.nan
+				rh = np.ones((np.shape(rhT)[2],np.shape(rhT)[1],np.shape(heightlevs)[0]))*np.nan
+				pressure = np.ones((np.shape(pressureT)[2],np.shape(pressureT)[1],np.shape(heightlevs)[0]))*np.nan
+				print(hgtT.shape)
+				print(uwindT.shape)
+				print(uwind.shape)
 	
 				for k in range(np.shape(heightlevs)[0]):
 					uwind[:,:,k] = metpy.interpolate.interpolate_to_isosurface(hgtT,uwindT,heightlevs[k])
@@ -411,10 +432,10 @@ def main():
 	
 				heightlevs_pbl = np.linspace(0,3000,31)
 				zsize_pbl = np.shape(heightlevs_pbl)[0]
-				uwind_pbl = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs_pbl)[0]))*np.nan
-				vwind_pbl = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs_pbl)[0]))*np.nan
-				rho_pbl = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs_pbl)[0]))*np.nan
-				pressure_pbl = np.ones((np.shape(lat)[0],np.shape(lon)[0],np.shape(heightlevs_pbl)[0]))*np.nan
+				uwind_pbl = np.ones((np.shape(uwind)[0],np.shape(uwind)[1],np.shape(heightlevs_pbl)[0]))*np.nan
+				vwind_pbl = np.ones((np.shape(vwind)[0],np.shape(vwind)[1],np.shape(heightlevs_pbl)[0]))*np.nan
+				rho_pbl = np.ones((np.shape(rh)[0],np.shape(rh)[1],np.shape(heightlevs_pbl)[0]))*np.nan
+				pressure_pbl = np.ones((np.shape(pressure)[0],np.shape(pressure)[1],np.shape(heightlevs_pbl)[0]))*np.nan
 	
 				for k in range(np.shape(heightlevs_pbl)[0]):
 					uwind_pbl[:,:,k] = metpy.interpolate.interpolate_to_isosurface(hgtT,uwindT,heightlevs_pbl[k])
