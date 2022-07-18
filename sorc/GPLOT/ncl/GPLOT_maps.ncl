@@ -1145,6 +1145,10 @@ do fff = 0,nFiles-1
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
                                         y = ddd
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
+					if(dimsizes(lat).le.2 .and. dimsizes(lat).gt.1)then
+						lat := 9.96921e+36
+						lat@_FillValue = 9.96921e+36
+					end if
 					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
 
@@ -1161,6 +1165,10 @@ do fff = 0,nFiles-1
 					BOCO@PivotLon = PIV
 					if(SC_DOMAIN)then	lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
 					else			lon := get_dim_lon(f,dNames(ddd),BOCO,9.96921e+36,9.96921e+36,ti,B)
+					end if
+					if(dimsizes(lon).le.2 .and. dimsizes(lon).gt.1)then
+						lon := 9.96921e+36
+						lon@_FillValue = 9.96921e+36
 					end if
 					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
