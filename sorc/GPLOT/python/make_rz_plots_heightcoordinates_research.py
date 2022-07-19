@@ -263,48 +263,30 @@ def main():
 					if test > rmax:  xoffset,yoffset = NL,NL
 				print(f'MSG: Will use a box with side of {NL} degrees.')
 	
-	
-				#Get lat, lon
+				# Setup lat, lon boundaries
 				ga('set z 1')
-
 				lonmax = centerlon + xoffset
 				lonmin = centerlon - xoffset
-				lonstring = 'set lon '+str(lonmin)+' '+str(lonmax)
-				ga(lonstring)
-				lons = ga.exp('lon')
-				lon = lons[0,:]
-
+				ga(f'set lon {lonmin} {lonmax}')
 				latmax = centerlat + yoffset
 				latmin = centerlat - yoffset
-				latstring = 'set lat '+str(latmin)+' '+str(latmax)
-				ga(latstring)
-				lats = ga.exp('lat')
-				lat = lats[:,0]
+				ga(f'set lat {latmin} {latmax}')
 
-				# Check that lat & lon are the same size
-				if lon.shape < lat.shape:
-					centerlon = centerlon + 0.0001
-					lonmax,lonmin = centerlon + xoffset, centerlon - xoffset
-					lonstring = 'set lon '+str(lonmin)+' '+str(lonmax)
-					ga(lonstring)
-					lons = ga.exp('lon')
-					lon = lons[0,:]
-				elif lat.shape < lon.shape:
-					centerlat = centerlat + 0.0001
-					latmax,latmin = centerlat + yoffset, centerlat - yoffset
-					latstring = 'set lat '+str(latmin)+' '+str(latmax)
-					ga(latstring)
-					lats = ga.exp('lat')
-					lat = lats[:,0]
-					
+				# Fix to integer boundaries to prevent mismatching array shapes
+				env = ga.env()
+				ga(f'set x {env.xi[0]} {env.xi[1]}')
+				ga(f'set y {env.yi[0]} {env.yi[1]}')
+
+				# Read lat & lon
+				lon = ga.exp('lon')[0,:]
+				lat = ga.exp('lat')[:,0]
+				#print(lat.shape, lon.shape)
+
 				# Get pressure levels
-				zstring = 'set z 1 '+str(zsize_pressure)
-				ga(zstring)
+				ga(f'set z 1 {zsize_pressure}')
 				levs = ga.exp('lev')
 				z = np.zeros((zsize_pressure,0))*np.nan
-				for i in range(zsize_pressure):
-					#print(i)
-					z[i] = levs[1,1,i]
+				for i in range(zsize_pressure):  z[i] = levs[1,1,i]
 	
 				#Get data
 				print('Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
@@ -364,9 +346,6 @@ def main():
 	
 				#Define the polar coordinates needed
 				r = np.linspace(0,rmax,(int(rmax//resolution)+1))
-				#r = np.linspace(0,600,201)
-				#print(r)
-				#sys.exit()
 				pi = np.arccos(-1)
 				theta = np.arange(0,2*pi+pi/36,pi/36)
 				R, THETA = np.meshgrid(r, theta)
@@ -399,17 +378,16 @@ def main():
 				heightlevs = np.linspace(0,18000,37)
 				zsize = np.shape(heightlevs)[0] #Change zsize here
 	
-				uwind = np.ones((np.shape(uwindT)[2],np.shape(uwindT)[1],np.shape(heightlevs)[0]))*np.nan
-				vwind = np.ones((np.shape(vwindT)[2],np.shape(vwindT)[1],np.shape(heightlevs)[0]))*np.nan
-				wwind = np.ones((np.shape(wwindT)[2],np.shape(wwindT)[1],np.shape(heightlevs)[0]))*np.nan
-				dbz = np.ones((np.shape(dbzT)[2],np.shape(dbzT)[1],np.shape(heightlevs)[0]))*np.nan
-				temp = np.ones((np.shape(tempT)[2],np.shape(tempT)[2],np.shape(heightlevs)[0]))*np.nan
-				q = np.ones((np.shape(qT)[2],np.shape(qT)[1],np.shape(heightlevs)[0]))*np.nan
-				rh = np.ones((np.shape(rhT)[2],np.shape(rhT)[1],np.shape(heightlevs)[0]))*np.nan
-				pressure = np.ones((np.shape(pressureT)[2],np.shape(pressureT)[1],np.shape(heightlevs)[0]))*np.nan
-				print(hgtT.shape)
-				print(uwindT.shape)
-				print(uwind.shape)
+				uwind = np.ones((np.shape(uwindT)[1],np.shape(uwindT)[2],np.shape(heightlevs)[0]))*np.nan
+				vwind = np.ones((np.shape(vwindT)[1],np.shape(vwindT)[2],np.shape(heightlevs)[0]))*np.nan
+				wwind = np.ones((np.shape(wwindT)[1],np.shape(wwindT)[2],np.shape(heightlevs)[0]))*np.nan
+				dbz = np.ones((np.shape(dbzT)[1],np.shape(dbzT)[2],np.shape(heightlevs)[0]))*np.nan
+				temp = np.ones((np.shape(tempT)[1],np.shape(tempT)[2],np.shape(heightlevs)[0]))*np.nan
+				q = np.ones((np.shape(qT)[1],np.shape(qT)[2],np.shape(heightlevs)[0]))*np.nan
+				rh = np.ones((np.shape(rhT)[1],np.shape(rhT)[2],np.shape(heightlevs)[0]))*np.nan
+				pressure = np.ones((np.shape(pressureT)[1],np.shape(pressureT)[2],np.shape(heightlevs)[0]))*np.nan
+				#print(uwindT.shape)
+				#print(uwind.shape)
 	
 				for k in range(np.shape(heightlevs)[0]):
 					uwind[:,:,k] = metpy.interpolate.interpolate_to_isosurface(hgtT,uwindT,heightlevs[k])
