@@ -276,7 +276,7 @@ fi
 # Merge the NHC A-Deck
 echo "*********************************************"
 echo "MSG: PART ONE - MERGE THE NHC A_DECK"
-NHC_DECKS=( `find ${ANHC}/. -mmin ${MMIN} -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
+NHC_DECKS=( `find ${ANHC}/. -maxdepth 1 -mmin ${MMIN} -name "a[a-z][a-z][0-9][0-9]${YYYY}${EXT2}" -type f -print0 | xargs -0 -r ls -t | xargs -r -L1 basename` )
 if [ -z "${NHC_DECKS}" ]; then
     echo "WARNING: Couldn't find any recent NHC a-decks. This might be OK."
 fi
@@ -411,7 +411,7 @@ for D in "${M_DECKS[@]}"; do
         sed -i 's/CCCC/'"${MODI}"'/g' ${INTERP_DIR}/${INTERP_NML}
         sed -i 's/DDD/006/g' ${INTERP_DIR}/${INTERP_NML}
         #sed -i 's/EEE/'"${FNL_HR}"'/g' ${INTERP_DIR}/${INTERP_NML}
-        sed -i 's/EEE/096/g' ${INTERP_DIR}/${INTERP_NML}
+        sed -i 's/EEE/036/g' ${INTERP_DIR}/${INTERP_NML}
 
         # Update the executable.
         cp -p ${INTERP_DIR}/${INTERP_EXE}.template ${INTERP_DIR}/${INTERP_EXE}
