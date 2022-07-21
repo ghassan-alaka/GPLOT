@@ -289,11 +289,11 @@ def main():
 				for i in range(zsize_pressure):  z[i] = levs[1,1,i]
 	
 				#Get data
-				print('Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
+				print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
 				uwind = ga.exp('ugrdprs')
 				vwind = ga.exp('vgrdprs')
 				omega = ga.exp('vvelprs')
-				print('Done With u,v,w')
+				print('MSG: Done With u,v,w')
 				dbz = ga.exp('refdprs')
 				hgt = ga.exp('hgtprs')
 				temp = ga.exp('tmpprs')
@@ -317,7 +317,7 @@ def main():
 				mixr2m = q2m/(1-q2m)
 				temp_v_2m = tmp2m*(1+0.61*mixr2m)
 				rho2m = mslp/(287*temp_v_2m)
-				print('MSG: Done with u10,v10')
+				print('MSG: Done with surface vars (e.g., u10,v10)')
 				
 				#Get u850, v850, u200, v200 for Shear Calculation
 				ga('set lev 850')
