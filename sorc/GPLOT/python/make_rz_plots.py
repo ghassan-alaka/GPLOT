@@ -253,35 +253,35 @@ def main():
 						sys.exit(1)
 					NL = NL+1
 					test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
-					if test > rmax:  xoffset = NL
+					if test > rmax:  xoffset,yoffset = NL,NL
 				print(f'MSG: Will use a box with side of {NL} degrees.')
-	
-				#Get lat, lon, levs
+
+				# Setup lat, lon boundaries
 				ga('set z 1')
 				lonmax = centerlon + xoffset
-				latmax = centerlat + yoffset
 				lonmin = centerlon - xoffset
+				ga(f'set lon {lonmin} {lonmax}')
+				latmax = centerlat + yoffset
 				latmin = centerlat - yoffset
-				lonstring = 'set lon '+str(lonmin)+' '+str(lonmax)
-				latstring = 'set lat '+str(latmin)+' '+str(latmax)
-				ga(lonstring)
-				ga(latstring)
-				lats = ga.exp('lat')
-				lons = ga.exp('lon')
-				zstring = 'set z 1 '+str(zsize)
-				ga(zstring)
+				ga(f'set lat {latmin} {latmax}')
+
+				# Fix to integer boundaries to prevent mismatching array shapes
+				env = ga.env()
+				ga(f'set x {env.xi[0]} {env.xi[1]}')
+				ga(f'set y {env.yi[0]} {env.yi[1]}')
+
+				# Read lat & lon
+				lon = ga.exp('lon')[0,:]
+				lat = ga.exp('lat')[:,0]
+				#print(lat.shape, lon.shape)
+
+				# Get pressure levels
+				ga(f'set z 1 {zsize}')
 				levs = ga.exp('lev')
 				zlevs = levs[0,0,:]
-	
-			
-				#Make them all a 1-d array
-				lon = lons[0,:]
-				lat = lats[:,0]
 				z = np.zeros((zsize,0))*np.nan
-				for i in range(zsize):
-					#print(i)
-					z[i] = levs[1,1,i]
-	
+				for i in range(zsize):  z[i] = levs[1,1,i]
+
 				#Get data
 				print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
 				uwind = ga.exp('ugrdprs')
@@ -415,7 +415,13 @@ def main():
 	
 				shearmag = np.hypot(ushear,vshear)
 				sheardir = np.arctan2(vshear,ushear)*180.0/pi
-				shearstring = str(int(np.round(shearmag*1.94,0)))
+				if np.isnan(shearmag):
+					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					continue
+				else:
+					shearstring = str(int(np.round(shearmag*1.94,0)))
+
 	
 				#Convert shear to meteorological convention
 				if sheardir <=90:
@@ -477,7 +483,7 @@ def main():
 					warnings.filterwarnings(action='ignore', message='Mean of empty slice')
 					vt_p_mean = np.nanmean(vt_p,0)
 					ur_p_mean = np.nanmean(ur_p,0)
-					w_p_mean = np.nanmean(w_p,0)
+					w_p_mean = np.NaN if np.isnan(w_p).all() else np.nanmean(w_p,0)
 					dbz_p_mean = np.nanmean(dbz_p,0)
 					temp_p_mean = np.nanmean(temp_p,0)
 					q_p_mean = np.nanmean(q_p,0)
@@ -621,8 +627,19 @@ def main():
 				vt_p_mean_max = np.max(vt_p_mean,0)
 				rmw_750 = rmw_mean[10]
 				vt_p_mean_max_750 = vt_p_mean_max[10]
-				rmwstring = str(int(np.round(rmw_750*0.54,0)))
-				vmaxstring = str(int(np.round(vt_p_mean_max_750*1.94,0)))
+				if np.isnan(rmw_750):
+					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					continue
+				else:
+					rmwstring = str(int(np.round(rmw_750*0.54,0)))
+				if np.isnan(vt_p_mean_max_750):
+					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					continue
+				else:
+					vmaxstring = str(int(np.round(vt_p_mean_max_750*1.94,0)))
+
 	
 				u750 = uwind[:,:,10]
 				v750 = vwind[:,:,10]
