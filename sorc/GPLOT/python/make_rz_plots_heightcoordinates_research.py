@@ -2489,10 +2489,6 @@ def main():
 			
 		# Write the input file to a log to mark that it has ben processed
 		update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
-		#os.system("sed -i '/"+str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
-		#os.system('echo "'+str(FILE)+' 1" >> '+PLOTTED_FILES)
-		#os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
-		#os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 	
 	print('MSG: DOING THE EXTRA STUFF')
 	combinedfile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.all.txt'

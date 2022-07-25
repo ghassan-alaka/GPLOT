@@ -1227,11 +1227,7 @@ def main():
 	
 				
 		# Write the input file to a log to mark that it has ben processed
-		PLOTTED_FILES=ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-		os.system("sed -i '/"+str(os.path.basename(FILE))+"/d' "+PLOTTED_FILES)
-		os.system('echo "'+str(FILE)+' 1" >> '+PLOTTED_FILES)
-		os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
-		os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+		update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 	
 	
 	print('MSG: COMPLETING')
@@ -1289,6 +1285,17 @@ def axes_radpres(ax, xmax, xmin, ymax=1000, ymin=100):
 	ax.grid()
 
 	return ax
+
+
+def update_plottedfile(OFILE, IFILE):
+        """Update the GPLOT PlottedFiles file to mark a file as processed.
+        @param OFILE: the plotted file path as a string
+        @param IFILE: the model output file that was processed
+        """
+        os.system("sed -i '/"+str(os.path.basename(IFILE))+"/d' "+OFILE)
+        os.system('echo "'+str(IFILE)+' 1" >> '+OFILE)
+        os.system('sort -u '+OFILE+' > '+OFILE+'.TMP')
+        os.system('mv '+OFILE+'.TMP '+OFILE)
 
 
 ##############################
