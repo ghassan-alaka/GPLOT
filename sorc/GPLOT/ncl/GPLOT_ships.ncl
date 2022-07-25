@@ -706,6 +706,10 @@ do fff = 0,nFiles-1
 			; LATITUDE
 			if(isStrSubset(dNames(ddd),"lat"))then
 				lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats,tcLons,fff,B)
+				if(dimsizes(lat).eq.2)then	lat := 9.96921e+36
+								lat@_FillValue = 9.96921e+36
+				end if
+				if(ismissing(lat(0)))then   break   end if
 				dy := abs(lat(1)-lat(0))
 				dym := dy*111200.
 				BOCO = lat@BOCO
@@ -716,6 +720,10 @@ do fff = 0,nFiles-1
 			if(isStrSubset(dNames(ddd),"lon"))then
 				BOCO@PivotLon = PIV
 				lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons,tcLats,fff,B)
+                                if(dimsizes(lon).eq.2)then      lon := 9.96921e+36
+                                                                lon@_FillValue = 9.96921e+36
+                                end if
+                                if(ismissing(lon(0)))then   break   end if
 				dx := abs(lon(1)-lon(0))
 				dxm := dx*111200.
 				BOCO = lon@BOCO
@@ -748,6 +756,45 @@ do fff = 0,nFiles-1
 				mf	= 1.
 			end if
 		end do
+
+		OUT_OF_BDS = False
+		if(isvar("lat"))then
+		if(ismissing(lat(0)))then
+		        print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+		        OUT_OF_BDS = True
+		end if
+		end if
+		if(isvar("lon"))then
+		if(ismissing(lon(0)))then
+		        print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+		        OUT_OF_BDS = True
+		end if
+		end if
+		if(OUT_OF_BDS)then
+		        ; Update PlottedFiles file if all files are done and:
+		        ;    -- ATCF is required and forecast hour is less than or equal to the minimum hour from ATCFs
+		        ;    -- ATCF is not required
+	                print("MSG: All graphics & data files found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
+		
+	                ; Get the input file base name
+	                IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+	                IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+		
+	                PLOTTED_FILES = ODIR+"PlottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
+	                ;if(ATCF_REQD .and. ALL_ATCF)then
+	                if(FHR(fff).le.FNL_HR)then
+	                        if(fileexists(PLOTTED_FILES))then
+	                                system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+	                                system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
+	                        else
+	                                system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
+	                        end if
+	                end if
+	                system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
+	                system("mv "+PLOTTED_FILES+".TMP "+PLOTTED_FILES)
+
+			continue
+	        end if
 		
 		
 		; mf is the multiplicative factor for the vertical coordinate
