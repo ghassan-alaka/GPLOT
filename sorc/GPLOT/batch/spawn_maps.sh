@@ -178,6 +178,9 @@ if [ -z "$IDATE" ]; then
         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -25 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
@@ -278,8 +281,8 @@ for TR in ${TIER[@]}; do
 
         # Only retain the numbers for the cycle
         # Parse the prefix (e.g., gfs.) if it exists.
-        CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
-        CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
+	CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z0-9]*.\\)\([0-9]*\)/\1/'`
+        CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z0-9]*\.\)\([0-9]*\)/\2/'`
 
         # If the CYCLE is empty, skip it
         if [ -z "$CYCLE" ]; then
@@ -706,7 +709,6 @@ for TR in ${TIER[@]}; do
                                "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L/" \
                                "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
                                "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
-
 
                     # Get the right list of lead times
                     if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
