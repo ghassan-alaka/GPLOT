@@ -1669,6 +1669,7 @@ do fff = 0,nFiles-1
 		else if(FNAME(ppp).eq."TCCEN")then
 			; 1) Use NCL & Fortran functions to find the TC centers
 			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,lat,lonF,flipFlag,BOCO2,1)
+			if(all(ismissing(CTR)))then   continue   end if
 			;print(CTR@value)
 			;exit				
 			
@@ -2202,12 +2203,14 @@ do fff = 0,nFiles-1
 			V3@units = "kts"
 			V3@long_name = "Wind Magnitude"
 			V3@_FillValue = U1@_FillValue
+			if(all(ismissing(V3)))then   continue   end if
 					
 			; 4E) FOR WIND DIRECTION
 			V4	:= C@r2d*atan2(U2,V2)
 			if(any(V4.lt.0))then	V4(ind(V4.lt.0)) = 360.+V4(ind(V4.lt.0))   end if
 			V4@units = "degrees"
 			V4@long_name = "Wind Direction"
+			if(all(ismissing(V4)))then   continue   end if
 
 			; 4F) Delete the large arrays to release memory
 			delete([/U1,V1/])
@@ -2925,8 +2928,12 @@ end if
 if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
 else			print("MSG:   Convert to GIF:     OFF")
 end if
-print("MSG:   Plotted Files file: "+PLOTTED_FILES)
-print("MSG:   Status file:        "+STATUS_FILE)
+if(isvar("PLOTTED_FILES"))then
+	print("MSG:   Plotted Files file: "+PLOTTED_FILES)
+end if
+if(isvar("STATUS_FILE"))then
+	print("MSG:   Status file:        "+STATUS_FILE)
+end if
 print("********************")
 
 
