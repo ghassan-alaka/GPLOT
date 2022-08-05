@@ -12,7 +12,7 @@
 #
 #------------------------------------------------------------------------------------------------------------------------
 
-print('Importing Everything Needed')
+#print('Importing Everything Needed')
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -22,22 +22,13 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 import os
 
-def shearandrhplot(Xpolar,Ypolar,theta,r,ushear_polar,vshear_polar,rh_mean_polar,rh_level_lower,rh_level_upper,rmw_lower,rmw_upper,GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF):
 
-	#Define a plotting function first
-	def colored_bar(left, height, z=None, width=0.8, bottom=0.2, ax=None, **kwargs):
-		if ax is None:
-			ax = plt.gca()
-		width = itertools.cycle(np.atleast_1d(width))
-		bottom = itertools.cycle(np.atleast_1d(bottom))
-		rects = []
-		for x, y, h, w in zip(left, bottom, height, width):
-			rects.append(Rectangle((x,y), w, h))
-		coll = PatchCollection(rects, array=z, **kwargs)
-		#ax.set_clim(coll, vmin=30, vmax=90)
-		ax.add_collection(coll)
-		ax.autoscale()
-		return coll
+##############################
+##############################
+def shearandrhplot(Xpolar, Ypolar, theta, r, ushear_polar, vshear_polar, rh_mean_polar, rh_level_lower, rh_level_upper, \
+		   rmw_lower, rmw_upper, GPLOT_DIR, EXPT, FHR, maxwind, minpressure, LONGSID, ODIR, forecastinit, DO_CONVERTGIF):
+	"""
+	"""
 	
 	ushear_domain_mean = np.nanmean(ushear_polar,1)
 	vshear_domain_mean = np.nanmean(vshear_polar,1)
@@ -114,3 +105,25 @@ def shearandrhplot(Xpolar,Ypolar,theta,r,ushear_polar,vshear_polar,rh_mean_polar
 	plt.close()                
 	if ( DO_CONVERTGIF ):
 		os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+##############################
+
+
+##############################
+##############################
+#Define a plotting function first
+def colored_bar(left, height, z=None, width=0.8, bottom=0.2, ax=None, **kwargs):
+	"""Create a colorbar
+	"""
+	if ax is None:
+		ax = plt.gca()
+	width = itertools.cycle(np.atleast_1d(width))
+	bottom = itertools.cycle(np.atleast_1d(bottom))
+	rects = []
+	for x, y, h, w in zip(left, bottom, height, width):
+		rects.append(Rectangle((x,y), w, h))
+	coll = PatchCollection(rects, array=z, **kwargs)
+	#ax.set_clim(coll, vmin=30, vmax=90)
+	ax.add_collection(coll)
+	ax.autoscale()
+	return coll
+##############################
