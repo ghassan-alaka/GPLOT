@@ -2569,7 +2569,7 @@ if(DO_LI_GUIDE)then
 			; Add legend info for each model
 			if(DO_MARKERS)then
 				mkres2@gsMarkerColor := INTcolors(ppp2)
-				mkres2@gsMarkerIndex := INTmarkers(ppp3)
+				mkres2@gsMarkerIndex := INTmarkers(ppp2)
 				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp3%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp3/4),mkres2)
 			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp3%4)*0.25*vpWID),vpLFT+(tofloat(ppp3%4)*0.25*vpWID)+0.04/),\
