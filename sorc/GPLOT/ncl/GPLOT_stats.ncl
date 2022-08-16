@@ -1028,8 +1028,7 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	system("sed -i 's/BBBB/"+MCODE12+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/CCCC/"+MCODEI+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/DDD/006/g' "+INTERP_DIR+"/"+INTERP_NML)
-	#system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
-	system("sed -i 's/EEE/096/g' "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/EEE/036/g' "+INTERP_DIR+"/"+INTERP_NML)
 	
 
 	; Run the interpolation executable to produce early forecasts.
@@ -2223,6 +2222,7 @@ if(DO_ET_GUIDE)then
 		print("WARNING: Early model track guidance can't be produced.")
 		DO_THIS = False
 		DO_ET_GUIDE = False
+	end if
 	
 
 	if(DO_THIS)then
@@ -2718,9 +2718,9 @@ if(DO_EI_GUIDE)then
 	
 		; Plot the best track
 		if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
-			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
+			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2b)
 		else
-			plot	:= gsn_csm_blank_plot(wks,xyres2a)
+			plot	:= gsn_csm_blank_plot(wks,xyres2b)
 		end if
 
 		; Info about plot size
@@ -3260,7 +3260,7 @@ if(DO_LT_TREND)then
 				; Add model tracks
 				do ttt = 0,nTrend-1
 	
-					; Check if the HWRF-B track is available
+					; Check if the track is available
 					if(all(ismissing(aTRK2(mmm,ttt,0,:))))then
 						print("WARNING: "+thisModel+" track is unavailable for "+IDATES(ttt)+".")
 						continue
