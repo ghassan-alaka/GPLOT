@@ -281,7 +281,7 @@ for TR in ${TIER[@]}; do
 
         # Only retain the numbers for the cycle
         # Parse the prefix (e.g., gfs.) if it exists.
-	CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z0-9]*.\\)\([0-9]*\)/\1/'`
+	CPREFIX=`echo "$CYCLE" | grep -E '^[A-Za-z0-9]*\..*$' | sed 's/\([A-Za-z0-9]*\.\)\([0-9]*\)/\1/'`
         CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z0-9]*\.\)\([0-9]*\)/\2/'`
 
         # If the CYCLE is empty, skip it
