@@ -17,16 +17,20 @@ import matplotlib 					# The plotting routines
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt				# Command for the plotting
 import matplotlib.colors as colors			# Command to do some colorbar stuff
-from matplotlib.ticker import ScalarFormatter		# Used to change the log-y-axis ticks
+#from matplotlib.ticker import ScalarFormatter		# Used to change the log-y-axis ticks
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy						# Used for interpolation to polar coordinates
 from scipy import interpolate				# The interpolation function
-import concurrent.futures
+#import concurrent.futures
 from functools import partial
 #sys.path.append(GPLOT_DIR+'/sorc/GPLOT/python/modules')
 import modules.skewTmodelTCpolar as skewTmodelTCpolar
 import modules.shearandrhplot as shearandrhplot
 import modules.centroid as centroid
+import modules.interp as interp
+import modules.io as io
+import modules.plotting as plotting
+import modules.multiprocess as mproc
 
 
 ##############################
@@ -48,7 +52,7 @@ def main():
 	
 	#Get command lines arguments
 	if len(sys.argv) < 11:
-		print("ERROR: Expected 11 command line arguments. Got "+str(len(sys.argv)))
+		print(f'ERROR: Expected 11 command line arguments. Got {len(sys.argv)} args.')
 		sys.exit()
 	IDATE = sys.argv[1]
 	if IDATE == 'MISSING':       IDATE = ''
@@ -80,9 +84,9 @@ def main():
 	else:
 		print("ERROR: I couldn't find the Master Namelist.")
 		sys.exit()
-	PYTHONDIR = sys.argv[11]
-	if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
-		PYTHONDIR = f'{GPLOT_DIR}/sorc/GPLOT/python'
+	#PYTHONDIR = sys.argv[11]
+	#if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
+	PYTHONDIR = f'{GPLOT_DIR}/sorc/GPLOT/python'
 	
 	
 	# Read the master namelist
@@ -177,7 +181,6 @@ def main():
 	
 		# Get coordinate information from ATCF
 		lonstr = ATCF_DATA[list(FHRIND),7][0]
-		print('lonstr = ',lonstr)
 		lonstr1 = lonstr[::-1]
 		lonstr1 = lonstr1[1:]
 		lonstr1 = lonstr1[::-1]
@@ -197,6 +200,7 @@ def main():
 		maxwind = ATCF_DATA[list(FHRIND),8][0]
 		minpressure = ATCF_DATA[list(FHRIND),9][0]
 		rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+		print(f'MSG: centerlat,centerlon = {centerlat},{centerlon}')
 	
 		if ( centerlat > 50.0):
 			# Write the input file to a log to mark that it has ben processed
@@ -206,14 +210,13 @@ def main():
 			os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
 			break
 	
-		figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
+		figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{FHR:03}{figext}")])[0]
 		if (figuretest < 1):
-			print('MSG: I can\'t find the graphical products for this lead time.')
-			print(figuretest)
-			print('h = ',list(FHRIND))
+			print(f'MSG: I can\'t find the graphical products for this lead time (figuretest={figuretest}).')
+			#print('h = ',list(FHRIND))
 	
 			# Check that the data file 'FILE' exists
-			gribfiletest = os.system(f'ls {FILE}')
+			gribfiletest = os.system(f'ls {FILE} >/dev/null')
 	
 			if (gribfiletest < 1):
 	
@@ -367,7 +370,7 @@ def main():
 				zsize = np.shape(heightlevs)[0] #Change zsize here
 
 				varInList = [uwindT, vwindT, wwindT, dbzT, tempT, qT, rhT, pressureT]
-				HeightData = multiprocess_height_vars(hgt=hgtT, varList=varInList, levels=heightlevs)
+				HeightData = mproc.multiprocess_height_vars(hgt=hgtT, varList=varInList, levels=heightlevs)
 				uwind, vwind, wwind = HeightData[0,:,:,:], HeightData[1,:,:,:], HeightData[2,:,:,:]
 				dbz, temp, q = HeightData[3,:,:,:], HeightData[4,:,:,:], HeightData[5,:,:,:]
 				rh, pressure = HeightData[6,:,:,:], HeightData[7,:,:,:]
@@ -380,7 +383,7 @@ def main():
 				zsize_pbl = np.shape(heightlevs_pbl)[0]
 				varList = [uwindT, vwindT, rhoT, pressureT]
 				varNames = ['uwind_pbl', 'vwind_pbl', 'rho_pbl', 'pressure_pbl']
-				HeightData = multiprocess_height_vars(hgt=hgtT, varList=varList, levels=heightlevs_pbl)
+				HeightData = mproc.multiprocess_height_vars(hgt=hgtT, varList=varList, levels=heightlevs_pbl)
 				uwind_pbl, vwind_pbl = HeightData[0,:,:,:], HeightData[1,:,:,:]
 				rho_pbl, pressure_pbl = HeightData[2,:,:,:], HeightData[3,:,:,:]
 				
@@ -426,7 +429,7 @@ def main():
 				varList = [np.transpose(uwind,(2,0,1)), np.transpose(vwind, (2,0,1)), np.transpose(wwind, (2,0,1)), \
 					   np.transpose(dbz, (2,0,1)), np.transpose(temp, (2,0,1)), np.transpose(q, (2,0,1)), \
 					   np.transpose(rh, (2,0,1)), np.transpose(pressure, (2,0,1))]
-				PolarData = multiprocess_polar_vars(x_sr, y_sr, XI, YI, varList=varList, levels=heightlevs)
+				PolarData = mproc.multiprocess_polar_vars(x_sr, y_sr, XI, YI, varList=varList, levels=heightlevs)
 				u_p, v_p, w_p = PolarData[0,:,:,:], PolarData[1,:,:,:], PolarData[2,:,:,:]
 				dbz_p, temp_p, q_p = PolarData[3,:,:,:], PolarData[4,:,:,:], PolarData[5,:,:,:]
 				rh_p, pressure_p = PolarData[6,:,:,:], PolarData[7,:,:,:]
@@ -524,7 +527,7 @@ def main():
 				sheardir = np.arctan2(vshear1,ushear1)*180.0/pi
 				if np.isnan(shearmag):
 					ga('close 1')
-					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					io.update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 					continue
 				else:
 					shearstring = str(int(np.round(shearmag*1.94,0)))
@@ -781,13 +784,13 @@ def main():
 				vt_p_mean_max_2km = vt_p_mean_max[4]
 				if np.isnan(rmw_2km):
 					ga('close 1')
-					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					io.update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 					continue
 				else:
 					rmwstring = str(int(np.round(rmw_2km*0.54,0)))
 				if np.isnan(vt_p_mean_max_2km):
 					ga('close 1')
-					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					io.update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
 					continue
 				else:
 					vmaxstring = str(int(np.round(vt_p_mean_max_2km*1.94,0)))
@@ -915,10 +918,10 @@ def main():
 					# Get coordinate information from ATCF
 					FHRIND2 = list(FHRIND)[0]-1
 					FHR_tm1 = int(ATCF_DATA[FHRIND2,5])
-					print('MSG: h_tm1 = ',FHRIND2)
-					print('MSG: FHR_tm1 =',FHR_tm1)
+					#print('MSG: h_tm1 = ',FHRIND2)
+					#print('MSG: FHR_tm1 =',FHR_tm1)
 					lonstr_tm1 = ATCF_DATA[FHRIND2,7]
-					print('MSG: lonstr_tm1 = ',lonstr_tm1)
+					#print('MSG: lonstr_tm1 = ',lonstr_tm1)
 					lonstr1_tm1 = lonstr_tm1[::-1]
 					lonstr1_tm1 = lonstr1_tm1[1:]
 					lonstr1_tm1 = lonstr1_tm1[::-1]
@@ -943,16 +946,13 @@ def main():
 					dx = (centerlon-centerlon_tm1)*111.1e3*np.cos(centerlat*3.14159/180)
 					dy = (centerlat-centerlat_tm1)*111.1e3
 				else:
-					dt = np.nan
-					dx = np.nan
-					dy = np.nan
+					dt, dx, dy = np.nan, np.nan, np.nan
 	
 				umotion = dx/dt
 				vmotion = dy/dt
-				print('MSG: fhr = ',FHR)
-				print('MSG: dt = ',dt)
-				print('MSG: umotion = ',umotion)
-				print('MSG: vmotion = ',vmotion)
+				#print('MSG: fhr = ',FHR)
+				#print('MSG: dt = ',dt)
+				print(f'MSG: umotion,vmotion = {umotion:.2f},{vmotion:.2f}')
 	
 				uwind_sr = uwind-umotion
 				vwind_sr = vwind-vmotion
@@ -963,8 +963,6 @@ def main():
 				#Term1 (Horizontal Advection)
 				d_eta_dx = np.array(metpy.calc.first_derivative(absvort,axis=1,delta=xgrad*1e3))
 				d_eta_dy = np.array(metpy.calc.first_derivative(absvort,axis=0,delta=ygrad*1e3))
-				print(uwind_sr.shape, vwind_sr.shape)
-				print(d_eta_dx.shape, d_eta_dy.shape)
 				horizontal_advection = -(uwind_sr*d_eta_dx + vwind_sr*d_eta_dy)
 	
 				#Term2 (Vertical advection)
@@ -1228,17 +1226,17 @@ def main():
 						threshold_pressure[k] = np.nanmin(pressure_p_mean[0:r2+1,k])+0.2*(np.nanmax(pressure_p_mean[0:r2+1,k])-np.nanmin(pressure_p_mean[0:r2+1,k]))
 						threshold_vort[k] = 0.80*np.nanmax(vort_p_mean[0:r2+1,k])
 				
-					print('MSG: HERE ARE THE THRESHOLDS')
-					for k in range(ivd):
-						print(threshold_pressure[k],threshold_vort[k])
+					#print('MSG: HERE ARE THE THRESHOLDS')
+					#for k in range(ivd):
+					#	print(threshold_pressure[k],threshold_vort[k])
 		
 					if ( np.min(threshold_vort) > 0):	
 						centroid.centroid(pressure_centroid,center_indices_pressure,threshold_pressure,-1,np.shape(pressure_centroid)[0],np.shape(pressure_centroid)[1],np.shape(pressure_centroid)[2])
 						centroid.centroid(vort_centroid,center_indices_vort,threshold_vort,1,np.shape(vort_centroid)[0],np.shape(vort_centroid)[1],np.shape(vort_centroid)[2])
 						
-						print('HERE ARE THE INDICES')
-						for k in range(ivd):
-							print(center_indices_vort[k,:])
+						#print('HERE ARE THE INDICES')
+						#for k in range(ivd):
+						#	print(center_indices_vort[k,:])
 			
 						center_x_vort = np.ones(zsize)*np.nan
 						center_y_vort = np.ones(zsize)*np.nan
@@ -1497,10 +1495,13 @@ def main():
 				f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vort,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local))
 				f.close()
 	
+
+
 				#############################################################################################################################################
-				
-				#Make Plots
+				# CREATE THE GRAPHICS HERE
+				#############################################################################################################################################
 				print('MSG: Doing Plots Now')
+				start = time.perf_counter()
 				if os.path.exists(f'{NMLDIR}/namelist.polar.structure.{EXPT}'):
 					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure.{EXPT}',delimiter=',',dtype='str')
 				else:
@@ -1533,43 +1534,43 @@ def main():
 					skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
 	
 				#Load the colormaps needed
-				color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
+				color_data_vt = np.genfromtxt('{PYTHONDIR}/colormaps/colormap_wind.txt')
 				colormap_vt = matplotlib.colors.ListedColormap(color_data_vt)
 				levs_vt = np.linspace(0,80,41,endpoint=True)
 				norm_vt = colors.BoundaryNorm(levs_vt,256)
 	
-				color_data_ur = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
+				color_data_ur = np.genfromtxt(f'{PYTHONDIR}/colormaps/bluewhitered.txt')
 				colormap_ur = matplotlib.colors.ListedColormap(color_data_ur)
 				levs_ur = np.linspace(-30,30,31,endpoint=True)
 				norm_ur = colors.BoundaryNorm(levs_ur,256)
 	
-				color_data_w = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
+				color_data_w = np.genfromtxt(f'{PYTHONDIR}/colormaps/bluewhitered.txt')
 				colormap_w = matplotlib.colors.ListedColormap(color_data_w)
 				levs_w = np.linspace(-5,5,41,endpoint=True)
 				norm_w = colors.BoundaryNorm(levs_w,256)
 	
-				color_data_dbz = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_radar.txt')
+				color_data_dbz = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_radar.txt')
 				colormap_dbz = matplotlib.colors.ListedColormap(color_data_dbz)
 				levs_dbz = np.linspace(0,80,41,endpoint=True)
 				norm_dbz = colors.BoundaryNorm(levs_dbz,256)
 	
-				color_data_rh = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_brown_to_green.txt')
+				color_data_rh = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_brown_to_green.txt')
 				colormap_rh = matplotlib.colors.ListedColormap(color_data_rh)
 				levs_rh = np.linspace(0,100,41,endpoint=True)
 				norm_rh = colors.BoundaryNorm(levs_rh,256)
 	
 	
-				color_data_wind = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
+				color_data_wind = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_wind.txt')
 				colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
 				levs_wind = [0,7,10,13,16,19,22,25,28,31,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,69.333,74.666,80,85.333,90.666,96,100.666,105.333,110,115,120,125,130,132,140,145,150,155,160]
 				norm_wind = colors.BoundaryNorm(levs_wind,256)
 	
-				color_data_vt_budget = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
+				color_data_vt_budget = np.genfromtxt(f'{PYTHONDIR}/colormaps/bluewhitered.txt')
 				colormap_vt_budget = matplotlib.colors.ListedColormap(color_data_vt_budget)
 				levs_vt_budget = np.linspace(-10,10,81,endpoint=True)
 				norm_vt_budget = colors.BoundaryNorm(levs_vt_budget,256)
 	
-				color_data_vort_budget = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/bluewhitered.txt')
+				color_data_vort_budget = np.genfromtxt(f'{PYTHONDIR}/colormaps/bluewhitered.txt')
 				colormap_vort_budget = matplotlib.colors.ListedColormap(color_data_vort_budget)
 				levs_vort_budget = np.linspace(-40,40,41,endpoint=True)
 				norm_vort_budget = colors.BoundaryNorm(levs_vort_budget,256)
@@ -1580,7 +1581,7 @@ def main():
 					ax1 = fig1.add_subplot(1, 1, 1)
 					co1 = ax1.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_mean,1)), levs_ur, \
 							  cmap=colormap_ur, norm=norm_ur, extend='both')
-					ax1 = axes_radhgt(ax1, xmax=rmax)
+					ax1 = plotting.axes_radhgt(ax1, xmax=rmax)
 					cbar1 = plt.colorbar(co1, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 					cbar1.ax.tick_params(labelsize=24)
 					ax1.set_title(f'{EXPT.strip()}\n' + \
@@ -1601,7 +1602,7 @@ def main():
 					ax2 = fig2.add_subplot(1, 1, 1)
 					co2 = ax2.contourf(r, heightlevs/1000, np.flipud(np.rot90(vt_p_mean, 1)), levs_vt, \
 							   cmap=colormap_vt, norm=norm_vt, extend='max')
-					ax2 = axes_radhgt(ax2, xmax=rmax)
+					ax2 = plotting.axes_radhgt(ax2, xmax=rmax)
 					cbar2 = plt.colorbar(co2, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
 					cbar2.ax.tick_params(labelsize=24)
 					ax2.set_title(f'{EXPT.strip()}\n' + \
@@ -1622,7 +1623,7 @@ def main():
 					ax3 = fig3.add_subplot(1, 1, 1)
 					co3 = ax3.contourf(r, heightlevs/1000, np.flipud(np.rot90(w_p_mean, 1)), levs_w, \
 							   cmap=colormap_w, norm=norm_w, extend='both')
-					ax3 = axes_radhgt(ax3, xmax=rmax)
+					ax3 = plotting.axes_radhgt(ax3, xmax=rmax)
 					cbar3 = plt.colorbar(co3, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 					cbar3.ax.tick_params(labelsize=24)
 					ax3.set_title(f'{EXPT.strip()}\n' + \
@@ -1643,7 +1644,7 @@ def main():
 					ax4 = fig4.add_subplot(1, 1, 1)
 					co4 = ax4.contourf(r, heightlevs/1000, np.flipud(np.rot90(dbz_p_mean, 1)), levs_dbz, \
 							   cmap=colormap_dbz, norm=norm_dbz, extend='max')
-					ax4 = axes_radhgt(ax4, xmax=rmax)
+					ax4 = plotting.axes_radhgt(ax4, xmax=rmax)
 					cbar4 = plt.colorbar(co4, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 					cbar4.ax.tick_params(labelsize=24)
 					ax4.set_title(f'{EXPT.strip()}\n' + \
@@ -1664,7 +1665,7 @@ def main():
 					ax5 = fig5.add_subplot(1, 1, 1)
 					co5 = ax5.contourf(r, heightlevs/1000, np.flipud(np.rot90(rh_p_mean, 1)), levs_rh, \
 							   cmap=colormap_rh, norm=norm_rh, extend='max')
-					ax5 = axes_radhgt(ax5, xmax=rmax)
+					ax5 = plotting.axes_radhgt(ax5, xmax=rmax)
 					cbar5 = plt.colorbar(co5, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 					cbar5.ax.tick_params(labelsize=24)
 					ax5.set_title(f'{EXPT.strip()}\n' + \
@@ -1687,7 +1688,7 @@ def main():
 							   cmap=colormap_dbz, norm=norm_dbz, extend='max')
 					ax6.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_upshear_mean, 1)), levs_dbz, \
 						     cmap=colormap_dbz, norm=norm_dbz, extend='max')
-					ax6 = axes_radhgt(ax6, xmax=rmax, xmin=-rmax)
+					ax6 = plotting.axes_radhgt(ax6, xmax=rmax, xmin=-rmax)
 					cbar6 = plt.colorbar(co6, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 					cbar6.ax.tick_params(labelsize=24)
 					ax6.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1711,7 +1712,7 @@ def main():
 					co7 = ax7.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_downshear_mean, 1)), levs_ur, \
 							   cmap=colormap_ur, norm=norm_ur, extend='both')
 					ax7.contourf(-r,heightlevs/1000,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-					ax7 = axes_radhgt(ax7, xmax=rmax, xmin=-rmax)
+					ax7 = plotting.axes_radhgt(ax7, xmax=rmax, xmin=-rmax)
 					cbar7 = plt.colorbar(co7, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 					cbar7.ax.tick_params(labelsize=24)
 					ax7.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1736,7 +1737,7 @@ def main():
 							   cmap=colormap_w, norm=norm_w, extend='both')
 					ax8.contourf(-r, heightlevs/1000, np.flipud(np.rot90(w_p_upshear_mean, 1)), levs_w, \
 						     cmap=colormap_w, norm=norm_w, extend='both')
-					ax8 = axes_radhgt(ax8, xmax=rmax, xmin=-rmax)
+					ax8 = plotting.axes_radhgt(ax8, xmax=rmax, xmin=-rmax)
 					cbar8 = plt.colorbar(co8, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 					cbar8.ax.tick_params(labelsize=24)
 					ax8.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1761,7 +1762,7 @@ def main():
 							   cmap=colormap_rh, norm=norm_rh, extend='both')
 					ax9.contourf(-r, heightlevs/1000, np.flipud(np.rot90(rh_p_upshear_mean, 1)), levs_rh, \
 						     cmap=colormap_rh, norm=norm_rh, extend='both')
-					ax9 = axes_radhgt(ax9, xmax=rmax, xmin=-rmax)
+					ax9 = plotting.axes_radhgt(ax9, xmax=rmax, xmin=-rmax)
 					cbar9 = plt.colorbar(co9, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 					cbar9.ax.tick_params(labelsize=24)
 					ax9.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1786,7 +1787,7 @@ def main():
 							   cmap=colormap_dbz, norm=norm_dbz, extend='both')
 					ax10.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_leftshear_mean, 1)), levs_dbz, \
 						     cmap=colormap_dbz, norm=norm_dbz, extend='both')
-					ax10 = axes_radhgt(ax10, xmax=rmax, xmin=-rmax)
+					ax10 = plotting.axes_radhgt(ax10, xmax=rmax, xmin=-rmax)
 					cbar10 = plt.colorbar(co10, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
 					cbar10.ax.tick_params(labelsize=24)
 					ax10.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1811,7 +1812,7 @@ def main():
 							   cmap=colormap_ur, norm=norm_ur, extend='both')
 					ax11.contourf(-r, heightlevs/1000, np.flipud(np.rot90(ur_p_leftshear_mean, 1)), levs_ur, \
 						     cmap=colormap_ur, norm=norm_ur, extend='both')
-					ax11 = axes_radhgt(ax11, xmax=rmax, xmin=-rmax)
+					ax11 = plotting.axes_radhgt(ax11, xmax=rmax, xmin=-rmax)
 					cbar11 = plt.colorbar(co11, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 					cbar11.ax.tick_params(labelsize=24)
 					ax11.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1836,7 +1837,7 @@ def main():
 							   cmap=colormap_w, norm=norm_w, extend='both')
 					ax12.contourf(-r, heightlevs/1000, np.flipud(np.rot90(w_p_leftshear_mean, 1)), levs_w, \
 						     cmap=colormap_w, norm=norm_w, extend='both')
-					ax12 = axes_radhgt(ax12, xmax=rmax, xmin=-rmax)
+					ax12 = plotting.axes_radhgt(ax12, xmax=rmax, xmin=-rmax)
 					cbar12 = plt.colorbar(co12, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
 					cbar12.ax.tick_params(labelsize=24)
 					ax12.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1861,7 +1862,7 @@ def main():
 							   cmap=colormap_rh, norm=norm_rh, extend='both')
 					ax13.contourf(-r, heightlevs/1000, np.flipud(np.rot90(rh_p_leftshear_mean, 1)), levs_rh, \
 						     cmap=colormap_rh, norm=norm_rh, extend='both')
-					ax13 = axes_radhgt(ax13, xmax=rmax, xmin=-rmax)
+					ax13 = plotting.axes_radhgt(ax13, xmax=rmax, xmin=-rmax)
 					cbar13 = plt.colorbar(co13, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
 					cbar13.ax.tick_params(labelsize=24)
 					ax13.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -1887,31 +1888,36 @@ def main():
 					ax14a = fig14.add_subplot(2, 2, 1)
 					co14a = ax14a.contourf(XI, YI, dbz5_p[:,:], levs_dbz, \
 								cmap=colormap_dbz, norm=norm_dbz, extend='max')
-					ax14a = axes_wavenumber(ax14a, rmax/2, -rmax/2)
+					ax14a = plotting.axes_wavenumber(ax14a, rmax/2, -rmax/2)
 					cbar14a = plt.colorbar(co14a, ticks=ticks14)
 					cbar14a.ax.tick_params(labelsize=18)
 					ax14a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
 							linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-					ax14a.set_title(EXPT.strip()+'\n'+ r'WV#0,1,2 5-km Reflectivity ($dBZ$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+					ax14a.set_title(f'{EXPT.strip()}\n' + \
+							r'WV#0,1,2 5-km Reflectivity ($dBZ$, Shading)' + \
+							f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
+							fontsize=20, weight='bold', loc='left')
 					ax14a.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
 					# Panel B
 					ax14b = fig14.add_subplot(2, 2, 2)
 					co14b = ax14b.contourf(XI, YI, dbz5_p_w0[:,:], levs_dbz, \
 								cmap=colormap_dbz, norm=norm_dbz, extend='max')
-					ax14b = axes_wavenumber(ax14b, rmax/2, -rmax/2)
+					ax14b = plotting.axes_wavenumber(ax14b, rmax/2, -rmax/2)
 					cbar14b = plt.colorbar(co14b, ticks=ticks14)
 					cbar14b.ax.tick_params(labelsize=18)
 					ax14b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
 							linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-					ax14b.set_title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+str(int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+str(int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+					ax14b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa' + \
+							f'\nShear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\circ$', \
+							fontsize=20, color='brown', loc='right')
 					ax14b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 					# Panel C	
 					ax14c = fig14.add_subplot(2, 2, 3)
 					co14c = ax14c.contourf(XI, YI, dbz5_p_w1[:,:], levs_dbz, \
 								cmap=colormap_dbz, norm=norm_dbz, extend='max')
-					ax14c = axes_wavenumber(ax14c, rmax/2, -rmax/2)
+					ax14c = plotting.axes_wavenumber(ax14c, rmax/2, -rmax/2)
 					cbar14c = plt.colorbar(co14c, ticks=ticks14)
 					cbar14c.ax.tick_params(labelsize=18)
 					ax14c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
@@ -1922,7 +1928,7 @@ def main():
 					ax14d = fig14.add_subplot(2, 2, 4)
 					co14d = ax14d.contourf(XI, YI, dbz5_p_w2[:,:], levs_dbz, \
 								cmap=colormap_dbz, norm=norm_dbz, extend='max')
-					ax14d = axes_wavenumber(ax14d, rmax/2, -rmax/2)
+					ax14d = plotting.axes_wavenumber(ax14d, rmax/2, -rmax/2)
 					cbar14d = plt.colorbar(co14d, ticks=ticks14)
 					cbar14d.ax.tick_params(labelsize=18)
 					ax14d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
@@ -1947,31 +1953,36 @@ def main():
 					ax15a = fig15.add_subplot(2, 2, 1)
 					co15a = ax15a.contourf(XI, YI, rh5_p[:,:], levs_rh, \
 								cmap=colormap_rh, norm=norm_rh, extend='max')
-					ax15a = axes_wavenumber(ax15a, rmax/2, -rmax/2)
+					ax15a = plotting.axes_wavenumber(ax15a, rmax/2, -rmax/2)
 					cbar15a = plt.colorbar(co15a, ticks=ticks15)
 					cbar15a.ax.tick_params(labelsize=18)
 					ax15a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
 							linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-					ax15a.set_title(EXPT.strip()+'\n'+ r'WV#0,1,2 5-km RH ($\%$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+					ax15a.set_title(f'{EXPT.strip()}\n' + \
+							r'WV#0,1,2 5-km RH ($\%$, Shading)' + \
+							f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
+							fontsize=20, weight='bold', loc='left')
 					ax15a.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
 					# Panel B
 					ax15b = fig15.add_subplot(2, 2, 2)
 					co15b = ax15b.contourf(XI, YI, rh5_p_w0[:,:], levs_rh, \
 								cmap=colormap_rh, norm=norm_rh, extend='max')
-					ax15b = axes_wavenumber(ax15b, rmax/2, -rmax/2)
+					ax15b = plotting.axes_wavenumber(ax15b, rmax/2, -rmax/2)
 					cbar15b = plt.colorbar(co15b, ticks=ticks15)
 					cbar15b.ax.tick_params(labelsize=18)
 					ax15b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
 							linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-					ax15b.set_title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+str(int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+str(int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+					ax15b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa' + \
+							f'\nShear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\circ$', \
+							fontsize=20, color='brown', loc='right')
 					ax15b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 					# Panel C
 					ax15c = fig15.add_subplot(2, 2, 3)
 					co15c = ax15c.contourf(XI, YI, rh5_p_w1[:,:], levs_rh, \
 								cmap=colormap_rh, norm=norm_rh, extend='max')
-					ax15c = axes_wavenumber(ax15c, rmax/2, -rmax/2)
+					ax15c = plotting.axes_wavenumber(ax15c, rmax/2, -rmax/2)
 					cbar15c = plt.colorbar(co15c, ticks=ticks15)
 					cbar15c.ax.tick_params(labelsize=18)
 					ax15c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
@@ -1982,7 +1993,7 @@ def main():
 					ax15d = fig15.add_subplot(2, 2, 4)
 					co15d = ax15d.contourf(XI, YI, rh5_p_w2[:,:], levs_rh, \
 								cmap=colormap_rh, norm=norm_rh, extend='max')
-					ax15d = axes_wavenumber(ax15d, rmax/2, -rmax/2)
+					ax15d = plotting.axes_wavenumber(ax15d, rmax/2, -rmax/2)
 					cbar15d = plt.colorbar(co15d, ticks=ticks15)
 					cbar15d.ax.tick_params(labelsize=18)
 					ax15d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
@@ -2006,31 +2017,36 @@ def main():
 					ax16a = fig16.add_subplot(2, 2, 1)
 					co16a = ax16a.contourf(XI, YI, vt10_p[:,:], levs_vt, \
 								cmap=colormap_vt, norm=norm_vt, extend='max')
-					ax16a = axes_wavenumber(ax16a, rmax/2, -rmax/2)
+					ax16a = plotting.axes_wavenumber(ax16a, rmax/2, -rmax/2)
 					cbar16a = plt.colorbar(co16a, ticks=ticks16)
 					cbar16a.ax.tick_params(labelsize=18)
 					ax16a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
 							linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-					ax16a.set_title(EXPT.strip()+'\n'+ r'WV#0,1,2 10-m Tangential Wind ($m\ s^{-1}$, Shading)'+'\n'+'Shear Vector in Black'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+					ax16a.set_title(f'{EXPT.strip()}\n' +\
+							r'WV#0,1,2 10-m Tangential Wind ($m\ s^{-1}$, Shading)' + \
+							f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
+							fontsize=20, weight='bold', loc='left')
 					ax16a.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
 					# Panel B
 					ax16b = fig16.add_subplot(2, 2, 2)
 					co16b = ax16b.contourf(XI, YI, vt10_p_w0[:,:], levs_vt, \
 								cmap=colormap_vt, norm=norm_vt, extend='max')
-					ax16b = axes_wavenumber(ax16b, rmax/2, -rmax/2)
+					ax16b = plotting.axes_wavenumber(ax16b, rmax/2, -rmax/2)
 					cbar16b = plt.colorbar(co16b, ticks=ticks16)
 					cbar16b.ax.tick_params(labelsize=18)
 					ax16b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
 							linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-					ax16b.set_title(LONGSID.upper()+'\n'+'VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+'Shear Magnitude= '+str(int(np.round(shearmag*1.94,0)))+'kts'+'\n'+'Shear Direction= '+str(int(np.round(sheardir_met,0)))+'$^\circ$',fontsize=20,color='brown',loc='right')
+					ax16b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n' + \
+							f'Shear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\circ$', \
+							fontsize=20, color='brown', loc='right')
 					ax16b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
 					# Panel C
 					ax16c = fig16.add_subplot(2, 2, 3)
 					co16c = ax16c.contourf(XI, YI, vt10_p_w1[:,:], levs_vt, \
 								cmap=colormap_vt, norm=norm_vt, extend='max')
-					ax16c = axes_wavenumber(ax16c, rmax/2, -rmax/2)
+					ax16c = plotting.axes_wavenumber(ax16c, rmax/2, -rmax/2)
 					cbar16c = plt.colorbar(co16c, ticks=ticks16)
 					cbar16c.ax.tick_params(labelsize=18)
 					ax16c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
@@ -2041,7 +2057,7 @@ def main():
 					ax16d = fig16.add_subplot(2, 2, 4)
 					co16d = ax16d.contourf(XI, YI, vt10_p_w2[:,:], levs_vt, \
 								cmap=colormap_vt, norm=norm_vt, extend='max')
-					ax16d = axes_wavenumber(ax16d, rmax/2, -rmax/2)
+					ax16d = plotting.axes_wavenumber(ax16d, rmax/2, -rmax/2)
 					cbar16d = plt.colorbar(co16d, ticks=ticks16)
 					cbar16d.ax.tick_params(labelsize=18)
 					ax16d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
@@ -2064,7 +2080,7 @@ def main():
 					ax17 = fig17.add_subplot(1, 1, 1)
 					co17 = ax17.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vt_tendency_mean_radial_flux*1e3,1)), levs_vt_budget, \
 							     cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-					ax17 = axes_radhgt(ax17, xmax=rmax, formatters=True)
+					ax17 = plotting.axes_radhgt(ax17, xmax=rmax, formatters=True)
 					cbar17 = plt.colorbar(co17, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
 					cbar17.ax.tick_params(labelsize=24)
 					sc17 = ax17.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2084,7 +2100,7 @@ def main():
 					ax18 = fig18.add_subplot(1, 1, 1)
 					co18 = ax18.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vt_tendency_mean_vertical_advection*1e3,1)), levs_vt_budget, \
 							     cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-					ax18 = axes_radhgt(ax18, xmax=rmax, formatters=True)
+					ax18 = plotting.axes_radhgt(ax18, xmax=rmax, formatters=True)
 					cbar18 = plt.colorbar(co18, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
 					cbar18.ax.tick_params(labelsize=24)
 					sc18 = ax18.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2104,7 +2120,7 @@ def main():
 					ax19 = fig19.add_subplot(1, 1, 1)
 					co19 = ax19.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vt_tendency_eddy_flux*1e3,1)), levs_vt_budget, \
 							     cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-					ax19 = axes_radhgt(ax19, xmax=rmax, formatters=True)
+					ax19 = plotting.axes_radhgt(ax19, xmax=rmax, formatters=True)
 					cbar19 = plt.colorbar(co19, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
 					cbar19.ax.tick_params(labelsize=24)
 					sc19 = ax19.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2124,7 +2140,7 @@ def main():
 					ax20 = fig20.add_subplot(1, 1, 1)
 					co20 = ax20.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vt_tendency_vertical_eddy_advection*1e3,1)), levs_vt_budget, \
 							     cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-					ax20 = axes_radhgt(ax20, xmax=rmax, formatters=True)
+					ax20 = plotting.axes_radhgt(ax20, xmax=rmax, formatters=True)
 					cbar20 = plt.colorbar(co20, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
 					cbar20.ax.tick_params(labelsize=24)
 					sc20 = ax20.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2144,7 +2160,7 @@ def main():
 					ax21 = fig21.add_subplot(1, 1, 1)
 					co21 = ax21.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vt_tendency_sum*1e3,1)), levs_vt_budget, \
 							     cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-					ax21 = axes_radhgt(ax21, xmax=rmax, formatters=True)
+					ax21 = plotting.axes_radhgt(ax21, xmax=rmax, formatters=True)
 					cbar21 = plt.colorbar(co21, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
 					cbar21.ax.tick_params(labelsize=24)
 					sc21 = ax21.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2167,7 +2183,7 @@ def main():
 					ax22 = fig22.add_subplot(1, 1, 1)
 					co22 = ax22.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vort_tendency_horizontal_advection*1e5*60,1)), levs_vort_budget, \
 							     cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-					ax22 = axes_radhgt(ax22, xmax=rmax, formatters=True)
+					ax22 = plotting.axes_radhgt(ax22, xmax=rmax, formatters=True)
 					cbar22 = plt.colorbar(co22, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
 					cbar22.ax.tick_params(labelsize=24)
 					sc22 = ax22.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2186,7 +2202,7 @@ def main():
 					ax23 = fig23.add_subplot(1, 1, 1)
 					co23 = ax23.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vort_tendency_vertical_advection*1e5*60,1)), levs_vort_budget, \
 							     cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-					ax23 = axes_radhgt(ax23, xmax=rmax, formatters=True)
+					ax23 = plotting.axes_radhgt(ax23, xmax=rmax, formatters=True)
 					cbar23 = plt.colorbar(co23, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
 					cbar23.ax.tick_params(labelsize=24)
 					sc23 = ax23.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2206,7 +2222,7 @@ def main():
 					ax24 = fig24.add_subplot(1, 1, 1)
 					co24 = ax24.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vort_tendency_stretching_convergence*1e5*60,1)), levs_vort_budget, \
 							     cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-					ax24 = axes_radhgt(ax24, xmax=rmax, formatters=True)
+					ax24 = plotting.axes_radhgt(ax24, xmax=rmax, formatters=True)
 					cbar24 = plt.colorbar(co24, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
 					cbar24.ax.tick_params(labelsize=24)
 					sc24 = ax24.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2226,7 +2242,7 @@ def main():
 					ax25 = fig25.add_subplot(1, 1, 1)
 					co25 = ax25.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vort_tendency_tilting*1e5*60,1)), levs_vort_budget, \
 							     cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-					ax25 = axes_radhgt(ax25, xmax=rmax, formatters=True)
+					ax25 = plotting.axes_radhgt(ax25, xmax=rmax, formatters=True)
 					cbar25 = plt.colorbar(co25, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
 					cbar25.ax.tick_params(labelsize=24)
 					sc25 = ax25.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2246,7 +2262,7 @@ def main():
 					ax26 = fig26.add_subplot(1, 1, 1)
 					co26 = ax26.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vort_tendency_sum*1e5*60,1)), levs_vort_budget, \
 							     cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-					ax26 = axes_radhgt(ax26, xmax=rmax, formatters=True)
+					ax26 = plotting.axes_radhgt(ax26, xmax=rmax, formatters=True)
 					cbar26 = plt.colorbar(co26, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
 					cbar26.ax.tick_params(labelsize=24)
 					sc26 = ax26.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -2267,7 +2283,7 @@ def main():
 					ax27 = fig27.add_subplot(1, 1, 1)
 					co27 = ax27.contourf(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), levs_ur, \
 							     cmap=colormap_ur, norm=norm_ur, extend='both')
-					ax27 = axes_radhgt(ax27, xmax=rmax, ymax=3000, ny=7, yunit='m', formatters=True)
+					ax27 = plotting.axes_radhgt(ax27, xmax=rmax, ymax=3000, ny=7, yunit='m', formatters=True)
 					cbar27 = plt.colorbar(co27, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
 					cbar27.ax.tick_params(labelsize=24)
 					co27b = ax27.contour(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), \
@@ -2473,10 +2489,14 @@ def main():
 
 				#Make Shear/RH Combo Plot With Vortex-Removed Shear, If Flag is Set on
 				if (do_shear_and_rh_plots == 'Y'):
-					shearandrhplot.shearandrhplot(XI,YI,theta,r,ushear_p,vshear_p,np.nanmean(rh_p[:,:,6:10],2),'3km','5km',rmw_mean[6],rmw_mean[10],GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
-			
+					shearandrhplot.shearandrhplot(XI, YI, theta, r, ushear_p, vshear_p, np.nanmean(rh_p[:,:,6:10],2), '3km', '5km', rmw_mean[6], rmw_mean[10], GPLOT_DIR, \
+								      EXPT, FHR, maxwind, minpressure, LONGSID, ODIR, forecastinit, DO_CONVERTGIF)
+
+				finish = time.perf_counter()
+				print(f'MSG: Total time for plotting: {finish-start:.2f} second(s)')
+
 		# Write the input file to a log to mark that it has ben processed
-		update_plottedfile(f'{ODIR}/PlottedFiles.{DOMAIN.strip()}.{TIER.strip()}.{SID.strip()}.log', FILE)
+		io.update_plottedfile(f'{ODIR}/PlottedFiles.{DOMAIN.strip()}.{TIER.strip()}.{SID.strip()}.log', FILE)
 
 	
 	print('MSG: DOING THE EXTRA STUFF')
@@ -2498,118 +2518,6 @@ def main():
 	print(f'MSG: make_rz_plots_heightcoordinates_research.py completed at {datetime.datetime.now()}')
 
 
-##############################
-def axes_wavenumber(ax, xmax, xmin):
-	"""Set up common axes attributes for wavenumber graphics.
-	@param ax:   the axes object
-	@param xmax: max value of both x/y axes
-	@param xmin: min value of both x/y axes
-	"""
-	ticks = np.linspace(xmin,xmax,7)
-
-	ax.set_xlim(xmin,xmax)
-	ax.set_xticks(ticks)
-	ax.set_xticklabels([str(int(x)) for x in ticks], fontsize=18)
-	ax.set_xlabel('X (km)', fontsize=20)
-
-	ax.set_ylim(xmin,xmax)
-	ax.set_yticks(ticks)
-	ax.set_yticklabels([str(int(x)) for x in ticks], fontsize=18)
-	ax.set_ylabel('Y (km)', fontsize=20)
-
-	ax.set_aspect('equal', adjustable='box')
-	ax.grid()
-
-	return ax
-
-
-##############################
-def axes_radpres(ax, xmax, xmin, ymax=1000, ymin=100):
-	"""Set up common axes attributes for radius-pressure graphics.
-	@param ax:   the axes object
-	@param xmax: max value of both x/y axes
-	@param xmin: min value of both x/y axes
-	@kwarg ymax: max value of y-axis
-	@kwarg ymin: min value of y-axis
-	"""
-	xticks = np.linspace(xmin,xmax,11)
-	yticks = np.linspace(ymax,ymin,10)
-
-	ax.set_xlim(xmin, xmax)
-	ax.set_xticks(xticks)
-	ax.set_xticklabels([str(int(x)) for x in xticks], fontsize=24)
-	ax.set_xlabel('Radius (km)', fontsize=24)
-
-	ax.set_yscale('log')
-	ax.set_ylim(ymin,ymax)
-	ax.invert_yaxis()
-	ax.set_yticks(yticks)
-	ax.set_yticklabels([str(int(x)) for x in yticks], fontsize=24)
-	ax.set_ylabel('Pressure Level (hPa)', fontsize=24)
-
-	ax.grid()
-
-	return ax
-
-
-##############################
-def axes_radhgt(ax, xmax=200, xmin=0, nx=11, xunit='km', ymax=18, ymin=0, ny=10, yunit='km', formatters=False):
-	"""Set up common axes attributes for wavenumber graphics.
-	@param ax:   the axes object
-	@param xmax: max value of x-axis
-	@param xmin: min value of x-axis
-	@kwarg ymax: max value of y-axis
-	@kwarg ymin: min value of y-axis
-	"""
-	xticks = np.linspace(xmin,xmax,nx)
-	yticks = np.linspace(ymin,ymax,ny)
-
-	ax.set_xlim(xmin, xmax)
-	ax.set_xticks(xticks)
-	ax.set_xticklabels([str(int(x)) for x in xticks], fontsize=24)
-	ax.set_xlabel(f'Radius ({xunit})', fontsize=24)
-
-	ax.set_ylim(ymin,ymax)
-	ax.set_yticks(yticks)
-	ax.set_yticklabels([str(int(x)) for x in yticks], fontsize=24)
-	ax.set_ylabel(f'Height ({yunit})', fontsize=24)
-
-	ax.grid()
-
-	if formatters:
-		ax.yaxis.set_major_formatter(ScalarFormatter())
-		ax.yaxis.set_minor_formatter(plt.NullFormatter())
-
-	return ax
-
-
-##############################
-def update_plottedfile(OFILE, IFILE):
-        """Update the GPLOT PlottedFiles file to mark a file as processed.
-        @param OFILE: the plotted file path as a string
-        @param IFILE: the model output file that was processed
-        """
-        os.system(f'sed -i \'/{os.path.basename(IFILE)}/d\' {OFILE}')
-        os.system(f'echo "{IFILE} 1" >> {OFILE}')
-        os.system(f'sort -u {OFILE} > {OFILE}.TMP')
-        os.system(f'mv {OFILE}.TMP {OFILE}')
-
-
-##############################
-def interp_to_isosurface(hgt, varPrs, lev, idx, ivar, verbose=False):
-	"""Interpolate input data (varPrs) from pressure levels to a height
-	level (i.e., isosurface). Return 2D data (lat, lon) along with
-	the height level and the height level index.
-	@param hgt:	3D height data on pressure levels (lev, lat, lon)
-	@param varPrs:  3D input data on pressure levels (lev, lat, lon)
-	@param lev:     Height level to interpolate to
-	@param idx:	Level index
-	@param ivar:    Variable index
-	@kwarg verbose: Logical to determine level of verbosity
-	"""
-	if verbose:  print(f'MSG: Interpolating to the {int(lev)}-m isosurface for var{ivar} - {datetime.datetime.now()}')
-	return metpy.interpolate.interpolate_to_isosurface(hgt, varPrs, lev), lev, idx
-
 
 ##############################
 def wait_random(lev):
@@ -2617,167 +2525,6 @@ def wait_random(lev):
 	print(f'MSG: Waiting {rand} seconds for lev={lev}.')
 	time.sleep(rand)
 	return rand, lev
-
-
-##############################
-def multiprocess_height_interp(hgt=None, varPrs=None, levels=None, idx=0):
-	"""Multiprocessing function to parallelize interpolation from
-	pressure surfaces to height surfaces.
-	@kwarg hgt:    3D height data on pressure levels (lev, lat, lon)
-	@kwarg varPrs: 3D input data on pressure levels (lev, lat, lon)
-	@kwarg levels: 1D array/list of height levels in meters
-	@kwarg idx:    Variable index
-	"""
-
-	# Check that required variables exist
-	if hgt is None:
-		print(f'ERROR: Height data must be defined')
-		sys.exit(1)
-	elif varPrs is None:
-		print('ERROR: Data on pressure levels must be provided.')
-		sys.exit(1)
-	elif levels is None:
-		print('ERROR: List of height levels (m) must be provided.')
-		sys.exit(1)
-
-	# Initiate thread pool to perform tasks for all levels in parallel.
-	allstacks, indices = [], []
-	with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-		results = [executor.submit(interp_to_isosurface, hgt, varPrs, lev, iii, idx) for (iii,lev) in enumerate(levels)]
-		for job in concurrent.futures.as_completed(results):
-			(data,lll,ix) = job.result()
-			#print(f'MSG: Finished interpolating to the {int(lll)}-m isosurface for var{idx} -  {datetime.datetime.now()}')
-			allstacks.append(data), indices.append(ix)
-	executor.shutdown()
-
-	indices_sorted = np.argsort(np.array(indices))
-	varHgt = np.transpose(np.stack(allstacks)[indices_sorted,:,:], (1,2,0))
-
-	return varHgt, idx
-
-
-##############################
-def multiprocess_height_vars(hgt=None, varList=None, varNames=None, levels=None):
-	"""Multiprocessing function to parallelize similar processing for
-	multiple variables.
-	@kwarg hgt:      3D height data on pressure levels (lev, lat, lon)
-	@kwarg varList:  List of 3D data on pressure levels for each variable (lev, lat, lon)
-	@kwarg varNames: List of variable names (not required)
-	@kwarg levels:   1D array/list of height levels in meters
-	"""
-
-	# Check that required variables exist
-	if hgt is None:
-		print(f'ERROR: Height data must be defined')
-		sys.exit(1)
-	elif varList is None:
-		print('ERROR: List of variables to be processed must be provided.')
-		sys.exit(1)
-	elif levels is None:
-		print('ERROR: List of height levels (m) must be provided.')
-		sys.exit(1)
-
-	# Initiate thread pool to perform tasks for all levels in parallel.
-	allstacks, indices = [], []
-	with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-		results = [executor.submit(multiprocess_height_interp, hgt, var, levels, idx) for idx,var in enumerate(varList)]
-		for job in concurrent.futures.as_completed(results):
-			(data,ix) = job.result()
-			#print(ix, data.shape, type(data))
-			allstacks.append(data), indices.append(ix)
-	executor.shutdown()
-
-	indices_sorted = np.argsort(np.array(indices))
-	varHgtList = np.stack(allstacks)[indices_sorted,:,:,:]
-
-	return varHgtList
-
-
-##############################
-def multiprocess_prs_vars(ga=None, names=None):
-
-	# Initiate thread pool to perform tasks for all levels in parallel.
-	allstacks, indices = [], []
-	with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-		results = [executor.submit(read_grads, ga, name, idx) for (idx,name) in enumerate(names)]
-		for job in concurrent.futures.as_completed(results):
-			(data,N,ix) = job.result()
-			print(f'MSG: Finished reading {N}')
-			allstacks.append(data), indices.append(ix)
-	executor.shutdown()
-
-	indices_sorted = np.argsort(np.array(indices))
-	varPrsList = np.stack(allstacks)[indices_sorted,:,:,:]
-
-	return varPrsList
-
-
-##############################
-def read_grads(ga, name=None, idx=None):
-	"""
-	"""
-	print(f'MSG: Using GrADs to read {name}')
-	data = ga.exp(name)
-
-	return data, name, idx
-
-
-##############################
-def multiprocess_polar_vars(x, y, xi, yi, varList=None, levels=None):
-	"""
-	"""
-	if varList is None:
-		print('ERROR: List of variables to be processed must be provided.')
-		sys.exit(1)
-	elif levels is None:
-		print('ERROR: List of height levels (m) must be provided.')
-		sys.exit(1)
-
-	# Initiate thread pool to perform tasks for all levels in parallel.
-	allstacks, indices = [], []
-	with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-		results = [executor.submit(multiprocess_polar_interp, var, x, y, xi, yi, levels, idx) for idx,var in enumerate(varList)]
-		for job in concurrent.futures.as_completed(results):
-			(data,ix) = job.result()
-			#print(ix, data.shape, type(data))
-			allstacks.append(data), indices.append(ix)
-	executor.shutdown()
-
-	indices_sorted = np.argsort(np.array(indices))
-	varPolarList = np.stack(allstacks)[indices_sorted,:,:,:]
-
-	return varPolarList
-
-
-
-##############################
-def multiprocess_polar_interp(varIn, x, y, xi, yi, levels, idx):
-	"""
-	"""
-	# Initiate thread pool to perform tasks for all levels in parallel.
-	allstacks, indices = [], []
-	with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-		results = [executor.submit(interp_to_polarcylindrical, var, lev, x, y, xi, yi, iii, idx) for (iii,(var,lev)) in enumerate(zip(varIn,levels))]
-		for job in concurrent.futures.as_completed(results):
-			(data,lll,ix) = job.result()
-			#print(f'MSG: Finished interpolating to polar cylindrical coordinates for level {int(lll)} for var{idx} -  {datetime.datetime.now()}')
-			allstacks.append(data), indices.append(ix)
-	executor.shutdown()
-
-	indices_sorted = np.argsort(np.array(indices))
-	varPolar = np.transpose(np.stack(allstacks)[indices_sorted,:,:], (1,2,0))
-
-	return varPolar, idx
-
-
-##############################
-def interp_to_polarcylindrical(varIn, lev, x, y, xi, yi, idx, ivar, verbose=False):
-	"""
-	"""
-	if verbose:  print(f'MSG: Interpolating to polar cylindrical coordinates for level {int(lev)} for var{ivar} - {datetime.datetime.now()}')
-	varTmp = interpolate.RegularGridInterpolator((y, x), varIn)
-	varPolar = varTmp((yi, xi), method='linear')
-	return varPolar, lev, idx
 
 
 ##############################

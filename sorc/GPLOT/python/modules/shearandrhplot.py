@@ -21,6 +21,7 @@ import itertools
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 import os
+import modules.plotting as plotting
 
 
 ##############################
@@ -54,7 +55,7 @@ def shearandrhplot(Xpolar, Ypolar, theta, r, ushear_polar, vshear_polar, rh_mean
 	fig.set_constrained_layout_pads(wspace=0.2)
 	ax = fig.add_subplot(121, projection='polar')
 	cmap = colormap_rh_2
-	coll = colored_bar(x, y, z, ax=ax, width=np.gradient(theta)[0], cmap=cmap)
+	coll = plotting.colored_bar(x, y, z, ax=ax, width=np.gradient(theta)[0], cmap=cmap)
 	coll.set_clim(vmin=30, vmax=90)
 	cbar = fig.colorbar(coll,ticks=[30,40,50,60,70,80,90],location='bottom')
 	cbar.set_ticklabels([30,40,50,60,70,80,90])
@@ -108,22 +109,4 @@ def shearandrhplot(Xpolar, Ypolar, theta, r, ushear_polar, vshear_polar, rh_mean
 ##############################
 
 
-##############################
-##############################
-#Define a plotting function first
-def colored_bar(left, height, z=None, width=0.8, bottom=0.2, ax=None, **kwargs):
-	"""Create a colorbar
-	"""
-	if ax is None:
-		ax = plt.gca()
-	width = itertools.cycle(np.atleast_1d(width))
-	bottom = itertools.cycle(np.atleast_1d(bottom))
-	rects = []
-	for x, y, h, w in zip(left, bottom, height, width):
-		rects.append(Rectangle((x,y), w, h))
-	coll = PatchCollection(rects, array=z, **kwargs)
-	#ax.set_clim(coll, vmin=30, vmax=90)
-	ax.add_collection(coll)
-	ax.autoscale()
-	return coll
-##############################
+

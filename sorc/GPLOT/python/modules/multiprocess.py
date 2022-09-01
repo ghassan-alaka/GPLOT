@@ -1,3 +1,8 @@
+import concurrent.futures
+import numpy as np
+import modules.interp as interp
+import modules.io as io
+
 ##############################
 def multiprocess_polar_vars(x, y, xi, yi, varList=None, levels=None):
 	"""
@@ -33,7 +38,7 @@ def multiprocess_polar_interp(varIn, x, y, xi, yi, levels, idx):
 	# Initiate thread pool to perform tasks for all levels in parallel.
 	allstacks, indices = [], []
 	with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-		results = [executor.submit(interp_to_polarcylindrical, var, lev, x, y, xi, yi, iii, idx) for (iii,(var,lev)) in enumerate(zip(varIn,levels))]
+		results = [executor.submit(interp.interp_to_polarcylindrical, var, lev, x, y, xi, yi, iii, idx) for (iii,(var,lev)) in enumerate(zip(varIn,levels))]
 		for job in concurrent.futures.as_completed(results):
 			(data,lll,ix) = job.result()
 			#print(f'MSG: Finished interpolating to polar cylindrical coordinates for level {int(lll)} for var{idx} -  {datetime.datetime.now()}')
@@ -70,7 +75,7 @@ def multiprocess_height_interp(hgt=None, varPrs=None, levels=None, idx=0):
 	# Initiate thread pool to perform tasks for all levels in parallel.
 	allstacks, indices = [], []
 	with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-		results = [executor.submit(interp_to_isosurface, hgt, varPrs, lev, iii, idx) for (iii,lev) in enumerate(levels)]
+		results = [executor.submit(interp.interp_to_isosurface, hgt, varPrs, lev, iii, idx) for (iii,lev) in enumerate(levels)]
 		for job in concurrent.futures.as_completed(results):
 			(data,lll,ix) = job.result()
 			#print(f'MSG: Finished interpolating to the {int(lll)}-m isosurface for var{idx} -  {datetime.datetime.now()}')
@@ -126,7 +131,7 @@ def multiprocess_prs_vars(ga=None, names=None):
 	# Initiate thread pool to perform tasks for all levels in parallel.
 	allstacks, indices = [], []
 	with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-		results = [executor.submit(read_grads, ga, name, idx) for (idx,name) in enumerate(names)]
+		results = [executor.submit(io.read_grads, ga, name, idx) for (idx,name) in enumerate(names)]
 		for job in concurrent.futures.as_completed(results):
 			(data,N,ix) = job.result()
 			print(f'MSG: Finished reading {N}')

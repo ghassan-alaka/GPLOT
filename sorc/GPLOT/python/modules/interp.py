@@ -1,4 +1,3 @@
-
 import metpy
 from scipy import interpolate
 
