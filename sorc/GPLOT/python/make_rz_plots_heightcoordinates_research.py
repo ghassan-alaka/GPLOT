@@ -74,7 +74,7 @@ def main():
 	if LEVS == 'MISSING':        LEVS = ''
 	NMLIST = sys.argv[10]
 	if NMLIST == 'MISSING':
-		print("ERROR: Master Namelist can't be MISSING.")
+		print(f'ERROR: Master Namelist can\'t be {NMLIST}.')
 		sys.exit()
 	NMLDIR = f'{GPLOT_DIR}/parm'
 	if os.path.exists(NMLIST):
@@ -112,8 +112,7 @@ def main():
 	
 	# Create the temporary directory for GrADs files
 	TMPDIR = ODIR.strip()+'grads/'
-	if not os.path.exists(TMPDIR):
-		os.mkdir(TMPDIR)
+	if not os.path.exists(TMPDIR):  os.mkdir(TMPDIR)
 	
 	# Define some important file names
 	UNPLOTTED_FILE = f'{ODIR.strip()}UnplottedFiles.{DOMAIN.strip()}.{TIER.strip()}.{SID.strip()}.log'
@@ -163,7 +162,7 @@ def main():
 	
 	for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 	
-		if (FILE == 'MISSING'):  continue
+		if FILE == 'MISSING':  continue
 	
 		print(f'MSG: Working on this file --> {FILE}  {str(fff)}  {datetime.datetime.now()}')
 	
@@ -1534,7 +1533,7 @@ def main():
 					skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
 	
 				#Load the colormaps needed
-				color_data_vt = np.genfromtxt('{PYTHONDIR}/colormaps/colormap_wind.txt')
+				color_data_vt = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_wind.txt')
 				colormap_vt = matplotlib.colors.ListedColormap(color_data_vt)
 				levs_vt = np.linspace(0,80,41,endpoint=True)
 				norm_vt = colors.BoundaryNorm(levs_vt,256)

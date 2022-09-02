@@ -158,22 +158,21 @@ def skewplot_blank(location, GPLOT_DIR, EXPT, FHR, maxwind, minpressure, LONGSID
 	"""
 	figext = '.png'
 	fig = plt.figure(figsize=(16, 12))
-	ax = fig.add_subplot(1, 1, 1)
 	add_metpy_logo(fig, 150, 100)
-	skew = SkewT(ax, rotation=45, aspect=80.5)
+	skew = SkewT(fig, rotation=45, aspect=80.5)
 	skew.ax.set_ylim(1000, 100)
 	skew.ax.set_xlim(-40, 50)
 	skew.ax.axvline(0, color='c', linestyle='--', linewidth=2)
 	skew.plot_dry_adiabats()
 	skew.plot_moist_adiabats()
 	skew.plot_mixing_lines()
-	ax.set_xlabel('degC',weight='bold',fontsize=24)
-	ax.set_ylabel('Pressure (hPa)',weight='bold',fontsize=24)
-	ax.text(-30,200,'No Data' + '\n' + 'RMW > 50 nmi',fontsize=28,weight='bold')
-	ax.set_title(f'{EXPT.strip()}\nSounding {location}\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
-		     fontsize=24, weight='bold', loc='left')
-	ax.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', \
-		     fontsize=24, color='brown', loc='right')
+	skew.ax.set_xlabel('degC',weight='bold',fontsize=24)
+	skew.ax.set_ylabel('Pressure (hPa)',weight='bold',fontsize=24)
+	skew.ax.text(-30,200,'No Data' + '\n' + 'RMW > 50 nmi',fontsize=28,weight='bold')
+	skew.ax.set_title(f'{EXPT.strip()}\nSounding {location}\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
+			  fontsize=24, weight='bold', loc='left')
+	skew.ax.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', \
+			  fontsize=24, color='brown', loc='right')
 	figfname = f'{ODIR}/{LONGSID.lower()}.sounding_{location.replace(" ","_")}.{forecastinit}.polar.f{FHR:03}'
 	fig.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 	plt.close(fig)
