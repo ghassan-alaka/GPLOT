@@ -490,6 +490,15 @@ if [ "${DO_POLAR}" = "True" ]; then
                                    "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" \
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
 
+
+                        # Get the right list of lead times
+                        if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
+                            FILE_FHRS=( ${ATCF_FHRS[@]} )
+                        else
+                            FILE_FHRS=( ${FHRS[@]} )
+                        fi
+                        echo "MSG: I will only look for these forecast lead times --> ${FILE_FHRS[*]}"
+
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                         # If a match is found, write lead time to a data file "AllForecastHours"
                         IFILES=()
@@ -504,23 +513,38 @@ if [ "${DO_POLAR}" = "True" ]; then
                                 continue
                             fi
 
-                            # Get the right list of lead times
-                            if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
-                                FILE_FHRS=${ATCF_FHRS[@]}
-                            else
-                                FILE_FHRS=${FHRS[@]}
-                            fi
-
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
-                                if [ -z "$FSUFFIX" ]; then
-                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                else
-                                    FILE_SEARCH="${IDIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
+
+                                # Build the file search string.
+                                FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                if [ ! -z "${FSUFFIX}" ]; then
+                                    FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
+                                    FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
+                                    FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
-                                if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
-                                    IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
+    
+                                # Search for a matching file. If found, append the file and forecast hour to their respective arrays
+                                FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
+                                if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                    IFILES+=("${FILE_LS[*]}")
                                     IFHRS+=( ${FHR} )
+                                else
+                                    FILE_LS=( `ls ${FILE_SEARCH2} 2>/dev/null` )
+                                    if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                        IFILES+=("${FILE_LS[*]}")
+                                        IFHRS+=( ${FHR} )
+                                    else
+                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
+                                            FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
+                                            if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                                IFILES+=("${FILE_LS[*]}")
+                                                IFHRS+=( ${FHR} )
+                                            fi
+                                        fi
+                                    fi
                                 fi
                             done
 

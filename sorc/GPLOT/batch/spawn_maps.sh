@@ -2,7 +2,7 @@
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=00:15:00
+#SBATCH --time=00:19:30
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
@@ -170,21 +170,32 @@ fi
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
+# Define a maximum number of cycles to be processed based on the experiment
+MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
+if [ -z "${MAX_CYCLES}" ]; then
+    if [ "${EXPT}" == "GFS_Forecast" ]; then
+        MAX_CYCLES=6
+    else
+        MAX_CYCLES=25
+    fi
+fi
+echo "MSG: Will produce graphics for up to ${MAX_CYCLES} forecast cycles."
+
 # Find the forecast cycles for which graphics should be created
 if [ -z "$IDATE" ]; then
     echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -25 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -252>/dev/null` )
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
 else
     CYCLES=( "${IDATE[@]}" )
@@ -675,7 +686,7 @@ for TR in ${TIER[@]}; do
                                 FORCE="True"
                             elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
                                 for ATCF in ${PREV_ATCF[@]}; do
-                                    test=$(find ${ATCF} -mmin -60 2>/dev/null)
+                                    test=$(find ${ATCF} -mmin -20 2>/dev/null)
                                     if [[ -n $test ]]; then
                                         echo "MSG: This ATCF is not old enough --> ${ATCF}"
                                         echo "MSG: Forcing production."
@@ -685,7 +696,7 @@ for TR in ${TIER[@]}; do
                                 done
                             fi
                         elif [ ! -z "${STORM_ATCF[*]}" ]; then
-                            test=$(find ${STORM_ATCF[0]} -mmin -60 2>/dev/null)
+                            test=$(find ${STORM_ATCF[0]} -mmin -20 2>/dev/null)
                             if [[ -n $test ]]; then
                                 echo "MSG: This ATCF is not old enough --> ${ATCF}"
                                 echo "MSG: Forcing production."
@@ -733,15 +744,45 @@ for TR in ${TIER[@]}; do
                         
                         # Loop over all lead times to find available files.
                         for FHR in ${FILE_FHRS[@]}; do
-                            if [ -z "$FSUFFIX" ]; then
-                                FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                            else
-                                FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
+
+                            # Build the file search string.
+                            FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                            FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                            FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                            if [ ! -z "${FSUFFIX}" ]; then
+                                FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
+                                FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
+                                FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                             fi
-                            if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
-                                IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
+
+                            # Search for a matching file. If found, append the file and forecast hour to their respective arrays
+                            FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
+                            if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                IFILES+=("${FILE_LS[*]}")
                                 IFHRS+=( ${FHR} )
+                            else
+                                FILE_LS=( `ls ${FILE_SEARCH2} 2>/dev/null` )
+                                if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                    IFILES+=("${FILE_LS[*]}")
+                                    IFHRS+=( ${FHR} )
+                                else
+                                    if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
+                                        FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
+                                        if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                            IFILES+=("${FILE_LS[*]}")
+                                            IFHRS+=( ${FHR} )
+                                        fi
+                                    fi
+                                fi
                             fi
+
+#                            if [ ! -z "$(ls ${FILE_SEARCH} 2>/dev/null)" ]; then
+#                                IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
+#                                IFHRS+=( ${FHR} )
+#                            elif [ ! -z "$(ls ${FILE_SEARCH2} 2>/dev/null)" ]; then
+#                                IFILES+=(`ls ${FILE_SEARCH2} 2>/dev/null`)
+#                                IFHRS+=( ${FHR} )
+#                            fi
                         done
 
                         # Increase the counter to search the next input directory option
