@@ -1,0 +1,157 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+; 1A. EXPERIMENT NAME.
+EXPT = HAFSV0.3Basin_2022
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+DO_MAPS = True
+DO_STATS = True
+DO_SHIPS = True
+DO_POLAR = True
+
+; 1C. DATA SOURCE
+DSOURCE = HAFS
+
+; 1D. IS THIS MULTISTORM DATA?
+IS_MSTORM = False
+
+; 1E. ENSEMBLE MEMBER NUMBER
+ENSMEM = 0
+
+; 1E. SYSTEM ENVIRONMENT
+SYS_ENV = ORION
+
+; 1F. FORECAST CYCLE
+IDATE =
+
+; 1G. STORM ID
+SID = 
+
+; 1H. INPUT PATH
+IDIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/scrub/hafsv0.3_basin_20220909_modvi/com/
+ITAG =
+EXT = .grb2
+
+; 1I. OUTPUT PATH
+ODIR = /work2/noaa/aoml-hafs1/galaka/GPOUT/
+
+; 1J. ATCF PATH
+ATCF1_DIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/scrub/hafsv0.3_basin_20220909_modvi/com/
+ATCF1_TAG = hafs.grid02.trak.atcfunix
+ATCF2_DIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/noscrub/hafstrak/hafsv0.3_basin_20220909_modvi/
+ATCF2_TAG = hafs.trak.atcfunix
+
+; 1K. ADECK & BDECK PATHS
+ADECK_DIR = /work/noaa/aoml-hafs1/galaka/adeck/GPLOT_2022/
+BDECK_DIR = /work/noaa/aoml-hafs1/galaka/bdeck/
+
+; 1L. FORECAST HOUR INFORMATION
+INIT_HR = 0
+FNL_HR = 126
+FMT_HR = 3
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+DT = 3
+
+; 1N. MASK TOPOGRAPHY
+DO_TOPOMASK = False
+
+; 1O. REMOVE WHITE SPACE
+DO_RMWHITE = True
+
+; 1P. TOGGLE TITLE
+DO_SRCLBL = True
+
+; 1S. FORCE
+FORCE = False
+
+; 1T. BATCH SUBMISSION MODE
+;BATCH_MODE; = Foreground
+;BATCH_MODE; = Background
+BATCH_MODE = SBatch
+CPU_ACCT = aoml-hafs1
+
+; 1U. CONVERT FROM PNG TO GIF
+;DO_CONVERTGIF; = False
+DO_CONVERTGIF = True
+
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+DOMAIN = wlant elant gom eus hwrf d03
+
+; 2B. MAP GRAPHICS TIER
+TIER = Tier1
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = False
+
+; 2D. MAXIMUM NUMBER OF FILES TO PROCESS
+NMAX_MAPS = 8
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES
+MORIG = HAFS
+MCODE = HF3B
+MCODEI = HFBI
+MCODE12 = HFB2
+
+; 3B. FORECAST GUIDANCE MODELS
+TRKM = HF3B HF3S HF3A AVNO HWRF HMON NVGM CTCX EGRR
+TRKIM = HF3B HF3S HF3A AVNO HWRF HMON NVGM CTCX EGRR CMC
+INTM = HF3B HF3S HF3A AVNO HWRF HMON DSHP LGEM CTCX
+PRSM = HF3B HF3S HF3A AVNO HWRF HMON CTCX
+TRKMI = HFBI HFSI HFAI AVNI HWFI HMNI EGRI CTCI TVCN OFCL
+INTMI = HFBI HFSI HFAI AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = HF3B HF3S HF3A AVNO HWRF HMON CTCX EGRR OFCL
+INTMT = HF3B HF3S HF3A AVNO HWRF HMON DSHP CTCX OFCL
+
+; 3C. VERIFICATION MODELS
+ETM = HFBI HFSI HFAI GFSI HWFI HMNI TVCN OFCL
+EIM = HFBI HFSI HFAI HWFI HMNI DSHP LGEM IVCN OFCL
+LTM = HF3B HF3S HF3A GFSO HWRF HMON
+LIM = HF3B HF3S HF3A HWRF HMON
+
+; 3D. VERIFICATION TIMES
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
+; 3F. INTERPOLATION
+DO_INTERP = True
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; SECTION 5: GPLOT_Polar variables
+;================================================================
+
+PYTHONFILE = make_rz_plots_heightcoordinates_research.py
+RESOLUTION = 2.0
+RMAX = 500
+LEVS = 46
+
