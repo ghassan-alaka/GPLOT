@@ -685,7 +685,9 @@ end if
 print("MSG: Found this ATCF file --> "+ATCF_FILE)
 ATCF_BASE = systemfunc("basename "+ATCF_FILE)
 ATCF_DIR = str_sub_str(ATCF_FILE,ATCF_BASE,"")
-ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+if(ODIR_TYPE.eq.1)then	ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +20")
+else			ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+end if
 
 
 ; Check if the ATCF file is the final ATCF
@@ -1026,7 +1028,11 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	system("sed -i 's/BBBB/"+MCODE12+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/CCCC/"+MCODEI+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/DDD/006/g' "+INTERP_DIR+"/"+INTERP_NML)
-	system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	if(DSOURCE.eq."HAFS")then
+		system("sed -i 's/EEE/036/g' "+INTERP_DIR+"/"+INTERP_NML)
+	else
+		system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	end if
 	
 
 	; Run the interpolation executable to produce early forecasts.
@@ -1199,6 +1205,7 @@ if(DO_LT_GUIDE)then
 	vals := ind(.not.ismissing(aTRK(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late track models at "+IDATE+" --> "+stringOut(TRKmodels(vals)))
 	else				print("WARNING: None of the late track models were found.")
+					DO_LT_GUIDE = False
 	end if
 end if
 
@@ -1220,6 +1227,7 @@ if(DO_LTI_GUIDE)then
 	vals := ind(.not.ismissing(aTRKINT(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late track/intensity models at "+IDATE+" --> "+stringOut(TRKINTmodels(vals)))
 	else				print("WARNING: None of the late track models were found.")
+					DO_LTI_GUIDE = False
 	end if
 end if
 
@@ -1227,7 +1235,7 @@ end if
 
 ; EARLY TRACK GUIDANCE	
 if(DO_ET_GUIDE)then
-	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+	if(ODIR_TYPE.eq.0)then	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))  end if
 	print("MSG: Retrieving these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI))
 	aTRKI	= new((/dimsizes(TRKmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(TRKmodelsI)-1
@@ -1243,6 +1251,7 @@ if(DO_ET_GUIDE)then
 	vals := ind(.not.ismissing(aTRKI(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI(vals)))
 	else				print("WARNING: None of the early track models were found.")
+					DO_ET_GUIDE = False
 	end if
 end if
 
@@ -1300,6 +1309,7 @@ if(DO_LT_TREND)then
 		vals := ind(.not.ismissing(aTRK3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
 		else				print("WARNING: No cycles were found.")
+						DO_LT_TREND = False
 		end if
 	end do
 end if
@@ -1322,6 +1332,7 @@ if(DO_LI_GUIDE)then
 	vals := ind(.not.ismissing(aINT(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late intensity models at "+IDATE+" --> "+stringOut(INTmodels(vals)))
 	else				print("WARNING: None of the late intensity models were found.")
+					DO_LI_GUIDE = False
 	end if
 	aINT(:,0,:) = where(aINT(:,0,:).le.0, aINT@_FillValue, aINT(:,0,:))
 end if
@@ -1329,7 +1340,7 @@ end if
 
 ; EARLY INTENSITY GUIDANCE
 if(DO_EI_GUIDE)then
-	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+	if(ODIR_TYPE.eq.0)then  system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))  end if
 	print("MSG: Retrieving these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI))
 	aINTI	= new((/dimsizes(INTmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(INTmodelsI)-1
@@ -1341,6 +1352,7 @@ if(DO_EI_GUIDE)then
 	vals := ind(.not.ismissing(aINTI(:,0,0)))
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI(vals)))
 	else					print("WARNING: None of the early intensity models were found.")
+						DO_EI_GUIDE = False
 	end if
 	aINTI(:,0,:) = where(aINTI(:,0,:).le.0, aINTI@_FillValue, aINTI(:,0,:))
 end if
@@ -1398,6 +1410,7 @@ if(DO_LI_TREND)then
 		vals := ind(.not.ismissing(aINT3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
 		else				print("WARNING: No cycles were found.")
+						DO_LI_TREND = False
 		end if
 	end do
 	aINT2(:,:,0,:) = where(aINT2(:,:,0,:).le.0, aINT2@_FillValue, aINT2(:,:,0,:))
@@ -1422,6 +1435,7 @@ if(DO_LP_GUIDE)then
 	vals := ind(.not.ismissing(aPRS(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late pressure models at "+IDATE+" --> "+stringOut(PRSmodels(vals)))
 	else				print("WARNING: None of the late pressure models were found.")
+					DO_LP_GUIDE = False
 	end if
 end if
 
@@ -1451,13 +1465,14 @@ if(DO_LP_TREND)then
 	vals := ind(.not.ismissing(aPRS2(:,0,0)))
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these cycles --> "+stringOut(IDATES3(vals)))
 	else					print("WARNING: No cycles were found.")
+						DO_LP_TREND = False
 	end if
 end if
 
 
 
 
-;================================================================
+ ;================================================================
 ; Read BDECK data.
 ;================================================================
 
@@ -2201,7 +2216,14 @@ if(DO_ET_GUIDE)then
 								rngLon = abs(maxLon-minLon)
 	end if  end if
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
-		print("WARNING: Late model track guidance can't be produced.")
+		print("WARNING: Early model track guidance can't be produced.")
+		DO_THIS = False
+		DO_ET_GUIDE = False
+	end if
+
+	vals := ind(.not.ismissing(aTRKI(:,0,0)))
+	if(ismissing(vals(0)))then
+		print("WARNING: Early model track guidance can't be produced.")
 		DO_THIS = False
 		DO_ET_GUIDE = False
 	end if
@@ -2227,7 +2249,9 @@ if(DO_ET_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		if(ODIR_TYPE.eq.1)then	OFILE = ODIR+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		else			OFILE = str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		end if
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2663,7 +2687,9 @@ if(DO_EI_GUIDE)then
 
 
 		; Setup the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		if(ODIR_TYPE.eq.1)then	OFILE = ODIR+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		else			OFILE = str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		end if
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2765,6 +2791,7 @@ if(DO_EI_GUIDE)then
 	
 			plres2@gsLineColor   := INTcolorsI(ppp2)
 			txres4@txFontColor   := INTcolorsI(ppp2)
+
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINTI(ppp2,1,vals),aINTI(ppp2,0,vals),xyres2b))
 
@@ -5231,7 +5258,9 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_ET_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		if(ODIR_TYPE.eq.1)then	chk := systemfunc("ls "+ODIR+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		else			chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		end if
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Guidance graphic ot produced.")
 						exit
 		end if
@@ -5241,7 +5270,9 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_EI_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		if(ODIR_TYPE.eq.1)then	chk := systemfunc("ls "+ODIR+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		else			chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		end if
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Guidance graphic not produced.")
 						exit
 		end if
