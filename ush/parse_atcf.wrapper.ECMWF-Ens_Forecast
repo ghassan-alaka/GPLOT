@@ -1,0 +1,42 @@
+#!/bin/sh
+
+echo "MSG: parse_atcf.wrapper.ECMWF-Ens_Forecast started at `date`"
+
+X_PARSE="/home/Ghassan.Alaka/GPLOT/ush/parse_atcf.v2.sh"
+ODIR="/lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF-ENS_Forecast_2022"
+ADIR="/lfs4/HFIP/hwrf-data/hwrf-input/abdeck/aid_nws/"
+BDIR="/lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck"
+TDIR="/lfs4/HFIP/hwrf-data/hwrf-input/SYNDAT-PLUS"
+SFILE="/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
+TAG="*2022.dat"
+OTAG="trak.ecmwf.atcfunix"
+
+# Loop over each ensemble member and parse it.
+for EE in $(seq -f "%02g" 01 50); do
+
+    M="EE${EE}"
+    MO="EE${EE}"
+    echo "MSG: Working on ensemble member ${MO}"
+
+    echo "MSG: Submitting [${X_PARSE} -m ${M} -mo ${MO} -o ${ODIR} -a ${ADIR} -b ${BDIR} -t ${TDIR} \
+                           -s ${SFILE} -n \"${TAG}\" -no \"${OTAG}\" &> /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/parse_atcf.${MO}.log &]"
+
+    "${X_PARSE}" -m "${M}" -mo "${MO}" -o "${ODIR}" -a "${ADIR}" \
+                 -b "${BDIR}" -t "${TDIR}" -s "${SFILE}" -n "${TAG}" -no "${OTAG}" &> /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/parse_atcf.${MO}.log &
+done
+
+# Parse the ensemble mean
+M="EEMN"
+MO="EEMN"
+OTAG="trak.ecmwf.atcfunix"
+
+echo "MSG: Working on ensemble member ${MO}"
+echo "MSG: Submitting [${X_PARSE} -m ${M} -mo ${MO} -o ${ODIR} -a ${ADIR} -b ${BDIR} -t ${TDIR} \
+                       -s ${SFILE} -n \"${TAG}\" -no \"${OTAG}\" &> /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/parse_atcf.${MO}.log &]"
+
+"${X_PARSE}" -m "${M}" -mo "${MO}" -o "${ODIR}" -a "${ADIR}" \
+             -b "${BDIR}" -t "${TDIR}" -s "${SFILE}" -n "${TAG}" -no "${OTAG}" &> /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/log/parse_atcf.${MO}.log &
+
+wait
+
+echo "MSG: parse_atcf.wrapper.ECMWF-Ens_Forecast completed at `date`"

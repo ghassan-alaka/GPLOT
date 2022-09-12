@@ -40,9 +40,6 @@ while test $# -gt 0; do
             shift
             if test $# -gt 0; then
                 MODEL="${1}"
-            else
-                echo "ERROR: Model identifier not specified."
-                exit 1
             fi
             shift
             ;;
@@ -54,9 +51,6 @@ while test $# -gt 0; do
                     echo "MSG: Creating output directory because it does not exist --> ${OUTDIR}"
                     mkdir -p ${OUTDIR}
                 fi
-            else
-                echo "ERROR: Output directory not specified."
-                exit 1
             fi
             shift
             ;;
@@ -68,9 +62,6 @@ while test $# -gt 0; do
                     echo "ERROR: A-Deck directory does not exist."
                     exit 1
                 fi
-            else
-                echo "ERROR: A-Deck directory not specified."
-                exit 1
             fi
             shift
             ;;
@@ -82,9 +73,6 @@ while test $# -gt 0; do
                     echo "ERROR: B-Deck directory does not exist."
                     exit 1
                 fi
-            else
-                echo "ERROR: B-Deck directory not specified."
-                exit 1
             fi
             shift
             ;;
@@ -96,9 +84,6 @@ while test $# -gt 0; do
                     echo "ERROR: TCVitals directory does not exist."
                     exit 1
                 fi
-            else
-                echo "ERROR: TCVitals directory not specified."
-                exit 1
             fi
             shift
             ;;
@@ -106,9 +91,6 @@ while test $# -gt 0; do
             shift
             if test $# -gt 0; then
                 TAG="${1}"
-            else
-                echo "WARNING: File name tag not specified. Defaulting to '*atcfunix'."
-                TAG="*.atcfunix"
             fi
             shift
             ;;
@@ -116,9 +98,6 @@ while test $# -gt 0; do
             shift
             if test $# -gt 0; then
                 OTAG="${1}"
-            else
-                echo "WARNING: Output file name tag not specified. Defaulting to '' for now."
-                OTAG=""
             fi
             shift
             ;;
@@ -136,9 +115,6 @@ while test $# -gt 0; do
             shift
             if test $# -gt 0; then
                 MMAX="${1}"
-            else
-                echo "WARNING: Maximum file age not specified. Defaulting to infinity."
-                MMAX=""
             fi
             shift
             ;;
@@ -147,10 +123,13 @@ while test $# -gt 0; do
             if test $# -gt 0; then
                 OMODEL="${1}"
                 echo "MSG: Output model specified. Will change model ID to ${ODMOEL}"
-            else
-                OMODEL=""
             fi
             shift
+            ;;
+        --sidstrict)
+            shift
+            SIDSTRICT="YES"
+            echo "MSG: Strict enforcement of SIDs, i.e., it must be in the file name."
             ;;
         *)
             break
@@ -161,19 +140,45 @@ while test $# -gt 0; do
 done
 
 
-#MODEL="$1"
-#ODIR="$2"
-#ADECKDIR="$3"
-#BDECKDIR="$4"
-#TCVDIR="$5"
-#TYPE="$6"
-#AAA="$7"
-#ODIR="/lfs2/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/"
-#ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
-#BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
-#MMIN="-720"
-#SID_FILE="${GPLOT_DIR}/tbl/SIDs_Old_New.dat"
+if [ -z "${MODEL}" ]; then
+    echo "ERROR: Model identifier (ABCD) not specified."
+    exit 1
+fi
+if [ -z "${OUTDIR}" ]; then
+    echo "ERROR: Output directory not specified."
+    exit 1
+fi
+if [ -z "${ADECKDIR}" ]; then
+    echo "ERROR: A-deck directory not specified."
+    exit 1
+fi
+if [ -z "${BDECKDIR}" ]; then
+    echo "ERROR: B-deck directory not specified."
+    exit 1
+fi
+if [ -z "${TCVDIR}" ]; then
+    echo "ERROR: TCVitals directory not specified."
+    exit 1
+fi
+if [ -z "${TAG}" ]; then
+    echo "WARNING: File name tag not specified. Defaulting to '*atcfunix'."
+    TAG="*.atcfunix"
+fi
+if [ -z "${OTAG}" ]; then
+    echo "WARNING: Output file name tag not specified. Defaulting to '' for now."
+    OTAG=""
+fi
+if [ -z "${SID_FILE}" ]; then
+    echo "WARNING: SID Old/New file not specified. Defaulting to '${GPLOT_DIR}/tbl/SIDs_Old_New.dat'."
+    SID_FILE="${GPLOT_DIR}/tbl/SIDs_Old_New.dat"
+fi
+if [ -z "${SIDSTRICT}" ]; then
+    echo "WARNING: Strict enforcement of SID not specified."
+    SIDSTRICT="NO"
+fi
 
+
+# Change into the output directory
 cd ${ODIR}
 
 
@@ -201,7 +206,6 @@ for ADECK in ${ALL_ADECKS[@]}; do
     echo "***********************"
     echo "MSG: Working on this A-Deck --> ${ADECK}"
     echo "***********************"
-
     #ALL_SNUM=( `awk -v MODEL="${MODEL}" -F ', ' '$5==MODEL && $2!="00"' ${ADECK} | cut -d "," -f2 | sort -u | sed -e 's/^[[:space:]]*//'` )
     ALL_SNUM=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL^^}" -F, '$5==MODEL && $2!="00"' | cut -d "," -f2 | sort -u` )
 
@@ -288,6 +292,12 @@ for ADECK in ${ALL_ADECKS[@]}; do
                 elif (( $(echo "${SNUM} > 89" | bc) )); then
                     SID_TC=""
                     SID_INVEST="${SID}"
+                fi
+
+                # Check if the SID matches strict standards
+                if [ "${SIDSTRICT}" == "YES" ] && [[ $(echo ${ADECK##*/} | awk '{print tolower($0)}' | cut -d'.' -f1) != *"${SID,,}"* ]]; then
+                    echo "WARNING: I will not process this ATCF because the storm ID can't be found in the file name."
+                    continue
                 fi
                 
 
