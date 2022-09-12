@@ -15,10 +15,10 @@
 EXPT = HAFSV0.3S_2022_RT
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
-DO_MAPS = False
+DO_MAPS = True
 DO_STATS = True
-DO_SHIPS = False
-DO_POLAR = False
+DO_SHIPS = True
+DO_POLAR = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -33,13 +33,13 @@ ENSMEM = 0
 SYS_ENV = JET
 
 ; 1F. FORECAST CYCLE
-IDATE =
+IDATE = 
 
 ; 1G. STORM ID
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs4/HFIP/hur-aoml/rthr-aoml/hafstmp2022/HAFSV0.3S_2022_RT/com/
+IDIR = /lfs1/HFIP/hwrf-data/WCOSS2_realtime/hafsv0p3s_2022rt/
 ITAG =
 EXT = .grb2
 
@@ -92,10 +92,10 @@ DO_CONVERTGIF = True
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = wlant elant gom d01 d03 epac wpac
+DOMAIN = hwrf d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1
+TIER = Tier1 Tier2
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
