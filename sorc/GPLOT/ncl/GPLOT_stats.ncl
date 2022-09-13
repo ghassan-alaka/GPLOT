@@ -705,9 +705,13 @@ end if  end if
 fSplit	:= str_split(ATCF_BASE,".")
 LONGSID	:= fSplit(0)
 tmp	:= tochar(LONGSID)
-TC_NAME	:= str_upper(tostring(tmp(0)))+""+tostring(tmp(1:dimsizes(tmp)-4))
-TC_NUM	:= tostring(tmp(dimsizes(tmp)-3:dimsizes(tmp)-2))
-BASIN1	:= tostring(tmp(dimsizes(tmp)-1))
+if(dimsizes(tmp).ge.4)then
+	TC_NAME	:= str_upper(tostring(tmp(0:dimsizes(tmp)-4)))
+else
+	TC_NAME := "MISSING"
+end if
+TC_NUM  := tostring(tmp(dimsizes(tmp)-3:dimsizes(tmp)-2))
+BASIN1  := tostring(tmp(dimsizes(tmp)-1))
 if(BASIN1.eq."l")then   BASIN2 = "al"   end if
 if(BASIN1.eq."e")then   BASIN2 = "ep"   end if
 if(BASIN1.eq."c")then   BASIN2 = "cp"   end if
