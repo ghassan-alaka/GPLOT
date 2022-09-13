@@ -706,7 +706,7 @@ fSplit	:= str_split(ATCF_BASE,".")
 LONGSID	:= fSplit(0)
 tmp	:= tochar(LONGSID)
 if(dimsizes(tmp).ge.4)then
-	TC_NAME	:= str_upper(tostring(tmp(0)))+""+tostring(tmp(1:dimsizes(tmp)-4))
+	TC_NAME	:= str_upper(tostring(tmp(0:dimsizes(tmp)-4)))
 else
 	TC_NAME := "MISSING"
 end if
