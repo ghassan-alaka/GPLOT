@@ -32,8 +32,10 @@ SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                        
 # EXPERIMENTAL MODELS #
 HF3A,         HF3A: HAFS V0.3A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.3A
 HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.3A (Early)
-HF3S,         HF3S: HAFS V0.3S,  8,              orange,   Hurricane Analysis and Forecast System V0.3S
-HFSI,     HFSI: Interp. HAFS-S,  8,              orange,                            HAFS V0.3S (Early)
+HF3S,         HF3S: HAFS V0.3S,  8,           orangered,   Hurricane Analysis and Forecast System V0.3S
+HFSI,     HFSI: Interp. HAFS-S,  8,           orangered,                            HAFS V0.3S (Early)
+HF3B,         HF3B: HAFS V0.3B,  3,            seagreen,   Hurricane Analysis and Forecast System V0.3Basin
+HFBI,     HFBI: Interp. HAFS-B,  3,            seagreen,                        HAFS V0.3Basin (Early)
 HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
 HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
 HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)

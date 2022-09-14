@@ -247,6 +247,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
                     tac ${ADECK} | awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -v MODEL="${MODEL^^}" -F ',[ \t]*' \
                                    '$1==BASIN && $2==SNUM && $3==CYCLE && $5==MODEL' | \
                                    sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
+diff "${OFILE}" "${TMPFILE}"
                     if diff -q "${OFILE}" "${TMPFILE}" ; then
                         echo "MSG: Parsed A-Deck has not changed --> ${OFILE}"
                         rm -f ${TMPFILE}

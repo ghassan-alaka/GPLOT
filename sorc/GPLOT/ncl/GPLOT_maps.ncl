@@ -549,10 +549,10 @@ print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
 ; 6. Limit the total number of files to process, if required.
-if(nFiles.gt.NMAX)then
-	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
-	nFiles = NMAX
-end if
+;if(nFiles.gt.NMAX)then
+;	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
+;	nFiles = NMAX
+;end if
 
 
 
@@ -1135,7 +1135,7 @@ do fff = 0,nFiles-1
                         ;    'B' is used to determine how to set the figure domain size.
                         ;    Force B=1 to use the lat/lon provided by the BOCO.
                         ;================================================================
-                        B = getDmnInfo(DOMAIN,"bdstype",False)
+                        B = getDmnInfo(DOMAIN,DSOURCE,"bdstype",False)
                         if(SC_GRAPHICS .and. .not.ATCF_REQD .and. any((/ATCF_FILES(0),SID/).eq."NONE"))then
                                 B = 1
                         end if
@@ -1150,6 +1150,10 @@ do fff = 0,nFiles-1
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
                                         y = ddd
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
+					if(dimsizes(lat).le.2 .and. dimsizes(lat).gt.1)then
+						lat := 9.96921e+36
+						lat@_FillValue = 9.96921e+36
+					end if
 					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
 
@@ -1166,6 +1170,10 @@ do fff = 0,nFiles-1
 					BOCO@PivotLon = PIV
 					if(SC_DOMAIN)then	lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
 					else			lon := get_dim_lon(f,dNames(ddd),BOCO,9.96921e+36,9.96921e+36,ti,B)
+					end if
+					if(dimsizes(lon).le.2 .and. dimsizes(lon).gt.1)then
+						lon := 9.96921e+36
+						lon@_FillValue = 9.96921e+36
 					end if
 					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
@@ -1618,6 +1626,8 @@ do fff = 0,nFiles-1
 						continue
 					end if
 					f2 := addfile(PFILE1,"r")
+printVarSummary(Vbase)
+printVarSummary(f2->TPRCP)
 					Vbase	= Vbase + (/f2->TPRCP/)
 					Vbase!0 = "lat"
 					Vbase!1 = "lon"
@@ -2558,12 +2568,12 @@ do fff = 0,nFiles-1
 				;    llbox -  minimum distance that the closest High/Low can be
 				;    maxH -  maximum number of Highs to be marked on the map
 				;    maxL -  maximum number of Lows to be marked on the map
-				llbox = getDmnInfo(DOMAIN,"llbox",False)
+				llbox = getDmnInfo(DOMAIN,DSOURCE,"llbox",False)
 				dx = abs(lon(1)-lon(0))
 				dxi = floor(llbox/dx)
 				if(dxi.eq.0)then   print("WARNING: 'llbox' is smaller than 'dx'. Defaulting to 1.")   end if
-				maxH = getDmnInfo(DOMAIN,"maxH",False)
-				maxL = getDmnInfo(DOMAIN,"maxL",False)
+				maxH = getDmnInfo(DOMAIN,DSOURCE,"maxH",False)
+				maxL = getDmnInfo(DOMAIN,DSOURCE,"maxL",False)
 			end if
 			
 			;================================================================

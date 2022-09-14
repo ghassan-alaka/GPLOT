@@ -84,8 +84,6 @@ def main():
 	else:
 		print("ERROR: I couldn't find the Master Namelist.")
 		sys.exit()
-	#PYTHONDIR = sys.argv[11]
-	#if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
 	PYTHONDIR = f'{GPLOT_DIR}/sorc/GPLOT/python'
 	
 	

@@ -39,7 +39,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs4/HFIP/hur-aoml/Mu-Chieh.Ko/HAFS-A/
+IDIR = /lfs1/HFIP/hwrf-data/WCOSS2_realtime/hafsv0p3a_2022rt/
 ITAG =
 EXT = .grb2
 
@@ -47,10 +47,10 @@ EXT = .grb2
 ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hwrfv3/Bin.Liu_pan2/trak/hafsv0p3a_2022rt/
-ATCF1_TAG = hafs.trak.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hwrfv3/Bin.Liu_pan2/trak/hafsv0p3a_2022rt/
-ATCF2_TAG = hafs.trak.atcfunix
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HAFSV0.3A_2022_RT/
+ATCF1_TAG = trak.hafs.atcfunix
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HAFSV0.3A_2022_RT/
+ATCF2_TAG = trak.hafs.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT_2022/
