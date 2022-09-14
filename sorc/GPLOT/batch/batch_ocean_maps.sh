@@ -94,11 +94,6 @@ if [ ! -z "$NMLIST" ]; then
 else
     PYTHON_ARGS+=("MISSING")
 fi
-if [ ! -z "${PYTHONDIR}" ]; then
-    PYTHON_ARGS+=("${PYTHONDIR}")
-else
-    PYTHON_ARGS+=("${GPLOT_DIR}/sorc/GPLOT/python")
-fi
 if [ ! -z "$OCEAN_SOURCE" ]; then
     PYTHON_ARGS+=("${OCEAN_SOURCE}")
 else
