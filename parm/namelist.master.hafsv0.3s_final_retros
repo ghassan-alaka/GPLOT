@@ -51,7 +51,7 @@ ODIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/adeck
-ATCF1_TAG = hafs.trak.atcfunix
+ATCF1_TAG = hafs.atcfunix
 ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/adeck
 ATCF2_TAG = hafs.atcfunix
 
