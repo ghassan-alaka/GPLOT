@@ -117,16 +117,14 @@ def main():
         else:
                 print("ERROR: I couldn't find the Master Namelist.")
                 sys.exit()
-        PYTHONDIR = sys.argv[11]
-        if PYTHONDIR == 'MISSING' or PYTHONDIR == '':
-                PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
-        OCEAN_SOURCE = sys.argv[12]
+        PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
+        OCEAN_SOURCE = sys.argv[11]
         if OCEAN_SOURCE == 'MISSING' or OCEAN_SOURCE == '':
                 OCEAN_SOURCE = 'HYCOM'
-        OCEAN_CFG = sys.argv[13]
+        OCEAN_CFG = sys.argv[12]
         if OCEAN_CFG == 'MISSING' or OCEAN_CFG == '':
                 OCEAN_CFG = 'NHC'
-        FIX_DIR = sys.argv[14]
+        FIX_DIR = sys.argv[13]
         if FIX_DIR == 'MISSING' or FIX_DIR == '':
                 FIX_DIR = GPLOT_DIR+'/fix'
         
