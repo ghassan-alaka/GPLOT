@@ -89,11 +89,6 @@ if [ ! -z "$NMLIST" ]; then
 else
     PYTHON_ARGS+=("MISSING")
 fi
-if [ ! -z "${PYTHONDIR}" ]; then
-    PYTHON_ARGS+=("${PYTHONDIR}")
-else
-    PYTHON_ARGS+=("${GPLOT_DIR}/sorc/GPLOT/python")
-fi
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
