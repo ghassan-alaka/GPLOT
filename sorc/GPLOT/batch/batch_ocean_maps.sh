@@ -22,12 +22,17 @@ NMLIST="${4:-namelist.master.default}"
 ENSID="${5:-XX}"
 IDATE="${6}"
 SID="${7}"
-DOMAIN="${8}"
+#DOMAIN="${8}"
+OCEAN_DOMAIN="${8}"
 TIER="${9}"
 RESOLUTION="${10}"
 RMAX="${11}"
 LEVS="${12}"
 FORCE="${13}"
+OCEAN_SOURCE="${14}"
+OCEAN_CFG="${15}"
+FIX_DIR="${16}"
+
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
@@ -49,8 +54,8 @@ if [ ! -z "$SID" ]; then
 else
     PYTHON_ARGS+=("MISSING")
 fi
-if [ ! -z "$DOMAIN" ]; then
-    PYTHON_ARGS+=("${DOMAIN}")
+if [ ! -z "$OCEAN_DOMAIN" ]; then
+    PYTHON_ARGS+=("${OCEAN_DOMAIN}")
 else
     PYTHON_ARGS+=("MISSING")
 fi
@@ -93,6 +98,22 @@ if [ ! -z "${PYTHONDIR}" ]; then
     PYTHON_ARGS+=("${PYTHONDIR}")
 else
     PYTHON_ARGS+=("${GPLOT_DIR}/sorc/GPLOT/python")
+fi
+if [ ! -z "$OCEAN_SOURCE" ]; then
+    PYTHON_ARGS+=("${OCEAN_SOURCE}")
+else
+    PYTHON_ARGS+=("MISSING")
+fi
+if [ ! -z "$OCEAN_CFG" ]; then
+    PYTHON_ARGS+=("${OCEAN_CFG}")
+else
+    PYTHON_ARGS+=("MISSING")
+fi
+
+if [ ! -z "$FIX_DIR" ]; then
+    PYTHON_ARGS+=("${FIX_DIR}")
+else
+    PYTHON_ARGS+=("MISSING")
 fi
 
 # 2. Submit the Python job

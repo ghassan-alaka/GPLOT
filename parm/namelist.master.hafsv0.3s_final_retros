@@ -12,7 +12,7 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = HAFS
+EXPT = hafsv0.3s_final_retros
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
@@ -20,7 +20,7 @@ DO_STATS = True
 DO_SHIPS = True
 DO_POLAR = True
 DO_AIRSEA = True
-DO_OCEAN = True
+DO_OCEAN_MAPS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -35,29 +35,29 @@ ENSMEM = 0
 SYS_ENV = HERA
 
 ; 1F. FORECAST CYCLE
-IDATE = 
+IDATE = 2021082712
 
 ; 1G. STORM ID
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /PLEASE/SET/THE/INPUT/PATH
+IDIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/grb2
 ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /PLEASE/SET/THE/OUTPUT/PATH
-ODIR_TYPE = 1
+ODIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/GPLOT
+;ODIR_TYPE; = 1
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /PLEASE/SET/THE/ATCF1/DIRECTORY
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/adeck
 ATCF1_TAG = hafs.trak.atcfunix
-ATCF2_DIR = /PLEASE/SET/THE/ATCF2/DIRECTORY
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/adeck
 ATCF2_TAG = hafs.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /PLEASE/SET/THE/ADECK/DIRECTORY
-BDECK_DIR = /PLEASE/SET/THE/BDECK/DIRECTORY
+ADECK_DIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/adeck/NHC/
+BDECK_DIR = /scratch2/NAGAPE/aoml-hafs1/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
@@ -164,8 +164,15 @@ LEVS = 46
 AIRSEA_PYTHONFILE = plot_airsea_pbl.py
 
 ;================================================================
-; SECTION 7: GPLOT_Ocean variables
+; SECTION 7: GPLOT_Ocean_Maps variables
 ;================================================================
-OCEAN_PYTHONFILE = plot_ocean.py
+; Script to produce ocean map graphics
+OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
+; Ocean data input directory
 OCEAN_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv0.3s_final_retros/coupled/grb2
+; Ocean model
 OCEAN_SOURCE = HYCOM
+; Ocean graphical regions to plot
+OCEAN_DOMAIN = domain d03
+; Ocean model configuration (e.g., for domain bounds and bathymetry)
+OCEAN_CFG = NHC

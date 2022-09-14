@@ -17,7 +17,7 @@
 
 
 
-echo "MSG: Submitting jobs for OCEAN module."
+echo "MSG: Submitting jobs for OCEAN_MAPS module."
 
 
 # Determine the GPLOT source code directory
@@ -30,6 +30,7 @@ NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
 PYTHON_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
+FIX_DIR="${GPLOT_DIR}/fix/"
 
 # Get the namelist, could be from command line
 NMLIST="${1:-namelist.input.default}"
@@ -47,9 +48,10 @@ fi
 echo "MSG: Found this namelist --> ${NMLIST}"
 
 # Pull important variables from the namelist
-DO_OCEAN="`sed -n -e 's/^.*DO_OCEAN =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DO_OCEAN_MAPS="`sed -n -e 's/^.*DO_OCEAN_MAPS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 DSOURCE="`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 OCEAN_SOURCE="`sed -n -e 's/^.*OCEAN_SOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_CFG="`sed -n -e 's/^.*OCEAN_CFG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 EXPT="`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 MCODE="`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 IS_MSTORM="`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -76,7 +78,7 @@ PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 RESOLUTION="`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 RMAX="`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 LEVS="`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_PYTHONFILE="`sed -n -e 's/^.*OCEAN_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_MAPS_PYTHONFILE="`sed -n -e 's/^.*OCEAN_MAPS_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 
 # Define batch defaults
 BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
@@ -138,6 +140,14 @@ if [ -z "${PARTITION}" ]; then
         PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     fi
 fi
+
+# Get the domains
+OCEAN_DOMAIN=( `sed -n -e 's/^OCEAN_DOMAIN =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+echo "MSG: Found these graphic Ocean domains in the namelist --> ${OCEAN_DOMAIN[*]}"
+
+# Get the graphics tiers for this OCEAN_MAPS domain
+TIER=( `sed -n -e 's/^TIER =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+echo "MSG: Found these graphic tiers in the namelist   --> ${TIER[*]}"
 
 # If FORCE is undefined, set it to False.
 if [ -z "${FORCE}" ]; then
@@ -205,12 +215,12 @@ else
 fi
 
 # Define other important variables
-BATCHFILE="batch_ocean.sh"
+BATCHFILE="batch_ocean_maps.sh"
 
 
-# If OCEAN_PYTHONFILE is empty, set it to a default script.
-if [ -z "${OCEAN_PYTHONFILE}" ]; then
-    OCEAN_PYTHONFILE="plot_ocean.py"
+# If OCEAN_MAPS_PYTHONFILE is empty, set it to a default script.
+if [ -z "${OCEAN_MAPS_PYTHONFILE}" ]; then
+    OCEAN_MAPS_PYTHONFILE="plot_ocean_maps.py"
 fi
 
 
@@ -253,8 +263,8 @@ fi
 #    This script is responsible for creating graphics based #
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
-if [ "${DO_OCEAN}" = "True" ]; then
-    DOMAIN="ocean"
+if [ "${DO_OCEAN_MAPS}" = "True" ]; then
+    #DOMAIN="ocean"
     TIER="Tier1"
     SC="True"
     ATCF_REQD="True"
@@ -366,13 +376,13 @@ if [ "${DO_OCEAN}" = "True" ]; then
             #########################
             # LOOP OVER MAP DOMAINS #
             #########################
-            for DMN in ${DOMAIN}; do
+            for DMN in ${OCEAN_DOMAIN}; do
                 echo "MSG: Current domain --> $DMN"
 
                 # Get nest information from GPLOT table
                 NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
                 if [ -z "$NEST" ]; then
-                    echo "MSG: Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
+                    echo "MSG: Ocean Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
                     echo "MSG: Assuming NEST=1."
                     NEST=1
                 fi
@@ -440,12 +450,12 @@ if [ "${DO_OCEAN}" = "True" ]; then
                 # If domain is storm-centerd and ATCF is required, then ATCF must
                 # be present and contain forecast hours
                 if [ -z ${STORM_ATCF} ]; then
-                    echo "ERROR: Domain is storm-centered and ATCF files are required."
+                    echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
                     echo "ERROR: But, found no matching ATCF files. So, nothing to do."
                     echo ""
                     continue
                 elif [ -z "${ATCF_FHRS[*]}" ]; then
-                    echo "ERROR: Domain is storm-centered and ATCF files are required."
+                    echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
                     echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
                     echo ""
                     continue
@@ -477,9 +487,9 @@ if [ "${DO_OCEAN}" = "True" ]; then
 
                         # Create full output path
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
+                            ODIR_FULL="${ODIR}/ocean_${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/${ENSIDTAG}/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${ENSIDTAG}/${CYCLE}/ocean_${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -802,13 +812,14 @@ if [ "${DO_OCEAN}" = "True" ]; then
                         # Change options in the batch submission script.
                         if [ -z "${JOB_TEST}" ]; then
                             LOG_DIR="$ODIR_FULL"
-                            LOGFILE1="${LOG_DIR}GPLOT_Ocean.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
-                            LOGFILE2="${LOG_DIR}GPLOT_Ocean.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
+                            LOGFILE1="${LOG_DIR}GPLOT_Ocean_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
+                            LOGFILE2="${LOG_DIR}GPLOT_Ocean_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
 
                             # Call the batch job
                             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${OCEAN_PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${OCEAN_MAPS_PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
                             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
+                            FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
                                 ${FULL_CMD}
@@ -842,7 +853,7 @@ if [ "${DO_OCEAN}" = "True" ]; then
             done #end of DMN loop
         done #end of STORM loop
     done #end of CYCLE loop
-fi #end of DO_OCEAN
+fi #end of DO_OCEAN_MAPS
 
 wait
 

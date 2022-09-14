@@ -1,7 +1,10 @@
 do_iso_26,Y
-do_iso_20,N
+do_iso_20,Y
 do_ohc,Y
 do_sfc_conv,Y
 do_sfc_vort,Y
+do_ml_conv,Y
+do_ml_vort,Y
 do_ssh,Y
+do_shf,Y
 do_dpi,Y
