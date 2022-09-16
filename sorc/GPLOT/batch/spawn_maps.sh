@@ -426,7 +426,7 @@ for TR in ${TIER[@]}; do
 
                 # Get ATCF_REQD to check if it is required.
                 # This is optional for MAPS.
-                if [ "$DMN" == "d03" ]; then
+                if [ "$DMN" == "d03" ] || [ "$DMN" == "alld03" ]; then
                     ATCF_REQD="True"
                 else
                     ATCF_REQD=`sed -n -e 's/^.*ATCF_REQD =\s//p' ${NMLIST} | sed 's/^\t*//'`
@@ -441,7 +441,7 @@ for TR in ${TIER[@]}; do
                 # to most file names.
                 # GJA: Integrate SC as 3rd column in DomainInfo.dat
                 if [ "$DMN" == "hwrf" ] || [ "$DMN" == "d03" ] || \
-                   [ "$DMN" == "d02" ] || [ "$DMN" == "tkfull" ]; then
+                   [ "$DMN" == "d02" ] || [ "$DMN" == "tkfull" ] || [ "$DMN" == "alld03" ]; then
                     SC="True"
                     STORMTAG=".${STORM^^}"
                 else

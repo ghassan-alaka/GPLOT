@@ -302,7 +302,7 @@ BOCO    = getDmnBds(DOMAIN,DSOURCE)
 SC_DOMAIN   = False
 SC_DSOURCE  = False
 SC_GRAPHICS = False
-if(any((/"d02","d03","tkfull","hwrf"/).eq.DOMAIN))then    SC_DOMAIN  = True     end if
+if(any((/"d02","d03","tkfull","hwrf","alld03"/).eq.DOMAIN))then    SC_DOMAIN  = True     end if
 ;if(.not.IS_MSTORM .and. isStrSubset(DSOURCE,"HWRF"))then   SC_DSOURCE = True     end if
 if(SC_DOMAIN .or. SC_DSOURCE)then
         print("MSG: Determined that these graphics are storm-centered.")
@@ -453,10 +453,10 @@ end if
 if(DSOURCE.eq."GFS" .and. any(FNAME.eq."REFL_UV750"))then
         What2Plot = where(FNAME.eq."REFL_UV750",False,What2Plot)
 end if
-if(DOMAIN.eq."d03" .and. any(FNAME.eq."PRCP_MSLP_Z1000500"))then
+if(any((/"d03","alld03"/).eq.DOMAIN) .and. any(FNAME.eq."PRCP_MSLP_Z1000500"))then
         What2Plot = where(FNAME.eq."PRCP_MSLP_Z1000500",False,What2Plot)
 end if
-if(DOMAIN.eq."d03" .and. any(FNAME.eq."PRCP_MSLP"))then
+if(any((/"d03","alld03"/).eq.DOMAIN) .and. any(FNAME.eq."PRCP_MSLP"))then
         What2Plot = where(FNAME.eq."PRCP_MSLP",False,What2Plot)
 end if
 if(.not.any(What2Plot))then     print("ERROR: No graphics turned on in this namelist. Exiting.")
@@ -958,7 +958,7 @@ do fff = 0,nFiles-1
                         else if(DSOURCE.eq."GFS" .and. DOMAIN.eq."d03" .and. isStrSubset(FNAME(ppp),"TPRCP"))then
                                 print("WARNING: Graphic '"+FNAME(ppp)+"' might not work for DOMAIN="+DOMAIN+" and DSOURCE="+DSOURCE+".")
                                 print("WARNING: Turn this graphic off in "+VAR_NML)
-                        else if(DOMAIN.eq."d03" .and. any((/"PRCP_MSLP_Z1000500","PRCP_MSLP","PRCP24_MSLP"/).eq.FNAME(ppp)))then
+                        else if(any((/"d03","alld03"/).eq.DOMAIN) .and. any((/"PRCP_MSLP_Z1000500","PRCP_MSLP","PRCP24_MSLP"/).eq.FNAME(ppp)))then
                                 print("WARNING: Graphic '"+FNAME(ppp)+"' might not work for DOMAIN="+DOMAIN+".")
                                 print("WARNING: Turn this graphic off in "+VAR_NML)
                         end if  end if  end if  end if
@@ -1144,7 +1144,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ; xi. Read dimension data (only for available dims)
                         ;================================================================
-			if(any((/"HWRF","HMON"/).eq.DSOURCE) .and. DOMAIN.eq."d03")then   BOCO@doPivot = False   end if
+			if(any((/"HWRF","HMON"/).eq.DSOURCE) .and. any((/"d03","alld03"/).eq.DOMAIN))then   BOCO@doPivot = False   end if
                         do ddd = 0,nDims-1
                                 ; 1. Y-DOORDINATE --> LATITUDE
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
@@ -1309,7 +1309,7 @@ do fff = 0,nFiles-1
                         ;      time. If either variable can't be found, then it will be
                         ;      missing.
                         ;================================================================
-                      	if(.not.isvar("UV10max") .and. DOMAIN.eq."d03")then
+                      	if(.not.isvar("UV10max") .and. any((/"d03","alld03"/).eq.DOMAIN))then
                         
                                 ; 1. GET 10M WIND
                                 ; 1a. Determine which file contains the UV10max variable.
@@ -1338,7 +1338,7 @@ do fff = 0,nFiles-1
                                 end if
 			end if
                         
-			if(.not.isvar("MSLPmin") .and. DOMAIN.eq."d03")then
+			if(.not.isvar("MSLPmin") .and. any((/"d03","alld03"/).eq.DOMAIN))then
                                 ; 2. GET THE MINIMUM MSLP
                                 ; 2a. Determine which file contains the MSLPmin variable
                                 varStatus = False
@@ -1442,7 +1442,7 @@ do fff = 0,nFiles-1
                                 res@mpCenterLonF                = (res@mpMaxLonF+res@mpMinLonF)/2.
                                 res@mpMaxLatF                   = BOCO(0)
                                 res@mpMinLatF                   = BOCO(1)
-                                if(DOMAIN.eq."d03")then
+                                if(any((/"d03"/).eq.DOMAIN))then
                                         ;res@gsnRightString = ""+NameIDTag
                                         res@mpGridLatSpacingF   = 2.
                                         res@mpGridLonSpacingF   = 2.
@@ -1833,7 +1833,7 @@ printVarSummary(f2->TPRCP)
 					resOv1@vcLevelSelectionMode     = "ExplicitLevels"
 					resOv1@vcLevels                 = ispan(5,150,5)
 					if(FNAME(ppp).eq."RH700_UV700_MSLP")then	resOv1@vcWindBarbColor = "black"   end if
-					if(DOMAIN.eq."d03")then				resOv1@vcWindBarbLineThicknessF = 5.0
+					if(any((/"d03","alld03"/).eq.DOMAIN))then	resOv1@vcWindBarbLineThicknessF = 5.0
 											resOv1@vcMinDistanceF = 0.03
 					end if
 				end if
@@ -1973,7 +1973,7 @@ printVarSummary(f2->TPRCP)
                                 ; 1. Set graphical Resources
                                 resOv2 := GenPlotRes(6,True)
                                 if(any((/"SHDL","SHML","SHSL"/).eq.FNAME(ppp)))then   resOv2@stLineColor = "black"   end if
-                                if(DOMAIN.eq."d03")then   resOv2@stLineColor = "black"   end if
+                                if(any((/"d03","alld03"/).eq.DOMAIN))then	      resOv2@stLineColor = "black"   end if
                                 resOv2@gsnLeftString = ""
                                 resOv2@gsnRightString = ""
 
@@ -2112,7 +2112,7 @@ printVarSummary(f2->TPRCP)
                                 resOv25@gsnLeftString = ""
                                 resOv25@gsnRightString = ""
                                 if(any((/"SHDL","SHML","SHSL"/).eq.FNAME(ppp)))then   resOv25@stLineColor = "black"   end if
-                                if(DOMAIN.eq."d03")then   
+                                if(any((/"d03","alld03"/).eq.DOMAIN))then   
                                         resOv25@stLineColor = "grey90" ;"white"   
                                         resOv25@stLineThicknessF = 3.5
                                         resOv25@stMinDistanceF     = 0.05
@@ -2583,7 +2583,7 @@ printVarSummary(f2->TPRCP)
 
 				; 1. Find the local High Pressure locations.
 				;    These aren't necessary for 'd03' graphics.
-				if(DOMAIN.ne."d03")then
+				if(.not.any((/"d03","alld03"/).eq.DOMAIN))then
                                         
 					;Find the local Highs. Could be 0
 					VOv5_max := local_max(VOv5B, False, 0.0)
@@ -2933,8 +2933,8 @@ printVarSummary(f2->TPRCP)
                 	;================================================================
                         ; lxvii. Graphic Title
 			;================================================================
-	                if(DOMAIN.eq."d03")then         add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.012)
-	                else                            add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.010)
+	                if(any((/"d03","alld03"/).eq.DOMAIN))then	add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.012)
+	                else						add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.010)
 	                end if
                 
 	                ;================================================================
@@ -2942,34 +2942,34 @@ printVarSummary(f2->TPRCP)
 			;================================================================
 	                TimeTitle       = "Init: "+changeTimeFmt(str_sub_str(IDATE,"gfs.",""),"YYYYMMDDHH","HHz DOW, Month DD YYYY",0)+\
 	                                  "  Forecast Hour:["+str_sub_str(sprinti("%0.3i",FHR3(ttt)),"f","")+"]  valid at "+validDate
-	                if(DOMAIN.eq."d03")then         add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.010,"left")
-	                else                            add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
+	                if(any((/"d03","alld03"/).eq.DOMAIN))then	add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.010,"left")
+	                else						add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
 	                end if
                 
 	                ;================================================================
                         ; lxix. Storm Title
 			;================================================================
 	                if(LONGSID_LIST.ne."")then
-	                        if(DOMAIN.eq."d03")then         add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.010,"right")
-	                        else                            add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.008,"right")
+	                        if(any((/"d03","alld03"/).eq.DOMAIN))then	add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.010,"right")
+	                        else						add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.008,"right")
 	                        end if
 	                end if
                 
 			;================================================================
                         ; lxxx. Max Wind & Min MSLP information
 			;================================================================
-	                if(DOMAIN.eq."d03")then         add_vmax_label (wks,UV10max,vpLFT+vpWID,vpTOP+0.035,0.009,"right")
-	                                                add_mslp_label (wks,MSLPmin,vpLFT+vpWID,vpTOP+0.022,0.009,"right")
+	                if(any((/"d03","alld03"/).eq.DOMAIN))then	add_vmax_label(wks,UV10max,vpLFT+vpWID,vpTOP+0.035,0.009,"right")
+									add_mslp_label(wks,MSLPmin,vpLFT+vpWID,vpTOP+0.022,0.009,"right")
 	                end if
                 
 			;================================================================
                         ; lxxi. Model Title & Disclaimer
 			;================================================================
 	                if(DO_SRCLBL)then
-	                        if(DOMAIN.eq."d03")then         add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.015,"left")
-	                                                        add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.015)
-	                        else                            add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.009,"left")
-	                                                        add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
+	                        if(any((/"d03","alld03"/).eq.DOMAIN))then	add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.015,"left")
+										add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.015)
+	                        else						add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.009,"left")
+										add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
 	                        end if
 	                end if
 			
@@ -3034,7 +3034,7 @@ printVarSummary(f2->TPRCP)
                 if(FHR(fff).lt.24 .and. isStrSubset(FNAME2(ppp),"PRCP24_"))then continue   end if
                 if(DSOURCE.eq."GFS" .and. \
                    isStrSubset(FNAME2(ppp),"REFL"))then                         continue   end if
-                if(      DOMAIN.eq."d03"\
+                if(any((/"d03","alld03"/).eq.DOMAIN) \
                    .and. isStrSubset(FNAME2(ppp),"PRCP"))then                   continue   end if
                                                         
                 PNGname = FNAME2(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".gif"
