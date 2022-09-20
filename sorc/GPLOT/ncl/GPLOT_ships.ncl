@@ -2655,7 +2655,7 @@ do fff = 0,nFiles-1
 				end if
 
 			end if  end if
-			myHrs	:= ispan(-24,max(FHR2),12)
+			myHrs	:= ispan(-24,toint(max(FHR2)),12)
 	
 			; Set up the output file
 			OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN
