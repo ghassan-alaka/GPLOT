@@ -833,13 +833,13 @@ begin
 	if(isatt(BOCO,"doPivot"))then	DO_PIVOT = BOCO@doPivot
 	else				DO_PIVOT = True
 	end if
-	
+
 	; Check if the longitude coordinate is as expected.
 	; -180<->180 needs to be treated differently than 0<->360
 	if(min(f->$DIM$).eq.0.)then
 		if(DO_PIVOT)then		LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
-						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
+						if(PIV.ge.0 .and. max(array_append_record(TCLONS,BDS(2:3),0)).gt.PIV)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF 	= (/f->$DIM$/)
 						flipFlag= False
@@ -851,7 +851,7 @@ begin
 						flipFlag= False
 	else
 		if(DO_PIVOT)then		LONF    = lonPivot(f->$DIM$,PIV)
-						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
+						if(PIV.ge.0 .and. max(array_append_record(TCLONS,BDS(2:3),0)).gt.PIV)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF    := (/f->$DIM$/)
 						flipFlag= False

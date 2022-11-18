@@ -131,6 +131,22 @@ while test $# -gt 0; do
             SIDSTRICT="YES"
             echo "MSG: Strict enforcement of SIDs, i.e., it must be in the file name."
             ;;
+        --snum)
+            shift
+            if test $# -gt 0; then
+                ISNUM="${1}"
+                echo "MSG: Storm number specified --> ${ISNUM}"
+            fi
+            shift
+            ;;
+        --basin)
+            shift
+            if test $# -gt 0; then
+                IBASIN="${1}"
+                echo "MSG: Storm basin specified --> ${IBASIN}"
+            fi
+            shift
+            ;;
         *)
             break
             ;;
@@ -175,6 +191,14 @@ fi
 if [ -z "${SIDSTRICT}" ]; then
     echo "WARNING: Strict enforcement of SID not specified."
     SIDSTRICT="NO"
+fi
+if [ -z "${ISNUM}" ]; then
+    echo "WARNING: Storm number not specified."
+    ISNUM="all"
+fi
+if [ -z "${IBASIN}" ]; then
+    echo "WARNING: Storm basin not specified."
+    ISBASIN="all"
 fi
 
 

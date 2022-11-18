@@ -152,7 +152,6 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-;PYTHONFILE; = make_rz_plots.py
 PYTHONFILE = make_rz_plots_heightcoordinates_research.py
 RESOLUTION = 2.0
 RMAX = 600

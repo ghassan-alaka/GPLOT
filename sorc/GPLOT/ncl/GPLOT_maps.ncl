@@ -1124,6 +1124,7 @@ do fff = 0,nFiles-1
                                                 ;if(BOCO(2).gt.180.)then   BOCO(2) = BOCO(2) - 360.   end if
                                                 BOCO(3) = max(LONTEST)
                                                 ;if(BOCO(3).gt.180.)then   BOCO(3) = BOCO(3) - 360.   end if
+						if(BOCO@doPivot)then   BOCO@PivotLon = ceil(BOCO(3))+1   end if
                                         end if
                                 end do
                         end if
@@ -1167,7 +1168,7 @@ do fff = 0,nFiles-1
                                 ; 2. X-COORDINATE --> LONGITUDE
                                 if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
                                         x = ddd
-					BOCO@PivotLon = PIV
+					if(.not.isatt(BOCO,"PivotLon"))then   BOCO@PivotLon = PIV   end if
 					if(SC_DOMAIN)then	lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
 					else			lon := get_dim_lon(f,dNames(ddd),BOCO,9.96921e+36,9.96921e+36,ti,B)
 					end if
@@ -1227,6 +1228,28 @@ do fff = 0,nFiles-1
 				continue
 			end if
 			end if
+
+			; Mark the current file as processed if data is out of bounds.
+			if(OUT_OF_BDS)then
+		                if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
+		                        if(fileexists(PLOTTED_FILES))then
+						system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+		                        else
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+		                        end if
+		                else if(.not.ATCF_REQD)
+		                        if(fileexists(PLOTTED_FILES))then
+						system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+		                        else
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+		                        end if
+		                end if  end if
+		                system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
+		                system("mv "+PLOTTED_FILES+".TMP "+PLOTTED_FILES)
+			end if
+
                 
                         ;================================================================
                         ; xii. 'mf' is the multiplicative factor for the vertical
@@ -1264,9 +1287,9 @@ do fff = 0,nFiles-1
                         ;     Most of the time, BOCO=BOCO2. Found that this was critical
                         ;     for the 'hwrf' domain centered on the HWRF outer nest.
                         ;================================================================
-                        BOCO@PivotLon = PIV
+                        if(.not.isatt(BOCO,"PivotLon"))then   BOCO@PivotLon = PIV   end if
 			BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
-			BOCO2@PivotLon = PIV
+			BOCO2@PivotLon = BOCO@PivotLon
 			
                         ;================================================================f
                         ;================================================================

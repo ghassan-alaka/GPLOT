@@ -1313,9 +1313,11 @@ if(DO_LT_TREND)then
 		vals := ind(.not.ismissing(aTRK3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
 		else				print("WARNING: No cycles were found.")
-						DO_LT_TREND = False
 		end if
 	end do
+
+	if(all(ismissing(aTRK2)) .and. all(ismissing(aTRK3)))   DO_LT_TREND = False   end if
+
 end if
 
 
@@ -1414,11 +1416,12 @@ if(DO_LI_TREND)then
 		vals := ind(.not.ismissing(aINT3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
 		else				print("WARNING: No cycles were found.")
-						DO_LI_TREND = False
 		end if
 	end do
 	aINT2(:,:,0,:) = where(aINT2(:,:,0,:).le.0, aINT2@_FillValue, aINT2(:,:,0,:))
 	aINT3(:,:,0,:) = where(aINT3(:,:,0,:).le.0, aINT3@_FillValue, aINT3(:,:,0,:))
+
+	if(all(ismissing(aINT2)) .and. all(ismissing(aINT2)))then   DO_LI_TREND = False   end if
 end if
 
 
