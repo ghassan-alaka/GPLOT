@@ -61,8 +61,3 @@ if [ "${A}" -eq 1 ]; then
     export CPATH="${ECCODES_DIR}/include:${CPATH}"
 fi
 
-export ECCODES_DIR="/work/noaa/aoml-hafs1/galaka/software/eccodes/latest"
-export PATH=${ECCODES_DIR}/bin:${PATH}
-export LD_LIBRARY_PATH="${ECCODES_DIR}/lib:${LD_LIBRARY_PATH}"
-export LD_LIBRARY_PATH="${ECCODES_DIR}/lib64:${LD_LIBRARY_PATH}"
-export CPATH="${ECCODES_DIR}/include:${CPATH}"
