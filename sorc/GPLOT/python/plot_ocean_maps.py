@@ -245,10 +245,10 @@ def main():
         
                 if ( centerlat > 50.0):
                         # Write the input file to a log to mark that it has been processed
-                        PLOTTED_FILES=ODIR+'/PlottedFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-                        os.system('echo "'+str(FILE)+'" >> '+PLOTTED_FILES)
-                        os.system('sort -u '+PLOTTED_FILES+' > '+PLOTTED_FILES+'.TMP')
-                        os.system('mv '+PLOTTED_FILES+'.TMP '+PLOTTED_FILES)
+                        # PLOTTED_FILES=ODIR+'/PlottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
+                        os.system('echo "'+str(FILE)+'" >> '+PLOTTED_FILE)
+                        os.system('sort -u '+PLOTTED_FILE+' > '+PLOTTED_FILE+'.TMP')
+                        os.system('mv '+PLOTTED_FILE+'.TMP '+PLOTTED_FILE)
                         break
         
                 figuretest = np.shape([g for g in glob.glob(f"{ODIR}/*{TCNAME.lower()}*{format(FHR,'03d')}{figext}")])[0]
@@ -262,33 +262,37 @@ def main():
         
                         if (gribfiletest < 1):
         
-                                #Define how big of a box you want, based on lat distance
-                                yoffset = 6
-                                xoffset = None
-                                NL = yoffset-1
-                                while not xoffset:
-                                        if NL > 25:
-                                                print(f'ERROR: YOU NEED A BIGGER BOX THAN {NL} DEGREES. rmax={rmax}, test={test}, centerlat={centerlat}')
-                                                sys.exit(1)
-                                        NL = NL+1
-                                        test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
-                                        if test > rmax:  xoffset,yoffset = NL,NL
-                                print(f'MSG: Will use a box with side of {NL} degrees.')
+                                if ( OCEAN_DOMAIN == 'd03' ):
+                                        #Define how big of a box you want, based on lat distance
+                                        yoffset = 6
+                                        xoffset = None
+                                        NL = yoffset-1
+                                        while not xoffset:
+                                                if NL > 25:
+                                                        print(f'ERROR: YOU NEED A BIGGER BOX THAN {NL} DEGREES. rmax={rmax}, test={test}, centerlat={centerlat}')
+                                                        sys.exit(1)
+                                                NL = NL+1
+                                                test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
+                                                if test > rmax:  xoffset,yoffset = NL,NL
+                                        print(f'MSG: Will use a box with side of {NL} degrees.')
+                
+                                        # Setup lat, lon boundaries
+                                        lonmax = centerlon + xoffset
+                                        lonmin = centerlon - xoffset
+                                        latmax = centerlat + yoffset
+                                        latmin = centerlat - yoffset
         
-                                # Setup lat, lon boundaries
-                                lonmax = centerlon + xoffset
-                                lonmin = centerlon - xoffset
-                                latmax = centerlat + yoffset
-                                latmin = centerlat - yoffset
-
-                                # Ocean data has longitudes -180 -> +180
-                                lonmin = lonmin - 360
-                                lonmax = lonmax - 360
+                                        # Ocean data has longitudes -180 -> +180
+                                        lonmin = lonmin - 360
+                                        lonmax = lonmax - 360
 
                                 #Get data
-                                print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
+                                if ( OCEAN_DOMAIN == 'd03' ):
+                                        print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
+                                else:
+                                        print('MSG: Getting Data Now.')
                                 all_ds = xr.open_dataset(FILE);
-                                ds = all_ds.where(depths>=0);
+                                ds = all_ds.where(~depths.mask);
                                 if ( OCEAN_DOMAIN == 'd03' ):
                                     ds = ds.where((lonmin<=all_ds.Longitude) & (all_ds.Longitude<=lonmax) & (latmin<=all_ds.Latitude) & (all_ds.Latitude<=latmax));
                                 lon = ds.Longitude.squeeze();
@@ -302,11 +306,12 @@ def main():
                                 T = ds.temperature.squeeze()
                                 S = ds.salinity.squeeze()
                                 OHC = ds.ocean_heat_content.squeeze()
+                                #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
                                 i26 = ds['depth of 26C isotherm'].squeeze()
                                 i20 = ds['depth of 20C isotherm'].squeeze()
                                 ds.close()
                                 print('MSG: Done with T, S, MLD, OHC, Iso')
-
+                                
                                 dZ = ds.Z.diff(dim='Z');
                                 MLu = ucurr.where(ds.Z < MLD).mean(axis=0)
                                 MLv = vcurr.where(ds.Z < MLD).mean(axis=0)
@@ -321,7 +326,7 @@ def main():
                                 SSH = None;
                                 if (ofiletest < 1):
                                         all_ods = xr.open_dataset(oFILE)
-                                        ods = all_ods.where(depths>0);
+                                        ods = all_ods.where(~depths.mask);
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ods = ods.where((lonmin<=all_ods.Longitude) & (all_ods.Longitude<=lonmax) \
                                                             & (latmin<=all_ods.Latitude) & (all_ods.Latitude<=latmax));
@@ -376,10 +381,10 @@ def main():
                                 iso_26_levs = np.arange(0,300+1e-6,20.0);		iso_26_ticks = np.arange(0,300+1e-6,20.0)
                                 iso_20_levs = np.arange(0,300+1e-6,20.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
                                 OHC_levs = np.arange(0,200+1e-6,20.0);			OHC_ticks = np.arange(0,200+1e-6,20.0);
-                                sfc_conv_levs = np.arange(-1e-6,1e-6+1e-8,1e-7);	sfc_conv_ticks = np.arange(-1e-6,1e-6+1e-8,2e-7)
-                                sfc_vort_levs = np.arange(-1e-6,1e-6+1e-8,1e-7);	sfc_vort_ticks = np.arange(-1e-6,1e-6+1e-8,2e-7)
-                                ml_conv_levs = np.arange(-1e-6,1e-6+1e-8,1e-7);		ml_conv_ticks = np.arange(-1e-6,1e-6+1e-8,2e-7)
-                                ml_vort_levs = np.arange(-1e-6,1e-6+1e-8,1e-7);		ml_vort_ticks = np.arange(-1e-6,1e-6+1e-8,2e-7)
+                                sfc_conv_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	sfc_conv_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
+                                sfc_vort_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	sfc_vort_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
+                                ml_conv_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	ml_conv_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
+                                ml_vort_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	ml_vort_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
                                 SSH_levs = np.arange(-200,200+1e-6,10.0);		SSH_ticks = np.arange(-200,200+1e-6,20.0)
                                 SHF_levs = np.arange(-1600,200+1e-6,20.0);		SHF_ticks = np.arange(-1600,200+1e-6,100.0)
                                 DPI_levs = np.arange(0,30+1e-6,1.0);			DPI_ticks = np.arange(0,30+1e-6,2.0)
@@ -435,9 +440,9 @@ def main():
                                         fig1 = plt.figure(figsize=figsize)
                                         ax1 = fig1.add_subplot(1, 1, 1)
                                         co1 = ax1.contourf(lon,lat, i26, levels=iso_26_levs, extend='both')
-                                        # ax1 = axes_radhgt(ax1, rmax, 0)
                                         cbar1 = plt.colorbar(co1, ticks=iso_26_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 26 $^oC$ Isotherm (m, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -459,6 +464,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, i20, levels=iso_20_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=iso_20_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 20 $^oC$ Isotherm (m, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -480,6 +486,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, OHC, levels=OHC_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=OHC_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Ocean Heat Content ($kJ\ cm^{-2}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -501,6 +508,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, sfc_conv, levels=sfc_conv_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=sfc_conv_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -522,6 +530,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, sfc_vort, levels=sfc_vort_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=sfc_vort_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -543,6 +552,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, ml_conv, levels=ml_conv_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=ml_conv_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -564,6 +574,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, ml_vort, levels=ml_vort_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=ml_vort_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -585,6 +596,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, SSH, levels=SSH_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=SSH_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Height ($cm$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -606,6 +618,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, SHF, levels=SHF_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=SHF_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Surface Heat Flux ($W m^{-2}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -627,6 +640,7 @@ def main():
                                         co1 = ax1.contourf(lon,lat, DPI, levels=DPI_levs, extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=DPI_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Dynamic Potential Intensity ($m\ s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
@@ -645,7 +659,7 @@ def main():
                                 
                         
                 # Write the input file to a log to mark that it has ben processed
-                update_plottedfile(ODIR+'/PlottedFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+                update_plottedfile(ODIR+'/PlottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
         
         print('MSG: COMPLETING')
         os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)

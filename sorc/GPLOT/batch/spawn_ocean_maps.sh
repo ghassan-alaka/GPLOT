@@ -376,8 +376,8 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
             #########################
             # LOOP OVER MAP DOMAINS #
             #########################
-            for DMN in ${OCEAN_DOMAIN}; do
-                echo "MSG: Current domain --> $DMN"
+            for DMN in ${OCEAN_DOMAIN[@]}; do
+                echo "MSG: Current ocean domain --> $DMN"
 
                 # Get nest information from GPLOT table
                 NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
@@ -816,7 +816,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             LOGFILE2="${LOG_DIR}GPLOT_Ocean_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
 
                             # Call the batch job
-                            echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
+                            echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}, DMN ${DMN}"
                             FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${OCEAN_MAPS_PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
                             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
                             FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR}"
