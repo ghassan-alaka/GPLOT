@@ -15,14 +15,13 @@
 
 #set -x
 
-
-
-echo "MSG: Submitting jobs for OCEAN_MAPS module."
+echo "MSG: spawn_ocean_maps.sh started at `date`"
+echo "MSG: Submitting jobs for GPLOT module 'OCEAN_MAPS'."
 
 
 # Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
-    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
 # Define important GPLOT directories
@@ -33,7 +32,7 @@ TBL_DIR="${GPLOT_DIR}/tbl/"
 FIX_DIR="${GPLOT_DIR}/fix/"
 
 # Get the namelist, could be from command line
-NMLIST="${1:-namelist.input.default}"
+NMLIST="${1:-namelist.master.default}"
 
 # Check if the namelist exists. If not, exit.
 if [ ! -f ${NMLIST} ]; then
@@ -48,37 +47,38 @@ fi
 echo "MSG: Found this namelist --> ${NMLIST}"
 
 # Pull important variables from the namelist
-DO_OCEAN_MAPS="`sed -n -e 's/^.*DO_OCEAN_MAPS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-DSOURCE="`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_SOURCE="`sed -n -e 's/^.*OCEAN_SOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_CFG="`sed -n -e 's/^.*OCEAN_CFG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-EXPT="`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-MCODE="`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-IS_MSTORM="`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ENSMEM="`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_DIR="`sed -n -e 's/^.*OCEAN_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_TAG="`sed -n -e 's/^.*OCEAN_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_EXT="`sed -n -e 's/^.*OCEAN_EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ODIR="`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DO_OCEAN_MAPS="`sed -n -e 's/^DO_OCEAN_MAPS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DSOURCE="`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_SOURCE="`sed -n -e 's/^OCEAN_SOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_CFG="`sed -n -e 's/^OCEAN_CFG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXPT="`sed -n -e 's/^EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+MCODE="`sed -n -e 's/^MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IS_MSTORM="`sed -n -e 's/^IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EID=( `sed -n -e 's/^EID =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+OCEAN_DIR="`sed -n -e 's/^OCEAN_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_TAG="`sed -n -e 's/^OCEAN_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_EXT="`sed -n -e 's/^OCEAN_EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR="`sed -n -e 's/^ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 ODIR_TYPE=`sed -n -e 's/^ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`
-INIT_HR="`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-FNL_HR="`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-DT="`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-IDATE="`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-SID="`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF1_DIR="`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF1_TAG="`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF2_DIR="`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF2_TAG="`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-FORCE="`sed -n -e 's/^.*FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+INIT_HR="`sed -n -e 's/^INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FNL_HR="`sed -n -e 's/^FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FHRFMT="`sed -n -e 's/^FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DT="`sed -n -e 's/^DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDATE="`sed -n -e 's/^IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+SID="`sed -n -e 's/^SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_DIR="`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_TAG="`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_DIR="`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_TAG="`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FORCE="`sed -n -e 's/^FORCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 QOS="`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 PARTITION="`sed -n -e 's/^PARTITION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-RESOLUTION="`sed -n -e 's/^.*RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-RMAX="`sed -n -e 's/^.*RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-LEVS="`sed -n -e 's/^.*LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-OCEAN_MAPS_PYTHONFILE="`sed -n -e 's/^.*OCEAN_MAPS_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+RESOLUTION="`sed -n -e 's/^RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+RMAX="`sed -n -e 's/^RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+LEVS="`sed -n -e 's/^LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_MAPS_PYTHONFILE="`sed -n -e 's/^OCEAN_MAPS_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 
 # Define batch defaults
 BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
@@ -98,30 +98,35 @@ else
     echo "MSG: Found these Storm IDs in the namelist       --> ${SID}"
 fi
 if [ "${IS_MSTORM}" == "True" ]; then
-    echo "MSG: Data source has been identified as HWRF-B."
+    echo "MSG: Data source has been identified as a multi-storm configuration."
 fi
 echo "MSG: Found this top level input directory in the namelist --> ${IDIR}"
 echo "MSG: Found this top level OCEAN input directory in the namelist --> ${OCEAN_DIR}"
 if [ ! -z "${OCEAN_TAG}" ]; then
-    echo "MSG: Considering these input file tag --> ${OCEAN_TAG}"
+    echo "MSG: Considering this input file string --> ${OCEAN_TAG}"
 fi
 if [ ! -z "${OCEAN_EXT}" ]; then
-    echo "MSG: Considering these input file extensions --> ${OCEAN_EXT}"
+    echo "MSG: Considering this input file extension --> ${OCEAN_EXT}"
 fi
 echo "MSG: Found this top level output directory in the namelist --> ${ODIR}"
 if [ -z "${ODIR_TYPE}" ]; then
     ODIR_TYPE="0"
 fi
-if [ -z "${CPU_ACCT}" ]; then
-    echo "MSG: Could not find a CPU account in the namelist. Assuming 'hur-aoml'."
-    CPU_ACCT="hur-aoml"
-fi
-
 if [ -z "${MACHINE}" ]; then
-    MACHINE=`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST} | sed 's/^\t*//'`
+    MACHINE="`sed -n -e 's/^SYS_ENV =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 fi
 if [ -z "${MACHINE}" ]; then
     MACHINE="JET"
+fi
+if [ -z "${CPU_ACCT}" ]; then
+    if [ "${MACHINE}" == "JET" ]; then
+        CPU_ACCT="hur-aoml"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    else
+        CPU_ACCT="hur-aoml"
+    fi
+    echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
 
 if [ -z "${QOS}" ]; then
@@ -149,10 +154,15 @@ echo "MSG: Found these graphic Ocean domains in the namelist --> ${OCEAN_DOMAIN[
 TIER=( `sed -n -e 's/^TIER =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 echo "MSG: Found these graphic tiers in the namelist   --> ${TIER[*]}"
 
-# If FORCE is undefined, set it to False.
-if [ -z "${FORCE}" ]; then
-    FORCE="False"
+# Get the Model ID(s) [ABCD]
+MID=( `sed -n -e 's/^MID =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+if [ -z "${MID}" ]; then
+    MID=( `sed -n -e 's/^MORIG =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
+if [ -z "${MID}" ]; then
+    MID=( `sed -n -e 's/^DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+fi
+
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -167,12 +177,26 @@ fi
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
+# Define a maximum number of cycles to be processed based on the experiment
+MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
+if [ -z "${MAX_CYCLES}" ]; then
+    if [ "${EXPT}" == "GFS_Forecast" ]; then
+        MAX_CYCLES=6
+    else
+        MAX_CYCLES=25
+    fi
+fi
+echo "MSG: Will produce graphics for up to ${MAX_CYCLES} forecast cycles."
+
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
     echo ${OCEAN_DIR}
     CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
         CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
         CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
@@ -183,10 +207,10 @@ if [ -z "${IDATE}" ]; then
 else
     CYCLES=( "${IDATE[@]}" )
 fi
-echo "MSG: Found these cycles: ${CYCLES[*]}"
+echo "MSG: Found these cycles --> ${CYCLES[*]}"
 echo ""
 
-# Get all of the ATCF files for the forecast cycles so they can be searched later.
+# Get all of the ATCF files across all forecast cycles so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
 ATCF_TMP=()
 ATCF_ALL=()
@@ -202,32 +226,28 @@ for ATCF in ${ATCF_TMP[@]}; do
     fi
 done
 
-
 # Determine if this experiment has ensemble members
 # Deterministic forecasts will have ENSMEM=0 in the namelist
-if [ $ENSMEM -eq 0 ] || [ -z $ENSMEM ]; then
+echo "MSG: Found these ensemble members --> ${EID[*]}"
+if [ -z "${EID[*]}" ]; then
+    EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+fi
+if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
-    ENSIDS=0
+    ENSIDS=( "XX" )
+elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+    IS_ENS="True"
+    E1=$(echo "${EID[0]}" | cut -d'-' -f1)
+    E2=$(echo "${EID[0]}" | cut -d'-' -f2)
+    ENSIDS=( `seq -f "%02g" ${E1} ${E2}` )
 else
     IS_ENS="True"
-    ENSIDS=`seq 1 $ENSMEM`  # SKIP MEM 00, Start from 01
-
+    ENSIDS=( `printf "%02d\n" ${EID[*]}` )
 fi
-
-# Define other important variables
-BATCHFILE="batch_ocean_maps.sh"
-
-
-# If OCEAN_MAPS_PYTHONFILE is empty, set it to a default script.
-if [ -z "${OCEAN_MAPS_PYTHONFILE}" ]; then
-    OCEAN_MAPS_PYTHONFILE="plot_ocean_maps.py"
-fi
-
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
 MAXCOUNT=25
-
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -240,7 +260,6 @@ if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
     echo "ERROR: Can't find 'sbatch'. Exiting."
     exit 2
 fi
-
 
 # Get the 'squeue' executable
 if [ -z "${X_SQUEUE}" ]; then
@@ -257,216 +276,230 @@ fi
 
 
 
-
 #############################################################
-# 2. CALL GPLOT SHIPS                                       #
+# 2. CALL GPLOT OCEAN MAPS                                  #
 #    This script is responsible for creating graphics based #
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
 if [ "${DO_OCEAN_MAPS}" = "True" ]; then
+    OCEAN_MAPS_PYTHONFILE="${OCEAN_MAPS_PYTHONFILE:-plot_ocean_maps.py}"
+    BATCHFILE="batch_ocean_maps.sh"
     #DOMAIN="ocean"
     TIER="Tier1"
     SC="True"
     ATCF_REQD="True"
 
-
     # Define the batch submission counter.
     N=0
 
-
-    ##################################
-    # LOOP OVER ALL AVAILABLE CYCLES #
-    ##################################
-    for CYCLE in ${CYCLES[@]}; do
-
-        # Only retain the numbers for the cycle
-        # Parse the prefix (e.g., gfs.) if it exists.
-        CYCLE=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\2/'`
-        CPREFIX=`echo "$CYCLE" | sed 's/\([A-Za-z.]*\)\([0-9]*\)/\1/'`
-
-        echo "MSG: Current cycle --> $CYCLE"
-
-        # Parse the cycle into year, month, day, hour
-        YYYY=`echo "$CYCLE" | cut -c1-4`
-        MM=`echo "$CYCLE" | cut -c5-6`
-        DD=`echo "$CYCLE" | cut -c7-8`
-        HH=`echo "$CYCLE" | cut -c9-10`
-
-        # Get the cycle prefix from a table and define CYCLE_STR
-        # CYCLE_STR should be used in file paths.
-        if [ -z "$CPREFIX" ]; then
-            CPREFIX=`awk -v DSRC=$DSOURCE '($1 == DSRC) { print $2 }' ${TBL_DIR}/CyclePrefix.dat`
-        fi
-        CYCLE_STR="${CPREFIX}${CYCLE}"
+    ###########################
+    # LOOP OVER GRAPHIC TIERS #
+    ###########################
+    for TR in ${TIER[@]}; do
 
 
-        # Find the ATCFs for the current CYCLE.
-        # It will be blank if no ATCFs are found.
-        CYCLE_ATCF=`printf '%s\n' ${ATCF_ALL[@]} | grep "${CYCLE}"`
-
-
-        # First, try to get STORMS from the namelist (SID)
-        STORMS=()
-        if [ ! -z "$SID" ]; then
-            STORMS+=("${SID[@]}")
-        fi
-
-        # Second, try to get STORMS from the ATCF files
-        if [ -z "${STORMS[*]}" ]; then
-            for ATCF in ${CYCLE_ATCF}; do
-                STORMS+=(`basename $ATCF | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-            done
-        fi
-
-        # Third, try to get STORMS from the HWRF file path.
-        # This is hard-coded and might not work.
-        if [ -z "${STORMS[*]}" ]; then
-            if [ ! -z $(ls -d ${OCEAN_DIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null) ]; then
-                STORMS+=(`ls -d ${OCEAN_DIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
-            fi
-        fi
-
-        # Fourth, remove duplicate storms, if applicable.
-        STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
-
-        # Fifth, append Fake Storm (00L) if IS_MSTORM=True
-        if [ "$IS_MSTORM" == "True" ]; then
-            STORMS+=("00L")
-        fi
-
-        echo "MSG: Found these storms: ${STORMS[*]}"
-
-
-        ####################
-        # LOOP OVER STORMS #
-        ####################
-        for STORM in ${STORMS[@]}; do
-
-            # Never process the fake storm (00L)
-            if [ "${STORM^^}" == "00L" ]; then
-                echo "MSG: Fake storm detected. Skipping."
+        ##################################
+        # LOOP OVER ALL AVAILABLE CYCLES #
+        ##################################
+        for CYCLE in ${CYCLES[@]}; do
+    
+            # Only retain the numbers for the cycle
+            # Parse the prefix (e.g., gfs.) if it exists.
+            CPREFIX=`echo "${CYCLE}" | grep -E '^[A-Za-z0-9]*\..*$' | sed 's/\([A-Za-z0-9]*\.\)\([0-9]*\)/\1/'`
+            CYCLE=`echo "${CYCLE}" | sed 's/\([A-Za-z0-9]*\.\)\([0-9]*\)/\2/'`
+    
+            # If the CYCLE is empty, skip it
+            if [ -z "$CYCLE" ]; then
+                echo "WARNING: The cycle is undefined. Skipping to next."
                 continue
             fi
+    
+            # Parse the cycle into year, month, day, hour
+            YYYY=`echo "${CYCLE}" | cut -c1-4`
+            MM=`echo "${CYCLE}" | cut -c5-6`
+            DD=`echo "${CYCLE}" | cut -c7-8`
+            HH=`echo "${CYCLE}" | cut -c9-10`
 
-            echo "MSG: Current storm --> $STORM"
-
-            # Find the forecast hours from the ATCF for thie particular storm
-            STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-            echo "MSG: The ATCF for this storm --> $STORM_ATCF"
-            if [ -z "${STORM_ATCF[*]}" ]; then
-                echo "WARNING: No ATCF found for this storm. This might be OK."
-            else
-                ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+            # Get the cycle prefix from a table and define CYCLE_STR
+            # CYCLE_STR should be used in file paths.
+            if [ -z "${CPREFIX}" ]; then
+                CPREFIX=`awk -v DSRC=${DSOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
+            fi
+            CYCLE_STR="${CPREFIX}${CYCLE}"
+    
+    
+            # Find the ATCFs for the current CYCLE.
+            # It will be blank if no ATCFs are found.
+            CYCLE_ATCF=( `printf '%s\n' ${ATCF_ALL[@]} | grep "${CYCLE}"` )
+    
+            # 1) Try to get STORMS from the namelist (SID)
+            STORMS=()
+            if [ ! -z "${SID}" ]; then
+                STORMS+=("${SID[@]}")
+            fi
+    
+            # 2) Try to get STORMS from the ATCF files
+            if [ -z "${STORMS[*]}" ]; then
+                for ATCF in ${CYCLE_ATCF[@]}; do
+                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                done
+            fi
+    
+            # 3) Try to get STORMS from the HWRF file path.
+            # This is hard-coded and might not work.
+            if [ -z "${STORMS[*]}" ]; then
+                if [ ! -z "$(ls -d ${OCEAN_DIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
+                    STORMS+=(`ls -d ${OCEAN_DIR}/${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
+                fi
             fi
 
-            #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
-            NEW_ATCF_FHRS=()
-            for FHR in ${ATCF_FHRS[@]}; do
-                if [ $((10#$FHR)) -ge $INIT_HR ] && [ $((10#$FHR)) -le $FNL_HR ] && [ $((10#$FHR % $DT)) -eq 0 ]; then
-                    NEW_ATCF_FHRS+=( $FHR )
-                fi
-            done
-            ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
+            # 4) If STORMS is still undefined, then set it to "NONE"
+            # Large-scale graphics may still proceed.
+            # Storm-centered graphics will be skipped.
+            if [ -z "${STORMS[*]}" ]; then
+                STORMS+=("NONE")
+            fi
 
+            # 5) Remove duplicate storms, if applicable.
+            STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
+    
+            # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
+            # were found, i.e., STORMS != NONE
+            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                STORMS+=("00L")
+            fi
 
-            # Set the STORMTAG for file names
-            STORMTAG=".${STORM^^}"
+            # Set the storm counter. This is important because large-scale
+            # output files may be duplicated for different storms. For example,
+            # HWRF-B/GFS files for the outer domain are identical for all storms.
+            NSTORM=0
+    
+            # Set a flag to determine whether or not files were found.
+            # By default, it is False. If it is set to 
+            FOUND_FILES="False"
 
-
-            #########################
-            # LOOP OVER MAP DOMAINS #
-            #########################
-            for DMN in ${OCEAN_DOMAIN[@]}; do
-                echo "MSG: Current ocean domain --> $DMN"
-
-                # Get nest information from GPLOT table
-                NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
-                if [ -z "$NEST" ]; then
-                    echo "MSG: Ocean Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
-                    echo "MSG: Assuming NEST=1."
-                    NEST=1
-                fi
-
-                # Get file prefix information from table or namelist
-                if [ -z "$OCEAN_TAG" ]; then
-                    FPREFIX=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}/FilePrefix.dat`
+            echo "MSG: Found these storms: ${STORMS[*]}"
+    
+    
+            ####################
+            # LOOP OVER STORMS #
+            ####################
+            for STORM in ${STORMS[@]}; do
+ 
+                # Increase the storm counter
+                ((NSTORM=NSTORM+1))
+    
+                # Find the forecast hours from the ATCF for this particular storm
+                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                if [ -z "${STORM_ATCF[*]}" ]; then
+                    echo "WARNING: No ATCF found for ${STORM}. This might be OK."
                 else
-                    FPREFIX="$OCEAN_TAG"
+                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
                 fi
-                if [ -z "$FPREFIX" ]; then
-                    echo "ERROR: File prefix not found for ${DSOURCE}_${OCEAN_SOURCE}."
-                    echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FilePrefix.dat."
-                    echo "ERROR: Or define OCEAN_TAG in the namelist."
-                    exit
-                fi
-                if [ "${IS_MSTORM}" == "False" ]; then
-                    FPREFIX="${STORM,,}*${FPREFIX}"
-                fi
+    
+                #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
+                #NEW_ATCF_FHRS=()
+                #for FHR in ${ATCF_FHRS[@]}; do
+                #    if [ $((10#$FHR)) -ge $INIT_HR ] && [ $((10#$FHR)) -le $FNL_HR ] && [ $((10#$FHR % $DT)) -eq 0 ]; then
+                #        NEW_ATCF_FHRS+=( $FHR )
+                #    fi
+                #done
+                #ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
+    
+    
+                # Set the STORMTAG for file names
+                STORMTAG=".${STORM^^}"
+    
+    
+                #########################
+                # LOOP OVER MAP DOMAINS #
+                #########################
+                for DMN in ${OCEAN_DOMAIN[@]}; do
+                    echo "MSG: Current ocean domain --> $DMN"
+    
+                    # Get nest information from GPLOT table
+                    NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
+                    if [ -z "$NEST" ]; then
+                        echo "MSG: Ocean Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
+                        echo "MSG: Assuming NEST=1."
+                        NEST=1
+                    fi
+    
+                    # Get file prefix information from table or namelist
+                    if [ -z "$OCEAN_TAG" ]; then
+                        FPREFIX=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}/FilePrefix.dat`
+                    else
+                        FPREFIX="$OCEAN_TAG"
+                    fi
+                    if [ -z "$FPREFIX" ]; then
+                        echo "ERROR: File prefix not found for ${DSOURCE}_${OCEAN_SOURCE}."
+                        echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FilePrefix.dat."
+                        echo "ERROR: Or define OCEAN_TAG in the namelist."
+                        exit
+                    fi
+                    if [ "${IS_MSTORM}" == "False" ]; then
+                        FPREFIX="${STORM,,}*${FPREFIX}"
+                    fi
+    
+                    # Get file hour string information from table or namelist
+                    if [ -z "$FHRSTR" ]; then
+                        FHRSTR=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileTimeFormat.dat`
+                    else
+                        FHRSTR="$FHRSTR"
+                    fi
+                    if [ -z "$FHRSTR" ]; then
+                        echo "ERROR: File hour string not found for ${DSOURCE}_${OCEAN_SOURCE}."
+                        echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FileTimeFormat.dat."
+                        echo "ERROR: Or define FHRSTR in the namelist."
+                        exit
+                    fi
+    
+                    # Get file hour format information from table or namelist
+                    FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
+                    if [ -z "$FHRFMT" ]; then
+                        FHRFMT="%0`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $3 }' ${TBL_DIR}/FileTimeFormat.dat`d"
+                    else
+                        FHRFMT="%0${FHRFMT}d"
+                    fi
+                    if [ -z "$FHRFMT" ]; then
+                        echo "ERROR: File hour format not found for ${DSOURCE}_${OCEAN_SOURCE}."
+                        echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FileTimeFormat.dat."
+                        echo "ERROR: Or define FHRFMT in the namelist."
+                        exit
+                    fi
+    
+                    # Get file extension information from table or namelist
+                    if [ -z "$OCEAN_EXT" ]; then
+                        FSUFFIX=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileSuffix.dat`
+                    else
+                        FSUFFIX="$OCEAN_EXT"
+                    fi
+                    if [ -z "$FSUFFIX" ]; then
+                        echo "ERROR: File suffix not found for ${DSOURCE}_${OCEAN_SOURCE}."
+                        echo "ERROR: Please add your OCEAN_SOURCE to ${TBL_DIR}/FileSuffix.dat."
+                        echo "ERROR: Or define OCEAN_EXT in the namelist."
+                        exit
+                    fi
+                    if [ "$FSUFFIX" == "NONE" ]; then
+                        FSUFFIX=""
+                    fi
+    
+                    # Run some tests on the ATCF for thie storm.
+                    # If domain is storm-centerd and ATCF is required, then ATCF must
+                    # be present and contain forecast hours
+                    if [ -z ${STORM_ATCF} ]; then
+                        echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
+                        echo "ERROR: But, found no matching ATCF files. So, nothing to do."
+                        echo ""
+                        continue
+                    elif [ -z "${ATCF_FHRS[*]}" ]; then
+                        echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
+                        echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
+                        echo ""
+                        continue
+                    fi
 
-                # Get file hour string information from table or namelist
-                if [ -z "$FHRSTR" ]; then
-                    FHRSTR=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileTimeFormat.dat`
-                else
-                    FHRSTR="$FHRSTR"
-                fi
-                if [ -z "$FHRSTR" ]; then
-                    echo "ERROR: File hour string not found for ${DSOURCE}_${OCEAN_SOURCE}."
-                    echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FileTimeFormat.dat."
-                    echo "ERROR: Or define FHRSTR in the namelist."
-                    exit
-                fi
-
-                # Get file hour format information from table or namelist
-                FHRFMT=`sed -n -e 's/^.*FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`
-                if [ -z "$FHRFMT" ]; then
-                    FHRFMT="%0`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $3 }' ${TBL_DIR}/FileTimeFormat.dat`d"
-                else
-                    FHRFMT="%0${FHRFMT}d"
-                fi
-                if [ -z "$FHRFMT" ]; then
-                    echo "ERROR: File hour format not found for ${DSOURCE}_${OCEAN_SOURCE}."
-                    echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FileTimeFormat.dat."
-                    echo "ERROR: Or define FHRFMT in the namelist."
-                    exit
-                fi
-
-                # Get file extension information from table or namelist
-                if [ -z "$OCEAN_EXT" ]; then
-                    FSUFFIX=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileSuffix.dat`
-                else
-                    FSUFFIX="$OCEAN_EXT"
-                fi
-                if [ -z "$FSUFFIX" ]; then
-                    echo "ERROR: File suffix not found for ${DSOURCE}_${OCEAN_SOURCE}."
-                    echo "ERROR: Please add your OCEAN_SOURCE to ${TBL_DIR}/FileSuffix.dat."
-                    echo "ERROR: Or define OCEAN_EXT in the namelist."
-                    exit
-                fi
-                if [ "$FSUFFIX" == "NONE" ]; then
-                    FSUFFIX=""
-                fi
-
-                # Run some tests on the ATCF for thie storm.
-                # If domain is storm-centerd and ATCF is required, then ATCF must
-                # be present and contain forecast hours
-                if [ -z ${STORM_ATCF} ]; then
-                    echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
-                    echo "ERROR: But, found no matching ATCF files. So, nothing to do."
-                    echo ""
-                    continue
-                elif [ -z "${ATCF_FHRS[*]}" ]; then
-                    echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
-                    echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
-                    echo ""
-                    continue
-                fi
-
-
-                ###########################
-                # LOOP OVER GRAPHIC TIERS #
-                ###########################
-                for TR in ${TIER}; do
-                    echo "MSG: Current tier --> $TR"
 
 
                     ##########################
