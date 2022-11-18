@@ -19,6 +19,8 @@ DO_MAPS = True
 DO_STATS = True
 DO_SHIPS = True
 DO_POLAR = True
+DO_AIRSEA = True
+DO_OCEAN_MAPS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -33,23 +35,24 @@ ENSMEM = 0
 SYS_ENV = ORION
 
 ; 1F. FORECAST CYCLE
-IDATE =
+IDATE = 
 
 ; 1G. STORM ID
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/scrub/hafsv0.3_basin_20220909_modvi/com/
+IDIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/scrub/HAFSV0.3Basin_2022/com/
 ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
 ODIR = /work2/noaa/aoml-hafs1/galaka/GPOUT/
+ODIR_TYPE = 1
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/scrub/hafsv0.3_basin_20220909_modvi/com/
-ATCF1_TAG = hafs.grid02.trak.atcfunix
-ATCF2_DIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/noscrub/hafstrak/hafsv0.3_basin_20220909_modvi/
+ATCF1_DIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/scrub/HAFSV0.3Basin_2022/com/
+ATCF1_TAG = trak.hafs.atcfunix
+ATCF2_DIR = /work2/noaa/aoml-hafs1/galaka/HAFS_OUTPUT/noscrub/hafstrak/HAFSV0.3Basin_2022/
 ATCF2_TAG = hafs.trak.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
@@ -96,7 +99,7 @@ DO_CONVERTGIF = True
 DOMAIN = wlant elant gom eus hwrf d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1
+TIER = Tier1 Tier2
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
@@ -155,3 +158,21 @@ RESOLUTION = 2.0
 RMAX = 500
 LEVS = 46
 
+;================================================================
+; SECTION 6: GPLOT_Airsea variables
+;================================================================
+AIRSEA_PYTHONFILE = plot_airsea_pbl.py
+
+;================================================================
+; SECTION 7: GPLOT_Ocean_Maps variables
+;================================================================
+; Script to produce ocean map graphics
+OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
+; Ocean data input directory
+OCEAN_DIR = /PLEASE/SET/THE/OCEAN/INPUT/DIR
+; Ocean model (codes)
+OCEAN_SOURCE = HYCOM
+; Ocean graphical regions to plot
+OCEAN_DOMAIN = domain d03
+; Ocean model configuration (e.g., for domain bounds and bathymetry)
+OCEAN_CFG = NHC
