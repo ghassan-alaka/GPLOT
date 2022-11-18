@@ -1640,17 +1640,15 @@ do fff = 0,nFiles-1
 					end if  end if
 				end if  end if
 				if(isvar("DT_TPRCP"))then
-		                        if(SC_GRAPHICS)then	PFILE1 = ODIR+"PRCPDATA/"+str_lower(ALL_LONGSID(0))+".TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"
+
+		                        if(SC_GRAPHICS)then	PFILE1 := systemfunc("ls "+ODIR+"PRCPDATA/*"+str_lower(ALL_LONGSID(0))+".TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"+" 2>/dev/null")
 		                        else			PFILE1 = ODIR+"PRCPDATA/TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"
 		                        end if
-
 					if(.not.fileexists(PFILE1))then
 						print("WARNING: Can't compute total precipitation because data from forecast hours is missing. Skipping...")
 						continue
 					end if
 					f2 := addfile(PFILE1,"r")
-printVarSummary(Vbase)
-printVarSummary(f2->TPRCP)
 					Vbase	= Vbase + (/f2->TPRCP/)
 					Vbase!0 = "lat"
 					Vbase!1 = "lon"
