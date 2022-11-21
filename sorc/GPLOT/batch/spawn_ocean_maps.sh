@@ -276,11 +276,11 @@ fi
 
 
 
-#############################################################
-# 2. CALL GPLOT OCEAN MAPS                                  #
-#    This script is responsible for creating graphics based #
-#    on SHIPS fields and other relevant predictors.         #
-#############################################################
+####################################################################
+# 2. CALL GPLOT OCEAN MAPS                                         #
+#    This script is responsible for creating 2D plan view graphics #
+#    for large-scale and storm-centered domains.                   #
+####################################################################
 if [ "${DO_OCEAN_MAPS}" = "True" ]; then
     OCEAN_MAPS_PYTHONFILE="${OCEAN_MAPS_PYTHONFILE:-plot_ocean_maps.py}"
     BATCHFILE="batch_ocean_maps.sh"
@@ -296,12 +296,14 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
     # LOOP OVER GRAPHIC TIERS #
     ###########################
     for TR in ${TIER[@]}; do
+        echo ""
 
 
         ##################################
         # LOOP OVER ALL AVAILABLE CYCLES #
         ##################################
         for CYCLE in ${CYCLES[@]}; do
+            echo ""
     
             # Only retain the numbers for the cycle
             # Parse the prefix (e.g., gfs.) if it exists.
@@ -326,7 +328,6 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                 CPREFIX=`awk -v DSRC=${DSOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}CyclePrefix.dat`
             fi
             CYCLE_STR="${CPREFIX}${CYCLE}"
-    
     
             # Find the ATCFs for the current CYCLE.
             # It will be blank if no ATCFs are found.
@@ -416,39 +417,47 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                 # LOOP OVER MAP DOMAINS #
                 #########################
                 for DMN in ${OCEAN_DOMAIN[@]}; do
-                    echo "MSG: Current ocean domain --> $DMN"
+                    echo ""
     
                     # Get nest information from GPLOT table
-                    NEST=`awk -v DMN=$DMN '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
-                    if [ -z "$NEST" ]; then
-                        echo "MSG: Ocean Domain $DMN not found in ${TBL_DIR}/DomainInfo.dat."
-                        echo "MSG: Assuming NEST=1."
+                    NEST=`awk -v DMN=${DMN} '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
+                    if [ -z "${NEST}" ]; then
+                        echo "WARNING: Ocean Domain (${DMN}) not found in ${TBL_DIR}DomainInfo.dat."
+                        echo "WARNING: Assuming NEST=1."
                         NEST=1
+                    fi
+
+                    # If not a storm-centered domain, set FOUND_FILES=False
+                    if [ "${SC}" == "True" ]; then
+                        FOUND_FILES="False"
                     fi
     
                     # Get file prefix information from table or namelist
-                    if [ -z "$OCEAN_TAG" ]; then
+                    if [ -z "${OCEAN_TAG}" ]; then
                         FPREFIX=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} -v N=$NEST '($1 == DSRC) { print $(1+N) }' ${TBL_DIR}/FilePrefix.dat`
                     else
-                        FPREFIX="$OCEAN_TAG"
+                        FPREFIX="${OCEAN_TAG}"
                     fi
-                    if [ -z "$FPREFIX" ]; then
+                    if [ -z "${FPREFIX}" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> ${CYCLE}"
+                        echo "MSG: Current storm       --> ${STORM}"
                         echo "ERROR: File prefix not found for ${DSOURCE}_${OCEAN_SOURCE}."
                         echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FilePrefix.dat."
                         echo "ERROR: Or define OCEAN_TAG in the namelist."
                         exit
                     fi
-                    if [ "${IS_MSTORM}" == "False" ]; then
-                        FPREFIX="${STORM,,}*${FPREFIX}"
-                    fi
     
                     # Get file hour string information from table or namelist
-                    if [ -z "$FHRSTR" ]; then
+                    if [ -z "${FHRSTR}" ]; then
                         FHRSTR=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileTimeFormat.dat`
                     else
-                        FHRSTR="$FHRSTR"
+                        FHRSTR="${FHRSTR}"
                     fi
-                    if [ -z "$FHRSTR" ]; then
+                    if [ -z "${FHRSTR}" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> ${CYCLE}"
+                        echo "MSG: Current storm       --> ${STORM}"
                         echo "ERROR: File hour string not found for ${DSOURCE}_${OCEAN_SOURCE}."
                         echo "ERROR: Please add your DSOURCE and/or OCEAN_SOURCE to ${TBL_DIR}/FileTimeFormat.dat."
                         echo "ERROR: Or define FHRSTR in the namelist."
@@ -470,34 +479,43 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                     fi
     
                     # Get file extension information from table or namelist
-                    if [ -z "$OCEAN_EXT" ]; then
+                    if [ -z "${OCEAN_EXT}" ]; then
                         FSUFFIX=`awk -v DSRC=${DSOURCE}_${OCEAN_SOURCE} '($1 == DSRC) { print $2 }' ${TBL_DIR}/FileSuffix.dat`
                     else
-                        FSUFFIX="$OCEAN_EXT"
+                        FSUFFIX="${OCEAN_EXT}"
                     fi
-                    if [ -z "$FSUFFIX" ]; then
+                    if [ -z "${FSUFFIX}" ]; then
+                        echo ""
+                        echo "MSG: Current cycle       --> ${CYCLE}"
+                        echo "MSG: Current storm       --> ${STORM}"
                         echo "ERROR: File suffix not found for ${DSOURCE}_${OCEAN_SOURCE}."
                         echo "ERROR: Please add your OCEAN_SOURCE to ${TBL_DIR}/FileSuffix.dat."
                         echo "ERROR: Or define OCEAN_EXT in the namelist."
                         exit
                     fi
-                    if [ "$FSUFFIX" == "NONE" ]; then
+                    if [ "${FSUFFIX}" == "NONE" ]; then
                         FSUFFIX=""
                     fi
     
                     # Run some tests on the ATCF for thie storm.
                     # If domain is storm-centerd and ATCF is required, then ATCF must
                     # be present and contain forecast hours
-                    if [ -z ${STORM_ATCF} ]; then
-                        echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
-                        echo "ERROR: But, found no matching ATCF files. So, nothing to do."
-                        echo ""
-                        continue
-                    elif [ -z "${ATCF_FHRS[*]}" ]; then
-                        echo "ERROR: Ocean Domain is storm-centered and ATCF files are required."
-                        echo "ERROR: ATCF was found for this storm, but no forecast hours were found."
-                        echo ""
-                        continue
+                    if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
+                        if [ -z "${STORM_ATCF[*]}" ]; then
+                            echo ""
+                            echo "MSG: Current cycle       --> ${CYCLE}"
+                            echo "MSG: Current storm       --> ${STORM}"
+                            echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                            echo "WARNING: But, found no matching ATCF files. Skipping to next."
+                            continue
+                        #elif [ -z "${ATCF_FHRS[*]}" ]; then
+                        #    echo ""
+                        #    echo "MSG: Current cycle       --> $CYCLE"
+                        #    echo "MSG: Current storm       --> $STORM"
+                        #    echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                        #    echo "WARNING: ATCF was found for this storm, but no forecast hours were found."
+                        #    continue
+                        fi
                     fi
 
 
@@ -506,26 +524,138 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                     # LOOP OVER ENSEMBLE IDS #
                     ##########################
                     # Could be 1 iteration if no ensemble
-                    for ID in $ENSIDS; do
+                    NID=0
+                    for ID in ${ENSIDS[@]}; do
+                        echo ""
 
                         # Set 2-digit variable ENSID
                         if [ "${IS_ENS}" == "False" ]; then
                             ENSID="XX"
                             ENSIDTAG=""
+                            MODEL="${MID}"
                         else
-                            ENSID=$(printf "%02d\n" $ID)
+                            ENSID=$(printf "%02d\n" ${ID})
                             ENSIDTAG=".E${ENSID}"
-                            echo "MSG: Current ensemble member --> $ENSID"
+                            MODEL="${MID[NID]}"
                         fi
+                        ((NID++))
 
                         # Create full output path
                         if [ "${ODIR_TYPE}" == "1" ]; then
                             ODIR_FULL="${ODIR}/ocean_${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/${ENSIDTAG}/${CYCLE}/ocean_${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/ocean_${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
+
+                        # Print some information to the terminal
+                        echo ""
+                        echo "MSG: **********DETAILS FOR THIS CASE**********"
+                        echo "     Current cycle       --> ${CYCLE}"
+                        echo "     Current storm       --> ${STORM}"
+                        echo "     Storm number        --> ${NSTORM}"
+                        echo "     Current domain      --> ${DMN}"
+                        echo "     Current tier        --> ${TR}"
+                        echo "     Current model       --> ${MODEL}"
+                        echo "     Output directory    --> ${ODIR_FULL}"
+                        if [ ! -z "${ENSIDTAG}" ]; then
+                            echo "     Current Ensemble ID --> ${ENSID}"
+                        fi
+                        if [ -z "${STORM_ATCF[*]}" ]; then
+                            echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+                        else
+                            echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                        fi
+
+                        # Find the forecast hours from the ATCF for this particular model
+                        # MODEL_ATCF1: list of ATCF files filtered by Storm & Cycle
+                        # MODEL_ATCF2: list of ATCF files filtered by Cycle
+                        MODEL_ATCF1=( "" )
+                        if [ ! -z "${STORM_ATCF[*]}" ]; then
+                            MODEL_ATCF1=( `grep -l "${MODEL^^}" ${STORM_ATCF[*]}` )
+                        fi
+                        MODEL_ATCF2=( "" )
+                        if [ ! -z "${CYCLE_ATCF[*]}" ]; then
+                            MODEL_ATCF2=( `grep -l "${MODEL^^}" ${CYCLE_ATCF[*]}` )
+                        fi
+                        ATCF_FHRS=()
+                        if [ -z "${MODEL_ATCF1[*]}" ] && [ -z "${MODEL_ATCF2[*]}" ]; then
+                            echo "WARNING: No matching ATCFs found for MODEL=${MODEL}. This might be OK."
+                        elif [ "${SC}" == "True" ] && [ -f ${MODEL_ATCF1[0]} ]; then
+                            echo "MSG: ATCF(s) found for ${MODEL} --> ${MODEL_ATCF1[*]}"
+                            ATCF_FHRS=( `cat ${MODEL_ATCF1[*]} | tr -d "[:blank:]" | awk -v MODEL="${MODEL^^}" -F, '$5==MODEL { printf("%03d\n", $6) }' | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
+                        elif [ "${SC}" == "False" ] && [ -f ${MODEL_ATCF2[0]} ]; then
+                            echo "MSG: ATCF(s) found for ${MODEL} --> ${MODEL_ATCF2[*]}"
+                            ATCF_FHRS=( `cat ${MODEL_ATCF2[*]} | tr -d "[:blank:]" | awk -v MODEL="${MODEL^^}" -F, '$5==MODEL { printf("%03d\n", $6) }' | sort -u | sort -k1,1n | sed -e 's/^[[:space:]]*//'` )
+                        else
+                            if [ "${SC}" == "True" ]; then
+                                echo "WARNING: ATCF information for MODEL=${MODEL} could not be extracted from ${MODEL_ATCF1[*]}"
+                            else
+                                echo "WARNING: ATCF information for MODEL=${MODEL} could not be extracted from ${MODEL_ATCF2[*]}"
+                            fi
+                        fi
+                        # Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
+                        NEW_ATCF_FHRS=()
+                        for FHR in ${ATCF_FHRS[@]}; do
+                            if [[ $((10#$FHR)) -ge $INIT_HR ]] && [[ $((10#$FHR)) -le $FNL_HR ]] && [[ $((10#$FHR % $DT)) -eq 0 ]]; then
+                                NEW_ATCF_FHRS+=( $FHR )
+                            fi
+                        done
+                        ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
+
+                        # Run some tests on the ATCF for thie storm.
+                        # If domain is storm-centerd and ATCF is required, then ATCF must
+                        # be present and contain forecast hours
+                        if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
+                            if [ -z "${MODEL_ATCF1[*]}" ]; then
+                                echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                                echo "WARNING: But, found no matching ATCF files. So, nothing to do."
+                                continue
+                            elif [ -z "${ATCF_FHRS[*]}" ]; then
+                                echo "WARNING: DOMAIN=${DMN} is storm-centered and ATCF files are required."
+                                echo "WARNING: ATCF was found for this storm, but no forecast hours were found."
+                                continue
+                            fi
+                        fi
+
+                        # If ATCF_FILES.dat already exists, check that no additional ATCFs
+                        # were found. Also, check if the any of the ATCFs were modified
+                        # in the last hour. If so, then force re-production of all graphics.
+                        # This is important for non-storm-centered domains. ATCFs will be
+                        # used to place markers of active TC locations in larger domains.
+                        if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                            PREV_ATCF=()
+                            PREV_ATCF=( `cat ${ODIR_FULL}ATCF_FILES.dat` )
+                            if [ "$SC" == "False" ]; then
+                                if [ "${PREV_ATCF[*]}" == "NONE" ] && [ "${#CYCLE_ATCF[@]}" -gt "0" ]; then
+                                    echo "MSG: Found ${#CYCLE_ATCF[@]} ATCFs this time. No ATCF found last time."
+                                    echo "MSG: Forcing production."
+                                    FORCE="True"
+                                elif [ "${#PREV_ATCF[@]}" -lt "${#CYCLE_ATCF[@]}" ]; then
+                                    echo "MSG: Found more ATCFs this time (${#CYCLE_ATCF[@]}) than last time (${#PREV_ATCF[@]})."
+                                    echo "MSG: Forcing production."
+                                    FORCE="True"
+                                elif [ "${PREV_ATCF[*]}" != "NONE" ]; then
+                                    for ATCF in ${PREV_ATCF[@]}; do
+                                        test=$(find ${ATCF} -mmin -20 2>/dev/null)
+                                        if [[ -n $test ]]; then
+                                            echo "MSG: This ATCF is not old enough --> ${ATCF}"
+                                            echo "MSG: Forcing production."
+                                            FORCE="True"
+                                            break
+                                        fi
+                                    done
+                                fi
+                            elif [ ! -z "${STORM_ATCF[*]}" ]; then
+                                test=$(find ${STORM_ATCF[0]} -mmin -20 2>/dev/null)
+                                if [[ -n $test ]]; then
+                                    echo "MSG: This ATCF is not old enough --> ${ATCF}"
+                                    echo "MSG: Forcing production."
+                                    FORCE="True"
+                                fi
+                            fi
+                        fi
 
                         # Create a list of IDIR subdirectory options
                         OCEAN_DIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
@@ -536,15 +666,24 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                    "${ENSID}/${CYCLE_STR}/" "${STORM_STR}/${ENSID}/" "${ENSID}/${STORM}/" "${EXPT}/com/${ENSID}/${CYCLE_STR}/" \
                                    "${EXPT}/${ENSID}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/${ENSID}/com/${CYCLE_STR}/" "${EXPT}/${ENSID}/com/" \
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
-                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" \
-                                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
+                                   "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L/" \
+                                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
+                                   "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
+    
+                        # Get the right list of lead times
+                        if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
+                            FILE_FHRS=( ${ATCF_FHRS[@]} )
+                        else
+                            FILE_FHRS=( ${FHRS[@]} )
+                        fi
+                        echo "MSG: I will only look for these forecast lead times --> ${FILE_FHRS[*]}"
 
                         # Find all input files that match: FPREFIX,FHRSTR,FHRFMT,FSUFFIX
                         # If a match is found, write lead time to a data file "AllForecastHours"
                         IFILES=()
                         F=0
                         IFHRS=()
-                        while [ -z "$IFILES" ]; do
+                        while [ -z "${IFILES[*]}" ]; do
                             OCEAN_DIR_FULL="$(echo "${OCEAN_DIR}/${OCEAN_DIR_OPTS[$F]}" | sed s#//*#/#g)"
 
                             # If the input directory doesn't exist, continue to the next option
@@ -553,31 +692,47 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                 continue
                             fi
 
-                            # Get the right list of lead times
-                            if [ "$SC" == "True" ] && [ "$ATCF_REQD" == "True" ]; then
-                                FILE_FHRS=${ATCF_FHRS[@]}
-                            else
-                                FILE_FHRS=${FHRS[@]}
-                            fi
-
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
-                                if [ -z "$FSUFFIX" ]; then
-                                    FILE_SEARCH="${OCEAN_DIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                else
-                                    FILE_SEARCH="${OCEAN_DIR_FULL}/*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))*${FSUFFIX}"
+
+                                # Build the file search string.
+                                FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                if [ ! -z "${FSUFFIX}" ]; then
+                                    FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
+                                    FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
+                                    FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
-                                if [ ! -z $(ls ${FILE_SEARCH} 2>/dev/null) ]; then
-                                    IFILES+=(`ls ${FILE_SEARCH} 2>/dev/null`)
+    
+                                # Search for a matching file. If found, append the file and forecast hour to their respective arrays
+                                FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
+                                if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                    IFILES+=("${FILE_LS[*]}")
                                     IFHRS+=( ${FHR} )
+                                else
+                                    FILE_LS=( `ls ${FILE_SEARCH2} 2>/dev/null` )
+                                    if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                        IFILES+=("${FILE_LS[*]}")
+                                        IFHRS+=( ${FHR} )
+                                    else
+                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
+                                            FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
+                                            if [ "${#FILE_LS[@]}" -eq "1" ]; then
+                                                IFILES+=("${FILE_LS[*]}")
+                                                IFHRS+=( ${FHR} )
+                                            fi
+                                        fi
+                                    fi
                                 fi
                             done
+
 
                             # Increase the counter to search the next input directory option
                             ((F=F+1))
 
                             # Break the loop if all input directory options have been searched
-                            if [ $F -gt ${#OCEAN_DIR_OPTS[@]} ]; then
+                            if [ ${F} -gt ${#OCEAN_DIR_OPTS[@]} ]; then
                                 echo "ERROR: No files were found. Try fixing OCEAN_DIR in the namelist."
                                 break
                                 #exit
@@ -590,6 +745,8 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         fi
                         echo "MSG: Full (ocean) input directory --> ${OCEAN_DIR_FULL}"
 
+                        # Mark that files have been found
+                        FOUND_FILES="True"
 
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)
                         # Define the file that contains the status (STATUS_FILE)
@@ -597,31 +754,35 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         STATUS_FILE="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
                         LOCK_FILE="${STATUS_FILE}.lock"
 
-
                         # Get the list of plotted files for this case
                         CASE_PLOTTED=(`cat ${PLOTTED_FILE} | sed 's#//*#/#g' 2>/dev/null`)
-                        
 
                         # Get the status for this case
                         lockfile -r-1 -l 180 "${LOCK_FILE}"
                         CASE_STATUS=`cat ${STATUS_FILE} 2>/dev/null`
                         rm -f "${LOCK_FILE}"
 
-
                         # Print some information
-                        #if [ "$FORCE" == "False" ]; then
-                        #    echo "MSG: Using this file of processed files --> ${PLOTTED_FILE}"
-                        #    echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
-                        #    echo "MSG: To manually force reprocessing of all files, delete this file."
-                        #else
-                        #    echo "MSG: Graphic production will be forced."
-                        #    echo "MSG: Deleting this file of processed files --> ${PLOTTED_FILE}"
-                        #    rm -f ${PLOTTED_FILE}
-                        #    CASE_PLOTTED=()
-                        #    CASE_STATUS="force"
-                        #fi
-                        #echo "MSG: Using this status file --> ${STATUS_FILE}"
-                        #echo "MSG: Found this status --> ${CASE_STATUS}"
+                        # This depends on whether or not forcing is turned on.
+                        # Don't do this for the HAFS workflow (i.e., ODIR_TYPE=0)
+                        if [ "${ODIR_TYPE}" == "0" ]; then
+                            if [ "${FORCE}" == "False" ]; then
+                                echo "MSG: Using this processed file log --> ${PLOTTED_FILE}"
+                                echo "MSG: Found ${#CASE_PLOTTED[@]} processed files. These will be skipped."
+                                echo "MSG: To manually force reprocessing of all files, delete this file."
+                            else
+                                #  Don't do this if the status is working.
+                                if [ "${CASE_STATUS}" != "working" ]; then
+                                    echo "MSG: Graphic production will be forced."
+                                    echo "MSG: Deleting the processed file log --> ${PLOTTED_FILE}"
+                                    rm -f ${PLOTTED_FILE}
+                                    CASE_PLOTTED=()
+                                    CASE_STATUS="force"
+                                fi
+                            fi
+                        fi
+                        echo "MSG: Using this status file --> ${STATUS_FILE}"
+                        echo "MSG: Found this status --> ${CASE_STATUS}"
 
 
                         # Loop through IFILES and retain only valid entries
@@ -630,7 +791,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         for FILE in ${IFILES[@]}; do
 
                             # Remove files that are broken links
-                            if [ ! -e "$FILE" ]; then
+                            if [ ! -e "${FILE}" ]; then
                                 unset 'IFILES[$i]'
                                 unset 'IFHRS[$i]'
                                 BROKEN_LINK="YES"
@@ -643,21 +804,29 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
                                 #TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
-                                TMP=$(grep "$FILE" ${PLOTTED_FILE})
-                                CFILE=`echo $TMP | cut -d' ' -f1`
-                                NATCF=`echo $TMP | cut -d' ' -f2`
-                                if [[ -n "$CFILE" ]]; then
-                                    test=$(find ${OCEAN_DIR_FULL} -name "`basename $CFILE`" -mmin +15 2>/dev/null)
+                                TMP=$(grep "${FILE}" ${PLOTTED_FILE})
+                                CFILE=`echo "${TMP}" | cut -d' ' -f1`
+                                NATCF=`echo "${TMP}" | cut -d' ' -f2`
+                                ATCFDONE=`echo "${TMP}" | cut -d' ' -f3`
+                                if [ ${SC} == "True" ]; then
+                                    ATCF_EXP=1
+                                else
+                                    ATCF_EXP=${#CYCLE_ATCF[@]}
+                                fi
+                                if [[ -n "${CFILE}" ]]; then
+                                    test=$(find ${IDIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        unset 'IFILES[$i]'
-                                        unset 'IFHRS[$i]'
+                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                            unset 'IFILES[$i]'
+                                            unset 'IFHRS[$i]'
+                                        fi
                                     fi
                                 fi
                             fi
                             ((i++))
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            if [ "$BROKEN_LINK" == "YES" ]; then
+                            if [ "${BROKEN_LINK}" == "YES" ] && [ "${CASE_STATUS}" != "complete" ]; then
                                 echo "WARNING: No files to process, but broken links were detected."
                                 echo "WARNING: Marking status as broken. It should be double-checked."
                                 lockfile -r-1 -l 180 "${LOCK_FILE}"
@@ -689,12 +858,12 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         # Check the status and update it if necessary.
                         # This logic will allow work to start on this case
                         # or will move on to the next case.
-                        if [ "$CASE_STATUS" == "force" ]; then
+                        if [ "${CASE_STATUS}" == "force" ]; then
                             echo "MSG: Forcing production. Ignoring status file."
                             lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "start" > ${STATUS_FILE}
                             rm -f "${LOCK_FILE}"
-                        elif [ "$CASE_STATUS" == "complete" ]; then
+                        elif [ "${CASE_STATUS}" == "complete" ]; then
                             if [ -z "${IFILES[*]}" ]; then
                                 echo "MSG: Status suggests this case has been completed."
                                 echo "MSG: Nothing to do here. Moving on to next case."
@@ -707,7 +876,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                 echo "start" > ${STATUS_FILE}
                                 rm -f "${LOCK_FILE}"
                             fi
-                        elif [ "$CASE_STATUS" == "working" ]; then
+                        elif [ "${CASE_STATUS}" == "working" ]; then
                             echo "MSG: Status suggests this case is being worked on."
                             echo "MSG: Changing the status to 'update request 1'."
                             echo ""
@@ -715,7 +884,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             echo "update request 1" > ${STATUS_FILE}
                             rm -f "${LOCK_FILE}"
                             continue
-                        elif [ "$CASE_STATUS" == "update request 1" ]; then
+                        elif [ "${CASE_STATUS}" == "update request 1" ]; then
                             echo "MSG: Status suggests this case needs to be updated."
                             echo "MSG: Changing the status to 'update request 2'."
                             echo ""
@@ -723,24 +892,24 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             echo "update request 2" > ${STATUS_FILE}
                             rm -f "${LOCK_FILE}"
                             continue
-                        elif [ "$CASE_STATUS" == "update request 2" ] || [ "$CASE_STATUS" == "failed" ]; then
+                        elif [ "${CASE_STATUS}" == "update request 2" ] || [ "${CASE_STATUS}" == "failed" ]; then
                             echo "MSG: Status suggests this case has stalled/failed."
                             echo "MSG: Deleting the status for a restart."
                             lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "start" > ${STATUS_FILE}
                             rm -f "${LOCK_FILE}"
-                        elif [ "$CASE_STATUS" == "incomplete" ]; then
+                        elif [ "${CASE_STATUS}" == "incomplete" ]; then
                             echo "MSG: Status suggests that this case is incomplete."
                             echo "MSG: Will try to find new input files."
                             lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "start" > ${STATUS_FILE}
                             rm -f "${LOCK_FILE}"
-                        elif [ "$CASE_STATUS" == "broken" ]; then
+                        elif [ "${CASE_STATUS}" == "broken" ]; then
                             echo "MSG: Status suggests that this case is broken."
                             echo "MSG: It will require manual resubmission."
                             echo ""
                             continue
-                        elif [ -z "$CASE_STATUS" ]; then
+                        elif [ -z "${CASE_STATUS}" ]; then
                             echo "MSG: Status not found. Treating this as a new case."
                             lockfile -r-1 -l 180 "${LOCK_FILE}"
                             echo "start" > ${STATUS_FILE}
@@ -756,9 +925,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         # If IFILES is empty, then all available files have been plotted
                         # Then, skip to the next and mark status=complete
                         if [ -z "${IFILES[*]}" ]; then
-                        #if [ -z "$(echo -e "${IFILES[*]}" | tr -d '[:space:]')" ]; then
-                        #if [ -z $(echo "${IFILES[*]}" | sed -e 's/^[[:space:]]*//') ]; then
-                            if ! find "${STORM_ATCF[0]}" -mmin +60 >/dev/null ; then
+                            if [ "${ATCF_REQD}" == "True" ] && ! find "${STORM_ATCF[0]}" -mmin +60 >/dev/null ; then
                                 echo "MSG: All available files have already been processed."
                                 echo "MSG: However, ATCF is not old enough to complete."
                                 echo "MSG: More files might become available."
@@ -779,17 +946,6 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             continue
                         fi
 
-                        # Create a text file with ATCFs for this cycle in the output directory
-                        if [ -z "${CYCLE_ATCF}" ]; then
-                            echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
-                        else
-                            if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
-                                rm -f ${ODIR_FULL}ATCF_FILES.dat
-                            fi
-                            for ATCF in ${CYCLE_ATCF}; do
-                                echo "$ATCF" >> ${ODIR_FULL}ATCF_FILES.dat
-                            done
-                        fi
 
                         # Write existing IFILES out to UNPLOTTED_FNAME log for use in plotting scripts
                         UNPLOTTED_FILE="${ODIR_FULL}/UnplottedOceanFiles.${DMN}.${TR}${STORMTAG}.log"
@@ -835,32 +991,51 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
 
                         # Check if a similar job is already submitted
                         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
-                        JOBNAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
-                        if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
-                            JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
-                        else
+                        if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                             JOB_TEST=""
+                        elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
+                            JOB_TEST=""
+                        else
+                            JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
+                            JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
                         fi
 
                         # Change options in the batch submission script.
                         if [ -z "${JOB_TEST}" ]; then
-                            LOG_DIR="$ODIR_FULL"
+
+                            # Create a text file with ATCFs for this cycle in the output directory.
+                            # This file should only be updated when a new job is being submitted.
+                            # If this file changes and a job is not submitted, then it could cause
+                            # issues with storm labels for non-storm-centered graphics.
+                            if [ -z "${MODEL_ATCF2[*]}" ]; then
+                                echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
+                            else
+                                if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
+                                    rm -f ${ODIR_FULL}ATCF_FILES.dat
+                                fi
+                                for ATCF in ${MODEL_ATCF2[@]}; do
+                                    echo "${ATCF}" >> ${ODIR_FULL}ATCF_FILES.dat
+                                done
+                            fi
+
+                            # Change options in the batch submission script.
+                            LOG_DIR="${ODIR_FULL}"
                             LOGFILE1="${LOG_DIR}GPLOT_Ocean_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                             LOGFILE2="${LOG_DIR}GPLOT_Ocean_Maps.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"
 
-                            # Call the batch job
-                            echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}, DMN ${DMN}"
+                            # Submit the child batch job.
+                            echo "MSG: Submitting GPLOT child batch job. BATCH_MODE ${BATCH_MODE}, DMN ${DMN}"
                             FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${OCEAN_MAPS_PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
                             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
                             FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
                                 ${FULL_CMD}
-                            elif [ "$BATCH_MODE" == "BACKGROUND" ]; then
+                            elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD} &]."
                                 ${FULL_CMD} &
                             else
-                                SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
+                                SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                                 SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
@@ -871,7 +1046,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             if [ "$N" -ge "$MAXCOUNT" ]; then
                                 echo "MSG: Maximum number of batch submissions has been reached."
                                 echo "MSG: Further jobs will be submitted later."
-                                echo "MSG: spawn_ships.sh completed at `date`"
+                                echo "MSG: spawn_ocean_maps.sh completed at `date`"
                                 exit
                             fi
                         else
@@ -891,4 +1066,4 @@ fi #end of DO_OCEAN_MAPS
 wait
 
 echo "$?"
-echo "COMPLETE!"
+echo "MSG: spawn_maps.sh completed at `date`"
