@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -100,7 +100,6 @@ fi
 if [ "${IS_MSTORM}" == "True" ]; then
     echo "MSG: Data source has been identified as a multi-storm configuration."
 fi
-echo "MSG: Found this top level input directory in the namelist --> ${IDIR}"
 echo "MSG: Found this top level OCEAN input directory in the namelist --> ${OCEAN_DIR}"
 if [ ! -z "${OCEAN_TAG}" ]; then
     echo "MSG: Considering this input file string --> ${OCEAN_TAG}"
@@ -285,7 +284,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
     OCEAN_MAPS_PYTHONFILE="${OCEAN_MAPS_PYTHONFILE:-plot_ocean_maps.py}"
     BATCHFILE="batch_ocean_maps.sh"
     #DOMAIN="ocean"
-    TIER="Tier1"
+    TIER=( "Tier1" )
     SC="True"
     ATCF_REQD="True"
 
@@ -657,7 +656,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             fi
                         fi
 
-                        # Create a list of IDIR subdirectory options
+                        # Create a list of OCEAN_DIR subdirectory options
                         OCEAN_DIR_OPTS=("" "${EXPT}/com/${CYCLE_STR}/${STORM}/" "${EXPT}/com/${CYCLE_STR}/" "${EXPT}/com/" \
                                    "${EXPT}/" "${CYCLE_STR}/${STORM}/" "${CYCLE_STR}/" "${STORM}/" "${EXPT}/${CYCLE_STR}/${STORM}/" \
                                    "${EXPT}/${CYCLE_STR}/" "${EXPT}/com/${CYCLE_STR}/${STORM}/${ENSID}/" "${EXPT}/com/${CYCLE_STR}/${ENSID}/" \
@@ -696,9 +695,9 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             for FHR in ${FILE_FHRS[@]}; do
 
                                 # Build the file search string.
-                                FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH="${OCEAN_DIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH2="${OCEAN_DIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                FILE_SEARCH3="${OCEAN_DIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -814,7 +813,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                     ATCF_EXP=${#CYCLE_ATCF[@]}
                                 fi
                                 if [[ -n "${CFILE}" ]]; then
-                                    test=$(find ${IDIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
+                                    test=$(find ${OCEAN_DIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
                                         if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
