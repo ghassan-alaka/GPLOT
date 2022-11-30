@@ -50,28 +50,28 @@ BATCH_DFLTS="${NMLDIR}batch.defaults.${MACHINE,,}"
 
 
 # Pull important variables from the namelist
-DO_STATS="`sed -n -e 's/^.*DO_STATS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-DSOURCE="`sed -n -e 's/^.*DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-EXPT="`sed -n -e 's/^.*EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-MCODE="`sed -n -e 's/^.*MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-IS_MSTORM="`sed -n -e 's/^.*IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ENSMEM="`sed -n -e 's/^.*ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-IDIR="`sed -n -e 's/^.*IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ITAG="`sed -n -e 's/^.*ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-EXT="`sed -n -e 's/^.*EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ODIR="`sed -n -e 's/^.*ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ODIR_TYPE="`sed -n -e 's/^.*ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-INIT_HR="`sed -n -e 's/^.*INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-FNL_HR="`sed -n -e 's/^.*FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-DT="`sed -n -e 's/^.*DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-IDATE="`sed -n -e 's/^.*IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-SID="`sed -n -e 's/^.*SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-BDECK_DIR="`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF1_DIR="`sed -n -e 's/^.*ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF1_TAG="`sed -n -e 's/^.*ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF2_DIR="`sed -n -e 's/^.*ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-ATCF2_TAG="`sed -n -e 's/^.*ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
-BDECK_DIR="`sed -n -e 's/^.*BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DO_STATS="`sed -n -e 's/^DO_STATS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DSOURCE="`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXPT="`sed -n -e 's/^EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+MCODE="`sed -n -e 's/^MCODE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IS_MSTORM="`sed -n -e 's/^IS_MSTORM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ENSMEM="`sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDIR="`sed -n -e 's/^IDIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ITAG="`sed -n -e 's/^ITAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+EXT="`sed -n -e 's/^EXT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR="`sed -n -e 's/^ODIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ODIR_TYPE="`sed -n -e 's/^ODIR_TYPE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+INIT_HR="`sed -n -e 's/^INIT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FNL_HR="`sed -n -e 's/^FNL_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+DT="`sed -n -e 's/^DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+IDATE="`sed -n -e 's/^IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+SID="`sed -n -e 's/^SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+BDECK_DIR="`sed -n -e 's/^BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_DIR="`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF1_TAG="`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_DIR="`sed -n -e 's/^ATCF2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+ATCF2_TAG="`sed -n -e 's/^ATCF2_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+BDECK_DIR="`sed -n -e 's/^BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 MACHINE="`sed -n -e 's/^MACHINE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 CPU_ACCT="`sed -n -e 's/^CPU_ACCT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 QOS="`sed -n -e 's/^QOS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -82,7 +82,7 @@ BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
 
 # Fallback option for BDECK_DIR
 if [ -z "${BDECK_DIR}" ]; then
-    BDECK_DIR="`sed -n -e 's/^.*BDECK2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+    BDECK_DIR="`sed -n -e 's/^BDECK2_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 fi
 
 # Print information
@@ -417,7 +417,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
         # If the ATCF is new enough, force production.
-        test=$(find ${ATCF} -mmin -60 2>/dev/null)
+        test=$(find ${ATCF} -mmin -20 2>/dev/null)
         if [[ -n $test ]]; then
             echo "MSG: This ATCF is not old enough. Forcing production."
             FORCE="True"
@@ -427,7 +427,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # If the BDECK is new enough, force production.
         if [ -f "${BDECK}" ]; then
             echo "MSG: Found this B-Deck --> $BDECK"
-            test=$(find ${BDECK} -mmin -60 2>/dev/null)
+            test=$(find ${BDECK} -mmin -20 2>/dev/null)
             if [[ -n $test ]]; then
                 echo "MSG: This BDECK is not old enough. Forcing production."
                 FORCE="True"

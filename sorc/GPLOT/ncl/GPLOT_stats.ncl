@@ -685,7 +685,9 @@ end if
 print("MSG: Found this ATCF file --> "+ATCF_FILE)
 ATCF_BASE = systemfunc("basename "+ATCF_FILE)
 ATCF_DIR = str_sub_str(ATCF_FILE,ATCF_BASE,"")
-ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+if(ODIR_TYPE.eq.1)then	ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +20")
+else			ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+end if
 
 
 ; Check if the ATCF file is the final ATCF
@@ -703,7 +705,11 @@ end if  end if
 fSplit	:= str_split(ATCF_BASE,".")
 LONGSID	:= fSplit(0)
 tmp	:= tochar(LONGSID)
-TC_NAME	:= str_upper(tostring(tmp(0)))+""+tostring(tmp(1:dimsizes(tmp)-4))
+if(dimsizes(tmp).ge.4)then
+	TC_NAME	:= str_upper(tostring(tmp(0:dimsizes(tmp)-4)))
+else
+	TC_NAME := "MISSING"
+end if
 TC_NUM	:= tostring(tmp(dimsizes(tmp)-3:dimsizes(tmp)-2))
 BASIN1	:= tostring(tmp(dimsizes(tmp)-1))
 if(BASIN1.eq."l")then   BASIN2 = "al"   end if
@@ -1026,7 +1032,7 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	system("sed -i 's/BBBB/"+MCODE12+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/CCCC/"+MCODEI+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/DDD/006/g' "+INTERP_DIR+"/"+INTERP_NML)
-	system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	system("sed -i 's/EEE/036/g' "+INTERP_DIR+"/"+INTERP_NML)
 	
 
 	; Run the interpolation executable to produce early forecasts.
@@ -1199,6 +1205,7 @@ if(DO_LT_GUIDE)then
 	vals := ind(.not.ismissing(aTRK(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late track models at "+IDATE+" --> "+stringOut(TRKmodels(vals)))
 	else				print("WARNING: None of the late track models were found.")
+					DO_LT_GUIDE = False
 	end if
 end if
 
@@ -1220,6 +1227,7 @@ if(DO_LTI_GUIDE)then
 	vals := ind(.not.ismissing(aTRKINT(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late track/intensity models at "+IDATE+" --> "+stringOut(TRKINTmodels(vals)))
 	else				print("WARNING: None of the late track models were found.")
+					DO_LTI_GUIDE = False
 	end if
 end if
 
@@ -1243,6 +1251,7 @@ if(DO_ET_GUIDE)then
 	vals := ind(.not.ismissing(aTRKI(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI(vals)))
 	else				print("WARNING: None of the early track models were found.")
+					DO_ET_GUIDE = False
 	end if
 end if
 
@@ -1300,6 +1309,7 @@ if(DO_LT_TREND)then
 		vals := ind(.not.ismissing(aTRK3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
 		else				print("WARNING: No cycles were found.")
+						DO_LT_TREND = False
 		end if
 	end do
 end if
@@ -1322,6 +1332,7 @@ if(DO_LI_GUIDE)then
 	vals := ind(.not.ismissing(aINT(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late intensity models at "+IDATE+" --> "+stringOut(INTmodels(vals)))
 	else				print("WARNING: None of the late intensity models were found.")
+					DO_LI_GUIDE = False
 	end if
 	aINT(:,0,:) = where(aINT(:,0,:).le.0, aINT@_FillValue, aINT(:,0,:))
 end if
@@ -1341,6 +1352,7 @@ if(DO_EI_GUIDE)then
 	vals := ind(.not.ismissing(aINTI(:,0,0)))
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI(vals)))
 	else					print("WARNING: None of the early intensity models were found.")
+						DO_EI_GUIDE = False
 	end if
 	aINTI(:,0,:) = where(aINTI(:,0,:).le.0, aINTI@_FillValue, aINTI(:,0,:))
 end if
@@ -1398,6 +1410,7 @@ if(DO_LI_TREND)then
 		vals := ind(.not.ismissing(aINT3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
 		else				print("WARNING: No cycles were found.")
+						DO_LI_TREND = False
 		end if
 	end do
 	aINT2(:,:,0,:) = where(aINT2(:,:,0,:).le.0, aINT2@_FillValue, aINT2(:,:,0,:))
@@ -1422,6 +1435,7 @@ if(DO_LP_GUIDE)then
 	vals := ind(.not.ismissing(aPRS(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late pressure models at "+IDATE+" --> "+stringOut(PRSmodels(vals)))
 	else				print("WARNING: None of the late pressure models were found.")
+					DO_LP_GUIDE = False
 	end if
 end if
 
@@ -1451,6 +1465,7 @@ if(DO_LP_TREND)then
 	vals := ind(.not.ismissing(aPRS2(:,0,0)))
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these cycles --> "+stringOut(IDATES3(vals)))
 	else					print("WARNING: No cycles were found.")
+						DO_LP_TREND = False
 	end if
 end if
 
@@ -2201,7 +2216,14 @@ if(DO_ET_GUIDE)then
 								rngLon = abs(maxLon-minLon)
 	end if  end if
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
-		print("WARNING: Late model track guidance can't be produced.")
+		print("WARNING: Early model track guidance can't be produced.")
+		DO_THIS = False
+		DO_ET_GUIDE = False
+	end if
+
+	vals := ind(.not.ismissing(aTRKI(:,0,0)))
+	if(ismissing(vals(0)))then
+		print("WARNING: Early model track guidance can't be produced.")
 		DO_THIS = False
 		DO_ET_GUIDE = False
 	end if
@@ -2700,9 +2722,9 @@ if(DO_EI_GUIDE)then
 	
 		; Plot the best track
 		if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
-			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
+			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2b)
 		else
-			plot	:= gsn_csm_blank_plot(wks,xyres2a)
+			plot	:= gsn_csm_blank_plot(wks,xyres2b)
 		end if
 
 		; Info about plot size
@@ -3242,7 +3264,7 @@ if(DO_LT_TREND)then
 				; Add model tracks
 				do ttt = 0,nTrend-1
 	
-					; Check if the HWRF-B track is available
+					; Check if the track is available
 					if(all(ismissing(aTRK2(mmm,ttt,0,:))))then
 						print("WARNING: "+thisModel+" track is unavailable for "+IDATES(ttt)+".")
 						continue

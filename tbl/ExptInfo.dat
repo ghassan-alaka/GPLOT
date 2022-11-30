@@ -36,3 +36,5 @@
                              TH16_GFS_Forecast,   Global Forecast System (v16; Thomp. substep)
                              GF16_GFS_Forecast,    Global Forecast System (v16; GF convection)
                              MY16_GFS_Forecast,         Global Forecast System (v16; MYNN PBL)
+                               hafsv0p3s_final,   Hurricane Analysis and Forecast System V0.3S
+                             HAFSV0.3S_2022_RT,   Hurricane Analysis and Forecast System V0.3S

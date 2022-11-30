@@ -1694,7 +1694,7 @@ end
 ; getDmnInfo
 
 undef("getDmnInfo")
-function getDmnInfo (DOMAIN[1]:string,INFO[1]:string,DO_VALUE[1]:logical)
+function getDmnInfo (DOMAIN[1]:string,DSOURCE[1]:string,INFO[1]:string,DO_VALUE[1]:logical)
 local MASTER_DOMAIN, MASTER_INFO, OUT
 begin
 
@@ -1737,7 +1737,10 @@ begin
 		else if(DOMAIN.eq."hwrf")then	OUT = 0
 		else if(DOMAIN.eq."d01")then	OUT = 0
 		else if(DOMAIN.eq."d02")then	OUT = 2
-		else if(DOMAIN.eq."d03")then	OUT = 3
+		else if(DOMAIN.eq."d03")then
+			if(DSOURCE.eq."HAFS")then	OUT = 8
+			else				OUT = 3
+			end if
 		else if(DOMAIN.eq."tkfull")then	OUT = 4
 		else if(DOMAIN.eq."ships")then	OUT = 7
 		else if(DOMAIN.eq."global")then OUT = 1

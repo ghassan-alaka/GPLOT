@@ -96,7 +96,7 @@ DO_CONVERTGIF = True
 DOMAIN = hwrf d03
 
 ; 2B. MAP GRAPHICS TIER
-TIER = Tier1
+TIER = Tier1 Tier2
 
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
@@ -133,7 +133,7 @@ LTM = HF3S HF3A GFSO HWRF HMON
 LIM = HF3S HF3A HWRF HMON
 
 ; 3D. VERIFICATION TIMES
-LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
 
 ; 3E. NUMBER OF TREND FORECASTS
 NTREND = 6
@@ -150,8 +150,8 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots.py
+PYTHONFILE = make_rz_plots_heightcoordinates_research.py
 RESOLUTION = 2.0
-RMAX = 600
+RMAX = 500
 LEVS = 46
 
