@@ -1215,11 +1215,7 @@ begin
 				JSZ	= dimsizes(tmpU1(:,0))
 				if(isatt(tmpU1,"units"))then   units = tmpU1@units   end if
 				
-				if(flipFlag)then	;tmpU1	:= lonFlip(tmpU1)
-							;tmpU2	:= lonFlip(tmpU2)
-							;tmpV1	:= lonFlip(tmpV1)
-							;tmpV2	:= lonFlip(tmpV2)
-							tmpU1	:= lonPivot(tmpU1,PIV)
+				if(flipFlag)then	tmpU1	:= lonPivot(tmpU1,PIV)
 							tmpU2	:= lonPivot(tmpU2,PIV)
 							tmpV1	:= lonPivot(tmpV1,PIV)
 							tmpV2	:= lonPivot(tmpV2,PIV)

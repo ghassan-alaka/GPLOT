@@ -278,6 +278,11 @@ MM	= systemfunc("echo "+IDATE+" | cut -c5-6")
 DD	= systemfunc("echo "+IDATE+" | cut -c7-8")
 HH	= systemfunc("echo "+IDATE+" | cut -c9-10")
 
+; 12. Determine the extension of post-processed graphics.
+if(DO_CONVERTGIF)then	wtype2 = "gif"
+else			wtype2 = wtype
+end if
+
 
 ; 12. Determine the extension of post-processed graphics.
 if(DO_CONVERTGIF)then	wtype2 = "gif"
@@ -633,7 +638,7 @@ do fff = 0,nFiles-1
 		if(DATA_ON(ppp))then
 			DAT_FILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
 			;DAT_FILE2	= ODIR+str_lower(LONGSID)+".TC_CenterFix."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))+".dat"
-	
+
 			; Get the TC centers based on the geopotential height centroid
 			if(FNAME(ppp).eq."TCCEN")then		NCOL = 5
 			else if(FNAME(ppp).eq."TCHODO")then	NCOL = 4
@@ -641,7 +646,7 @@ do fff = 0,nFiles-1
 			end if  end if
 				
 			; 1) Check if the file exists, and if the data
-			; for this particular forecast hours has been written.
+			; for this particular forecast hour has been written.
 			if(fileexists(DAT_FILE))then
 				DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
 				if(ismissing(DAT_SZ(0)))then	FHRDONE = False
@@ -663,15 +668,15 @@ do fff = 0,nFiles-1
 			break
 		end if
 	end do
-	print("MSG: Made it! Does at least one graphic type requires more processing? "+FHRDONE)
+	print("MSG: Made it! Have all expected graphics been prduced for this lead time? "+FHRDONE)
 	if(.not.FORCE)then
 		if(FHRDONE .and. FHR(fff).ne.max(FHR))then
 			print("MSG: Data already completed for this forecast hour.")
 			continue
 		end if
 	end if
-	print("MSG: Yes, looks like at least one graphic type requires more processing for this lead time.")
-	
+	if(.not.FHRDONE)then  print("MSG: I found at least one graphic type requires more processing for this lead time --> "+FNAME(ppp))  end if
+
 
 	;================================================================
 	; Read the file
@@ -916,7 +921,7 @@ do fff = 0,nFiles-1
 
 		; IF APPLICABLE, compute values and write to a file for future use
 		; For simplicity, we will only do this for HWRF D03
-		print("MSG: Processing this parameter: "+FNAME(ppp))			
+		print("MSG: Processing this parameter: "+FNAME(ppp))
 			
 		; Find pre-written data for this variable
 		DAT_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
@@ -2928,8 +2933,12 @@ end if
 if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
 else			print("MSG:   Convert to GIF:     OFF")
 end if
-print("MSG:   Plotted Files file: "+PLOTTED_FILES)
-print("MSG:   Status file:        "+STATUS_FILE)
+if(isvar("PLOTTED_FILES"))then
+	print("MSG:   Plotted Files file: "+PLOTTED_FILES)
+end if
+if(isvar("STATUS_FILE"))then
+	print("MSG:   Status file:        "+STATUS_FILE)
+end if
 print("********************")
 
 
