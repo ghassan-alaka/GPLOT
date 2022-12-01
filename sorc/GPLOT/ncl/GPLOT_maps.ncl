@@ -3025,14 +3025,18 @@ do fff = 0,nFiles-1
                         ; NOTE: These are handled together, so we can call
                         ;  'convert' only once per plot when both are True
 			;================================================================
-			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
-			if (DO_RMWHITE .and. DO_CONVERTGIF) then
-			    system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_CONVERTGIF) then
-			    system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_RMWHITE) then
-			    system("convert -trim "+OFILE+".png "+OFILE+".png")
-			end if  end if  end if
+			if(DO_RMWHITE .or. DO_CONVERTGIF)then
+				CHK = 1
+				do while(CHK.ne.0)
+					CHK = toint(systemfunc("identify "+OFILE+".png >/dev/null 2>&1; echo $?"))
+					sleep(1)
+				end do
+
+				if(.not.DO_RMWHITE)then			system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				else if(.not.DO_CONVERTGIF)then		system("convert -trim "+OFILE+".png "+OFILE+".png")
+				else					system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				end if  end if
+			end if
 
 		end do ;ppp
         
@@ -3046,7 +3050,9 @@ do fff = 0,nFiles-1
 	;     missing graphics.
 	;================================================================
         print("MSG: Checking that all graphics were produced for current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
-        if(.not.isvar("FILE_DONE"))then   FILE_DONE = new(nFiles,logical)   end if
+        if(.not.isvar("FILE_DONE"))then FILE_DONE = new(nFiles_all,logical)
+					FILE_DONE = False
+	end if
         FILE_DONE(fff) = True
         do ppp = 0,dimsizes(FNAME2)-1
                 ; Skip variables that are not expected for current FHR
