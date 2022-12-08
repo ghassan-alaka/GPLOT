@@ -8,11 +8,11 @@ fi
 # 2. Determine the machine (via the hostname)
 HN1="$( hostname | cut -c1 )"
 if [ "${HN1}" == "f" ]; then
-    MACHINE="JET"
+    MACHINE="jet"
 elif [ "${HN1}" == "h" ]; then
-    MACHINE="HERA"
+    MACHINE="hera"
 elif [ "${HN1}" == "O" ]; then
-    MACHINE="ORION"
+    MACHINE="orion"
 else
     echo "ERROR: Machine could not be determined."
     exit 1
