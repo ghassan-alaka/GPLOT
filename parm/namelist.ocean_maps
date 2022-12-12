@@ -7,4 +7,8 @@ do_ml_conv,Y
 do_ml_vort,Y
 do_ssh,Y
 do_shf,Y
-do_dpi,Y
+do_dpi,N
+do_mld,Y
+do_sss,Y
+do_mlt,Y
+do_mls,Y

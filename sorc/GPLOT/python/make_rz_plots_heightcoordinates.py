@@ -127,14 +127,17 @@ PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
 	DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 	EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 	ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+	BASEDIR = ODIR
 	try:
 		ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
 	except:
 		ODIR_TYPE = 0
 	if ODIR_TYPE == 1:
 		ODIR = ODIR+'/polar/'
+		BASEDIR = BASEDIR+'/'
 	else:
 		ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+		BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
 	
 	try:
 		DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -145,7 +148,7 @@ PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
 	figext = '.png';
 	
 	# Create the temporary directory for GrADs files
-	TMPDIR = ODIR.strip()+'grads/'
+	TMPDIR = BASEDIR.strip()+'grads/'
 	if not os.path.exists(TMPDIR):
 		os.mkdir(TMPDIR)
 	

@@ -37,7 +37,6 @@ import xarray as xr
 sys.path.append(GPLOT_DIR+'/sorc/GPLOT/python/modules')
 import skewTmodelTCpolar
 import shearandrhplot
-import centroid
 import glob
 import math
 import cmath
@@ -305,6 +304,7 @@ def main():
                                 #DEBUG:                                MLD.plot(figsize=(11,9)); plt.savefig('3z.png');
                                 T = ds.temperature.squeeze()
                                 S = ds.salinity.squeeze()
+                                SSS = S[0,...].squeeze();
                                 OHC = ds.ocean_heat_content.squeeze()
                                 #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
                                 i26 = ds['depth of 26C isotherm'].squeeze()
@@ -364,6 +364,10 @@ def main():
                                 do_ssh = namelist_structure_vars[7,1]
                                 do_shf = namelist_structure_vars[8,1]
                                 do_dpi = namelist_structure_vars[9,1]
+                                do_mld = namelist_structure_vars[10,1]
+                                do_sss = namelist_structure_vars[11,1]
+                                do_mlt = namelist_structure_vars[12,1]
+                                do_mls = namelist_structure_vars[13,1]
                                 
                                 #Load the colormaps needed
                                 color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -377,31 +381,35 @@ def main():
                                 levs_th = np.linspace(350,380,31,endpoint=True)
                                 norm_th = colors.BoundaryNorm(levs_th,256)
                                 
-                                #turb_flux_levs = np.linspace(-50,1350,15,endpoint=True)
-                                iso_26_levs = np.arange(0,300+1e-6,20.0);		iso_26_ticks = np.arange(0,300+1e-6,20.0)
-                                iso_20_levs = np.arange(0,300+1e-6,20.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
-                                OHC_levs = np.arange(0,200+1e-6,20.0);			OHC_ticks = np.arange(0,200+1e-6,20.0);
-                                sfc_conv_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	sfc_conv_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
-                                sfc_vort_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	sfc_vort_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
-                                ml_conv_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	ml_conv_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
-                                ml_vort_levs = np.arange(-1.5e-4,1.5e-4+1e-8,1e-5);	ml_vort_ticks = np.arange(-1.5e-4,1.5e-4+1e-8,3e-5)
-                                SSH_levs = np.arange(-200,200+1e-6,10.0);		SSH_ticks = np.arange(-200,200+1e-6,20.0)
-                                SHF_levs = np.arange(-1600,200+1e-6,20.0);		SHF_ticks = np.arange(-1600,200+1e-6,100.0)
+                                iso_26_levs = np.arange(0,160+1e-6,5.0);		iso_26_ticks = np.arange(0,160+1e-6,20.0)
+                                iso_20_levs = np.arange(0,300+1e-6,10.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
+                                OHC_levs = np.arange(0,150+1e-6,5.0);			OHC_ticks = np.arange(0,150+1e-6,20.0);
+                                sfc_conv_levs = np.arange(-20,20+1e-8,0.5);		sfc_conv_ticks = np.arange(-20,20+1e-8,2)
+                                sfc_vort_levs = np.arange(-20,20+1e-8,0.5);		sfc_vort_ticks = np.arange(-20,20+1e-8,2)
+                                ml_conv_levs = np.arange(-20,20+1e-8,0.5);		ml_conv_ticks = np.arange(-20,20+1e-8,2)
+                                ml_vort_levs = np.arange(-20,20+1e-8,0.5);		ml_vort_ticks = np.arange(-20,20+1e-8,2)
+                                SSH_levs = np.arange(-100,100+1e-6,5.0);		SSH_ticks = np.arange(-100,100+1e-6,20.0)
+                                SHF_levs = np.arange(-1600,1600+1e-6,50.0);		SHF_ticks = np.arange(-1600,1600+1e-6,200.0)
                                 DPI_levs = np.arange(0,30+1e-6,1.0);			DPI_ticks = np.arange(0,30+1e-6,2.0)
+                                MLD_levs = np.arange(0,160+1e-6,5.0);			MLD_ticks = np.arange(0,160+1e-6,10.0)
+                                SSS_levs = np.arange(32,38+1e-6,0.2);			SSS_ticks = np.arange(32,38+1e-6,0.5)
+                                MLT_levs = np.arange(26,30+1e-6,0.2);			MLT_ticks = np.arange(26,30+1e-6,0.5)
+                                MLS_levs = np.arange(32,38+1e-6,0.2);			MLS_ticks = np.arange(32,38+1e-6,0.5)
                                 
                                 lonstretch = np.cos(np.deg2rad(lon.mean()));
-                                ml_u_x = MLu.differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [m/s]
+                                secPerDay = 24*3600
+                                ml_u_x = MLu.differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
                                 ml_u_y = MLu.differentiate('Latitude') / 1e2 / 111e3
                                 ml_v_x = MLv.differentiate('Longitude') / 1e2 / (lonstretch*111e3)
                                 ml_v_y = MLv.differentiate('Latitude') / 1e2 / 111e3
-                                ml_conv = -(ml_u_x + ml_v_y);                # Divergence on model layer
-                                ml_vort = (ml_v_x - ml_u_y);                 # Relative vorticity on model layer
-                                sfc_u_x = ucurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [m/s]
+                                ml_conv = -(ml_u_x + ml_v_y)*secPerDay;                # CONvergence on model layer
+                                ml_vort = (ml_v_x - ml_u_y)*secPerDay;                 # Relative vorticity on model layer
+                                sfc_u_x = ucurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
                                 sfc_u_y = ucurr[1,:].differentiate('Latitude') / 1e2 / 111e3
                                 sfc_v_x = vcurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3)
                                 sfc_v_y = vcurr[1,:].differentiate('Latitude') / 1e2 / 111e3
-                                sfc_conv = -(sfc_u_x + sfc_v_y);                # Divergence on model layer
-                                sfc_vort = (sfc_v_x - sfc_u_y);                 # Relative vorticity on model layer
+                                sfc_conv = -(sfc_u_x + sfc_v_y)*secPerDay;                # CONvergence on model layer
+                                sfc_vort = (sfc_v_x - sfc_u_y)*secPerDay;                 # Relative vorticity on model layer
                                 
                                 # Dynamic potential intensity (Balaguru et al. 2015)
                                 rho0 = 1025.0;  # Reference density
@@ -505,16 +513,16 @@ def main():
                                 if do_sfc_conv == 'Y':
                                         fig1 = plt.figure(figsize=figsize)
                                         ax1 = fig1.add_subplot(1, 1, 1)
-                                        co1 = ax1.contourf(lon,lat, sfc_conv, levels=sfc_conv_levs, extend='both')
+                                        co1 = ax1.contourf(lon,lat, sfc_conv, levels=sfc_conv_levs, cmap='seismic',extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=sfc_conv_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
                                         ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         else:
                                             #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -527,16 +535,16 @@ def main():
                                 if do_sfc_vort == 'Y':
                                         fig1 = plt.figure(figsize=figsize)
                                         ax1 = fig1.add_subplot(1, 1, 1)
-                                        co1 = ax1.contourf(lon,lat, sfc_vort, levels=sfc_vort_levs, extend='both')
+                                        co1 = ax1.contourf(lon,lat, sfc_vort, levels=sfc_vort_levs, cmap='seismic',extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=sfc_vort_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
                                         ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         else:
                                             #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -549,16 +557,15 @@ def main():
                                 if do_ml_conv == 'Y':
                                         fig1 = plt.figure(figsize=figsize)
                                         ax1 = fig1.add_subplot(1, 1, 1)
-                                        co1 = ax1.contourf(lon,lat, ml_conv, levels=ml_conv_levs, extend='both')
+                                        co1 = ax1.contourf(lon,lat, ml_conv, levels=ml_conv_levs, cmap='seismic',extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=ml_conv_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
                                         ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         else:
-                                            #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -571,16 +578,16 @@ def main():
                                 if do_ml_vort == 'Y':
                                         fig1 = plt.figure(figsize=figsize)
                                         ax1 = fig1.add_subplot(1, 1, 1)
-                                        co1 = ax1.contourf(lon,lat, ml_vort, levels=ml_vort_levs, extend='both')
+                                        co1 = ax1.contourf(lon,lat, ml_vort, levels=ml_vort_levs, cmap='seismic',extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=ml_vort_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
                                         ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         else:
                                             #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -593,7 +600,7 @@ def main():
                                 if do_ssh == 'Y' and SSH is not None:
                                         fig1 = plt.figure(figsize=figsize)
                                         ax1 = fig1.add_subplot(1, 1, 1)
-                                        co1 = ax1.contourf(lon,lat, SSH, levels=SSH_levs, extend='both')
+                                        co1 = ax1.contourf(lon,lat, SSH, levels=SSH_levs, cmap='seismic',extend='both')
                                         cbar1 = plt.colorbar(co1, ticks=SSH_ticks)
                                         cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
                                         ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -655,6 +662,100 @@ def main():
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
                                         plt.close(fig1)
+                                
+                                
+                                # FIGURE: Mixed-layer depth [m]
+                                if do_mld == 'Y' and MLD is not None:
+                                        fig1 = plt.figure(figsize=figsize)
+                                        ax1 = fig1.add_subplot(1, 1, 1)
+                                        co1 = ax1.contourf(lon,lat, MLD, levels=MLD_levs, extend='both')
+                                        cbar1 = plt.colorbar(co1, ticks=MLD_ticks)
+                                        cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Depth ($m$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        else:
+                                            #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Depth ($m$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.mld.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+                                        if ( DO_CONVERTGIF ):
+                                            os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+                                        plt.close(fig1)
+                                
+                                # FIGURE: Sea-surface salinity [psu]
+                                if do_sss == 'Y' and SSS is not None:
+                                        fig1 = plt.figure(figsize=figsize)
+                                        ax1 = fig1.add_subplot(1, 1, 1)
+                                        co1 = ax1.contourf(lon,lat, SSS, levels=SSS_levs, extend='both')
+                                        cbar1 = plt.colorbar(co1, ticks=SSS_ticks)
+                                        cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        else:
+                                            #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.sss.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+                                        if ( DO_CONVERTGIF ):
+                                            os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+                                        plt.close(fig1)
+                                
+                                # FIGURE: Mixed-layer temperature [oC]
+                                if do_mlt == 'Y' and MLT is not None:
+                                        fig1 = plt.figure(figsize=figsize)
+                                        ax1 = fig1.add_subplot(1, 1, 1)
+                                        co1 = ax1.contourf(lon,lat, MLT, levels=MLT_levs, cmap='Reds',extend='both')
+                                        cbar1 = plt.colorbar(co1, ticks=MLT_ticks)
+                                        cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Temperature ($^oC$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        else:
+                                            #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Temperature ($^oC$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.mlt.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+                                        if ( DO_CONVERTGIF ):
+                                            os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+                                        plt.close(fig1)
+                                
+                                # FIGURE: Mixed-layer salinity [psu]
+                                if do_mls == 'Y' and MLS is not None:
+                                        fig1 = plt.figure(figsize=figsize)
+                                        ax1 = fig1.add_subplot(1, 1, 1)
+                                        co1 = ax1.contourf(lon,lat, MLS, levels=MLS_levs, extend='both')
+                                        cbar1 = plt.colorbar(co1, ticks=MLS_ticks)
+                                        cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+                                        ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        else:
+                                            #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+                                        if ( OCEAN_DOMAIN == 'd03' ):
+                                            ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.mls.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+                                        if ( DO_CONVERTGIF ):
+                                            os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+                                        plt.close(fig1)
+                                
                                 print(f'MSG: Done with Plots {datetime.now()}')
                                 
                         

@@ -29,7 +29,6 @@ NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
 PYTHON_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
-FIX_DIR="${GPLOT_DIR}/fix/"
 
 # Get the namelist, could be from command line
 NMLIST="${1:-namelist.master.default}"
@@ -79,6 +78,27 @@ RESOLUTION="`sed -n -e 's/^RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 RMAX="`sed -n -e 's/^RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 LEVS="`sed -n -e 's/^LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 OCEAN_MAPS_PYTHONFILE="`sed -n -e 's/^OCEAN_MAPS_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+
+if [ -z "${FIX_DIR}" ]; then
+    if [ ! -z "${HOMEhafs}" ]; then
+        FIX_DIR="${HOMEhafs}/fix/fix_hycom/"
+    else
+        case ${MACHINE^^} in
+            "JET")
+                FIX_DIR="/lfs4/HFIP/hwrfv3/Bin.Liu/hafs_20221118/fix/fix_hycom/"
+                ;;
+            "HERA")
+                FIX_DIR="/scratch1/NCEPDEV/hwrf/save/Bin.Liu/hafs_20221118/fix/fix_hycom/"
+                ;;
+            "ORION")
+                FIX_DIR="/work/noaa/hwrf/save/bliu/hafs_20221118/fix/fix_hycom/"
+                ;;
+            *)
+                FIX_DIR="${GPLOT_DIR}/fix/"
+                ;;
+        esac
+    fi
+fi
 
 # Define batch defaults
 BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"

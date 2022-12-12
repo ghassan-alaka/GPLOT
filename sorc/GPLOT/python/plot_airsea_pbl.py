@@ -34,7 +34,6 @@ import sys #To change the path
 sys.path.append(GPLOT_DIR+'/sorc/GPLOT/python/modules')
 import skewTmodelTCpolar
 import shearandrhplot
-import centroid
 import glob
 import math
 import cmath
@@ -98,14 +97,17 @@ def main():
 	DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 	EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
 	ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+	BASEDIR = ODIR
 	try:
 		ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
 	except:
 		ODIR_TYPE = 0
 	if ODIR_TYPE == 1:
 		ODIR = ODIR+'/airsea/'
+		BASEDIR = BASEDIR+'/'
 	else:
 		ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/airsea/'
+		BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
 	
 	try:
 		DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip();
@@ -116,7 +118,7 @@ def main():
 	figext = '.png';
 	
 	# Create the temporary directory for GrADs files
-	TMPDIR = ODIR.strip()+'grads/'
+	TMPDIR = BASEDIR.strip()+'grads/'
 	if not os.path.exists(TMPDIR):
 		os.mkdir(TMPDIR)
 	
@@ -307,7 +309,8 @@ def main():
 				dbz = ga.exp('refdprs')
 				hgt = ga.exp('hgtprs')
 				temp = ga.exp('tmpprs')
-				print('MSG: Done with dbz, hgt, temp')
+				sst = ga.exp('wtmpsfc')
+				print('MSG: Done with dbz, hgt, temp, sst')
 				q = ga.exp('spfhprs')
 				rh = ga.exp('rhprs')
 				print('MSG: Done with q, rh')
@@ -354,13 +357,13 @@ def main():
 				temp_v = temp*(1+0.61*mixr)
 				rho = (levs*1e2)/(287*temp_v)
 				wwind = -omega/(rho*9.81)
-                                
+				
 				#Get storm-centered data
 				lon_sr = lon-centerlon
 				lat_sr = lat-centerlat
 				x_sr = lon_sr*111.1e3*np.cos(centerlat*3.14159/180)
 				y_sr = lat_sr*111.1e3
-                                
+				
 				#Define the polar coordinates needed
 				r = np.linspace(0,rmax,(int(rmax//resolution)+1))
 				pi = np.arccos(-1)
@@ -368,13 +371,13 @@ def main():
 				R, THETA = np.meshgrid(r, theta)
 				XI = R * np.cos(THETA)
 				YI = R * np.sin(THETA)
-                                
+				
 				x_sr = np.round(x_sr/1000,3)
 				y_sr = np.round(y_sr/1000,3)
-                                
+				
 				x_sr_2 = np.linspace(x_sr.min(), x_sr.max(), x_sr.size)
 				y_sr_2 = np.linspace(y_sr.min(), y_sr.max(), y_sr.size)
-                                
+				
 				rnorm = np.linspace(0,6,121)
 				Rnorm, THETAnorm = np.meshgrid(rnorm,theta)
 				XInorm = Rnorm * np.cos(THETAnorm)
@@ -391,6 +394,7 @@ def main():
 				do_theta_e_550 = namelist_structure_vars[2,1]
 				do_theta_e_700 = namelist_structure_vars[3,1]
 				do_theta_e_850 = namelist_structure_vars[4,1]
+				do_delta_t = namelist_structure_vars[5,1]
 				
 				#Load the colormaps needed
 				color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -410,14 +414,23 @@ def main():
 				theta_e_550_levs = np.arange(330,380+1e-6,2.0);		theta_e_550_ticks = np.arange(330,380+1e-6,5.0)
 				theta_e_700_levs = np.arange(330,380+1e-6,2.0);		theta_e_700_ticks = np.arange(330,380+1e-6,5.0)
 				theta_e_850_levs = np.arange(330,380+1e-6,2.0);		theta_e_850_ticks = np.arange(330,380+1e-6,5.0)
+				delta_t_levs = np.arange(-6,6+1e-6,0.2);		delta_t_ticks = np.arange(-6,6+1e-6,0.5)
 				
+				DELTA_T = sst[...,0].squeeze() - temp[...,0].squeeze();
 				DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\
                                                                              temp*metpy.units.units.K,\
                                                                              levs*metpy.units.units.hPa)
-                                                                             #levs[...,0:37]*metpy.units.units.hPa)
 				THETA_E = mpcalc.equivalent_potential_temperature(levs*metpy.units.units.hPa,\
                                                                                   temp*metpy.units.units.K,DPT);
-                                # Streamplots require equally spaced x and y
+
+				if ( np.all(np.isnan(THETA_E)) ):
+					print(f'WARNING: THETA_E ALL NaNs in {CTL_FILE}: Skipping this forecast hour')
+					ga('close 1')
+					update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
+					continue
+					
+				
+				# Streamplots require equally spaced x and y
 				xi = np.linspace(lon.min(),lon.max(),lon.shape[0]);
 				yi = np.linspace(lat.min(),lat.max(),lat.shape[0]);
 				
@@ -504,7 +517,6 @@ def main():
 				# FIGURE: Equivalent potential temperature below 850 hPa
 				if do_theta_e_850 == 'Y':
 					THETA_E_850 = np.nanmean(np.where((850<=levs), THETA_E, np.nan),axis=2);
-					print(np.nanmin(THETA_E), np.nanmax(THETA_E), np.nanmin(THETA_E_550), np.nanmax(THETA_E_550), np.nanmin(THETA_E_700), np.nanmax(THETA_E_700), np.nanmin(THETA_E_850), np.nanmax(THETA_E_850), int(maxwind));
 					uwind_850 = np.nanmean(np.where((850<=levs), uwind, np.nan),axis=2);
 					vwind_850 = np.nanmean(np.where((850<=levs), vwind, np.nan),axis=2);
 					
@@ -522,6 +534,23 @@ def main():
 					ax1.set_title(EXPT.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
 					ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
 					figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_850.'+forecastinit+'.airsea.f'+format(FHR,'03d')
+					fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+					if ( DO_CONVERTGIF ):
+						os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+					plt.close(fig1)
+				# FIGURE: Air-sea temperature contrast
+				if do_delta_t == 'Y':
+					print('DELTA_T', np.nanmin(DELTA_T), np.nanmean(DELTA_T), np.nanmax(DELTA_T), int(maxwind));
+					fig1 = plt.figure(figsize=figsize)
+					ax1 = fig1.add_subplot(1, 1, 1)
+					co1 = ax1.contourf(lon,lat, DELTA_T, levels=delta_t_levs, cmap='seismic',extend='both')
+					# ax1 = axes_radhgt(ax1, rmax, 0)
+					cbar1 = plt.colorbar(co1, ticks=delta_t_ticks)
+					cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+					Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
+					ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+					ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+					figfname = ODIR+'/'+LONGSID.lower()+'.delta_t.'+forecastinit+'.airsea.f'+format(FHR,'03d')
 					fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
 					if ( DO_CONVERTGIF ):
 						os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")

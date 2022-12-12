@@ -20,6 +20,9 @@ echo "MSG: shell scripts for each component of GPLOT."
 # as an environmental variable. If not, the script will attempt to
 
 # Determine the GPLOT source code directory
+if [ -z "${HOMEhafs}" ]; then
+    export HOMEhafs="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f7- | rev | sed s#//*#/#g)"
+fi
 if [ -z "${HOMEgplot}" ]; then
     export HOMEgplot="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev | sed s#//*#/#g)"
     export GPLOT_DIR="${HOMEgplot}"
