@@ -354,7 +354,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                 if [ ! -z "$(ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
                     STORMS+=(`ls -d ${IDIR}${CYCLE}/[0-9][0-9][A-Z]/ | xargs -n 1 basename`)
                 fi
-
+            fi
             # 4) If STORMS is still undefined, then set it to "NONE"
             # Large-scale graphics may still proceed.
             # Storm-centered graphics will be skipped.
