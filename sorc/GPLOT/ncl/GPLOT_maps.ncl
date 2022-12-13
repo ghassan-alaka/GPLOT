@@ -3050,7 +3050,7 @@ do fff = 0,nFiles-1
 	;     missing graphics.
 	;================================================================
         print("MSG: Checking that all graphics were produced for current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
-        if(.not.isvar("FILE_DONE"))then FILE_DONE = new(nFiles_all,logical)
+        if(.not.isvar("FILE_DONE"))then FILE_DONE = new(nFiles,logical)
 					FILE_DONE = False
 	end if
         FILE_DONE(fff) = True
