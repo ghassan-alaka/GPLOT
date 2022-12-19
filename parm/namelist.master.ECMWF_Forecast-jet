@@ -16,8 +16,8 @@ EXPT = ECMWF_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
-DO_STATS = False
-DO_SHIPS = False
+DO_STATS = True
+DO_SHIPS = True
 DO_POLAR = False
 
 ; 1C. DATA SOURCE
@@ -32,9 +32,6 @@ ENSMEM = 0
 ; 1E. SYSTEM ENVIRONMENT
 SYS_ENV = JET
 
-; 1FF. Operation or Research Mode?
-IS_REAL = True
-
 ; 1F. FORECAST CYCLE
 IDATE = 
 
@@ -42,25 +39,22 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/ECMWF_Forecast/
+IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/ECMWF/0p4-beta/oper/
 ITAG =
-EXT = .nc
+EXT = .grib2
 
 ; 1I. OUTPUT PATH
 ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF1_TAG = trak.emx.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF2_TAG = trak.emx.atcfunix
-ATCF3_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast/
-ATCF3_TAG = trak.emx.atcfunix
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
+ATCF1_TAG = trak.ecmo.atcfunix
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
+ATCF2_TAG = trak.ecmo.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
-BDECK2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
@@ -68,7 +62,7 @@ FNL_HR = 240
 FMT_HR = 3
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
-DT = 24
+DT = 3
 
 ; 1N. MASK TOPOGRAPHY
 DO_TOPOMASK = False
@@ -106,7 +100,7 @@ CPU_ACCT = hur-aoml
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom cpac d01 nio sio spac d03
+DOMAIN = basin atl epac wlant elant eus gom wpac cpac nio sio spac d01 d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1
@@ -121,27 +115,27 @@ ATCF_REQD = False
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = EMX
-MCODE = EMX
-MCODEI = EMXI
+MORIG = ECMO
+MCODE = ECMO
+MCODEI = ECMI
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM00 = HWRF HMON NVGM CTCX EGRR
-TRKM06 = HWRF HMON NVGM CTCX
-INTM = HWRF HMON DSHP LGEM CTCX
-PRSM = HWRF HMON NVGM CTCX
-TRKMI00 = HWFI HMNI EGRI CTCI TVCN OFCL
-TRKMI06 = HWFI HMNI NVGI CTCI TVCN OFCL
-INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-TRKMT00 = HWRF HMON EGRR OFCL
-TRKMT06 = HWRF HMON EGRR OFCL
-INTMT = HWRF HMON DSHP OFCL
+TRKM00 = ECMO HWRF HMON NVGM CTCX EGRR
+TRKM06 = ECMO HWRF HMON NVGM CTCX
+INTM = ECMO HWRF HMON DSHP LGEM CTCX
+PRSM = ECMO HWRF HMON NVGM CTCX
+TRKMI00 = ECMI HWFI HMNI EGRI CTCI TVCN OFCL
+TRKMI06 = ECMI HWFI HMNI NVGI CTCI TVCN OFCL
+INTMI = ECMI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT00 = ECMO HWRF HMON EGRR OFCL
+TRKMT06 = ECMO HWRF HMON EGRR OFCL
+INTMT = ECMO HWRF HMON DSHP OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HWFI HMNI NVGI CTCI TVCN OFCL
-EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-LTM = HWRF HMON NVGM CTCX
-LIM = HWRF HMON CTCX
+ETM = ECMI HWFI HMNI NVGI CTCI TVCN OFCL
+EIM = ECMI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = ECMO HWRF HMON NVGM CTCX
+LIM = ECMO HWRF HMON CTCX
 
 
 ; 3D. VERIFICATION TIMES
@@ -160,9 +154,8 @@ NTREND = 6
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-;TEMPDIR = /lfs3/projects/hur-aoml/rthr-aoml/GPLOT/HB18_v3_history/tempdir
-RESOLUTION = 1.5
+PYTHONFILE = make_rz_plots.nodbz.py
+RESOLUTION = 40
 RMAX = 600
-MODELTAG = hwrfprs.storm.0p015
-LEVS = 46
+LEVS = 9
 

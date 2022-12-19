@@ -1646,7 +1646,7 @@ begin
                             "epac",    "cpac",    "wpac",    "seasia",\                          ; North Pacific Ocean domains
                             "nio",     "bob",     "arab",\                                       ; North Indian Ocean domains
 			    "sio",     "spac",    "aust",\					 ; Southern Hemisphere domains
-                            "hwrf",    "d01",     "d02",     "d03",\                             ; Model Nest domains
+                            "hwrf",    "d01",     "d02",     "d03",     "all_d03", \             ; Model Nest domains
                             "tkfull",  "ships",   "data"/)                                       ; Other domains
 
         do bbb = 0,nBds-1
@@ -1679,6 +1679,7 @@ begin
                 if(nameBds(bbb).eq."data")then          allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
                 if(nameBds(bbb).eq."ships")then         allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
                 if(nameBds(bbb).eq."global")then        allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+		if(nameBds(bbb).eq."alld03")then	allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
         end do
 
 	if(nBds.eq.1)then   allBds := allBds(0,:)   end if
@@ -1694,7 +1695,7 @@ end
 ; getDmnInfo
 
 undef("getDmnInfo")
-function getDmnInfo (DOMAIN[1]:string,INFO[1]:string,DO_VALUE[1]:logical)
+function getDmnInfo (DOMAIN[1]:string,DSOURCE[1]:string,INFO[1]:string,DO_VALUE[1]:logical)
 local MASTER_DOMAIN, MASTER_INFO, OUT
 begin
 
@@ -1737,16 +1738,20 @@ begin
 		else if(DOMAIN.eq."hwrf")then	OUT = 0
 		else if(DOMAIN.eq."d01")then	OUT = 0
 		else if(DOMAIN.eq."d02")then	OUT = 2
-		else if(DOMAIN.eq."d03")then	OUT = 3
+		else if(DOMAIN.eq."d03")then
+			if(DSOURCE.eq."HAFS")then	OUT = 8
+			else				OUT = 3
+			end if
 		else if(DOMAIN.eq."tkfull")then	OUT = 4
 		else if(DOMAIN.eq."ships")then	OUT = 7
 		else if(DOMAIN.eq."global")then OUT = 1
+		else if(DOMAIN.eq."alld03")then	OUT = 1
 		else if(DO_VALUE)then		OUT = 6
 		else				OUT = 0
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if
 	; Set the maximum number of High pressure markers
 	else if(INFO.eq."maxH")then
 		if(     DOMAIN.eq."basin")then	OUT = 10
@@ -1763,10 +1768,11 @@ begin
 		else if(DOMAIN.eq."d03")then	OUT = 2
 		else if(DOMAIN.eq."global")then OUT = 25
 		else if(DOMAIN.eq."wmexico")then OUT = 4
+		else if(DOMAIN.eq."alld03")then	OUT = 2
 		else				OUT = 10
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if
 	
 	; Set the maximum number of Low pressure markers
 	else if(INFO.eq."maxL")then
@@ -1783,10 +1789,11 @@ begin
 		else if(DOMAIN.eq."d03")then	OUT = 2
 		else if(DOMAIN.eq."global")then OUT = 25
 		else if(DOMAIN.eq."wmexico")then OUT = 4
+		else if(DOMAIN.eq."alld03")then	OUT = 2
 		else				OUT = 12
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if
+		end if  end if
 	
 	; Set the minimum lat/lon box for each High/Low MSLP marker
 	; This "thins" the markers
@@ -1805,10 +1812,11 @@ begin
 		else if(DOMAIN.eq."d03")then	OUT = 2.5
 		else if(DOMAIN.eq."global")then OUT = 20.
 		else if(DOMAIN.eq."wmexico")then OUT = 4.
+		else if(DOMAIN.eq."alld03")then	OUT = 2.5
 		else				OUT = 10.
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if
 
 	end if  end if  end if  end if
 

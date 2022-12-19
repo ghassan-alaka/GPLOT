@@ -20,6 +20,9 @@ echo "MSG: shell scripts for each component of GPLOT."
 # as an environmental variable. If not, the script will attempt to
 
 # Determine the GPLOT source code directory
+if [ -z "${HOMEhafs}" ]; then
+    export HOMEhafs="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f7- | rev | sed s#//*#/#g)"
+fi
 if [ -z "${HOMEgplot}" ]; then
     export HOMEgplot="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev | sed s#//*#/#g)"
     export GPLOT_DIR="${HOMEgplot}"
@@ -95,7 +98,7 @@ for NML in "${NML_LIST[@]}"; do
 
 
     # Determine the components of GPLOT that should be submitted.
-    # These options currently include:  Maps, Ships, Stats, Polar
+    # These options currently include:  Maps, Ships, Stats, Polar, Airsea, Ocean_Maps
     GPMODLIST=()
     DO_MAPS="`sed -n -e 's/^DO_MAPS =\s//p' ${NML} | sed 's/^\t*//'`"
     if [ "${DO_MAPS}" = "True" ]; then
@@ -112,6 +115,14 @@ for NML in "${NML_LIST[@]}"; do
     DO_POLAR="`sed -n -e 's/^DO_POLAR =\s//p' ${NML} | sed 's/^\t*//'`"
     if [ "${DO_POLAR}" = "True" ]; then
         GPMODLIST+=("polar")
+    fi
+    DO_AIRSEA="`sed -n -e 's/^DO_AIRSEA =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_AIRSEA}" = "True" ]; then
+        GPMODLIST+=("airsea")
+    fi
+    DO_OCEAN_MAPS="`sed -n -e 's/^DO_OCEAN_MAPS =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_OCEAN_MAPS}" = "True" ]; then
+        GPMODLIST+=("ocean_maps")
     fi
     echo "MSG: Working on these GPLOT modules --> ${GPMODLIST[*]}"
 

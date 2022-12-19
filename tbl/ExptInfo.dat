@@ -33,6 +33,10 @@
                               H221_ensemble_18,   Hurricane Analysis and Forecast System V0.2E(18)
                               H221_ensemble_19,   Hurricane Analysis and Forecast System V0.2E(19)
                               H221_ensemble_20,   Hurricane Analysis and Forecast System V0.2E(20)
-                             TH16_GFS_Forecast,   Global Forecast System (v16; Thomp. substep)
-                             GF16_GFS_Forecast,    Global Forecast System (v16; GF convection)
-                             MY16_GFS_Forecast,         Global Forecast System (v16; MYNN PBL)
+                             GFP8_GFS_Forecast,          Global Forecast System (v17p8; GF Cu)
+                             MYP8_GFS_Forecast,       Global Forecast System (v17p8; MYNN PBL)
+                             HAFSV0.3S_2022_RT,   Hurricane Analysis and Forecast System V0.3S
+                             HAFSV0.3A_2022_RT,   Hurricane Analysis and Forecast System V0.3A
+                        hafsv0p3s_final_retros,   Hurricane Analysis and Forecast System V0.3S (RETROS)
+                            HAFSV0.3Basin_2022,   Hurricane Analysis and Forecast System V0.3Basin
+                             HAFS_v1b_baseline,                            HAFS V1.0B Baseline 

@@ -54,4 +54,9 @@ if [ "${A}" -eq 1 ]; then
     conda activate GPLOT
     #conda activate base
     export PYTHONBUFFERED=1
+
+    ECCODES_DIR="/work/noaa/aoml-hafs1/galaka/software/eccodes/latest"
+    export PATH="${ECCODES_DIR}/bin:${PATH}"
+    export LD_LIBRARY_PATH="${ECCODES_DIR}/lib64:${ECCODES_DIR}/lib:${LD_LIBRARY_PATH}"
+    export CPATH="${ECCODES_DIR}/include:${CPATH}"
 fi
