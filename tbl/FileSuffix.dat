@@ -11,5 +11,6 @@ HFVGFS        .nc
 fvGFS_ATL     .nc
 GEFS          NONE
 HAFS          .grb2
-ECMWF         .nc
+HAFS_HYCOM    .nc
+ECMWF         .grib2
 HMON          .grb2

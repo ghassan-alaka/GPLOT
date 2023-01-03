@@ -76,8 +76,8 @@ fi
 
 
 # Check that directory exists on HPSS
-/apps/hpss/hsi ls ${HPSSDIR} >& ${IDIR}/${EXPT}/hsi.out
-if grep -q ${EXPT} $IDIR/${EXPT}/hsi.out; then
+/apps/hpss/hsi ls ${HPSSDIR} >& ${IDIR}/hsi.out
+if grep -q ${EXPT} $IDIR/hsi.out; then
   echo "${EXPT}:  Archive path found."
 else
   echo "${EXPT}:  Archive path not found. Creating..."
@@ -86,23 +86,23 @@ fi
 
 
 # Loop over all available forecasts within EXPT
-find ${IDIR}/${EXPT}/*${MATCH}* -maxdepth 0 -type d | xargs -n 1 basename | while read TMP; do
+find ${IDIR}/*${MATCH}* -maxdepth 0 -type d | xargs -n 1 basename | while read TMP; do
 
   echo $TMP
 
   # ARCHIVE
-  /apps/hpss/hsi ls ${HPSSDIR}/${EXPT}/ >& ${IDIR}/${EXPT}/hsi.out
-  if grep -q $TMP.tar $IDIR/${EXPT}/hsi.out; then
+  /apps/hpss/hsi ls ${HPSSDIR}/${EXPT}/ >& ${IDIR}/hsi.out
+  if grep -q $TMP.tar $IDIR/hsi.out; then
     if [ "$FORCE" == "YES" ]; then
       echo "${TMP}:  Archive found. Deleting it and recreating."
       /apps/hpss/hsi rm ${HPSSDIR}/${EXPT}/${TMP}.tar
-      /apps/hpss/htar -cvpf ${HPSSDIR}/${EXPT}/${TMP}.tar ${IDIR}/${EXPT}/${TMP}/*
+      /apps/hpss/htar -cvpf ${HPSSDIR}/${EXPT}/${TMP}.tar ${IDIR}/${TMP}/*
     else
       echo "${TMP}:  Archive found. Skipping."
     fi
   else
     echo "${TMP}:  Archive started."
-    /apps/hpss/htar -cvpf ${HPSSDIR}/${EXPT}/${TMP}.tar ${IDIR}/${EXPT}/${TMP}/*
+    /apps/hpss/htar -cvpf ${HPSSDIR}/${EXPT}/${TMP}.tar ${IDIR}/${TMP}/*
     wait
     echo "${TMP}:  Archive completed."
   fi
@@ -110,10 +110,10 @@ find ${IDIR}/${EXPT}/*${MATCH}* -maxdepth 0 -type d | xargs -n 1 basename | whil
 
   # SCRUB
   if [ "$SCRUB" == "YES" ]; then
-    /apps/hpss/hsi ls ${HPSSDIR}/${EXPT}/ >& ${IDIR}/${EXPT}/hsi.out
-    if grep -q $TMP.tar $IDIR/${EXPT}/hsi.out; then
+    /apps/hpss/hsi ls ${HPSSDIR}/${EXPT}/ >& ${IDIR}/hsi.out
+    if grep -q $TMP.tar $IDIR/hsi.out; then
       echo "${TMP}:  Archive confirmed. Will scrub from disk."
-      rm -rf ${IDIR}/${EXPT}/${TMP}
+      rm -rf ${IDIR}/${TMP}
     else
       echo "${TMP}:  Archive unconfirmed. Check for errors."
     fi

@@ -22,7 +22,7 @@ OFCL,       OFCL: NHC Official, 12,                 red,                        
 OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
 DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
 LGEM,         LGEM: SHIPS LGEM,  4,           cadetblue,         Logistic Growth Equation Model (LGEM)
-IVCN,      IVCN: NHC Consensus, 10,              tomato,                       NHC Intensity Consensus
+IVCN,      IVCN: NHC Consensus, 10,       darkslategray,                       NHC Intensity Consensus
 TVCN,      TVCN: NHC Consensus, 10,       darkslategray,                           NHC Track Consensus
 OCD5,    OCD5: Combined CLIPER,  4,       darkslategray,             Combined Track & Intensity CLIPER
 CLP5,       CLP5: Track CLIPER,  4,       darkslategray,                                  Track CLIPER
@@ -30,18 +30,25 @@ SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                        
 
 
 # EXPERIMENTAL MODELS #
+H1AB,      H1AB: HAFS BL V1.0A,  9,      darkolivegreen,                           HAFS Baseline V1.0A
+HBAI,       HBAI: Interp. H1AB,  9,      darkolivegreen,                   HAFS Baseline V1.0A (Early)
+H1BB,      H1BB: HAFS BL V1.0B,  8,           orangered,                           HAFS Baseline V1.0B
+HBBI,       HBBI: Interp. H1BB,  8,           orangered,                   HAFS Baseline V1.0B (Early)
+HF3A,         HF3A: HAFS V0.3A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.3A
+HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.3A (Early)
+HF3S,         HF3S: HAFS V0.3S,  8,           orangered,   Hurricane Analysis and Forecast System V0.3S
+HFSI,     HFSI: Interp. HAFS-S,  8,           orangered,                            HAFS V0.3S (Early)
+HF3B,     HF3B: HAFS V0.3Basin,  4,          dodgerblue,   Hurricane Analysis and Forecast System V0.3Basin
+HFBI,       HFBI: Interp. HF3B,  4,          dodgerblue,                        HAFS V0.3Basin (Early)
 HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
-HFAI,     HFAI: Interp. HAFS-A,  9,      darkolivegreen,                            HAFS V0.2A (Early)
 HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
 HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
 HAFD,         HAFD: HAFS V0.2D,  7,                gold,   Hurricane Analysis and Forecast System V0.2D
 HFDI,     HFDI: Interp. HAFS-D,  7,                gold,                            HAFS V0.2D (Early)
-TH16,       TH16: GFSv16-Thomp, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
-TH6I,        TH6I: Interp TH16, 10,         aquamarine3,   Global Forecast System (v16) w/ Thomp. Substep
-GF16,      GF16: GFSv16-GFconv, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
-GF6I,        GF6I: Interp GF16, 15,            seagreen,   Global Forecast System (v16) w/ GF Convection
-MY16,        MY16: GFSv16-MYNN, 11,             salmon4,       Global Forecast System (v16) w/ MYNN PBL
-MY6I,        MY6I: Interp MY16, 11,             salmon4,       Global Forecast System (v16) w/ MYNN PBL
+GFP8,      GFP8: GFSv17p8-GFcu, 15,            seagreen,        Global Forecast System (v17p8) w/ GF Cu
+GF8I,        GF8I: Interp GFP8, 15,            seagreen,        Global Forecast System (v17p8) w/ GF Cu
+MYP8,      MYP8: GFSv17p8-MYNN, 11,             salmon4,     Global Forecast System (v17p8) w/ MYNN PBL
+MY8I,        MY8I: Interp MYP8, 11,             salmon4,     Global Forecast System (v17p8) w/ MYNN PBL
 T21D,           T21D: T-SHiELD,  7,             magenta, Tropical System for High-res. prediction on Earth-to-Local Domains
 T21I,       T21I: Interp. T21D,  7,             magenta,                               T-SHiELD (Early)
 F206,             F206: SHiELD,  6,          goldenrod4, System for High-res. prediction on Earth-to-Local Domains

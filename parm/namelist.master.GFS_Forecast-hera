@@ -1,0 +1,166 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+; 1A. EXPERIMENT NAME.
+EXPT = GFS_Forecast
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+DO_MAPS = True
+DO_STATS = True
+DO_SHIPS = True
+DO_POLAR = True
+
+; 1C. DATA SOURCE
+DSOURCE = GFS
+
+; 1D. BASIN-SCALE HWRF DATA?
+IS_MSTORM = False
+
+; 1E. ENSEMBLE MEMBER NUMBER
+ENSMEM = 0
+
+; 1E. SYSTEM ENVIRONMENT
+SYS_ENV = HERA
+
+; 1F. FORECAST CYCLE
+IDATE = 
+
+; 1G. STORM ID
+SID = 
+
+; 1H. INPUT PATH
+IDIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/GFS_Forecast/
+ITAG =
+EXT = .grb2
+
+; 1I. OUTPUT PATH
+ODIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/GPOUT/
+
+; 1J. ATCF PATH
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/GFS_Forecast_2022/
+ATCF1_TAG = trak.avno.atcfunix
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/GFS_Forecast_2022/
+ATCF2_TAG = trak.avno.atcfunix
+
+; 1K. ADECK & BDECK PATHS
+ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/GPLOT/
+BDECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/bdeck/
+
+; 1L. FORECAST HOUR INFORMATION
+INIT_HR = 0
+FNL_HR = 384
+FMT_HR = 3
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+DT = 3
+
+; 1N. MASK TOPOGRAPHY
+DO_TOPOMASK = False
+
+; 1O. REMOVE WHITE SPACE
+DO_RMWHITE = True
+
+; 1P. TOGGLE TITLE
+DO_SRCLBL = True
+
+; 1Q. AUTO-CHOOSE SETUP VARIABLES
+AUTO_VAR = False
+
+; 1R. AUTO-CHOOSE EXPERIMENT
+AUTO_DIR = False
+
+; 1S. FORCE
+FORCE = False
+
+; 1T. BATCH SUBMISSION MODE
+;BATCH_MODE; = Foreground
+;BATCH_MODE; = Background
+BATCH_MODE = SBatch
+
+; 1U. CONVERT FROM PNG TO GIF
+;DO_CONVERTGIF; = False
+DO_CONVERTGIF = True
+
+; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
+CPU_ACCT = aoml-hafs1
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+DOMAIN = global basin atl epac wlant elant gom cpac wpac nio sio spac d03
+
+; 2B. MAP GRAPHICS TIER
+TIER = Tier1 Tier2 Tier3
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = False
+
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES
+MORIG = AVNO
+MCODE = AVNO
+MCODEI = AVNI
+MCODE12 = AVN2
+
+; 3B. FORECAST GUIDANCE MODELS
+TRKM = AVNO HWRF HMON NVGM CTCX EGRR
+TRKIM = AVNO HWRF HMON NVGM CTCX EGRR CMC AEMN AP01 AP02 AP03 AP04 AP05 AP06 AP07 AP08 AP09 AP10 AP11 AP12 AP13 AP14 AP15 AP16 AP17 AP18 AP19 AP20 AP21 AP22 AP23 AP24 AP25 AP26 AP27 AP28 AP29 AP30 EEMN EE01 EE02 EE03 EE04 EE05 EE06 EE07 EE08 EE09 EE10 EE11 EE12 EE13 EE14 EE15 EE16 EE17 EE18 EE19 EE20 EE21 EE22 EE23 EE24 EE25 EE26 EE27 EE28 EE29 EE30 EE31 EE32 EE33 EE34 EE35 EE36 EE37 EE38 EE39 EE40 EE41 EE42 EE43 EE44 EE45 EE46 EE47 EE48 EE49 EE50
+INTM = AVNO HWRF HMON DSHP LGEM CTCX
+PRSM = AVNO HWRF HMON CTCX
+TRKMI = AVNI HWFI HMNI EGRI CTCI TVCN OFCL
+INTMI = AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = AVNO HWRF HMON CTCX EGRR OFCL
+INTMT = AVNO HWRF HMON DSHP CTCX OFCL
+
+; 3C. VERIFICATION MODELS
+ETM = GFSI HWFI HMNI CTCI TVCN OFCL
+EIM = GFSI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = GFSO HWRF HMON CTCX
+LIM = GFSO HWRF HMON CTCX
+
+
+; 3D. VERIFICATION TIMES
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
+; 3F. INTERPOLATION
+DO_INTERP = False
+
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; SECTION 5: GPLOT_Polar variables
+;================================================================
+
+PYTHONFILE = make_rz_plots.nodbz.py
+RESOLUTION = 25
+RMAX = 600
+LEVS = 57
+
