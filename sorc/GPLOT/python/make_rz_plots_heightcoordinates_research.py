@@ -31,6 +31,8 @@ import modules.interp as interp
 import modules.io as io
 import modules.plotting as plotting
 import modules.multiprocess as mproc
+import netCDF4
+from netCDF4 import Dataset
 
 
 ##############################
@@ -1496,16 +1498,118 @@ def main():
 				f.close()
 	
 
+				if os.path.exists(f'{NMLDIR}/namelist.polar.structure.{EXPT}'):
+					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure.{EXPT}',delimiter=',',dtype='str')
+				else:
+					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure',delimiter=',',dtype='str')
 
+				#############################################################################################################################################
+				# THIS BLOCK OF CODE WRITES AN OPTIONAL NETCDF FILE (BASED ON A NAMELIST PARAMETER) WITH AZIMUTHAL MEAN VARIABLES
+				#############################################################################################################################################
+				do_write_netcdf = namelist_structure_vars[22,1]
+				if do_write_netcdf == 'Y':
+				
+					#Make File With Azimuthal-Means and Structure Variables
+					fn = ODIR+'/'+LONGSID.lower()+'.polar_data.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.nc'
+					ds = netCDF4.Dataset(fn, 'w', format='NETCDF4')
+
+					rdim = ds.createDimension('rdim',np.shape(r)[0])
+					adim = ds.createDimension('adim',np.shape(theta)[0])
+					zdim = ds.createDimension('zdim',np.shape(heightlevs)[0])
+					zpbldim = ds.createDimension('zpbldim',np.shape(heightlevs_pbl)[0])
+
+					radius_write = ds.createVariable('radius','f4',('rdim',))
+					azimuth_write = ds.createVariable('azimuth','f4',('adim',))
+					height_write = ds.createVariable('height','f4',('zdim'))
+					vt_write = ds.createVariable('tangential_wind','f4',('adim','rdim','zdim'))
+					vt_write.units = 'Unknown'
+					ur_write = ds.createVariable('radial_wind','f4',('adim','rdim','zdim'))
+					ur_write.units = 'Unknown'
+					w_write = ds.createVariable('vertical_wind','f4',('adim','rdim','zdim'))
+					w_write.units = 'Unknown'
+					dbz_write = ds.createVariable('reflectivity','f4',('adim','rdim','zdim'))
+					dbz_write.units = 'Unknown'
+					q_write = ds.createVariable('specific_humidity','f4',('adim','rdim','zdim'))
+					q_write.units = 'Unknown'
+					rh_write = ds.createVariable('relative_humidity','f4',('adim','rdim','zdim'))
+					rh_write.units = 'Unknown'
+					temp_write = ds.createVariable('temperature','f4',('adim','rdim','zdim'))
+					temp_write.units = 'Unknown'
+					pressure_write = ds.createVariable('pressure','f4',('adim','rdim','zdim'))
+					pressure_write.units = 'Unknown'
+
+					vt_pbl_write = ds.createVariable('pbl_tangential_wind','f4',('adim','rdim','zpbldim'))
+					vt_pbl_write.units = 'Unknown'
+					ur_pbl_write = ds.createVariable('pbl_radial_wind','f4',('adim','rdim','zpbldim'))
+					ur_pbl_write.units = 'Unknown'
+
+					rmw2km_write = ds.createVariable('rmw_2km','f4')
+					rmw2km_write.units = 'Unknown'
+					vmax_write = ds.createVariable('vmax','f4')
+					vmax_write.units = 'Unknown'
+					pmin_write = ds.createVariable('pmin','f4')
+					pmin_write.units = 'Unknown'
+					shearmagnitude_write = ds.createVariable('shearmag','f4')
+					shearmagnitude_write.units = 'Unknown'
+					sheardirection_write = ds.createVariable('sheardir','f4')
+					sheardirection_write.units = 'Unknown'
+					longitude_write = ds.createVariable('longitude','f4')
+					longitude_write.units = 'Unknown'
+					latitude_write = ds.createVariable('latitude','f4')
+					latitude_write.units = 'Unknown'
+					vortex_depth_write = ds.createVariable('vortex_depth','f4')
+					vortex_depth_write.units = 'Unknown'
+					slopermw1_write = ds.createVariable('slope_rmw_linear_best_fit','f4')
+					slopermw1_write.units = 'Unknown'
+					slopermw2_write = ds.createVariable('slope_rmw_ratio','f4')
+					slopermw2_write.units = 'Unknown'
+					alphaparameter_write = ds.createVariable('alpha_decay_parameter','f4')
+					alphaparameter_write.units = 'Unknown'
+					rossbynumber_write = ds.createVariable('rossby','f4')
+					rossbynumber_write.units = 'Unknown'
+					warmcoremagnitude_write = ds.createVariable('warm_core_magnitude','f4')
+					warmcoremagnitude_write.units = 'Unknown'
+					warmcoreheight_write = ds.createVariable('warm_core_height','f4')
+					warmcoreheight_write.units = 'Unknown'
+
+					radius_write[:] = r
+					height_write[:] = heightlevs
+					vt_write[:] = vt_p
+					ur_write[:] = ur_p
+					w_write[:] = w_p
+					dbz_write[:] = dbz_p
+					q_write[:] = q_p
+					rh_write[:] = rh_p
+					temp_write[:] = temp_p
+					pressure_write[:] = pressure_p
+					vt_pbl_write[:] = vt_pbl_p
+					ur_pbl_write[:] = ur_pbl_p
+					rmw2km_write[:] = rmw_2km
+					vmax_write[:] = maxwind
+					pmin_write[:] = minpressure
+					longitude_write[:] = centerlon
+					latitude_write[:] = centerlat
+					shearmagnitude_write[:] = shearmag
+					sheardirection_write[:] = sheardir
+					vortex_depth_write[:] = vortex_depth_vt
+					slopermw1_write[:] = slope_rmw_1
+					slopermw2_write[:] = slope_rmw_2
+					alphaparameter_write[:] = alpha
+					rossbynumber_write[:] = rossby
+					warmcoremagnitude_write[:] = temp_anomaly_max
+					warmcoreheight_write[:] = height_temp_anomaly_max
+
+					ds.close()
+					
+				#############################################################################################################################################
+				# END OF BLOCK OF CODE TO WRITE A NETCDF FILE
+				#############################################################################################################################################
+				
 				#############################################################################################################################################
 				# CREATE THE GRAPHICS HERE
 				#############################################################################################################################################
 				print('MSG: Doing Plots Now')
 				start = time.perf_counter()
-				if os.path.exists(f'{NMLDIR}/namelist.polar.structure.{EXPT}'):
-					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure.{EXPT}',delimiter=',',dtype='str')
-				else:
-					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure',delimiter=',',dtype='str')
 				do_ur_mean = namelist_structure_vars[0,1]
 				do_vt_mean = namelist_structure_vars[1,1]
 				do_w_mean = namelist_structure_vars[2,1]
