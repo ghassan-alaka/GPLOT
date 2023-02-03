@@ -10,7 +10,9 @@ GFS           pgrb2.0p25              pgrb2.0p25                 pgrb2.0p25
 HFVGFS        nest02_nested_ltd       nest02_nested_ltd          nest02_nested_ltd
 fvGFS_ATL     nest02_nested_ltd       nest02_nested_ltd          nest02_nested_ltd
 GEFS          gep                     gep                        gep
-HAFS          hafs.grid01             hafs.grid02                hafs.grid02
+HAFSV0.3      hafs.grid01             hafs.grid02                hafs.grid02
+HAFSV1.0      hfs[a,b].parent.atm     hfs[a,b].storm.atm         hfs[a,b].storm.atm
+HAFS          hfs[a,b].parent.atm     hfs[a,b].storm.atm         hfs[a,b].storm.atm
 HAFS_HYCOM    hafs.hycom.3z           hafs.hycom.3z              hafs.hycom.3z
 HAFSv1a       hfsa.parent.atm         hfsa.storm.atm             hfsa.storm.atm
 HAFSv1a_HYCOM hfsa.hycom.3z           hfsa.hycom.3z              hfsa.hycom.3z
