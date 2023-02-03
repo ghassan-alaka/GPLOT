@@ -446,7 +446,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                     # Get file hour format information from table or namelist
                     if [ -z "${FHRFMT}" ]; then
                         FHRFMT="%0`awk -v DSRC=${DSOURCE} '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
-                    else
+                    elif [ "${FHRFMT:0:1}" != "%" ]; then
                         FHRFMT="%0${FHRFMT}d"
                     fi
                     if [ -z "${FHRFMT}" ]; then
