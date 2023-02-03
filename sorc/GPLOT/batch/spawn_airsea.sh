@@ -164,17 +164,35 @@ FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Find the forecast cycles for which graphics should be created
+# if [ -z "${IDATE}" ]; then
+#     echo ${IDIR}
+#     CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+#     if [ -z "${CYCLES}" ]; then
+#         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+#     fi
+#     if [ -z "${CYCLES}" ]; then
+#         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+#     fi
+#     if [ -z "${CYCLES}" ]; then
+#         CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+#     fi
+# else
+#     CYCLES=( "${IDATE[@]}" )
+# fi
 if [ -z "${IDATE}" ]; then
     echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
+    fi
+    if [ -z "${CYCLES}" ]; then
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
 else
     CYCLES=( "${IDATE[@]}" )
@@ -427,9 +445,10 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                     fi
     
                     # Get file hour format information from table or namelist
+                    echo "FHRFMT=${FHRFMT}, FHRFMT[0]=${FHRFMT:0:1}"
                     if [ -z "${FHRFMT}" ]; then
                         FHRFMT="%0`awk -v DSRC=${DSOURCE} '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
-                    else
+                    elif [ "${FHRFMT:0:1}" != "%" ]; then
                         FHRFMT="%0${FHRFMT}d"
                     fi
                     if [ -z "${FHRFMT}" ]; then
@@ -649,6 +668,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                             for FHR in ${FILE_FHRS[@]}; do
 
                                 # Build the file search string.
+                                echo "DEBUG:: FHRFMT=${FHRFMT}"
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
@@ -987,7 +1007,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                                 SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
-                                ${X_SBATCH} ${SLRM_ OPTS} ${FULL_CMD}
+                                ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.
