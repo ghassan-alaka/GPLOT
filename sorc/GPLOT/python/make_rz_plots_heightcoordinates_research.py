@@ -1188,17 +1188,24 @@ def main():
 					if ( np.nanmin(vt_rmw_ratio) < 0.4):
 						vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
 						index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
-						ivd = index_vortex_depth_vt_dynamic+1
 					else:
 						vortex_depth_vt_dynamic = np.nan
-						ivd=11
 					
 					if ( np.nanmin(vt_rmw_mean) < 24):
 						vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
 						index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))		
 					else:
 						vortex_depth_vt_static = np.nan
-					
+
+					if ( np.nanmin(vt_rmw_mean) < 8):
+						vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
+						index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+						ivd = index_vortex_depth_vt_temp+1
+					else:
+						ivd=11
+
+					print('IVD = ', ivd)
+
 					#Calculate vortex depth based on vort
 					vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
 					threshold_ratio_vort = 0.5
