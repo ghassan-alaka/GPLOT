@@ -1188,8 +1188,10 @@ def main():
 					if ( np.nanmin(vt_rmw_ratio) < 0.4):
 						vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
 						index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
+						ivd = index_vortex_depth_vt_dynamic+1
 					else:
 						vortex_depth_vt_dynamic = np.nan
+						ivd=11
 					
 					if ( np.nanmin(vt_rmw_mean) < 24):
 						vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
@@ -1203,10 +1205,8 @@ def main():
 					if (np.min(vort_ratio) < 0.5):
 						vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
 						index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
-						ivd = index_vortex_depth_vort+1	
 					else:
 						vortex_depth_vort = np.nan
-						ivd = 11
 	
 					#Calculate the new centers at each height using the centroid function
 					pressure_centroid = pressure[:,:,0:ivd]
