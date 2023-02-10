@@ -1197,7 +1197,7 @@ def main():
 					else:
 						vortex_depth_vt_static = np.nan
 
-					if ( np.nanmin(vt_rmw_mean) < 8 and nanmax(vt_rmw_mean) >=8):
+					if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
 						vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
 						index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
 						ivd = index_vortex_depth_vt_temp+1
