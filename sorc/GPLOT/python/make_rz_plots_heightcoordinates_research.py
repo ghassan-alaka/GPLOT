@@ -1191,13 +1191,13 @@ def main():
 					else:
 						vortex_depth_vt_dynamic = np.nan
 					
-					if ( np.nanmin(vt_rmw_mean) < 24):
+					if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
 						vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
 						index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))		
 					else:
 						vortex_depth_vt_static = np.nan
 
-					if ( np.nanmin(vt_rmw_mean) < 8):
+					if ( np.nanmin(vt_rmw_mean) < 8 and nanmax(vt_rmw_mean) >=8):
 						vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
 						index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
 						ivd = index_vortex_depth_vt_temp+1
@@ -1391,8 +1391,7 @@ def main():
 					temp_p_mean_outer_mean = np.nanmean(temp_p_mean_outer,0)
 					temp_anomaly = temp_p_mean_core_mean-temp_p_mean_outer_mean
 					temp_anomaly_max = np.max(temp_anomaly[1::])
-					height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000
-				
+					height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000	
 	
 					#Calculate symmetry of precipitation 
 					dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
