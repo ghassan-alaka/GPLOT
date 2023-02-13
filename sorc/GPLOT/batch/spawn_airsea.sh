@@ -181,15 +181,15 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # fi
 if [ -z "${IDATE}" ]; then
     echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
         CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
@@ -1004,7 +1004,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD} &]."
                                 ${FULL_CMD} &
                             else
-                                SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
+                                SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                                 SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}

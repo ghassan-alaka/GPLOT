@@ -395,6 +395,7 @@ def main():
 				do_theta_e_700 = namelist_structure_vars[3,1]
 				do_theta_e_850 = namelist_structure_vars[4,1]
 				do_delta_t = namelist_structure_vars[5,1]
+				do_delta_q = namelist_structure_vars[6,1]
 				
 				#Load the colormaps needed
 				color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -414,9 +415,14 @@ def main():
 				theta_e_550_levs = np.arange(330,380+1e-6,2.0);		theta_e_550_ticks = np.arange(330,380+1e-6,5.0)
 				theta_e_700_levs = np.arange(330,380+1e-6,2.0);		theta_e_700_ticks = np.arange(330,380+1e-6,5.0)
 				theta_e_850_levs = np.arange(330,380+1e-6,2.0);		theta_e_850_ticks = np.arange(330,380+1e-6,5.0)
-				delta_t_levs = np.arange(-6,6+1e-6,0.2);		delta_t_ticks = np.arange(-6,6+1e-6,0.5)
+				delta_t_levs = np.arange(-6,12+1e-6,0.2);		delta_t_ticks = np.arange(-6,12+1e-6,0.5)
+				delta_q_levs = np.arange(0.5,2.5+1e-6,0.05);		delta_q_ticks = np.arange(0.5,2.5+1e-6,0.1)
 				
 				DELTA_T = sst[...,0].squeeze() - temp[...,0].squeeze();
+				# DPT=SST at sfc
+				sfcq = mpcalc.specific_humidity_from_dewpoint((sst[...,0].squeeze()+273.15)*metpy.units.units.K,\
+				                                               mslp.squeeze()*metpy.units.units.hPa)
+				DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
 				DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\
                                                                              temp*metpy.units.units.K,\
                                                                              levs*metpy.units.units.hPa)
@@ -437,6 +443,8 @@ def main():
 				figsize = (24,24);
 				fontsize = 24
 				small_fontsize = 24
+				# Default for axis labels, etc.
+				plt.rcParams.update({'font.size': 20})
 				
 				# FIGURE: Total turbulent heat flux (enthalpy flux) at the sea surface
 				if do_turb_flux == 'Y':
@@ -555,6 +563,23 @@ def main():
 					if ( DO_CONVERTGIF ):
 						os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
 					plt.close(fig1)
+				# FIGURE: Air-sea specific humidity contrast
+				if do_delta_q == 'Y':
+					print('DELTA_Q', np.nanmin(DELTA_Q), np.nanmean(DELTA_Q), np.nanmax(DELTA_Q), int(maxwind));
+					fig1 = plt.figure(figsize=figsize)
+					ax1 = fig1.add_subplot(1, 1, 1)
+					co1 = ax1.contourf(lon,lat, DELTA_Q, levels=delta_q_levs, cmap='seismic',extend='both')
+					# ax1 = axes_radhgt(ax1, rmax, 0)
+					cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
+					cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+					Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
+					ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+					ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+					figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
+					fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+					if ( DO_CONVERTGIF ):
+						os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+					plt.close(fig1)
 	
 	
 				# Close the GrADs control file
@@ -572,14 +597,14 @@ def main():
 
 
 def update_plottedfile(OFILE, IFILE):
-        """Update the GPLOT PlottedFiles file to mark a file as processed.
-        @param OFILE: the plotted file path as a string
-        @param IFILE: the model output file that was processed
-        """
-        os.system("sed -i '/"+str(os.path.basename(IFILE))+"/d' "+OFILE)
-        os.system('echo "'+str(IFILE)+' 1" >> '+OFILE)
-        os.system('sort -u '+OFILE+' > '+OFILE+'.TMP')
-        os.system('mv '+OFILE+'.TMP '+OFILE)
+	"""Update the GPLOT PlottedFiles file to mark a file as processed.
+	@param OFILE: the plotted file path as a string
+	@param IFILE: the model output file that was processed
+	"""
+	os.system("sed -i '/"+str(os.path.basename(IFILE))+"/d' "+OFILE)
+	os.system('echo "'+str(IFILE)+' 1" >> '+OFILE)
+	os.system('sort -u '+OFILE+' > '+OFILE+'.TMP')
+	os.system('mv '+OFILE+'.TMP '+OFILE)
 
 
 

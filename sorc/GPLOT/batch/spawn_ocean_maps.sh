@@ -212,15 +212,15 @@ echo "MSG: Will produce graphics for up to ${MAX_CYCLES} forecast cycles."
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
     echo ${OCEAN_DIR}
-    CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
         CYCLES=( `ls -rd ${OCEAN_DIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
