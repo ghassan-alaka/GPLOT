@@ -130,6 +130,7 @@ def main():
         
         # Read the master namelist
         DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+        #OCEAN_DSOURCE = subprocess.run(['grep','^OCEAN_DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
         EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
         ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
         try:
@@ -158,8 +159,10 @@ def main():
         ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
         #/scratch2/AOML/aoml-hafs1/Lew.Gramer/src/hrd_gplot/fix/hafs_hycom_nhc.basin.regional.depth.b
         DEPTH_FILE = FIX_DIR.strip()+DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
+        #DEPTH_FILE = FIX_DIR.strip()+OCEAN_DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
         
         depths = read_fix_hycom_depth(DEPTH_FILE);
+        print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
         
         #Get parameters from input file
         resolution = float(RESOLUTION)
@@ -281,9 +284,9 @@ def main():
                                         latmax = centerlat + yoffset
                                         latmin = centerlat - yoffset
         
-                                        # Ocean data has longitudes -180 -> +180
-                                        lonmin = lonmin - 360
-                                        lonmax = lonmax - 360
+                                        # # Ocean data has longitudes -180 -> +180
+                                        # lonmin = lonmin - 360
+                                        # lonmax = lonmax - 360
 
                                 #Get data
                                 if ( OCEAN_DOMAIN == 'd03' ):
@@ -293,6 +296,7 @@ def main():
                                 all_ds = xr.open_dataset(FILE);
                                 ds = all_ds.where(~depths.mask);
                                 if ( OCEAN_DOMAIN == 'd03' ):
+                                    print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
                                     ds = ds.where((lonmin<=all_ds.Longitude) & (all_ds.Longitude<=lonmax) & (latmin<=all_ds.Latitude) & (all_ds.Latitude<=latmax));
                                 lon = ds.Longitude.squeeze();
                                 lat = ds.Latitude.squeeze();
@@ -328,6 +332,7 @@ def main():
                                         all_ods = xr.open_dataset(oFILE)
                                         ods = all_ods.where(~depths.mask);
                                         if ( OCEAN_DOMAIN == 'd03' ):
+                                            print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');
                                             ods = ods.where((lonmin<=all_ods.Longitude) & (all_ods.Longitude<=lonmax) \
                                                             & (latmin<=all_ods.Latitude) & (all_ods.Latitude<=latmax));
                                         SHF = ods.surface_heat_flux.squeeze()
@@ -442,6 +447,8 @@ def main():
                                 figsize = (24,24);
                                 fontsize = 24
                                 small_fontsize = 24
+                                # Default for axis labels, etc.
+                                plt.rcParams.update({'font.size': 20})
                                 
                                 # FIGURE: Depth of the 26 oC isotherm
                                 if do_iso_26 == 'Y':
@@ -459,8 +466,9 @@ def main():
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 26 $^oC$ Isotherm (m, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
+                                            print(f'DEBUG: set_xlim( {lonmin},{lonmax} ), set_ylim( {latmin},{latmax} )');
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.iso_26.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.iso_26.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -482,7 +490,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.iso_20.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.iso_20.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -504,7 +512,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.ohc.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.ohc.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -526,7 +534,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.sfc_conv.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.sfc_conv.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -548,7 +556,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.sfc_vort.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.sfc_vort.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -569,7 +577,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.ml_conv.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.ml_conv.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -591,7 +599,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.ml_vort.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.ml_vort.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -613,7 +621,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.ssh.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.ssh.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -635,7 +643,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.shf.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.shf.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -657,7 +665,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.dpi.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.dpi.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                                 os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -681,7 +689,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.mld.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.mld.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                             os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -704,7 +712,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.sss.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.sss.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                             os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -727,7 +735,7 @@ def main():
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.mlt.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.mlt.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                             os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -743,14 +751,14 @@ def main():
                                         ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-                                            ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+                                            ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         else:
                                             #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
                                             ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
                                         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
                                         if ( OCEAN_DOMAIN == 'd03' ):
                                             ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
-                                        figfname = ODIR+'/'+LONGSID.lower()+'.mls.'+forecastinit+'.'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+                                        figfname = ODIR+'/'+LONGSID.lower()+'.mls.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
                                         fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
                                         if ( DO_CONVERTGIF ):
                                             os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")

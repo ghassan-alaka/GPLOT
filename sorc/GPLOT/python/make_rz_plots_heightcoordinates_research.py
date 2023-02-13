@@ -31,6 +31,8 @@ import modules.interp as interp
 import modules.io as io
 import modules.plotting as plotting
 import modules.multiprocess as mproc
+import netCDF4
+from netCDF4 import Dataset
 
 
 ##############################
@@ -775,10 +777,13 @@ def main():
 	
 				rmw_mean = np.ones(zsize)*np.nan
 				rmw_mean_index = np.ones(zsize)*np.nan
+				vt_rmw_mean = np.ones(zsize)*np.nan
+
 				for k in range(zsize):
-					rmw_mean[k] = np.round(np.median(r[vt_p_mean[:,k] > 0.95*np.max(vt_p_mean[:,k])]))
+					rmw_mean[k] = np.round(np.median(r[vt_p_mean[:,k] > 0.95*np.nanmax(vt_p_mean[:,k])]))
 					rmw_mean_index[k] = np.argmin(abs(r-rmw_mean[k])) 
-				
+					vt_rmw_mean[k] = vt_p_mean[np.int(rmw_mean_index[k]),k]
+		
 				rmw_2km = rmw_mean[4]
 				vt_p_mean_max = np.max(vt_p_mean,0)
 				vt_p_mean_max_2km = vt_p_mean_max[4]
@@ -1175,27 +1180,40 @@ def main():
 				vmax = float(maxwind)
 				vt_max = np.nanmax(vt_p_mean)*1.94
 	
-				rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vort = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
+				rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vt_dynamic = vortex_depth_vt_static = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
 				if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
 					#Calculate Vortex Depth based on Vt
-					vt_ratio = np.nanmax(vt_p_mean,0)/np.nanmax(vt_p_mean[:,4])
-					threshold_ratio_vt = 0.5
-					if ( np.min(vt_ratio) < 0.5):
-						vortex_depth_vt = np.min(heightlevs[vt_ratio < threshold_ratio_vt])/1000
-						index_vortex_depth_vt = np.argmin(abs(heightlevs/1000-vortex_depth_vt))
+					vt_rmw_ratio = vt_rmw_mean/vt_rmw_mean[4]
+					threshold_ratio_vt_dynamic = 0.4
+					if ( np.nanmin(vt_rmw_ratio) < 0.4):
+						vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
+						index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
 					else:
-						vortex_depth_vt = np.nan
+						vortex_depth_vt_dynamic = np.nan
 					
+					if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
+						vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
+						index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))		
+					else:
+						vortex_depth_vt_static = np.nan
+
+					if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
+						vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
+						index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+						ivd = index_vortex_depth_vt_temp+1
+					else:
+						ivd=11
+
+					print('IVD = ', ivd)
+
 					#Calculate vortex depth based on vort
 					vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
 					threshold_ratio_vort = 0.5
 					if (np.min(vort_ratio) < 0.5):
 						vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
 						index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
-						ivd = index_vortex_depth_vort+1	
 					else:
 						vortex_depth_vort = np.nan
-						ivd = 11
 	
 					#Calculate the new centers at each height using the centroid function
 					pressure_centroid = pressure[:,:,0:ivd]
@@ -1373,8 +1391,7 @@ def main():
 					temp_p_mean_outer_mean = np.nanmean(temp_p_mean_outer,0)
 					temp_anomaly = temp_p_mean_core_mean-temp_p_mean_outer_mean
 					temp_anomaly_max = np.max(temp_anomaly[1::])
-					height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000
-				
+					height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000	
 	
 					#Calculate symmetry of precipitation 
 					dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
@@ -1492,20 +1509,125 @@ def main():
 			
 				structurefile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
 				f = open(structurefile,'w')
-				f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vort,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local))
+				f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vt_dynamic,vortex_depth_vt_static,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local))
 				f.close()
 	
 
+				if os.path.exists(f'{NMLDIR}/namelist.polar.structure.{EXPT}'):
+					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure.{EXPT}',delimiter=',',dtype='str')
+				else:
+					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure',delimiter=',',dtype='str')
 
+				#############################################################################################################################################
+				# THIS BLOCK OF CODE WRITES AN OPTIONAL NETCDF FILE (BASED ON A NAMELIST PARAMETER) WITH AZIMUTHAL MEAN VARIABLES
+				#############################################################################################################################################
+				do_write_netcdf = namelist_structure_vars[22,1]
+				if do_write_netcdf == 'Y':
+				
+					#Make File With Azimuthal-Means and Structure Variables
+					fn = ODIR+'/'+LONGSID.lower()+'.polar_data.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.nc'
+					ds = netCDF4.Dataset(fn, 'w', format='NETCDF4')
+
+					rdim = ds.createDimension('rdim',np.shape(r)[0])
+					adim = ds.createDimension('adim',np.shape(theta)[0])
+					zdim = ds.createDimension('zdim',np.shape(heightlevs)[0])
+					zpbldim = ds.createDimension('zpbldim',np.shape(heightlevs_pbl)[0])
+
+					radius_write = ds.createVariable('radius','f4',('rdim',))
+					azimuth_write = ds.createVariable('azimuth','f4',('adim',))
+					height_write = ds.createVariable('height','f4',('zdim'))
+					vt_write = ds.createVariable('tangential_wind','f4',('adim','rdim','zdim'))
+					vt_write.units = 'Unknown'
+					ur_write = ds.createVariable('radial_wind','f4',('adim','rdim','zdim'))
+					ur_write.units = 'Unknown'
+					w_write = ds.createVariable('vertical_wind','f4',('adim','rdim','zdim'))
+					w_write.units = 'Unknown'
+					dbz_write = ds.createVariable('reflectivity','f4',('adim','rdim','zdim'))
+					dbz_write.units = 'Unknown'
+					q_write = ds.createVariable('specific_humidity','f4',('adim','rdim','zdim'))
+					q_write.units = 'Unknown'
+					rh_write = ds.createVariable('relative_humidity','f4',('adim','rdim','zdim'))
+					rh_write.units = 'Unknown'
+					temp_write = ds.createVariable('temperature','f4',('adim','rdim','zdim'))
+					temp_write.units = 'Unknown'
+					pressure_write = ds.createVariable('pressure','f4',('adim','rdim','zdim'))
+					pressure_write.units = 'Unknown'
+
+					vt_pbl_write = ds.createVariable('pbl_tangential_wind','f4',('adim','rdim','zpbldim'))
+					vt_pbl_write.units = 'Unknown'
+					ur_pbl_write = ds.createVariable('pbl_radial_wind','f4',('adim','rdim','zpbldim'))
+					ur_pbl_write.units = 'Unknown'
+
+					rmw2km_write = ds.createVariable('rmw_2km','f4')
+					rmw2km_write.units = 'Unknown'
+					vmax_write = ds.createVariable('vmax','f4')
+					vmax_write.units = 'Unknown'
+					pmin_write = ds.createVariable('pmin','f4')
+					pmin_write.units = 'Unknown'
+					shearmagnitude_write = ds.createVariable('shearmag','f4')
+					shearmagnitude_write.units = 'Unknown'
+					sheardirection_write = ds.createVariable('sheardir','f4')
+					sheardirection_write.units = 'Unknown'
+					longitude_write = ds.createVariable('longitude','f4')
+					longitude_write.units = 'Unknown'
+					latitude_write = ds.createVariable('latitude','f4')
+					latitude_write.units = 'Unknown'
+					vortex_depth_dynamic_write = ds.createVariable('vortex_depth_dynamic','f4')
+					vortex_depth_dynamic_write.units = 'Unknown'
+					vortex_depth_static_write = ds.createVariable('vortex_depth_static','f4')
+					vortex_depth_static_write.units = 'Unknown'
+					slopermw1_write = ds.createVariable('slope_rmw_linear_best_fit','f4')
+					slopermw1_write.units = 'Unknown'
+					slopermw2_write = ds.createVariable('slope_rmw_ratio','f4')
+					slopermw2_write.units = 'Unknown'
+					alphaparameter_write = ds.createVariable('alpha_decay_parameter','f4')
+					alphaparameter_write.units = 'Unknown'
+					rossbynumber_write = ds.createVariable('rossby','f4')
+					rossbynumber_write.units = 'Unknown'
+					warmcoremagnitude_write = ds.createVariable('warm_core_magnitude','f4')
+					warmcoremagnitude_write.units = 'Unknown'
+					warmcoreheight_write = ds.createVariable('warm_core_height','f4')
+					warmcoreheight_write.units = 'Unknown'
+
+					radius_write[:] = r
+					height_write[:] = heightlevs
+					vt_write[:] = vt_p
+					ur_write[:] = ur_p
+					w_write[:] = w_p
+					dbz_write[:] = dbz_p
+					q_write[:] = q_p
+					rh_write[:] = rh_p
+					temp_write[:] = temp_p
+					pressure_write[:] = pressure_p
+					vt_pbl_write[:] = vt_pbl_p
+					ur_pbl_write[:] = ur_pbl_p
+					rmw2km_write[:] = rmw_2km
+					vmax_write[:] = maxwind
+					pmin_write[:] = minpressure
+					longitude_write[:] = centerlon
+					latitude_write[:] = centerlat
+					shearmagnitude_write[:] = shearmag
+					sheardirection_write[:] = sheardir
+					vortex_depth_dynamic_write[:] = vortex_depth_vt_dynamic
+					vortex_depth_static_write[:] = vortex_depth_vt_static
+					slopermw1_write[:] = slope_rmw_1
+					slopermw2_write[:] = slope_rmw_2
+					alphaparameter_write[:] = alpha
+					rossbynumber_write[:] = rossby
+					warmcoremagnitude_write[:] = temp_anomaly_max
+					warmcoreheight_write[:] = height_temp_anomaly_max
+
+					ds.close()
+					
+				#############################################################################################################################################
+				# END OF BLOCK OF CODE TO WRITE A NETCDF FILE
+				#############################################################################################################################################
+				
 				#############################################################################################################################################
 				# CREATE THE GRAPHICS HERE
 				#############################################################################################################################################
 				print('MSG: Doing Plots Now')
 				start = time.perf_counter()
-				if os.path.exists(f'{NMLDIR}/namelist.polar.structure.{EXPT}'):
-					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure.{EXPT}',delimiter=',',dtype='str')
-				else:
-					namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.polar.structure',delimiter=',',dtype='str')
 				do_ur_mean = namelist_structure_vars[0,1]
 				do_vt_mean = namelist_structure_vars[1,1]
 				do_w_mean = namelist_structure_vars[2,1]
