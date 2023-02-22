@@ -25,7 +25,8 @@ ulimit -c 0
 module purge
 module load intel/2022.1.2
 module load wgrib/1.8.1.0b
-module load wgrib2/2.0.8
+module load gnu/9.2.0
+module load wgrib2/3.1.1_ncep
 if [ "${A}" -eq 0 ]; then
     module load netcdf/4.6.1
     module load hdf5/1.10.4
