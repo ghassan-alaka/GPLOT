@@ -47,9 +47,9 @@ EXT = .grib2
 ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2023/
 ATCF1_TAG = trak.ecmo.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2023/
 ATCF2_TAG = trak.ecmo.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
