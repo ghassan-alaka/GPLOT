@@ -291,8 +291,7 @@ def main():
 				ga(f'set z 1 {zsize_pressure}')
 				levs = ga.exp('lev')
 				z = np.zeros((zsize_pressure))*np.nan
-				for i in range(zsize_pressure):
-					z[i] = levs[1,1,i]
+				for i in range(zsize_pressure):  z[i] = levs[1,1,i]
 	
 				#Get data
 				print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
@@ -466,10 +465,6 @@ def main():
 				varList = [np.transpose(uwind,(2,0,1)), np.transpose(vwind, (2,0,1)), np.transpose(wwind, (2,0,1)), \
 					   np.transpose(dbz, (2,0,1)), np.transpose(temp, (2,0,1)), np.transpose(q, (2,0,1)), \
 					   np.transpose(rh, (2,0,1)), np.transpose(pressure, (2,0,1))]
-				#print(x_sr)  #, print(y_sr)
-				#print(XI)
-				#print(YI)
-				#print(np.shape(np.transpose(uwind,(2,0,1))))
 				PolarData = mproc.multiprocess_polar_vars(x_sr, y_sr, XI, YI, varList=varList, levels=heightlevs)
 				u_p, v_p, w_p = PolarData[0,:,:,:], PolarData[1,:,:,:], PolarData[2,:,:,:]
 				dbz_p, temp_p, q_p = PolarData[3,:,:,:], PolarData[4,:,:,:], PolarData[5,:,:,:]
