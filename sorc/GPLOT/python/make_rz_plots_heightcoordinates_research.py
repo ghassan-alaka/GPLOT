@@ -278,13 +278,21 @@ def main():
 				# Read lat & lon
 				lon = ga.exp('lon')[0,:]
 				lat = ga.exp('lat')[:,0]
-				#print(lat.shape, lon.shape)
+				if np.any(lon[1:] < lon[:-1]):   do_reshape = True
+				elif np.any(lat[1:] < lat[:-1]): do_reshape = True
+				else:                            do_reshape = False
+				if do_reshape:
+					lon2d, lat2d = ga.exp('lon'), ga.exp('lat')
+					shape = np.shape(lon2d)
+					lon = lon2d.reshape((shape[1], shape[0]))[0,:]
+					lat = lat2d.reshape((shape[1], shape[0]))[:,0]
 
 				# Get pressure levels
 				ga(f'set z 1 {zsize_pressure}')
 				levs = ga.exp('lev')
-				z = np.zeros((zsize_pressure,0))*np.nan
-				for i in range(zsize_pressure):  z[i] = levs[1,1,i]
+				z = np.zeros((zsize_pressure))*np.nan
+				for i in range(zsize_pressure):
+					z[i] = levs[1,1,i]
 	
 				#Get data
 				print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
@@ -301,7 +309,7 @@ def main():
 				print('MSG: Done reading: dbz, hgt, temp')
 				q, rh = ga.exp('spfhprs'), ga.exp('rhprs')
 				print('MSG: Done reading: q, rh')
-				
+			
 				#Get 2-d Data
 				ga('set z 1')
 				u10, v10 = ga.exp('ugrd10m'), ga.exp('vgrd10m')
@@ -309,10 +317,6 @@ def main():
 				else:			mslp = ga.exp('prmslmsl')
 				tmp2m, q2m, rh2m = ga.exp('tmp2m'), ga.exp('spfh2m'), ga.exp('rh2m')
 				print('MSG: Done reading u10,v10,mslp,tmp2m,q2m')
-				mixr2m = q2m/(1-q2m)
-				temp_v_2m = tmp2m*(1+0.61*mixr2m)
-				rho2m = mslp/(287*temp_v_2m)
-				print('MSG: Done reading surface vars (e.g., u10,v10)')
 				
 				#Get u850, v850, u200, v200 for Shear Calculation
 				ga('set lev 850')
@@ -320,9 +324,40 @@ def main():
 				ga('set lev 200')
 				u200, v200, z200 = ga.exp('ugrdprs'), ga.exp('vgrdprs'), ga.exp('hgtprs')
 				ga('set z 1')
+
+				# Reshape the arrays, if necessary
+				if do_reshape:
+					shape = uwind.shape
+					levs = levs.reshape(shape[1], shape[0], shape[2])
+					uwind = uwind.reshape(shape[1], shape[0], shape[2])
+					vwind = vwind.reshape(shape[1], shape[0], shape[2])
+					omega = omega.reshape(shape[1], shape[0], shape[2])
+					dbz = dbz.reshape(shape[1], shape[0], shape[2])
+					hgt = hgt.reshape(shape[1], shape[0], shape[2])
+					temp = temp.reshape(shape[1], shape[0], shape[2])
+					q = q.reshape(shape[1], shape[0], shape[2])
+					rh = rh.reshape(shape[1], shape[0], shape[2])
+					mslp = mslp.reshape(shape[1], shape[0])
+					u10 = u10.reshape(shape[1], shape[0])
+					v10 = v10.reshape(shape[1], shape[0])
+					tmp2m = tmp2m.reshape(shape[1], shape[0])
+					q2m = q2m.reshape(shape[1], shape[0])
+					rh2m = rh2m.reshape(shape[1], shape[0])
+					u850 = u850.reshape(shape[1], shape[0])
+					v850 = v850.reshape(shape[1], shape[0])
+					z850 = z850.reshape(shape[1], shape[0])
+					u200 = u200.reshape(shape[1], shape[0])
+					v200 = v200.reshape(shape[1], shape[0])
+					z200 = z200.reshape(shape[1], shape[0])
+
+				# Compute additional 2D data
+				mixr2m = q2m/(1-q2m)
+				temp_v_2m = tmp2m*(1+0.61*mixr2m)
+				rho2m = mslp/(287*temp_v_2m)
+
 				finish = time.perf_counter()
 				print(f'MSG: Total time to read data: {finish-start:.2f} second(s)')
-				
+
 				#Get W from Omega
 				#w = -omega/(rho*g)
 				#rho = p/(Rd*Tv)
@@ -431,6 +466,10 @@ def main():
 				varList = [np.transpose(uwind,(2,0,1)), np.transpose(vwind, (2,0,1)), np.transpose(wwind, (2,0,1)), \
 					   np.transpose(dbz, (2,0,1)), np.transpose(temp, (2,0,1)), np.transpose(q, (2,0,1)), \
 					   np.transpose(rh, (2,0,1)), np.transpose(pressure, (2,0,1))]
+				#print(x_sr)  #, print(y_sr)
+				#print(XI)
+				#print(YI)
+				#print(np.shape(np.transpose(uwind,(2,0,1))))
 				PolarData = mproc.multiprocess_polar_vars(x_sr, y_sr, XI, YI, varList=varList, levels=heightlevs)
 				u_p, v_p, w_p = PolarData[0,:,:,:], PolarData[1,:,:,:], PolarData[2,:,:,:]
 				dbz_p, temp_p, q_p = PolarData[3,:,:,:], PolarData[4,:,:,:], PolarData[5,:,:,:]
