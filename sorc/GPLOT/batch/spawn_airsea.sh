@@ -163,6 +163,7 @@ echo "MSG: Using this batch-submission mode   --> ${BATCH_MODE}"
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
+MAX_CYCLES=25
 # Find the forecast cycles for which graphics should be created
 # if [ -z "${IDATE}" ]; then
 #     echo ${IDIR}

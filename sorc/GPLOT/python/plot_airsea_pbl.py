@@ -259,7 +259,7 @@ def main():
 				
 				# Open GrADs data file
 				print('MSG: GrADs control and index files should be available.')
-				ga('open '+CTL_FILE)
+				ga(f'open {CTL_FILE}')
 				env = ga.env()
 	
 				#Define how big of a box you want, based on lat distance
@@ -277,11 +277,9 @@ def main():
 	
 				# Setup lat, lon boundaries
 				ga('set z 1')
-				lonmax = centerlon + xoffset
-				lonmin = centerlon - xoffset
+				lonmax, lonmin = centerlon+xoffset, centerlon-xoffset
 				ga(f'set lon {lonmin} {lonmax}')
-				latmax = centerlat + yoffset
-				latmin = centerlat - yoffset
+				latmax, latmin = centerlat+yoffset, centerlat-yoffset
 				ga(f'set lat {latmin} {latmax}')
 
 				# Fix to integer boundaries to prevent mismatching array shapes
@@ -292,7 +290,14 @@ def main():
 				# Read lat & lon
 				lon = ga.exp('lon')[0,:]
 				lat = ga.exp('lat')[:,0]
-				#print(lat.shape, lon.shape)
+				if np.any(lon[1:] < lon[:-1]):   do_reshape = True
+				elif np.any(lat[1:] < lat[:-1]): do_reshape = True
+				else:                            do_reshape = False
+				if do_reshape:
+					lon2d, lat2d = ga.exp('lon'), ga.exp('lat')
+					shape = np.shape(lon2d)
+					lon = lon2d.reshape((shape[1], shape[0]))[0,:]
+					lat = lat2d.reshape((shape[1], shape[0]))[:,0]
 
 				# Get pressure levels
 				ga(f'set z 1 {zsize_pressure}')
@@ -302,18 +307,19 @@ def main():
 	
 				#Get data
 				print('MSG: Getting Data Now. Using an xoffset of '+str(xoffset)+' degrees')
+				start = time.perf_counter()
 				uwind = ga.exp('ugrdprs')
 				vwind = ga.exp('vgrdprs')
 				omega = ga.exp('vvelprs')
-				print('MSG: Done With u,v,w')
+				print('MSG: Done reading: u,v,w')
 				dbz = ga.exp('refdprs')
 				hgt = ga.exp('hgtprs')
 				temp = ga.exp('tmpprs')
 				sst = ga.exp('wtmpsfc')
-				print('MSG: Done with dbz, hgt, temp, sst')
+				print('MSG: Done reading: dbz, hgt, temp, sst')
 				q = ga.exp('spfhprs')
 				rh = ga.exp('rhprs')
-				print('MSG: Done with q, rh')
+				print('MSG: Done reading: q, rh')
 				lhtflx = ga.exp('lhtflsfc')[...,0]
 				shtflx = ga.exp('shtflsfc')[...,0]
 				dlwflx = ga.exp('dlwrfavesfc')[...,0]
@@ -333,11 +339,7 @@ def main():
 				tmp2m = ga.exp('tmp2m')
 				q2m = ga.exp('spfh2m')
 				rh2m = ga.exp('rh2m')
-				print('MSG: Done with u10,v10,mslp,tmp2m,q2m')
-				mixr2m = q2m/(1-q2m)
-				temp_v_2m = tmp2m*(1+0.61*mixr2m)
-				rho2m = mslp/(287*temp_v_2m)
-				print(f'MSG: Done with surface vars (e.g., u10,v10) {datetime.now()}')
+				print('MSG: Done reading: u10,v10,mslp,tmp2m,q2m')
 				
 				#Get u850, v850, u200, v200 for Shear Calculation
 				ga('set lev 850')
@@ -349,6 +351,46 @@ def main():
 				v200 = ga.exp('vgrdprs')
 				z200 = ga.exp('hgtprs')
 				ga('set z 1')
+				
+				# Reshape the arrays, if necessary
+				if do_reshape:
+					shape = uwind.shape
+					levs = levs.reshape(shape[1], shape[0], shape[2])
+					uwind = uwind.reshape(shape[1], shape[0], shape[2])
+					vwind = vwind.reshape(shape[1], shape[0], shape[2])
+					omega = omega.reshape(shape[1], shape[0], shape[2])
+					dbz = dbz.reshape(shape[1], shape[0], shape[2])
+					hgt = hgt.reshape(shape[1], shape[0], shape[2])
+					temp = temp.reshape(shape[1], shape[0], shape[2])
+					sst = sst.reshape(shape[1], shape[0])
+					q = q.reshape(shape[1], shape[0], shape[2])
+					rh = rh.reshape(shape[1], shape[0], shape[2])
+					lhtflx = lhtflx.reshape(shape[1], shape[0])
+					shtflx = shtflx.reshape(shape[1], shape[0])
+					dlwflx = dlwflx.reshape(shape[1], shape[0])
+					ulwflx = ulwflx.reshape(shape[1], shape[0])
+					dswflx = dswflx.reshape(shape[1], shape[0])
+					uswflx = uswflx.reshape(shape[1], shape[0])
+					mslp = mslp.reshape(shape[1], shape[0])
+					u10 = u10.reshape(shape[1], shape[0])
+					v10 = v10.reshape(shape[1], shape[0])
+					tmp2m = tmp2m.reshape(shape[1], shape[0])
+					q2m = q2m.reshape(shape[1], shape[0])
+					rh2m = rh2m.reshape(shape[1], shape[0])
+					u850 = u850.reshape(shape[1], shape[0])
+					v850 = v850.reshape(shape[1], shape[0])
+					z850 = z850.reshape(shape[1], shape[0])
+					u200 = u200.reshape(shape[1], shape[0])
+					v200 = v200.reshape(shape[1], shape[0])
+					z200 = z200.reshape(shape[1], shape[0])
+
+				# Compute additional 2D data
+				mixr2m = q2m/(1-q2m)
+				temp_v_2m = tmp2m*(1+0.61*mixr2m)
+				rho2m = mslp/(287*temp_v_2m)
+				
+				finish = time.perf_counter()
+				print(f'MSG: Total time to read data: {finish-start:.2f} second(s)')
 				
 				#Get W from Omega
 				#w = -omega/(rho*g)
