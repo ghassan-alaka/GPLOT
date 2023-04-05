@@ -157,7 +157,7 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots_heightcoordinates_research.py
+PYTHONFILE = polar_cylindrical_structure.py
 RESOLUTION = 2.0
 RMAX = 300
 LEVS = 46
