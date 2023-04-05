@@ -159,8 +159,9 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots.nodbz.py
+PYTHONFILE = polar_cylindrical_structure.py
 RESOLUTION = 25
 RMAX = 600
 LEVS = 57
+DO_DBZ = False
 
