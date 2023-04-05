@@ -4,7 +4,7 @@ False     RVO            850           HGT          850     N/A          N/A    
 False     RVO            850           N/A          N/A     N/A          N/A         UV           200         N/A          N/A     N/A         N/A           RVO850_UV200
 False     RVO            700           HGT          700     N/A          N/A         UV           700         N/A          N/A     N/A         N/A           RVO700_Z700_UV700
 False     RH             700           MSLP         N/A     N/A          N/A         UV           700         MSLP         N/A     N/A         N/A           RH700_UV700_MSLP
-False     PRATE          N/A           MSLP         N/A     HGT          05001000d   N/A          N/A         MSLP         N/A     N/A         N/A           PRCP_MSLP_Z1000500
+False     PRATE          N/A           MSLP         N/A     HGT          05001000d   N/A          N/A         MSLP         N/A     N/A         N/A           PRATE_MSLP_Z1000500
 True      HGT            500           MSLP         N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           HGT500_MSLP
 False     TPW            N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPW_MSLP
 False     UV             02000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          02000850d     SHDL
