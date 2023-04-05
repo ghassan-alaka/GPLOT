@@ -126,8 +126,7 @@ def main():
   except:
     DO_DBZ = True
   
-  print('DO_RESEARCH_MODE')
-  print(DO_RESEARCH_MODE)
+  print(f'MSG: Research Mode? {str(DO_RESEARCH_MODE)}')
 
   # Create the temporary directory for GrADs files
   TMPDIR = BASEDIR.strip()+'grads/'
@@ -217,7 +216,11 @@ def main():
     forecastinit = ATCF_DATA[list(FHRIND),2][0]
     maxwind = ATCF_DATA[list(FHRIND),8][0]
     minpressure = ATCF_DATA[list(FHRIND),9][0]
-    rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    try:
+      rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    except IndexError:
+      print(f'WARNING: RMW not found in the ATCF file. Setting to NaN.')
+      rmwnmi = np.nan
     print(f'MSG: centerlat,centerlon = {centerlat},{centerlon}')
 
     # HACK: This should be revisited.
@@ -307,6 +310,7 @@ def main():
     elif np.any(lat[1:] < lat[:-1]): do_reshape = True
     else:                            do_reshape = False
     if do_reshape:
+      print('MSG: Reshaping input data based on lat/lon arrays.')
       lon2d, lat2d = ga.exp('lon'), ga.exp('lat')
       shape = np.shape(lon2d)
       lon = lon2d.reshape((shape[1], shape[0]))[0,:]
@@ -331,12 +335,13 @@ def main():
     print('MSG: Done reading: u,v,w')
     if DO_DBZ:
        dbz, hgt, temp = ga.exp('refdprs'), ga.exp('hgtprs'), ga.exp('tmpprs')
+       print('MSG: Done reading: dbz, hgt, temp')
     else:
        hgt, temp = ga.exp('hgtprs'), ga.exp('tmpprs')
        dbz = np.ones(np.shape(hgt))*np.nan
        DO_RESEARCH_MODE = False
-
-    print('MSG: Done reading: dbz, hgt, temp')
+       print('MSG: Done reading: hgt, temp')
+       print('WARNING: Skipped reading dbz because DO_DBZ=False')
     q, rh = ga.exp('spfhprs'), ga.exp('rhprs')
     print('MSG: Done reading: q, rh')
   
@@ -379,6 +384,9 @@ def main():
       u200 = u200.reshape(shape[1], shape[0])
       v200 = v200.reshape(shape[1], shape[0])
       z200 = z200.reshape(shape[1], shape[0])
+
+    # TO-DO: Fix unexpected NaN values
+    # https://stackoverflow.com/questions/73206073/interpolation-of-missing-values-in-3d-data-array-in-python
 
     # Compute additional 2D data
     mixr2m = q2m/(1-q2m)
@@ -509,7 +517,7 @@ def main():
     ur_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
     for j in range(np.shape(XI)[1]):
       for k in range(zsize):
-        vt_p[:,j,k] = -u_p[:,j,k]*np.sin(theta)+v_p[:,j,k]*np.cos(theta)
+        vt_p[:,j,k] = np.sign(centerlat)*(-u_p[:,j,k]*np.sin(theta)+v_p[:,j,k]*np.cos(theta))
         ur_p[:,j,k] = u_p[:,j,k]*np.cos(theta)+v_p[:,j,k]*np.sin(theta)
 
     #Do PBL Interpolation
@@ -527,7 +535,7 @@ def main():
     ur_pbl_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize_pbl))*np.nan
     for j in range(np.shape(XI)[1]):
       for k in range(zsize_pbl):
-        vt_pbl_p[:,j,k] = -u_pbl_p[:,j,k]*np.sin(theta)+v_pbl_p[:,j,k]*np.cos(theta)
+        vt_pbl_p[:,j,k] = np.sign(centerlat)*(-u_pbl_p[:,j,k]*np.sin(theta)+v_pbl_p[:,j,k]*np.cos(theta))
         ur_pbl_p[:,j,k] = u_pbl_p[:,j,k]*np.cos(theta)+v_pbl_p[:,j,k]*np.sin(theta)
 
 
@@ -548,8 +556,6 @@ def main():
     ur10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     vt850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     ur850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-    vt850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-    ur850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     vt200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     ur200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 
@@ -564,11 +570,11 @@ def main():
     v850_p = f_v850((YI,XI),method='linear')
 
     for j in range(np.shape(XI)[1]):
-      vt10_p[:,j] = -u10_p[:,j]*np.sin(theta)+v10_p[:,j]*np.cos(theta)
+      vt10_p[:,j] = np.sign(centerlat)*(-u10_p[:,j]*np.sin(theta)+v10_p[:,j]*np.cos(theta))
       ur10_p[:,j] = u10_p[:,j]*np.cos(theta)+v10_p[:,j]*np.sin(theta)
-      vt850_p[:,j] = -u850_p[:,j]*np.sin(theta)+v850_p[:,j]*np.cos(theta)
+      vt850_p[:,j] = np.sign(centerlat)*(-u850_p[:,j]*np.sin(theta)+v850_p[:,j]*np.cos(theta))
       ur850_p[:,j] = u850_p[:,j]*np.cos(theta)+v850_p[:,j]*np.sin(theta)
-      vt200_p[:,j] = -u200_p[:,j]*np.sin(theta)+v200_p[:,j]*np.cos(theta)
+      vt200_p[:,j] = np.sign(centerlat)*(-u200_p[:,j]*np.sin(theta)+v200_p[:,j]*np.cos(theta))
       ur200_p[:,j] = u200_p[:,j]*np.cos(theta)+v200_p[:,j]*np.sin(theta)      
     
     #Calculate shear
@@ -593,6 +599,7 @@ def main():
     shearmag = np.hypot(ushear1,vshear1)
     sheardir = np.arctan2(vshear1,ushear1)*180.0/pi
     if np.isnan(shearmag):
+      print('WARNING: Shear magnitude (shearmag) is NaN. Skipping this file.')
       ga('close 1')
       io.update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
       continue
@@ -853,12 +860,14 @@ def main():
     vt_p_mean_max = np.max(vt_p_mean,0)
     vt_p_mean_max_2km = vt_p_mean_max[4]
     if np.isnan(rmw_2km):
+      print('WARNING: RMW @ 2km (rmw_2km) is NaN. Skipping this file.')
       ga('close 1')
       io.update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
       continue
     else:
       rmwstring = str(int(np.round(rmw_2km*0.54,0)))
     if np.isnan(vt_p_mean_max_2km):
+      print('WARNING: Max. tangential wind @ 2km (vt_p_mean_max_2km) is NaN. Skipping this file.')
       ga('close 1')
       io.update_plottedfile(ODIR+'/PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log', FILE)
       continue
