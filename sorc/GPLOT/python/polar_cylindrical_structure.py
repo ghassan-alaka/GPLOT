@@ -39,7 +39,7 @@ from netCDF4 import Dataset
 def main():
 
   # Log some important information
-  print(f'MSG: make_rz_plots_heightcoordinates_research.py began at {datetime.datetime.now()}')
+  print(f'MSG: polar_cylindrical_structure.py began at {datetime.datetime.now()}')
   print('')
   print('MSG: Welcome to GPLOT, Polar Module.')
   print('MSG: GPLOT is the Graphical Post-processed Locus for Output for Tropical cyclones.')
@@ -2725,7 +2725,7 @@ def main():
   os.system(f'rm -f {ST_LOCK_FILE}')
 
   # Log some important information
-  print(f'MSG: make_rz_plots_heightcoordinates_research.py completed at {datetime.datetime.now()}')
+  print(f'MSG: polar_cylindrical_structure.py completed at {datetime.datetime.now()}')
 
 
 
