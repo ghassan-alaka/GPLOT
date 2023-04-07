@@ -47,7 +47,7 @@ ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT_TEST/
+ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast_2023/
