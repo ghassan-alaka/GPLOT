@@ -2590,7 +2590,7 @@ def main():
       plt.grid()
       plt.xlabel('East-West Distance (n mi)',fontsize=18)
       plt.ylabel('North-South Distance (n mi)',fontsize=18)
-      plt.title(EXPT.strip()+'\n'+'2-km Precipitation Type'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+      plt.title(EXPT.strip()+'\n'+'2-km Reflectivity (dBZ)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
       ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80]
       ax = plt.gca()
       divider = make_axes_locatable(ax)
@@ -2612,7 +2612,7 @@ def main():
       plt.grid()
       plt.xlabel('East-West Distance (n mi)',fontsize=18)
       plt.ylabel('North-South Distance (n mi)',fontsize=18)
-      plt.title(EXPT.strip()+'\n'+'2-km Reflectivity (dBZ)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+      plt.title(EXPT.strip()+'\n'+'2-km Precipitation Type'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
       ax = plt.gca()
       divider = make_axes_locatable(ax)
       cax = divider.append_axes("bottom", size="5%", pad=1.0)
