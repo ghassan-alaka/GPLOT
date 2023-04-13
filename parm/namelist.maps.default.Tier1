@@ -10,5 +10,6 @@ True      TPW            N/A           N/A          N/A     N/A          N/A    
 True      UV             02000850d     N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          02000850d     SHDL
 True      REFL           N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           REFL_MSLP
 True      TPRCP          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     N/A         N/A           TPRCP_MSLP
+True      T              850           N/A          N/A     N/A          N/A         UV           850         MSLP         N/A     N/A         N/A           T850_UV850_MSLP
 True      MSLP           N/A           MSLP         N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           MSLP
 
