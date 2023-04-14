@@ -708,6 +708,7 @@ do fff = 0,nFiles-1
 		; Only need to do this once
 		if(ppp2.eq.0)then
 		do ddd = 0,nDims-1
+			BOCO@doPivot = False
 			; LATITUDE
 			if(isStrSubset(dNames(ddd),"lat"))then
 				lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats,tcLons,fff,B)
