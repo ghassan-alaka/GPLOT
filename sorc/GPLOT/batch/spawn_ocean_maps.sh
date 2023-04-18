@@ -80,6 +80,7 @@ RMAX="`sed -n -e 's/^RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 LEVS="`sed -n -e 's/^LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 OCEAN_MAPS_PYTHONFILE="`sed -n -e 's/^OCEAN_MAPS_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 FIX_DIR="`sed -n -e 's/^FIX_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_WRAP_LON="`sed -n -e 's/^OCEAN_WRAP_LON =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 
 if [ -z "${FIX_DIR}" ]; then
     if [ ! -z "${HOMEhafs}" ]; then
@@ -1054,7 +1055,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             echo "MSG: Submitting GPLOT child batch job. BATCH_MODE ${BATCH_MODE}, DMN ${DMN}"
                             FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${OCEAN_MAPS_PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
                             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
-                            FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR}"
+                            FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR} ${OCEAN_WRAP_LON}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
                                 ${FULL_CMD}

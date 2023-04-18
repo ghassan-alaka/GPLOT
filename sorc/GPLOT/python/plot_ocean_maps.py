@@ -129,6 +129,9 @@ def main():
   FIX_DIR = sys.argv[13]
   if FIX_DIR == 'MISSING' or FIX_DIR == '':
     FIX_DIR = GPLOT_DIR+'/fix'
+  OCEAN_WRAP_LON = sys.argv[14]
+  if OCEAN_WRAP_LON == 'MISSING' or OCEAN_WRAP_LON == '':
+    OCEAN_WRAP_LON = 'False'
   
   
   # Read the master namelist
@@ -305,6 +308,9 @@ def main():
     else:
       print('MSG: Getting Data Now.')
     all_ds = xr.open_dataset(FILE);
+    if ( OCEAN_WRAP_LON == 'True' ):
+      print('MSG: Wrapping 3D Longitudes');
+      all_ds['Longitude'] = all_ds.Longitude + 360
     ds = all_ds.where(~depths.mask);
     if ( OCEAN_DOMAIN == 'd03' ):
       print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
@@ -341,6 +347,9 @@ def main():
     SSH = None;
     if (ofiletest < 1):
       all_ods = xr.open_dataset(oFILE)
+      if ( OCEAN_WRAP_LON == 'True' ):
+        print('MSG: Wrapping 2D Longitudes');
+        all_ods['Longitude'] = all_ods.Longitude + 360
       ods = all_ods.where(~depths.mask);
       if ( OCEAN_DOMAIN == 'd03' ):
         print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');

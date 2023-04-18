@@ -340,6 +340,11 @@ def main():
     hgt = ga.exp('hgtprs')
     temp = ga.exp('tmpprs')
     sst = ga.exp('wtmpsfc')
+    if ( len(sst.squeeze().shape) > 2 ):
+      print('WARNING: SST had three dimensions!');
+      sst = sst[...,0].squeeze()
+    else:
+      sst = sst.squeeze()
     print('MSG: Done with dbz, hgt, temp, sst')
     q = ga.exp('spfhprs')
     rh = ga.exp('rhprs')
@@ -487,9 +492,9 @@ def main():
     delta_t_levs = np.arange(-6,12+1e-6,0.2);    delta_t_ticks = np.arange(-6,12+1e-6,0.5)
     delta_q_levs = np.arange(0.5,2.5+1e-6,0.05);    delta_q_ticks = np.arange(0.5,2.5+1e-6,0.1)
     
-    DELTA_T = sst[...,0].squeeze() - temp[...,0].squeeze();
+    DELTA_T = sst - temp[...,0].squeeze();
     # DPT=SST at sfc
-    sfcq = mpcalc.specific_humidity_from_dewpoint((sst[...,0].squeeze()+273.15)*metpy.units.units.K,\
+    sfcq = mpcalc.specific_humidity_from_dewpoint((sst+273.15)*metpy.units.units.K,\
                                                    mslp.squeeze()*metpy.units.units.hPa)
     DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
     DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\

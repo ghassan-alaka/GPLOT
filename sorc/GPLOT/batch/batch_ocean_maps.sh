@@ -32,6 +32,7 @@ FORCE="${13}"
 OCEAN_SOURCE="${14}"
 OCEAN_CFG="${15}"
 FIX_DIR="${16}"
+OCEAN_WRAP_LON="${17}"
 
 
 # 2. Determine the GPLOT source code directory
@@ -107,6 +108,12 @@ fi
 
 if [ ! -z "$FIX_DIR" ]; then
     PYTHON_ARGS+=("${FIX_DIR}")
+else
+    PYTHON_ARGS+=("MISSING")
+fi
+
+if [ ! -z "$OCEAN_WRAP_LON" ]; then
+    PYTHON_ARGS+=("${OCEAN_WRAP_LON}")
 else
     PYTHON_ARGS+=("MISSING")
 fi

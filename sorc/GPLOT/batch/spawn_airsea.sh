@@ -669,7 +669,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                             for FHR in ${FILE_FHRS[@]}; do
 
                                 # Build the file search string.
-                                echo "DEBUG:: FHRFMT=${FHRFMT}"
+                                #echo "DEBUG:: FHRFMT=${FHRFMT}"
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
@@ -1006,8 +1006,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                                 ${FULL_CMD} &
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-                                #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --mem=128G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi

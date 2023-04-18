@@ -56,13 +56,14 @@ ODIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPOUT/
 ODIR_TYPE = 0
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsb/adeck
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsb/adeck_names
 ATCF1_TAG = hfsb.trak.atcfunix
-ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsb/adeck
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsb/adeck_names
 ATCF2_TAG = hfsb.trak.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC
+ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/hafsv1_fnl_hfsb
+;ADECK_DIR; = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC
 ;ADECK_DIR; = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC
 BDECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/bdeck
 ;BDECK_DIR; = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck
