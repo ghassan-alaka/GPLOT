@@ -924,7 +924,7 @@ def main():
         ygrad = np.nanmean(np.gradient(y_sr))
 
       for k in range(zsize):
-        vort[:,:,k] = np.array(mpcalc.vorticity(uwind[:,:,k]* units.meter / units.second,vwind[:,:,k]* units.meter / units.second,xgrad*1e3* units.meter,ygrad*1e3* units.meter,dim_order='yx'))
+        vort[:,:,k] = np.sign(centerlat)*np.array(mpcalc.vorticity(uwind[:,:,k]* units.meter / units.second,vwind[:,:,k]* units.meter / units.second,xgrad*1e3* units.meter,ygrad*1e3* units.meter,dim_order='yx'))
 
       vort_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 
@@ -1296,8 +1296,8 @@ def main():
           vortex_depth_vort = np.nan
 
         #Calculate the new centers at each height using the centroid function
-        pressure_centroid = pressure[:,:,0:ivd]
-        vort_centroid = vort[:,:,0:ivd]
+        pressure_centroid = np.copy(pressure[:,:,0:ivd])
+        vort_centroid = np.copy(vort[:,:,0:ivd])
         center_indices_pressure = np.zeros((np.shape(pressure_centroid)[2],2),order='F').astype(np.int32)
         center_indices_vort = np.zeros((np.shape(vort_centroid)[2],2),order='F').astype(np.int32)
         threshold_pressure = np.zeros((np.shape(pressure_centroid)[2]))
