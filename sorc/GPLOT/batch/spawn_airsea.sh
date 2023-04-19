@@ -163,23 +163,11 @@ echo "MSG: Using this batch-submission mode   --> ${BATCH_MODE}"
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
-MAX_CYCLES=25
+# Define a maximum number of cycles to be processed
+#MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MAX_CYCLES=100
+
 # Find the forecast cycles for which graphics should be created
-# if [ -z "${IDATE}" ]; then
-#     echo ${IDIR}
-#     CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
-#     if [ -z "${CYCLES}" ]; then
-#         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
-#     fi
-#     if [ -z "${CYCLES}" ]; then
-#         CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
-#     fi
-#     if [ -z "${CYCLES}" ]; then
-#         CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
-#     fi
-# else
-#     CYCLES=( "${IDATE[@]}" )
-# fi
 if [ -z "${IDATE}" ]; then
     echo ${IDIR}
     CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
@@ -238,7 +226,7 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAXCOUNT=25
+MAX_JOBS=25
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -1013,7 +1001,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
 
                             # Increase the batch job counter and check if we're over the limit.
                             ((N++))
-                            if [ "$N" -ge "$MAXCOUNT" ]; then
+                            if [ "$N" -ge "$MAX_JOBS" ]; then
                                 echo "MSG: Maximum number of batch submissions has been reached."
                                 echo "MSG: Further jobs will be submitted later."
                                 echo "MSG: spawn_ships.sh completed at `date`"

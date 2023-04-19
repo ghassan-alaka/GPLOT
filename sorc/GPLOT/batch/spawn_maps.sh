@@ -239,7 +239,7 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAXCOUNT=20
+MAX_JOBS=20
 
 # Get file hour format information from table or namelist
 if [ -z "${FHRFMT}" ]; then
@@ -1084,7 +1084,7 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                             # Increase the batch job counter and check if we're over the limit.
                             ((N++))
-                            if [ "$N" -ge "$MAXCOUNT" ]; then
+                            if [ "$N" -ge "$MAX_JOBS" ]; then
                                 echo "MSG: Maximum number of batch submissions has been reached."
                                 echo "MSG: Further jobs will be submitted later."
                                 echo "MSG: spawn_maps.sh completed at `date`"
