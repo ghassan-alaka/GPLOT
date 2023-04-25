@@ -1094,6 +1094,7 @@ begin
 	; This should be integrated into the actual variable name, as with UV10, T2, etc.
 	if(any((/"GFS","HAFS","HMON"/).eq.DSOURCE))then
 		if(isStrSubset(VAR,"PRCP") .and. isStrSubset(LEV,"h"))then	NEWVAR = NEWVAR+LEV   end if
+		if(isStrSubset(VAR,"PRATE") .and. isStrSubset(LEV,"h"))then	NEWVAR = NEWVAR+LEV   end if
 	end if
 	
 	
