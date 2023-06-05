@@ -208,7 +208,11 @@ cd ${ODIR}
 
 # Update the output file tag, if applicable
 if [ -z "${OTAG}" ]; then
-    OTAG="trak.${MODEL,,}.atcfunix"
+    if [ -z "${OMODEL}" ]; then
+        OTAG="trak.${MODEL,,}.atcfunix"
+    else
+        OTAG="trak.${OMODEL,,}.atcfunix"
+    fi
     echo "MSG: Updating the output file tag --> ${OTAG}"
 fi
 
