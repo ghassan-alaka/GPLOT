@@ -34,6 +34,7 @@ from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis tic
 import struct;
 import sys #To change the path 
 import xarray as xr
+
 #import modules.skewTmodelTCpolar as skewTmodelTCpolar
 #import modules.shearandrhplot as shearandrhplot
 #import modules.interp as interp
@@ -164,11 +165,18 @@ def main():
   STATUS_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
   ST_LOCK_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
   ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
-  #/scratch2/AOML/aoml-hafs1/Lew.Gramer/src/hrd_gplot/fix/hafs_hycom_nhc.basin.regional.depth.b
-  DEPTH_FILE = FIX_DIR.strip()+DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
-  #DEPTH_FILE = FIX_DIR.strip()+OCEAN_DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
   
-  depths = read_fix_hycom_depth(DEPTH_FILE);
+  print(f'DEBUG: OCEAN_SOURCE {OCEAN_SOURCE}')
+  if ( OCEAN_SOURCE == 'HYCOM' ):
+    #/scratch2/AOML/aoml-hafs1/Lew.Gramer/src/hrd_gplot/fix/hafs_hycom_nhc.basin.regional.depth.b
+    DEPTH_FILE = FIX_DIR.strip()+DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
+    #DEPTH_FILE = FIX_DIR.strip()+OCEAN_DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
+    depths = read_fix_hycom_depth(DEPTH_FILE);
+  else:
+    DEPTH_FILE = f'{FIX_DIR.strip()}/{OCEAN_CFG.lower()}/ocean_topog.nc';
+    depths_ds = xr.open_dataset(DEPTH_FILE);
+    depths = depths_ds.depth.values
+    depths_ds.close();
   print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
   
   #Get parameters from input file
@@ -308,70 +316,134 @@ def main():
     else:
       print('MSG: Getting Data Now.')
     all_ds = xr.open_dataset(FILE);
-    if ( OCEAN_WRAP_LON == 'True' ):
-      print('MSG: Wrapping 3D Longitudes');
-      all_ds['Longitude'] = all_ds.Longitude + 360
-    ds = all_ds.where(~depths.mask);
-    if ( OCEAN_DOMAIN == 'd03' ):
-      print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
-      ds = ds.where((lonmin<=all_ds.Longitude) & (all_ds.Longitude<=lonmax) & (latmin<=all_ds.Latitude) & (all_ds.Latitude<=latmax));
-    lon = ds.Longitude.squeeze();
-    lat = ds.Latitude.squeeze();
-    ucurr = ds.u_velocity.squeeze()
-    vcurr = ds.v_velocity.squeeze()
-    wcurr = ds.w_velocity.squeeze()
-    print('MSG: Done With u,v,w')
-    MLD = ds.mixed_layer_thickness.squeeze()
-    #DEBUG:        MLD.plot(figsize=(11,9)); plt.savefig('3z.png');
-    T = ds.temperature.squeeze()
-    S = ds.salinity.squeeze()
-    SSS = S[0,...].squeeze();
-    OHC = ds.ocean_heat_content.squeeze()
-    #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
-    i26 = ds['depth of 26C isotherm'].squeeze()
-    i20 = ds['depth of 20C isotherm'].squeeze()
-    ds.close()
-    print('MSG: Done with T, S, MLD, OHC, Iso')
-    
-    dZ = ds.Z.diff(dim='Z');
-    MLu = ucurr.where(ds.Z < MLD).mean(axis=0)
-    MLv = vcurr.where(ds.Z < MLD).mean(axis=0)
-    MLT = T.where(ds.Z < MLD).mean(axis=0)
-    MLS = S.where(ds.Z < MLD).mean(axis=0)
-    print('MSG: Done with MLu, MLv, MLT, MLS')
-    
-    #Get 2-d Data
-    oFILE = FILE.replace('3z','2d')
-    ofiletest = os.system('ls '+oFILE)
-    SHF = None;
-    SSH = None;
-    if (ofiletest < 1):
-      all_ods = xr.open_dataset(oFILE)
+    if ( OCEAN_SOURCE == 'HYCOM' ):
       if ( OCEAN_WRAP_LON == 'True' ):
-        print('MSG: Wrapping 2D Longitudes');
-        all_ods['Longitude'] = all_ods.Longitude + 360
-      ods = all_ods.where(~depths.mask);
+        print('MSG: Wrapping 3D Longitudes');
+        all_ds['Longitude'] = all_ds.Longitude + 360
+      ds = all_ds.where(~depths.mask);
       if ( OCEAN_DOMAIN == 'd03' ):
-        print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');
-        ods = ods.where((lonmin<=all_ods.Longitude) & (all_ods.Longitude<=lonmax) \
-              & (latmin<=all_ods.Latitude) & (all_ods.Latitude<=latmax));
-      SHF = ods.surface_heat_flux.squeeze()
+        print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
+        ds = ds.where((lonmin<=all_ds.Longitude) & (all_ds.Longitude<=lonmax) & (latmin<=all_ds.Latitude) & (all_ds.Latitude<=latmax));
+      lon = ds.Longitude.squeeze();
+      lat = ds.Latitude.squeeze();
+      ucurr = ds.u_velocity.squeeze()
+      vcurr = ds.v_velocity.squeeze()
+      wcurr = ds.w_velocity.squeeze()
+      print('MSG: Done With u,v,w')
+      MLD = ds.mixed_layer_thickness.squeeze()
+      #DEBUG:        MLD.plot(figsize=(11,9)); plt.savefig('3z.png');
+      T = ds.temperature.squeeze()
+      S = ds.salinity.squeeze()
+      SSS = S[0,...].squeeze();
+      OHC = ds.ocean_heat_content.squeeze()
+      #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
+      i26 = ds['depth of 26C isotherm'].squeeze()
+      i20 = ds['depth of 20C isotherm'].squeeze()
+      ds.close()
+      print('MSG: Done with T, S, MLD, OHC, Iso')
+      
+      dZ = ds.Z.diff(dim='Z');
+      MLu = ucurr.where(ds.Z < MLD).mean(axis=0)
+      MLv = vcurr.where(ds.Z < MLD).mean(axis=0)
+      MLT = T.where(ds.Z < MLD).mean(axis=0)
+      MLS = S.where(ds.Z < MLD).mean(axis=0)
+      print('MSG: Done with MLu, MLv, MLT, MLS')
+      
+      #Get 2-d Data
+      oFILE = FILE.replace('3z','2d')
+      ofiletest = os.system('ls '+oFILE)
+      SHF = None;
+      SSH = None;
+      if (ofiletest < 1):
+        all_ods = xr.open_dataset(oFILE)
+        if ( OCEAN_WRAP_LON == 'True' ):
+          print('MSG: Wrapping 2D Longitudes');
+          all_ods['Longitude'] = all_ods.Longitude + 360
+        ods = all_ods.where(~depths.mask);
+        if ( OCEAN_DOMAIN == 'd03' ):
+          print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');
+          ods = ods.where((lonmin<=all_ods.Longitude) & (all_ods.Longitude<=lonmax) \
+                & (latmin<=all_ods.Latitude) & (all_ods.Latitude<=latmax));
+        SHF = ods.surface_heat_flux.squeeze()
+        #DEBUG:
+        print('SHF',SHF.min().values,SHF.max().values)
+        SSH = ods.sea_surface_height.squeeze()
+        #DEBUG:          print('SSH',SSH.max().values)
+        Mon = ods.montgomery_potential_surf.squeeze()
+        # MLu = ods.mixed_layer_u_velocity.squeeze()
+        # MLv = ods.mixed_layer_v_velocity.squeeze()
+        # MLD = ods.mixed_layer_thickness.squeeze()
+        # MLD.plot(figsize=(11,9)); plt.savefig('2d.png');
+        # MLT = ods.mixed_layer_temperature.squeeze()
+        # MLS = ods.mixed_layer_salinity.squeeze()
+        ods.barotropic_u_velocity.squeeze()
+        ods.barotropic_v_velocity.squeeze()
+        ods.close()
+        print(f'MSG: Done with surface vars (e.g., redo of MLu,MLv) {datetime.now()}')
+    
+    elif ( OCEAN_SOURCE == 'MOM6' ):
+      all_ds = all_ds.interp( {'xq':all_ds.xh, 'yq':all_ds.yh} )
+      if ( OCEAN_WRAP_LON == 'True' ):
+        print('MSG: Wrapping 3D Longitudes');
+        all_ds['xh'] = all_ds.xh + 360
+        all_ds['geolon'] = all_ds.geolon + 360
+      #ds = all_ds.where(~depths.mask);
+      ds = all_ds;
+      if ( OCEAN_DOMAIN == 'd03' ):
+        print(f'DEBUG: ds.where( {lonmin}<={all_ds.geolon.min().values} & {all_ds.geolon.max().values}<={lonmax} & {latmin}<={all_ds.geolat.min().values} & {all_ds.geolat.max().values}<={latmax} )');
+        #ds = ds.where((lonmin<=all_ds.geolon) & (all_ds.geolon<=lonmax) & (latmin<=all_ds.geolat) & (all_ds.geolat<=latmax));
+        ds = ds.where((lonmin<=all_ds.xh) & (all_ds.xh<=lonmax) & (latmin<=all_ds.yh) & (all_ds.yh<=latmax));
+      #lon = ds.geolon.squeeze();
+      #lat = ds.geolat.squeeze();
+      lon = ds.xh.squeeze();
+      lat = ds.yh.squeeze();
+      # ucurr = ds.uo.squeeze().interp( {'xq':ds.xh, 'yh':ds.yh} )
+      # vcurr = ds.vo.squeeze().interp( {'xh':ds.xh, 'yq':ds.yh} )
+      ucurr = ds.uo.squeeze()
+      vcurr = ds.vo.squeeze()
+      #wcurr = ds.w_velocity.squeeze()
+      print('MSG: Done With u,v,w')
+      #MLD = ds.MLD_003.squeeze()
+      MLD = ds.MLD_0125.squeeze()
+      #DEBUG:        MLD.plot(figsize=(11,9)); plt.savefig('3z.png');
+      T = ds.temp.squeeze()
+      S = ds.so.squeeze()
+      SSS = S[0,...].squeeze();
+      #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
+      i26 = ds.z_l.where(T>=26).max(axis=0)
+      i20 = ds.z_l.where(T>=20).max(axis=0)
+      cp = 4178;                  # Specific heat capacity of seawater [J kg^-1 K^-1]
+      rho = 1026;                 # Mean water density [kg m^-3]
+      kJcm2_per_Jm2 = 1e-7;       # Unit conversion kJ/cm^2 == 10^7 J/m^2
+      delT = T - 26;
+      delT = xr.where(delT > 0, delT, 0);
+      dZ = ds.z_l.broadcast_like(delT).diff(0)
+      delTdz = delT * dZ;
+      OHC = cp*rho*delTdz.sum(axis=0) * kJcm2_per_Jm2;
+      print('MSG: Done with T, S, MLD, Iso, OHC')
+      
+      MLu = ucurr.where(ds.z_l < MLD).mean(axis=0)
+      MLv = vcurr.where(ds.z_l < MLD).mean(axis=0)
+      MLT = T.where(ds.z_l < MLD).mean(axis=0)
+      MLS = S.where(ds.z_l < MLD).mean(axis=0)
+      print('MSG: Done with MLu, MLv, MLT, MLS')
+      
+      #Get 2-d Data
+      SHF = ds.LwLatSens.squeeze() + ds.SW.squeeze()
       #DEBUG:
       print('SHF',SHF.min().values,SHF.max().values)
-      SSH = ods.sea_surface_height.squeeze()
+      SSH = ds.SSH.squeeze()
       #DEBUG:          print('SSH',SSH.max().values)
-      Mon = ods.montgomery_potential_surf.squeeze()
-      # MLu = ods.mixed_layer_u_velocity.squeeze()
-      # MLv = ods.mixed_layer_v_velocity.squeeze()
-      # MLD = ods.mixed_layer_thickness.squeeze()
-      # MLD.plot(figsize=(11,9)); plt.savefig('2d.png');
-      # MLT = ods.mixed_layer_temperature.squeeze()
-      # MLS = ods.mixed_layer_salinity.squeeze()
-      ods.barotropic_u_velocity.squeeze()
-      ods.barotropic_v_velocity.squeeze()
-      ods.close()
+      # Mon = ds.montgomery_potential_surf.squeeze()
+      ds.close()
       print(f'MSG: Done with surface vars (e.g., redo of MLu,MLv) {datetime.now()}')
     
+    else:
+        print(f'ERROR: OCEAN_SOURCE {OCEAN_SOURCE} not yet handled by PLOT_OCEAN_MAPS.py!')
+        sys.exit(1)
+    
+    lonstretch = np.cos(np.deg2rad(lon.mean()));
+    secPerDay = 24*3600
     
     #Make Plots
     print(f'MSG: Doing Plots Now {datetime.now()}')
@@ -406,33 +478,58 @@ def main():
     levs_th = np.linspace(350,380,31,endpoint=True)
     norm_th = colors.BoundaryNorm(levs_th,256)
     
-    iso_26_levs = np.arange(0,160+1e-6,5.0);		iso_26_ticks = np.arange(0,160+1e-6,20.0)
-    iso_20_levs = np.arange(0,300+1e-6,10.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
-    OHC_levs = np.arange(0,150+1e-6,5.0);			OHC_ticks = np.arange(0,150+1e-6,20.0);
-    sfc_conv_levs = np.arange(-20,20+1e-8,0.5);		sfc_conv_ticks = np.arange(-20,20+1e-8,2)
-    sfc_vort_levs = np.arange(-20,20+1e-8,0.5);		sfc_vort_ticks = np.arange(-20,20+1e-8,2)
-    ml_conv_levs = np.arange(-20,20+1e-8,0.5);		ml_conv_ticks = np.arange(-20,20+1e-8,2)
-    ml_vort_levs = np.arange(-20,20+1e-8,0.5);		ml_vort_ticks = np.arange(-20,20+1e-8,2)
-    SSH_levs = np.arange(-100,100+1e-6,5.0);		SSH_ticks = np.arange(-100,100+1e-6,20.0)
-    SHF_levs = np.arange(-1600,1600+1e-6,50.0);		SHF_ticks = np.arange(-1600,1600+1e-6,200.0)
-    DPI_levs = np.arange(0,30+1e-6,1.0);			DPI_ticks = np.arange(0,30+1e-6,2.0)
-    MLD_levs = np.arange(0,160+1e-6,5.0);			MLD_ticks = np.arange(0,160+1e-6,10.0)
-    SSS_levs = np.arange(32,38+1e-6,0.2);			SSS_ticks = np.arange(32,38+1e-6,0.5)
-    MLT_levs = np.arange(26,30+1e-6,0.2);			MLT_ticks = np.arange(26,30+1e-6,0.5)
-    MLS_levs = np.arange(32,38+1e-6,0.2);			MLS_ticks = np.arange(32,38+1e-6,0.5)
+    if ( OCEAN_SOURCE == 'HYCOM' ):
+      ml_u_x = MLu.differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
+      ml_u_y = MLu.differentiate('Latitude') / 1e2 / 111e3
+      ml_v_x = MLv.differentiate('Longitude') / 1e2 / (lonstretch*111e3)
+      ml_v_y = MLv.differentiate('Latitude') / 1e2 / 111e3
+      sfc_u_x = ucurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
+      sfc_u_y = ucurr[1,:].differentiate('Latitude') / 1e2 / 111e3
+      sfc_v_x = vcurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3)
+      sfc_v_y = vcurr[1,:].differentiate('Latitude') / 1e2 / 111e3
+      
+      iso_26_levs = np.arange(0,160+1e-6,5.0);		iso_26_ticks = np.arange(0,160+1e-6,20.0)
+      iso_20_levs = np.arange(0,300+1e-6,10.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
+      OHC_levs = np.arange(0,150+1e-6,5.0);		OHC_ticks = np.arange(0,150+1e-6,20.0);
+      sfc_conv_levs = np.arange(-20,20+1e-8,0.5);	sfc_conv_ticks = np.arange(-20,20+1e-8,2)
+      sfc_vort_levs = np.arange(-20,20+1e-8,0.5);	sfc_vort_ticks = np.arange(-20,20+1e-8,2)
+      ml_conv_levs = np.arange(-20,20+1e-8,0.5);	ml_conv_ticks = np.arange(-20,20+1e-8,2)
+      ml_vort_levs = np.arange(-20,20+1e-8,0.5);	ml_vort_ticks = np.arange(-20,20+1e-8,2)
+      SSH_levs = np.arange(-100,100+1e-6,5.0);		SSH_ticks = np.arange(-100,100+1e-6,20.0)
+      SHF_levs = np.arange(-1600,1600+1e-6,50.0);	SHF_ticks = np.arange(-1600,1600+1e-6,200.0)
+      DPI_levs = np.arange(0,30+1e-6,1.0);		DPI_ticks = np.arange(0,30+1e-6,2.0)
+      MLD_levs = np.arange(0,160+1e-6,5.0);		MLD_ticks = np.arange(0,160+1e-6,10.0)
+      SSS_levs = np.arange(32,38+1e-6,0.2);		SSS_ticks = np.arange(32,38+1e-6,0.5)
+      MLT_levs = np.arange(26,30+1e-6,0.2);		MLT_ticks = np.arange(26,30+1e-6,0.5)
+      MLS_levs = np.arange(32,38+1e-6,0.2);		MLS_ticks = np.arange(32,38+1e-6,0.5)
     
-    lonstretch = np.cos(np.deg2rad(lon.mean()));
-    secPerDay = 24*3600
-    ml_u_x = MLu.differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
-    ml_u_y = MLu.differentiate('Latitude') / 1e2 / 111e3
-    ml_v_x = MLv.differentiate('Longitude') / 1e2 / (lonstretch*111e3)
-    ml_v_y = MLv.differentiate('Latitude') / 1e2 / 111e3
+    elif ( OCEAN_SOURCE == 'MOM6' ):
+      ml_u_x = MLu.differentiate('xh') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
+      ml_u_y = MLu.differentiate('yh') / 1e2 / 111e3
+      ml_v_x = MLv.differentiate('xh') / 1e2 / (lonstretch*111e3)
+      ml_v_y = MLv.differentiate('yh') / 1e2 / 111e3
+      sfc_u_x = ucurr[1,:].differentiate('xh') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
+      sfc_u_y = ucurr[1,:].differentiate('yh') / 1e2 / 111e3
+      sfc_v_x = vcurr[1,:].differentiate('xh') / 1e2 / (lonstretch*111e3)
+      sfc_v_y = vcurr[1,:].differentiate('yh') / 1e2 / 111e3
+
+      iso_26_levs = np.arange(0,160+1e-6,5.0);		iso_26_ticks = np.arange(0,160+1e-6,20.0)
+      iso_20_levs = np.arange(0,300+1e-6,10.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
+      OHC_levs = np.arange(0,150+1e-6,5.0);		OHC_ticks = np.arange(0,150+1e-6,20.0);
+      sfc_conv_levs = np.arange(-20,20+1e-8,0.5);	sfc_conv_ticks = np.arange(-20,20+1e-8,2)
+      sfc_vort_levs = np.arange(-20,20+1e-8,0.5);	sfc_vort_ticks = np.arange(-20,20+1e-8,2)
+      ml_conv_levs = np.arange(-20,20+1e-8,0.5);	ml_conv_ticks = np.arange(-20,20+1e-8,2)
+      ml_vort_levs = np.arange(-20,20+1e-8,0.5);	ml_vort_ticks = np.arange(-20,20+1e-8,2)
+      SSH_levs = np.arange(-100,100+1e-6,5.0);		SSH_ticks = np.arange(-100,100+1e-6,20.0)
+      SHF_levs = np.arange(-1600,1600+1e-6,50.0);	SHF_ticks = np.arange(-1600,1600+1e-6,200.0)
+      DPI_levs = np.arange(0,30+1e-6,1.0);		DPI_ticks = np.arange(0,30+1e-6,2.0)
+      MLD_levs = np.arange(0,160+1e-6,5.0);		MLD_ticks = np.arange(0,160+1e-6,10.0)
+      SSS_levs = np.arange(32,38+1e-6,0.2);		SSS_ticks = np.arange(32,38+1e-6,0.5)
+      MLT_levs = np.arange(26,30+1e-6,0.2);		MLT_ticks = np.arange(26,30+1e-6,0.5)
+      MLS_levs = np.arange(32,38+1e-6,0.2);		MLS_ticks = np.arange(32,38+1e-6,0.5)
+    
     ml_conv = -(ml_u_x + ml_v_y)*secPerDay;    # CONvergence on model layer
     ml_vort = (ml_v_x - ml_u_y)*secPerDay;     # Relative vorticity on model layer
-    sfc_u_x = ucurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3) # [cm/s/degree] => [1/s]
-    sfc_u_y = ucurr[1,:].differentiate('Latitude') / 1e2 / 111e3
-    sfc_v_x = vcurr[1,:].differentiate('Longitude') / 1e2 / (lonstretch*111e3)
-    sfc_v_y = vcurr[1,:].differentiate('Latitude') / 1e2 / 111e3
     sfc_conv = -(sfc_u_x + sfc_v_y)*secPerDay;    # CONvergence on model layer
     sfc_vort = (sfc_v_x - sfc_u_y)*secPerDay;     # Relative vorticity on model layer
     
@@ -447,7 +544,10 @@ def main():
     T0 = (-75+273.14);       # Outflow temperature (Komaromi and Doyle 2017)
     alpha = 0.03    # ??? "the rate of increase of potential density with depth beneath the mixed layer" HACK HACK HACK
     oL = MLD + ( ( (2*rho0*(ustar**3)*tmix)/(kappa*g*alpha) )**(1/3) )
-    Tdy = (1/oL) * (dZ * (T+273.14)).where(ds.Z <= oL).sum(dim='Z');
+    if ( OCEAN_SOURCE == 'HYCOM' ):
+      Tdy = (1/oL) * (dZ * (T+273.14)).where(ds.Z <= oL).sum(dim='Z');
+    elif ( OCEAN_SOURCE == 'MOM6' ):
+      Tdy = (1/oL) * (dZ * (T+273.14)).where(ds.z_l <= oL).sum(dim='z_l');
     Ck_Cd = 0.9     # Ck/Cd (Bister and Emanuel 2002)
     cpa = 1.006     # [kJ/kg/oC]
     hg = 2549       # []
@@ -475,6 +575,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, i26, levels=iso_26_levs, extend='both')
+      print(f'DEBUG: i26 in {np.nanmin(i26.values)},{np.nanmax(i26.values)}');
       cbar1 = plt.colorbar(co1, ticks=iso_26_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -498,6 +599,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, i20, levels=iso_20_levs, extend='both')
+      print(f'DEBUG: i20 in {np.nanmin(i20.values)},{np.nanmax(i20.values)}');
       cbar1 = plt.colorbar(co1, ticks=iso_20_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -520,6 +622,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, OHC, levels=OHC_levs, extend='both')
+      print(f'DEBUG: OHC in {np.nanmin(OHC.values)},{np.nanmax(OHC.values)}');
       cbar1 = plt.colorbar(co1, ticks=OHC_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -542,6 +645,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, sfc_conv, levels=sfc_conv_levs, cmap='seismic',extend='both')
+      print(f'DEBUG: sfc_conv in {np.nanmin(sfc_conv.values)},{np.nanmax(sfc_conv.values)}');
       cbar1 = plt.colorbar(co1, ticks=sfc_conv_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -564,6 +668,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, sfc_vort, levels=sfc_vort_levs, cmap='seismic',extend='both')
+      print(f'DEBUG: sfc_vort in {np.nanmin(sfc_vort.values)},{np.nanmax(sfc_vort.values)}');
       cbar1 = plt.colorbar(co1, ticks=sfc_vort_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -586,6 +691,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, ml_conv, levels=ml_conv_levs, cmap='seismic',extend='both')
+      print(f'DEBUG: ml_conv in {np.nanmin(ml_conv.values)},{np.nanmax(ml_conv.values)}');
       cbar1 = plt.colorbar(co1, ticks=ml_conv_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -607,6 +713,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, ml_vort, levels=ml_vort_levs, cmap='seismic',extend='both')
+      print(f'DEBUG: ml_vort in {np.nanmin(ml_vort.values)},{np.nanmax(ml_vort.values)}');
       cbar1 = plt.colorbar(co1, ticks=ml_vort_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -629,6 +736,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, SSH, levels=SSH_levs, cmap='seismic',extend='both')
+      print(f'DEBUG: SSH in {np.nanmin(SSH.values)},{np.nanmax(SSH.values)}');
       cbar1 = plt.colorbar(co1, ticks=SSH_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -651,6 +759,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, SHF, levels=SHF_levs, extend='both')
+      print(f'DEBUG: SHF in {np.nanmin(SHF.values)},{np.nanmax(SHF.values)}');
       cbar1 = plt.colorbar(co1, ticks=SHF_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -673,6 +782,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, DPI, levels=DPI_levs, extend='both')
+      print(f'DEBUG: DPI in {np.nanmin(DPI.values)},{np.nanmax(DPI.values)}');
       cbar1 = plt.colorbar(co1, ticks=DPI_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -697,6 +807,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, MLD, levels=MLD_levs, extend='both')
+      print(f'DEBUG: MLD in {np.nanmin(MLD.values)},{np.nanmax(MLD.values)}');
       cbar1 = plt.colorbar(co1, ticks=MLD_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -720,6 +831,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, SSS, levels=SSS_levs, extend='both')
+      print(f'DEBUG: SSS in {np.nanmin(SSS.values)},{np.nanmax(SSS.values)}');
       cbar1 = plt.colorbar(co1, ticks=SSS_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -743,6 +855,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, MLT, levels=MLT_levs, cmap='Reds',extend='both')
+      print(f'DEBUG: MLT in {np.nanmin(MLT.values)},{np.nanmax(MLT.values)}');
       cbar1 = plt.colorbar(co1, ticks=MLT_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
@@ -766,6 +879,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, MLS, levels=MLS_levs, extend='both')
+      print(f'DEBUG: MLS in {np.nanmin(MLS.values)},{np.nanmax(MLS.values)}');
       cbar1 = plt.colorbar(co1, ticks=MLS_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath

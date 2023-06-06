@@ -84,17 +84,17 @@ OCEAN_WRAP_LON="`sed -n -e 's/^OCEAN_WRAP_LON =\s//p' ${NMLIST} | sed 's/^\t*//'
 
 if [ -z "${FIX_DIR}" ]; then
     if [ ! -z "${HOMEhafs}" ]; then
-        FIX_DIR="${HOMEhafs}/fix/fix_hycom/"
+        FIX_DIR="${HOMEhafs}/fix/fix_${OCEAN_SOURCE,,}/"
     else
         case ${MACHINE^^} in
             "JET")
-                FIX_DIR="/lfs4/HFIP/hwrfv3/Bin.Liu/hafs_20221118/fix/fix_hycom/"
+                FIX_DIR="/mnt/lfs4/HFIP/hwrf-data/hafs-fix-files/hafs-20230518-fix/fix/fix_${OCEAN_SOURCE,,}/"
                 ;;
             "HERA")
-                FIX_DIR="/scratch1/NCEPDEV/hwrf/save/Bin.Liu/hafs_20221118/fix/fix_hycom/"
+                FIX_DIR="/scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20230518-fix/fix/fix_${OCEAN_SOURCE,,}/"
                 ;;
             "ORION")
-                FIX_DIR="/work/noaa/hwrf/save/bliu/hafs_20221118/fix/fix_hycom/"
+                FIX_DIR="/work/noaa/hwrf/noscrub/hafs-fix-files/hafs-20230518-fix/fix/fix_${OCEAN_SOURCE,,}/"
                 ;;
             *)
                 FIX_DIR="${GPLOT_DIR}/fix/"
@@ -702,7 +702,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         while [ -z "${IFILES[*]}" ]; do
                             OCEAN_DIR_FULL="$(echo "${OCEAN_DIR}/${OCEAN_DIR_OPTS[$F]}" | sed s#//*#/#g)"
                             
-                            #echo "DEBUG:: OCEAN_DIR_FULL: ${OCEAN_DIR_FULL}"
+                            #DEBUG:                            echo "DEBUG:: OCEAN_DIR_FULL: ${OCEAN_DIR_FULL}"
                             
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${OCEAN_DIR_FULL} ]; then
@@ -722,10 +722,13 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
                                     FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
+                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH=${FILE_SEARCH}"
+                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH2=${FILE_SEARCH2}"
+                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH3=${FILE_SEARCH3}"
     
                                 # Search for a matching file. If found, append the file and forecast hour to their respective arrays
                                 FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
-                                #echo "DEBUG:: FILE_SEARCH3: ${FILE_LS}"
+                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH3: ${FILE_LS}"
                                 if [ "${#FILE_LS[@]}" -eq "1" ]; then
                                     IFILES+=("${FILE_LS[*]}")
                                     IFHRS+=( ${FHR} )
@@ -1089,4 +1092,4 @@ fi #end of DO_OCEAN_MAPS
 wait
 
 echo "$?"
-echo "MSG: spawn_maps.sh completed at `date`"
+echo "MSG: spawn_ocean_maps.sh completed at `date`"
