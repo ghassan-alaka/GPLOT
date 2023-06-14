@@ -42,3 +42,5 @@
                              HAFS_v1b_baseline,   HAFS V1.0B Baseline 
                                hafsv1_fnl_hfsa,   HAFS V1.0A Operational
                                hafsv1_fnl_hfsb,   HAFS V1.0B Operational
+                                 HFSA_Forecast,   Oper HAFS-A V1.0
+                                 HFSB_Forecast,   Oper HAFS-B V1.0
