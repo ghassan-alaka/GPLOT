@@ -1150,7 +1150,7 @@ print(G_BASE(0,ppp)+"  "+G_BASE_LEVS(ggg)+"  "+BASEVAR)
                         ;================================================================
                         ; xi. Read dimension data (only for available dims)
                         ;================================================================
-			if(any((/"HWRF","HMON"/).eq.DSOURCE) .and. any((/"d03","alld03"/).eq.DOMAIN))then   BOCO@doPivot = False   end if
+			if(any((/"HWRF","HMON","HAFS"/).eq.DSOURCE) .and. any((/"d03","alld03"/).eq.DOMAIN))then   BOCO@doPivot = False   end if
                         do ddd = 0,nDims-1
                                 ; 1. Y-DOORDINATE --> LATITUDE
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
