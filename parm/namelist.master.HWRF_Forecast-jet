@@ -39,7 +39,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/
+IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HWRF/oper/
 ITAG =
 EXT =
 
@@ -47,8 +47,8 @@ EXT =
 ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/
-ATCF1_TAG = trak.hwrf.raw
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HWRF/tracker_2023/
+ATCF1_TAG = trak.hwrf.atcfunix
 ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HWRF_Forecast_2023/
 ATCF2_TAG = atcfunix
 
