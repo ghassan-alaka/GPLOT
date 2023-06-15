@@ -600,7 +600,29 @@ def main():
     # Default for axis labels, etc.
     plt.rcParams.update({'font.size': 20})
     
-    if do_ships_output == 'Y':
+    if (do_ships_output == 'Y') & (OCEAN_DOMAIN == 'd03'):
+      T0 = T[0,:,:].squeeze()
+      #Mark radial distance on lat/long grid ----------------------
+      dlats = (lat * (math.pi)/180.) - (centerlat* (math.pi)/180.)
+      dlons = (lon * (math.pi)/180.) - (centerlon* (math.pi)/180.)
+      aa = ((np.sin(dlats/2))**2 + np.cos((centerlat*(math.pi)/180)) * np.cos((lat * (math.pi)/180)) * (np.sin(dlons/2))**2)
+      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+      rad_distances = cc * 6371.      
+      where500 = np.where(rad_distances <= 500.)
+      T500 = np.nanmean(T0[where500])
+      OHC500 = np.nanmean(OHC[where500])
+ 
+      sstfname = ODIR+'/'+LONGSID.lower()+'.ships.sst.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.dat'
+      ohcfname = ODIR+'/'+LONGSID.lower()+'.ships.ohc.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.dat'
+      
+      f = open(sstfname,'a+')
+      print(f'{FHR}, {T500}',file=f)
+      f.close()      
+
+      f = open(ohcfname,'a+')    
+      print(f'{FHR}, {OHC500}',file=f)
+      f.close()
+
       pass;
 
     # FIGURE: Depth of the 26 oC isotherm
