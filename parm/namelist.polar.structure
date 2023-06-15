@@ -20,4 +20,5 @@ do_ur_pbl_p_mean,Y
 do_radar_plots,Y
 do_soundings,Y
 do_shear_and_rh_plots,Y
-do_netcdf_write,Y
+do_write_netcdf,Y
+do_tdr_recentering,Y
