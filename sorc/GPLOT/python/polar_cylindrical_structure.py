@@ -31,9 +31,16 @@ import modules.interp as interp
 import modules.io as io
 import modules.plotting as plotting
 import modules.multiprocess as mproc
+import modules.tdr_tc_centering_with_example as tdrcenter
+import concurrent.futures
+from scipy.interpolate import interp2d
 import netCDF4
 from netCDF4 import Dataset
 
+def MP_centers_function(u,v,lon,lat,centerlon,centerlat,level):
+  print(np.shape(u))
+  centers = tdrcenter.recenter_tc(u,v,lon,lat,1,10,150,centerlon,centerlat)
+  return centers,level
 
 ##############################
 def main():
@@ -1253,7 +1260,7 @@ def main():
       ptype_p_norm = np.round(ptype_p_norm)
 
       #End of Block to Calculate Precipitation Partitioning
-      ###########################################################################################################################################
+      ############################################################################################################################################
       
       ############################################################################################################################################
       #Calculate some important structure metrics and write them and others to a text file
@@ -1261,336 +1268,448 @@ def main():
       vt_max = np.nanmax(vt_p_mean)*1.94
 
       rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vt_dynamic = vortex_depth_vt_static = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
-      if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
-        #Calculate Vortex Depth based on Vt
-        vt_rmw_ratio = vt_rmw_mean/vt_rmw_mean[4]
-        threshold_ratio_vt_dynamic = 0.4
-        if ( np.nanmin(vt_rmw_ratio) < 0.4):
-          vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
-          index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
-        else:
-          vortex_depth_vt_dynamic = np.nan
-        
-        if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
-          vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
-          index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))    
-        else:
-          vortex_depth_vt_static = np.nan
-
-        if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
-          vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
-          index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
-          ivd = index_vortex_depth_vt_temp+1
-        else:
-          ivd=11
-
-        print('IVD = ', ivd)
-
-        #Calculate vortex depth based on vort
-        vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
-        threshold_ratio_vort = 0.5
-        if (np.min(vort_ratio) < 0.5):
-          vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
-          index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
-        else:
-          vortex_depth_vort = np.nan
-
-        #Calculate the new centers at each height using the centroid function
-        pressure_centroid = np.copy(pressure[:,:,0:ivd])
-        vort_centroid = np.copy(vort[:,:,0:ivd])
-        center_indices_pressure = np.zeros((np.shape(pressure_centroid)[2],2),order='F').astype(np.int32)
-        center_indices_vort = np.zeros((np.shape(vort_centroid)[2],2),order='F').astype(np.int32)
-        threshold_pressure = np.zeros((np.shape(pressure_centroid)[2]))
-        threshold_vort = np.zeros((np.shape(vort_centroid)[2]))
-        
-
-        for k in range(ivd):
-          x1 = np.argmin(abs(-rmw_mean[k]-x_sr))
-          x2 = np.argmin(abs(rmw_mean[k]-x_sr))
-          y1 = np.argmin(abs(-rmw_mean[k]-y_sr))
-          y2 = np.argmin(abs(rmw_mean[k]-y_sr))
-          r2 = np.argmin(abs(r-rmw_mean[k]))
-
-          pressure_centroid[0:y1,:,k] = 9999999999
-          pressure_centroid[y2::,:,k] = 9999999999
-          pressure_centroid[:,0:x1,k] = 9999999999
-          pressure_centroid[:,x2::,k] = 9999999999
-
-          vort_centroid[0:y1,:,k] = -9999999999
-          vort_centroid[y2::,:,k] = -9999999999
-          vort_centroid[:,0:x1,k] = -9999999999
-          vort_centroid[:,x2::,k] = -99999999999
-
-          threshold_pressure[k] = np.nanmin(pressure_p_mean[0:r2+1,k])+0.2*(np.nanmax(pressure_p_mean[0:r2+1,k])-np.nanmin(pressure_p_mean[0:r2+1,k]))
-          threshold_vort[k] = 0.80*np.nanmax(vort_p_mean[0:r2+1,k])
+      #if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
       
-        #print('MSG: HERE ARE THE THRESHOLDS')
+      #Calculate Vortex Depth based on Vt
+      vt_rmw_ratio = vt_rmw_mean/vt_rmw_mean[4]
+      threshold_ratio_vt_dynamic = 0.4
+      if ( np.nanmin(vt_rmw_ratio) < 0.4):
+        vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
+        index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
+      else:
+        vortex_depth_vt_dynamic = np.nan
+      
+      if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
+        vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
+        index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))    
+      else:
+        vortex_depth_vt_static = np.nan
+
+      if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
+        vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
+        index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+        ivd = index_vortex_depth_vt_temp+1
+      else:
+        ivd=11
+
+      ivd = np.nanmax((ivd,11))
+      print('IVD = ', ivd)
+
+      #Calculate vortex depth based on vort
+      vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
+      threshold_ratio_vort = 0.5
+      if (np.min(vort_ratio) < 0.5):
+        vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
+        index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
+      else:
+        vortex_depth_vort = np.nan
+
+      #Calculate the new centers at each height using the centroid function
+      pressure_centroid = np.copy(pressure[:,:,0:ivd])
+      vort_centroid = np.copy(vort[:,:,0:ivd])
+
+      center_indices_pressure = np.zeros((np.shape(pressure_centroid)[2],2),order='F').astype(np.int32)
+      center_indices_vort = np.zeros((np.shape(vort_centroid)[2],2),order='F').astype(np.int32)
+      threshold_pressure = np.zeros((np.shape(pressure_centroid)[2]))
+      threshold_vort = np.zeros((np.shape(vort_centroid)[2]))
+      
+      for k in range(ivd):
+        x1 = np.argmin(abs(-rmw_mean[k]-x_sr))
+        x2 = np.argmin(abs(rmw_mean[k]-x_sr))
+        y1 = np.argmin(abs(-rmw_mean[k]-y_sr))
+        y2 = np.argmin(abs(rmw_mean[k]-y_sr))
+        r2 = np.argmin(abs(r-rmw_mean[k]))
+
+        pressure_centroid[0:y1,:,k] = 9999999999
+        pressure_centroid[y2::,:,k] = 9999999999
+        pressure_centroid[:,0:x1,k] = 9999999999
+        pressure_centroid[:,x2::,k] = 9999999999
+
+        vort_centroid[0:y1,:,k] = -9999999999
+        vort_centroid[y2::,:,k] = -9999999999
+        vort_centroid[:,0:x1,k] = -9999999999
+        vort_centroid[:,x2::,k] = -99999999999
+
+        threshold_pressure[k] = np.nanmin(pressure_p_mean[0:r2+1,k])+0.2*(np.nanmax(pressure_p_mean[0:r2+1,k])-np.nanmin(pressure_p_mean[0:r2+1,k]))
+        threshold_vort[k] = 0.80*np.nanmax(vort_p_mean[0:r2+1,k])
+    
+      #print('MSG: HERE ARE THE THRESHOLDS')
+      #for k in range(ivd):
+      #  print(threshold_pressure[k],threshold_vort[k])
+
+      center_x_vort = np.ones(zsize)*np.nan
+      center_y_vort = np.ones(zsize)*np.nan
+      center_x_pressure = np.ones(zsize)*np.nan
+      center_y_pressure = np.ones(zsize)*np.nan
+      center_lon_pressure = np.ones(zsize)*np.nan
+      center_lat_pressure = np.ones(zsize)*np.nan
+
+      if ( np.min(threshold_vort) > 0):  
+        centroid.centroid(pressure_centroid,center_indices_pressure,threshold_pressure,-1,np.shape(pressure_centroid)[0],np.shape(pressure_centroid)[1],np.shape(pressure_centroid)[2])
+        centroid.centroid(vort_centroid,center_indices_vort,threshold_vort,1,np.shape(vort_centroid)[0],np.shape(vort_centroid)[1],np.shape(vort_centroid)[2])
+        
+        #print('HERE ARE THE INDICES')
         #for k in range(ivd):
-        #  print(threshold_pressure[k],threshold_vort[k])
+        #  print(center_indices_vort[k,:])
+  
+        center_x_vort[0:ivd] = x_sr[center_indices_vort[:,1]]
+        center_y_vort[0:ivd] = y_sr[center_indices_vort[:,0]]
+        center_x_pressure[0:ivd] = x_sr[center_indices_pressure[:,1]]
+        center_y_pressure[0:ivd] = y_sr[center_indices_pressure[:,0]]
+        center_lon_pressure[0:ivd] = lon[center_indices_pressure[:,1]]
+        center_lat_pressure[0:ivd] = lat[center_indices_pressure[:,0]]
 
-        if ( np.min(threshold_vort) > 0):  
-          centroid.centroid(pressure_centroid,center_indices_pressure,threshold_pressure,-1,np.shape(pressure_centroid)[0],np.shape(pressure_centroid)[1],np.shape(pressure_centroid)[2])
-          centroid.centroid(vort_centroid,center_indices_vort,threshold_vort,1,np.shape(vort_centroid)[0],np.shape(vort_centroid)[1],np.shape(vort_centroid)[2])
-          
-          #print('HERE ARE THE INDICES')
-          #for k in range(ivd):
-          #  print(center_indices_vort[k,:])
-    
-          center_x_vort = np.ones(zsize)*np.nan
-          center_y_vort = np.ones(zsize)*np.nan
-          center_x_pressure = np.ones(zsize)*np.nan
-          center_y_pressure = np.ones(zsize)*np.nan
-          center_x_vort[0:ivd] = x_sr[center_indices_vort[:,1]]
-          center_y_vort[0:ivd] = y_sr[center_indices_vort[:,0]]
-          center_x_pressure[0:ivd] = x_sr[center_indices_pressure[:,1]]
-          center_y_pressure[0:ivd] = y_sr[center_indices_pressure[:,0]]
-
-
-          #Calculate 2-10 and 2-5 km tilt
-          if ( vortex_depth_vort >= 10. ):
-            tiltmag_deep_pressure = np.hypot(center_x_pressure[20]-center_x_pressure[4],center_y_pressure[20]-center_y_pressure[4])
-            tiltdir_deep_pressure = np.arctan2(center_y_pressure[20]-center_y_pressure[4],center_x_pressure[20]-center_x_pressure[4])*180/np.pi
-            if tiltdir_deep_pressure <=90:
-              tiltdir_deep_pressure = 90-tiltdir_deep_pressure
-            else:
-              tiltdir_deep_pressure = 360-(tiltdir_deep_pressure-90)
-        
-            tiltmag_deep_vort = np.hypot(center_x_vort[20]-center_x_vort[4],center_y_vort[20]-center_y_vort[4])
-            tiltdir_deep_vort = np.arctan2(center_y_vort[20]-center_y_vort[4],center_x_vort[20]-center_x_vort[4])*180/np.pi
-            if tiltdir_deep_vort <=90:
-              tiltdir_deep_vort = 90-tiltdir_deep_vort
-            else:
-              tiltdir_deep_vort = 360-(tiltdir_deep_vort-90)
-
-            tiltmag_mid_pressure = np.hypot(center_x_pressure[10]-center_x_pressure[4],center_y_pressure[10]-center_y_pressure[4])
-            tiltdir_mid_pressure = np.arctan2(center_y_pressure[10]-center_y_pressure[4],center_x_pressure[10]-center_x_pressure[4])*180/np.pi
-            if tiltdir_mid_pressure <=90:
-              tiltdir_mid_pressure = 90-tiltdir_mid_pressure
-            else:   
-              tiltdir_mid_pressure = 360-(tiltdir_mid_pressure-90)
-            
-            tiltmag_mid_vort = np.hypot(center_x_vort[10]-center_x_vort[4],center_y_vort[10]-center_y_vort[4])
-            tiltdir_mid_vort = np.arctan2(center_y_vort[10]-center_y_vort[4],center_x_vort[10]-center_x_vort[4])*180/np.pi
-            if tiltdir_mid_vort <=90:
-              tiltdir_mid_vort = 90-tiltdir_mid_vort
-            else:
-              tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)    
-          elif ( vortex_depth_vort >= 5. and vortex_depth_vort <= 10. ):
-            tiltmag_deep_pressure = np.nan
-            tiltdir_deep_pressure = np.nan
-            tiltmag_deep_vort = np.nan
-            tiltdir_deep_vort = np.nan
-
-            tiltmag_mid_pressure = np.hypot(center_x_pressure[10]-center_x_pressure[4],center_y_pressure[10]-center_y_pressure[4])
-            tiltdir_mid_pressure = np.arctan2(center_y_pressure[10]-center_y_pressure[4],center_x_pressure[10]-center_x_pressure[4])*180/np.pi
-            if tiltdir_mid_pressure <=90:
-              tiltdir_mid_pressure = 90-tiltdir_mid_pressure
-            else:
-              tiltdir_mid_pressure = 360-(tiltdir_mid_pressure-90)
-
-            tiltmag_mid_vort = np.hypot(center_x_vort[10]-center_x_vort[4],center_y_vort[10]-center_y_vort[4])
-            tiltdir_mid_vort = np.arctan2(center_y_vort[10]-center_y_vort[4],center_x_vort[10]-center_x_vort[4])*180/np.pi
-            if tiltdir_mid_vort <=90:
-              tiltdir_mid_vort = 90-tiltdir_mid_vort
-            else:   
-              tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)
+        #Calculate 2-10 and 2-5 km tilt
+        if ( vortex_depth_vort >= 10. ):
+          tiltmag_deep_pressure = np.hypot(center_x_pressure[20]-center_x_pressure[4],center_y_pressure[20]-center_y_pressure[4])
+          tiltdir_deep_pressure = np.arctan2(center_y_pressure[20]-center_y_pressure[4],center_x_pressure[20]-center_x_pressure[4])*180/np.pi
+          if tiltdir_deep_pressure <=90:
+            tiltdir_deep_pressure = 90-tiltdir_deep_pressure
           else:
-            tiltmag_deep_pressure = np.nan
-            tiltdir_deep_pressure = np.nan
-            tiltmag_deep_vort = np.nan
-            tiltdir_deep_vort = np.nan
-            
-            tiltmag_mid_pressure = np.nan
-            tiltdir_mid_pressure = np.nan
-            tiltmag_mid_vort = np.nan
-            tiltdir_mid_vort = np.nan    
-              
-        #First, percentage of area in the inner and outer core with each precip type
-        ptype_p_norm_inner = ptype_p_norm[:,15:26]
-        ptype_p_norm_outer = ptype_p_norm[:,26:41]
+            tiltdir_deep_pressure = 360-(tiltdir_deep_pressure-90)
       
-        innersize = np.shape(ptype_p_norm_inner)[0]*np.shape(ptype_p_norm_inner)[1]
-        if innersize > 0:
-          weakpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 1.])[0]/innersize
-          stratiformpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 2.])[0]/innersize
-          shallowpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 3.])[0]/innersize
-          moderatepercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 4.])[0]/innersize
-          deeppercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 5.])[0]/innersize
+          tiltmag_deep_vort = np.hypot(center_x_vort[20]-center_x_vort[4],center_y_vort[20]-center_y_vort[4])
+          tiltdir_deep_vort = np.arctan2(center_y_vort[20]-center_y_vort[4],center_x_vort[20]-center_x_vort[4])*180/np.pi
+          if tiltdir_deep_vort <=90:
+            tiltdir_deep_vort = 90-tiltdir_deep_vort
+          else:
+            tiltdir_deep_vort = 360-(tiltdir_deep_vort-90)
+
+          tiltmag_mid_pressure = np.hypot(center_x_pressure[10]-center_x_pressure[4],center_y_pressure[10]-center_y_pressure[4])
+          tiltdir_mid_pressure = np.arctan2(center_y_pressure[10]-center_y_pressure[4],center_x_pressure[10]-center_x_pressure[4])*180/np.pi
+          if tiltdir_mid_pressure <=90:
+            tiltdir_mid_pressure = 90-tiltdir_mid_pressure
+          else:   
+            tiltdir_mid_pressure = 360-(tiltdir_mid_pressure-90)
+          
+          tiltmag_mid_vort = np.hypot(center_x_vort[10]-center_x_vort[4],center_y_vort[10]-center_y_vort[4])
+          tiltdir_mid_vort = np.arctan2(center_y_vort[10]-center_y_vort[4],center_x_vort[10]-center_x_vort[4])*180/np.pi
+          if tiltdir_mid_vort <=90:
+            tiltdir_mid_vort = 90-tiltdir_mid_vort
+          else:
+            tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)    
+        elif ( vortex_depth_vort >= 5. and vortex_depth_vort <= 10. ):
+          tiltmag_deep_pressure = np.nan
+          tiltdir_deep_pressure = np.nan
+          tiltmag_deep_vort = np.nan
+          tiltdir_deep_vort = np.nan
+
+          tiltmag_mid_pressure = np.hypot(center_x_pressure[10]-center_x_pressure[4],center_y_pressure[10]-center_y_pressure[4])
+          tiltdir_mid_pressure = np.arctan2(center_y_pressure[10]-center_y_pressure[4],center_x_pressure[10]-center_x_pressure[4])*180/np.pi
+          if tiltdir_mid_pressure <=90:
+            tiltdir_mid_pressure = 90-tiltdir_mid_pressure
+          else:
+            tiltdir_mid_pressure = 360-(tiltdir_mid_pressure-90)
+
+          tiltmag_mid_vort = np.hypot(center_x_vort[10]-center_x_vort[4],center_y_vort[10]-center_y_vort[4])
+          tiltdir_mid_vort = np.arctan2(center_y_vort[10]-center_y_vort[4],center_x_vort[10]-center_x_vort[4])*180/np.pi
+          if tiltdir_mid_vort <=90:
+            tiltdir_mid_vort = 90-tiltdir_mid_vort
+          else:   
+            tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)
         else:
-          weakpercent_inner = np.nan
-          stratiformpercent_inner = np.nan
-          shallowpercent_inner = np.nan
-          moderatepercent_inner = np.nan
-          deeppercent_inner = np.nan
+          tiltmag_deep_pressure = np.nan
+          tiltdir_deep_pressure = np.nan
+          tiltmag_deep_vort = np.nan
+          tiltdir_deep_vort = np.nan
+          
+          tiltmag_mid_pressure = np.nan
+          tiltdir_mid_pressure = np.nan
+          tiltmag_mid_vort = np.nan
+          tiltdir_mid_vort = np.nan    
+            
+      #First, percentage of area in the inner and outer core with each precip type
+      ptype_p_norm_inner = ptype_p_norm[:,15:26]
+      ptype_p_norm_outer = ptype_p_norm[:,26:41]
     
-        outersize = np.shape(ptype_p_norm_outer)[0]*np.shape(ptype_p_norm_outer)[1]
-        if outersize > 0:  
-          weakpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 1.])[0]/outersize
-          stratiformpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 2.])[0]/outersize
-          shallowpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 3.])[0]/outersize
-          moderatepercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 4.])[0]/outersize
-          deeppercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 5.])[0]/outersize
+      innersize = np.shape(ptype_p_norm_inner)[0]*np.shape(ptype_p_norm_inner)[1]
+      if innersize > 0:
+        weakpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 1.])[0]/innersize
+        stratiformpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 2.])[0]/innersize
+        shallowpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 3.])[0]/innersize
+        moderatepercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 4.])[0]/innersize
+        deeppercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 5.])[0]/innersize
+      else:
+        weakpercent_inner = np.nan
+        stratiformpercent_inner = np.nan
+        shallowpercent_inner = np.nan
+        moderatepercent_inner = np.nan
+        deeppercent_inner = np.nan
+  
+      outersize = np.shape(ptype_p_norm_outer)[0]*np.shape(ptype_p_norm_outer)[1]
+      if outersize > 0:  
+        weakpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 1.])[0]/outersize
+        stratiformpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 2.])[0]/outersize
+        shallowpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 3.])[0]/outersize
+        moderatepercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 4.])[0]/outersize
+        deeppercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 5.])[0]/outersize
+      else:
+        weakpercent_outer = np.nan
+        stratiformpercent_outer = np.nan
+        shallowpercent_outer = np.nan
+        moderatepercent_outer = np.nan
+        deeppercent_outer = np.nan
+
+      #Next, calculate closure of the eyewall for stratiform, shallow, moderate, and deep convection
+      ptype_p_norm_inner_max = np.max(ptype_p_norm_inner,1)
+      closure_stratiform = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 2.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+      closure_shallow = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 3.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+      closure_moderate = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 4.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+      closure_deep = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 5.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+
+      #RMW Slope
+      slope_rmw_1 = np.linalg.lstsq((heightlevs[4:21]/1000-heightlevs[4]/1000).reshape(-1,1), (rmw_mean[4:21]-rmw_mean[4]), rcond=None)[0][0]
+      slope_rmw_2 = (rmw_mean[20]-rmw_mean[4])/8
+     
+      #Alpha Parameter
+      if (rmw_2km < 100. and (3*rmw_2km) < rmax):
+        alpha = np.log(vt_p_mean_norm[20,4]/vt_p_mean_norm[60,4])/np.log(3)
+      else:
+        alpha = np.nan
+
+      #Rossby Number
+      rmw_mean_10m = rmw_mean[0]
+      rmw_mean_index_10m = int(rmw_mean_index[0])
+      vt10_p_mean = np.nanmean(vt10_p,0)
+      coriolis = 2*7.292e-5*np.sin(centerlat*3.14159/180)
+      rossby = vt10_p_mean[rmw_mean_index_10m]/(rmw_mean_10m*1000*coriolis)
+      
+      #Calculate Magnitude and Height of Warm Core Anomaly
+      r15km_index = np.argmin(np.abs(r-15))
+      r200km_index = np.argmin(np.abs(r-200))
+      r300km_index = np.argmin(np.abs(r-300))
+      temp_p_mean_core = temp_p_mean[0:r15km_index+1,:]
+      temp_p_mean_outer = temp_p_mean[r200km_index:r300km_index+1,:]
+      temp_p_mean_core_mean = np.nanmean(temp_p_mean_core,0)
+      temp_p_mean_outer_mean = np.nanmean(temp_p_mean_outer,0)
+      temp_anomaly = temp_p_mean_core_mean-temp_p_mean_outer_mean
+      temp_anomaly_max = np.max(temp_anomaly[1::])
+      height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000  
+
+      #Calculate symmetry of precipitation 
+      dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
+      dbz5_p_w1_ring = dbz5_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
+      dbz5_p_whigher_ring = dbz5_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
+      amp_dbz5_p_w0_ring = np.nanmean(np.nanmax(dbz5_p_w0_ring,0)) 
+      amp_dbz5_p_w1_ring = np.nanmean(np.nanmax(dbz5_p_w1_ring,0)-np.mean(dbz5_p_w1_ring,0))
+      amp_dbz5_p_whigher_ring = np.nanmean(np.nanmax(dbz5_p_whigher_ring,0)-np.mean(dbz5_p_whigher_ring,0))
+      symmetry_w1_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring)
+      symmetry_all_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring+amp_dbz5_p_whigher_ring)
+      if symmetry_w1_dbz5_p < 0: symmetry_w1_dbz5_p = 0
+      if symmetry_all_dbz5_p < 0: symmetry_all_dbz5_p = 0
+
+      vt10_p_w0_ring = vt10_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
+      vt10_p_w1_ring = vt10_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
+      vt10_p_whigher_ring = vt10_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
+      amp_vt10_p_w0_ring = np.nanmean(np.nanmax(vt10_p_w0_ring,0))
+      amp_vt10_p_w1_ring = np.nanmean(np.nanmax(vt10_p_w1_ring,0)-np.mean(vt10_p_w1_ring,0))
+      amp_vt10_p_whigher_ring = np.nanmean(np.nanmax(vt10_p_whigher_ring,0)-np.mean(vt10_p_whigher_ring,0))
+      symmetry_w1_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring)
+      symmetry_all_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring+amp_vt10_p_whigher_ring)
+      if symmetry_w1_vt10_p < 0: symmetry_w1_vt10_p = 0
+      if symmetry_all_vt10_p < 0: symmetry_all_vt10_p = 0
+      
+      #Calculate Local Shear
+      if ( np.min(threshold_vort) > 0):
+        rmaxlocal = 102
+        rlocal = np.linspace(0,rmaxlocal,(int(rmaxlocal//resolution)+1))
+        Rlocal, THETAlocal = np.meshgrid(rlocal, theta)
+        XIlocal = Rlocal * np.cos(THETAlocal)
+        YIlocal = Rlocal * np.sin(THETAlocal)
+        u2km = uwind[:,:,4]
+        v2km = vwind[:,:,4]
+        u5km = uwind[:,:,10]
+        v5km = vwind[:,:,10]
+        u8km = uwind[:,:,16]
+        v8km = vwind[:,:,16]
+        u10km = uwind[:,:,4]
+        v10km = vwind[:,:,20]
+
+        u2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        v2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        u5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        v5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        u8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        v8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        u10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+        v10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+
+        if (center_x_vort[4] < 200 and center_y_vort[4] < 200):
+          f_u2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), u2km[:,:])
+          u2km_p_local[:,:] = f_u2km((YIlocal,XIlocal),method='linear')
+          f_v2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), v2km[:,:])
+          v2km_p_local[:,:] = f_v2km((YIlocal,XIlocal),method='linear')
+
+        if (vortex_depth_vort >= 5 and center_x_vort[10] < 200 and center_y_vort[10] < 200):
+          f_u5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), u5km[:,:])
+          u5km_p_local[:,:] = f_u5km((YIlocal,XIlocal),method='linear')
+          f_v5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), v5km[:,:])
+          v5km_p_local[:,:] = f_v5km((YIlocal,XIlocal),method='linear')
+
+        if (vortex_depth_vort >= 8 and center_x_vort[16] < 200 and center_y_vort[16] < 200):
+          f_u8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), u8km[:,:])
+          u8km_p_local[:,:] = f_u8km((YIlocal,XIlocal),method='linear')
+          f_v8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), v8km[:,:])
+          v8km_p_local[:,:] = f_v8km((YIlocal,XIlocal),method='linear')
+
+        if (vortex_depth_vort >= 10 and center_x_vort[20] < 200 and center_y_vort[20] < 200):
+          f_u10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), u10km[:,:])
+          u10km_p_local[:,:] = f_u10km((YIlocal,XIlocal),method='linear')
+          f_v10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), v10km[:,:])
+          v10km_p_local[:,:] = f_v10km((YIlocal,XIlocal),method='linear')
+
+        rlocal50 = np.argmin(np.abs(rlocal-50))
+
+        with warnings.catch_warnings():
+          warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+          u2km_p_local_ring50km_mean = np.nanmean(u2km_p_local[:,rlocal50+1])
+          v2km_p_local_ring50km_mean = np.nanmean(v2km_p_local[:,rlocal50+1])
+          u5km_p_local_ring50km_mean = np.nanmean(u5km_p_local[:,rlocal50+1])
+          v5km_p_local_ring50km_mean = np.nanmean(v5km_p_local[:,rlocal50+1])
+          u8km_p_local_ring50km_mean = np.nanmean(u8km_p_local[:,rlocal50+1])
+          v8km_p_local_ring50km_mean = np.nanmean(v8km_p_local[:,rlocal50+1])
+          u10km_p_local_ring50km_mean = np.nanmean(u10km_p_local[:,rlocal50+1])
+          v10km_p_local_ring50km_mean = np.nanmean(v10km_p_local[:,rlocal50+1])
+
+        ushear_2km_5km_local_ring50km = u5km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
+        vshear_2km_5km_local_ring50km = v5km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
+        ushear_2km_8km_local_ring50km = u8km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
+        vshear_2km_8km_local_ring50km = v8km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
+        ushear_2km_10km_local_ring50km = u10km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
+        vshear_2km_10km_local_ring50km = v10km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
+
+        shearmag_2km_5km_local = np.hypot(ushear_2km_5km_local_ring50km,vshear_2km_5km_local_ring50km)
+        sheardir_2km_5km_local = np.arctan2(vshear_2km_5km_local_ring50km,ushear_2km_5km_local_ring50km)*180.0/np.pi
+        if sheardir_2km_5km_local <=90:
+          sheardir_2km_5km_local = 90-sheardir_2km_5km_local
         else:
-          weakpercent_outer = np.nan
-          stratiformpercent_outer = np.nan
-          shallowpercent_outer = np.nan
-          moderatepercent_outer = np.nan
-          deeppercent_outer = np.nan
+          sheardir_2km_5km_local = 360-(sheardir_2km_5km_local-90)
 
-        #Next, calculate closure of the eyewall for stratiform, shallow, moderate, and deep convection
-        ptype_p_norm_inner_max = np.max(ptype_p_norm_inner,1)
-        closure_stratiform = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 2.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-        closure_shallow = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 3.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-        closure_moderate = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 4.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-        closure_deep = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 5.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-
-        #RMW Slope
-        slope_rmw_1 = np.linalg.lstsq((heightlevs[4:21]/1000-heightlevs[4]/1000).reshape(-1,1), (rmw_mean[4:21]-rmw_mean[4]), rcond=None)[0][0]
-        slope_rmw_2 = (rmw_mean[20]-rmw_mean[4])/8
-       
-        #Alpha Parameter
-        if (rmw_2km < 100. and (3*rmw_2km) < rmax):
-          alpha = np.log(vt_p_mean_norm[20,4]/vt_p_mean_norm[60,4])/np.log(3)
+        shearmag_2km_8km_local = np.hypot(ushear_2km_8km_local_ring50km,vshear_2km_8km_local_ring50km)
+        sheardir_2km_8km_local = np.arctan2(vshear_2km_8km_local_ring50km,ushear_2km_8km_local_ring50km)*180.0/np.pi
+        if sheardir_2km_8km_local <=90:
+          sheardir_2km_8km_local = 90-sheardir_2km_8km_local
         else:
-          alpha = np.nan
+          sheardir_2km_8km_local = 360-(sheardir_2km_8km_local-90)
 
-        #Rossby Number
-        rmw_mean_10m = rmw_mean[0]
-        rmw_mean_index_10m = int(rmw_mean_index[0])
-        vt10_p_mean = np.nanmean(vt10_p,0)
-        coriolis = 2*7.292e-5*np.sin(centerlat*3.14159/180)
-        rossby = vt10_p_mean[rmw_mean_index_10m]/(rmw_mean_10m*1000*coriolis)
-        
-        #Calculate Magnitude and Height of Warm Core Anomaly
-        r15km_index = np.argmin(np.abs(r-15))
-        r200km_index = np.argmin(np.abs(r-200))
-        r300km_index = np.argmin(np.abs(r-300))
-        temp_p_mean_core = temp_p_mean[0:r15km_index+1,:]
-        temp_p_mean_outer = temp_p_mean[r200km_index:r300km_index+1,:]
-        temp_p_mean_core_mean = np.nanmean(temp_p_mean_core,0)
-        temp_p_mean_outer_mean = np.nanmean(temp_p_mean_outer,0)
-        temp_anomaly = temp_p_mean_core_mean-temp_p_mean_outer_mean
-        temp_anomaly_max = np.max(temp_anomaly[1::])
-        height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000  
-
-        #Calculate symmetry of precipitation 
-        dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-        dbz5_p_w1_ring = dbz5_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-        dbz5_p_whigher_ring = dbz5_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-        amp_dbz5_p_w0_ring = np.nanmean(np.nanmax(dbz5_p_w0_ring,0)) 
-        amp_dbz5_p_w1_ring = np.nanmean(np.nanmax(dbz5_p_w1_ring,0)-np.mean(dbz5_p_w1_ring,0))
-        amp_dbz5_p_whigher_ring = np.nanmean(np.nanmax(dbz5_p_whigher_ring,0)-np.mean(dbz5_p_whigher_ring,0))
-        symmetry_w1_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring)
-        symmetry_all_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring+amp_dbz5_p_whigher_ring)
-        if symmetry_w1_dbz5_p < 0: symmetry_w1_dbz5_p = 0
-        if symmetry_all_dbz5_p < 0: symmetry_all_dbz5_p = 0
-
-        vt10_p_w0_ring = vt10_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
-        vt10_p_w1_ring = vt10_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
-        vt10_p_whigher_ring = vt10_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
-        amp_vt10_p_w0_ring = np.nanmean(np.nanmax(vt10_p_w0_ring,0))
-        amp_vt10_p_w1_ring = np.nanmean(np.nanmax(vt10_p_w1_ring,0)-np.mean(vt10_p_w1_ring,0))
-        amp_vt10_p_whigher_ring = np.nanmean(np.nanmax(vt10_p_whigher_ring,0)-np.mean(vt10_p_whigher_ring,0))
-        symmetry_w1_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring)
-        symmetry_all_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring+amp_vt10_p_whigher_ring)
-        if symmetry_w1_vt10_p < 0: symmetry_w1_vt10_p = 0
-        if symmetry_all_vt10_p < 0: symmetry_all_vt10_p = 0
-        
-        #Calculate Local Shear
-        if ( np.min(threshold_vort) > 0):
-          rmaxlocal = 102
-          rlocal = np.linspace(0,rmaxlocal,(int(rmaxlocal//resolution)+1))
-          Rlocal, THETAlocal = np.meshgrid(rlocal, theta)
-          XIlocal = Rlocal * np.cos(THETAlocal)
-          YIlocal = Rlocal * np.sin(THETAlocal)
-          u2km = uwind[:,:,4]
-          v2km = vwind[:,:,4]
-          u5km = uwind[:,:,10]
-          v5km = vwind[:,:,10]
-          u8km = uwind[:,:,16]
-          v8km = vwind[:,:,16]
-          u10km = uwind[:,:,4]
-          v10km = vwind[:,:,20]
-
-          u2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          v2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          u5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          v5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          u8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          v8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          u10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-          v10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-
-          if (center_x_vort[4] < 200 and center_y_vort[4] < 200):
-            f_u2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), u2km[:,:])
-            u2km_p_local[:,:] = f_u2km((YIlocal,XIlocal),method='linear')
-            f_v2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), v2km[:,:])
-            v2km_p_local[:,:] = f_v2km((YIlocal,XIlocal),method='linear')
-
-          if (vortex_depth_vort >= 5 and center_x_vort[10] < 200 and center_y_vort[10] < 200):
-            f_u5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), u5km[:,:])
-            u5km_p_local[:,:] = f_u5km((YIlocal,XIlocal),method='linear')
-            f_v5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), v5km[:,:])
-            v5km_p_local[:,:] = f_v5km((YIlocal,XIlocal),method='linear')
-
-          if (vortex_depth_vort >= 8 and center_x_vort[16] < 200 and center_y_vort[16] < 200):
-            f_u8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), u8km[:,:])
-            u8km_p_local[:,:] = f_u8km((YIlocal,XIlocal),method='linear')
-            f_v8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), v8km[:,:])
-            v8km_p_local[:,:] = f_v8km((YIlocal,XIlocal),method='linear')
-
-          if (vortex_depth_vort >= 10 and center_x_vort[20] < 200 and center_y_vort[20] < 200):
-            f_u10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), u10km[:,:])
-            u10km_p_local[:,:] = f_u10km((YIlocal,XIlocal),method='linear')
-            f_v10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), v10km[:,:])
-            v10km_p_local[:,:] = f_v10km((YIlocal,XIlocal),method='linear')
-
-          rlocal50 = np.argmin(np.abs(rlocal-50))
-
-          with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-            u2km_p_local_ring50km_mean = np.nanmean(u2km_p_local[:,rlocal50+1])
-            v2km_p_local_ring50km_mean = np.nanmean(v2km_p_local[:,rlocal50+1])
-            u5km_p_local_ring50km_mean = np.nanmean(u5km_p_local[:,rlocal50+1])
-            v5km_p_local_ring50km_mean = np.nanmean(v5km_p_local[:,rlocal50+1])
-            u8km_p_local_ring50km_mean = np.nanmean(u8km_p_local[:,rlocal50+1])
-            v8km_p_local_ring50km_mean = np.nanmean(v8km_p_local[:,rlocal50+1])
-            u10km_p_local_ring50km_mean = np.nanmean(u10km_p_local[:,rlocal50+1])
-            v10km_p_local_ring50km_mean = np.nanmean(v10km_p_local[:,rlocal50+1])
-
-          ushear_2km_5km_local_ring50km = u5km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
-          vshear_2km_5km_local_ring50km = v5km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
-          ushear_2km_8km_local_ring50km = u8km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
-          vshear_2km_8km_local_ring50km = v8km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
-          ushear_2km_10km_local_ring50km = u10km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
-          vshear_2km_10km_local_ring50km = v10km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
-
-          shearmag_2km_5km_local = np.hypot(ushear_2km_5km_local_ring50km,vshear_2km_5km_local_ring50km)
-          sheardir_2km_5km_local = np.arctan2(vshear_2km_5km_local_ring50km,ushear_2km_5km_local_ring50km)*180.0/np.pi
-          if sheardir_2km_5km_local <=90:
-            sheardir_2km_5km_local = 90-sheardir_2km_5km_local
-          else:
-            sheardir_2km_5km_local = 360-(sheardir_2km_5km_local-90)
-
-          shearmag_2km_8km_local = np.hypot(ushear_2km_8km_local_ring50km,vshear_2km_8km_local_ring50km)
-          sheardir_2km_8km_local = np.arctan2(vshear_2km_8km_local_ring50km,ushear_2km_8km_local_ring50km)*180.0/np.pi
-          if sheardir_2km_8km_local <=90:
-            sheardir_2km_8km_local = 90-sheardir_2km_8km_local
-          else:
-            sheardir_2km_8km_local = 360-(sheardir_2km_8km_local-90)
-
-          shearmag_2km_10km_local = np.hypot(ushear_2km_10km_local_ring50km,vshear_2km_10km_local_ring50km)
-          sheardir_2km_10km_local = np.arctan2(vshear_2km_10km_local_ring50km,ushear_2km_10km_local_ring50km)*180.0/np.pi
-          if sheardir_2km_10km_local <=90:
-            sheardir_2km_10km_local = 90-sheardir_2km_10km_local
-          else:
-            sheardir_2km_10km_local = 360-(sheardir_2km_10km_local-90)
-
-    
+        shearmag_2km_10km_local = np.hypot(ushear_2km_10km_local_ring50km,vshear_2km_10km_local_ring50km)
+        sheardir_2km_10km_local = np.arctan2(vshear_2km_10km_local_ring50km,ushear_2km_10km_local_ring50km)*180.0/np.pi
+        if sheardir_2km_10km_local <=90:
+          sheardir_2km_10km_local = 90-sheardir_2km_10km_local
+        else:
+          sheardir_2km_10km_local = 360-(sheardir_2km_10km_local-90)
+  
       structurefile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
       f = open(structurefile,'w')
       f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vt_dynamic,vortex_depth_vt_static,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local))
       f.close()
+
+      #############################################################################################################
+      ###Start of Block of code to do center calculations at each height based on Michael Fischer's methodology
+      do_tdr_recentering = namelist_structure_vars[23,1]
+      if do_tdr_recentering == 'Y':
+        print('MADE IT INSIDE THE RECENTERING LOOP')
+
+        LON,LAT=np.meshgrid(lon,lat)
+
+        allstacks=[]
+        indices=[]
+        index2km = np.argmin(np.abs(heightlevs-2000))
+        list_of_levels=np.arange(index2km,ivd+1,1)
+
+        xmin = np.argmin(np.abs(x_sr+200))
+        xmax = np.argmin(np.abs(x_sr-200))
+        ymin = np.argmin(np.abs(y_sr+200))
+        ymax = np.argmin(np.abs(y_sr-200))
+
+        ### MP section (see: https://www.youtube.com/watch?v=fKl2JW_qrso)
+        #with concurrent.futures.ProcessPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+          results = [executor.submit(MP_centers_function, uwind[ymin:ymax,xmin:xmax,level]-umotion,vwind[ymin:ymax,xmin:xmax,level]-vmotion,LON[ymin:ymax,xmin:xmax],LAT[ymin:ymax,xmin:xmax],center_lon_pressure[level],center_lat_pressure[level], level) for level in list_of_levels]
+          for job in concurrent.futures.as_completed(results):
+            print(np.shape(job.result))
+            (vals,ix) = job.result()
+            allstacks.append(vals) #put all these arrays into a big list
+            indices.append(ix)
+
+        indices_sorted = np.argsort(np.array(indices))
+        allstacks_array = np.array(allstacks)
+        allstacks_sorted = allstacks_array[indices_sorted,:]
+        newcenter_lat = allstacks_sorted[:,1]
+        newcenter_lon = allstacks_sorted[:,0]
+        newcenter_vtmax = allstacks_sorted[:,2]
+        newcenter_vmax = allstacks_sorted[:,3]
+        newcenter_coverage = allstacks_sorted[:,4]
+
+        tiltmag_mid_tdr = tiltdir_mid_tdr = tiltmag_deep_tdr = tiltdir_deep_tdr = np.nan
+        index2km = np.argmin(np.abs(heightlevs[list_of_levels]-2000))
+        if ivd >= 11:
+          index5km = np.argmin(np.abs(heightlevs[list_of_levels]-5000))
+          tiltx_mid = (newcenter_lon[index5km]-newcenter_lon[index2km])*111.1*np.cos(centerlat*3.14159/180)
+          tilty_mid = (newcenter_lat[index5km]-newcenter_lat[index2km])*111.1
+          tiltmag_mid_tdr = np.hypot(tiltx_mid,tilty_mid)
+          tiltdir_mid_tdr = np.arctan2(tilty_mid,tiltx_mid)
+
+        if ivd >= 21:
+          index10km = np.argmin(np.abs(heightlevs[list_of_levels]-10000))
+          tiltx_deep = (newcenter_lon[index10km]-newcenter_lon[index2km])*111.1*np.cos(centerlat*3.14159/180)
+          tilty_deep = (newcenter_lat[index10km]-newcenter_lat[index2km])*111.1
+          tiltmag_deep_tdr = np.hypot(tiltx_deep,tilty_deep)
+          tiltdir_deep_tdr = np.arctan2(tilty_deep,tiltx_deep)
+
+        #Generate Some Variables for Later Plotting
+        ms2kt = 1.94384
+        deg2rad = pi/180.
+
+        res = 2
+        xmin = np.argmin(np.abs(x_sr+200))
+        xmax = np.argmin(np.abs(x_sr-200))
+        ymin = np.argmin(np.abs(y_sr+200))
+        ymax = np.argmin(np.abs(y_sr-200))
+        x_sr_200km = x_sr[xmin:xmax]
+        y_sr_200km = y_sr[ymin:ymax]
+        lon_sr_200km = lon[xmin:xmax]
+        lat_sr_200km = lat[ymin:ymax]
+        x_sr_200km_interp = np.linspace(-200,200,np.int(400/res)+1)
+        y_sr_200km_interp = np.linspace(-200,200,np.int(400/res)+1)
+
+        newcenter_xindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
+        newcenter_yindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
+        newcenter_flag = np.zeros(np.shape(newcenter_lon))
+        for k in range(np.shape(list_of_levels)[0]):
+           newcenter_xindex_orig = np.argmin(np.abs(newcenter_lon[k]-lon_sr_200km)).astype(int)
+           newcenter_yindex_orig = np.argmin(np.abs(newcenter_lat[k]-lat_sr_200km)).astype(int)
+           if ((newcenter_coverage[k] < 0.2) | (newcenter_vtmax[k] < 8.0)):
+            newcenter_flag[k] = 1
+           newcenter_xindex[k] = np.argmin(np.abs(x_sr_200km_interp-x_sr_200km[newcenter_xindex_orig])).astype(int)
+           newcenter_yindex[k] = np.argmin(np.abs(y_sr_200km_interp-y_sr_200km[newcenter_yindex_orig])).astype(int)
+
+        kmin_tilt = np.min(list_of_levels)
+        kmax_tilt = np.max(list_of_levels)
+
+        #Set the Flag to 1 at 0.5km intervals for plotting purposes
+        newcenter_flag[1:kmax_tilt-kmin_tilt+1:2] = 1
+
+        SHIPS_ShearMagNum = shearmag*ms2kt
+        SHIPS_ShearDirMetNum = sheardir_met
+
+        #Re-grid
+        uwind_sr_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+        vwind_sr_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+        wwind_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+        vort_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+        for k in range(zsize):
+          uwind_sr_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, uwind[ymin:ymax,xmin:xmax,k]-umotion)(x_sr_200km_interp, y_sr_200km_interp)
+          vwind_sr_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, vwind[ymin:ymax,xmin:xmax,k]-vmotion)(x_sr_200km_interp, y_sr_200km_interp)
+          wwind_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, wwind[ymin:ymax,xmin:xmax,k])(x_sr_200km_interp, y_sr_200km_interp)
+          vort_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, vort[ymin:ymax,xmin:xmax,k])(x_sr_200km_interp, y_sr_200km_interp)
+
+        #Now Write Out the Centers to a Text File
+        centersfile = ODIR+'/'+LONGSID.lower()+'.centers_by_height.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+        centersarray = (newcenter_lon,newcenter_lat,heightlevs[list_of_levels])
+        np.savetxt(centersfile,np.column_stack(centersarray),fmt = "%.2f",delimiter=',')
+        ###End of Block of code to do center calculations at each height based on Michael Fischer's methodology
+      #############################################################################################################
 
       #############################################################################################################################################
       # THIS BLOCK OF CODE WRITES AN OPTIONAL NETCDF FILE (BASED ON A NAMELIST PARAMETER) WITH AZIMUTHAL MEAN VARIABLES
@@ -1732,6 +1851,7 @@ def main():
       do_radar_plots = 'N'
       do_soundings = 'N'
       do_shear_and_rh_plots = 'N'
+      do_tdr_recentering = 'N'
 
     if not DO_DBZ:
       do_dbz_mean = 'N'
@@ -2701,6 +2821,26 @@ def main():
     if (do_shear_and_rh_plots == 'Y'):
       shearandrhplot.shearandrhplot(XI, YI, theta, r, ushear_p, vshear_p, np.nanmean(rh_p[:,:,6:10],2), '3km', '5km', rmw_mean[6], rmw_mean[10], GPLOT_DIR, \
                                     EXPT, FHR, maxwind, minpressure, LONGSID, ODIR, forecastinit, DO_CONVERTGIF)
+
+    #Make Recentered Tilt Plots if Flag is Set On
+    if do_tdr_recentering == 'Y':
+      import modules.tilt_plot as tilt_plot
+      if newcenter_flag[0] < 1:
+        anchorlon = newcenter_lon[0]
+        anchorlat = newcenter_lat[0]
+      else:
+        anchorlon = centerlon
+        anchorlat = centerlat
+
+      titlestring1 = EXPT.strip()+'\n'+ r'2-km Vorticity ($10^{-4} s^{-1}$, Shading) and Storm-Relative Wind'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']'
+      titlestring2 = EXPT.strip()+'\n'+ r'5-km Vorticity ($10^{-4} s^{-1}$, Shading) and Storm-Relative Wind'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']'
+      figfname = ODIR+'/'+LONGSID.lower()+'.vort_tilt_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
+      tilt_plot.tilt_plot(kmin_tilt,kmax_tilt,x_sr_200km_interp,y_sr_200km_interp,heightlevs/1000,np.flipud(np.rot90(uwind_sr_200km_interp)),np.flipud(np.rot90(vwind_sr_200km_interp)),np.flipud(np.rot90(wwind_200km_interp)),np.flipud(np.rot90(vort_200km_interp)),newcenter_xindex,newcenter_yindex,newcenter_flag,anchorlon,anchorlat,'vort',SHIPS_ShearMagNum,SHIPS_ShearDirMetNum,titlestring1,titlestring2,figfname+figext)
+      print(x_sr_200km_interp[newcenter_xindex])
+      print(y_sr_200km_interp[newcenter_yindex])
+      plt.close()
+      if ( DO_CONVERTGIF ):
+        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
 
     finish = time.perf_counter()
     print(f'MSG: Total time for plotting: {finish-start:.2f} second(s)')
