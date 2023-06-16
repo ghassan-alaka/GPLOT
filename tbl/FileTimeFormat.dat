@@ -13,5 +13,11 @@ fvGFS_ATL     f        3
 GEFS          f        2
 HAFS          f        3
 HAFS_HYCOM    f        3
+HAFSV0.3      f        3
+HAFSV0.3_HYCOM f        3
+HAFSv1a       f        3
+HAFSv1a_HYCOM f        3
+HAFSv1b       f        3
+HAFSv1b_HYCOM f        3
 ECMWF         f        3
 HMON          f        3

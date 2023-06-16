@@ -48,6 +48,7 @@ echo "MSG: Found this namelist --> ${NMLIST}"
 # Pull important variables from the namelist
 DO_OCEAN_MAPS="`sed -n -e 's/^DO_OCEAN_MAPS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 DSOURCE="`sed -n -e 's/^DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_DSOURCE="`sed -n -e 's/^OCEAN_DSOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 OCEAN_SOURCE="`sed -n -e 's/^OCEAN_SOURCE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 OCEAN_CFG="`sed -n -e 's/^OCEAN_CFG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 EXPT="`sed -n -e 's/^EXPT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -78,6 +79,8 @@ RESOLUTION="`sed -n -e 's/^RESOLUTION =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 RMAX="`sed -n -e 's/^RMAX =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 LEVS="`sed -n -e 's/^LEVS =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 OCEAN_MAPS_PYTHONFILE="`sed -n -e 's/^OCEAN_MAPS_PYTHONFILE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+FIX_DIR="`sed -n -e 's/^FIX_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+OCEAN_WRAP_LON="`sed -n -e 's/^OCEAN_WRAP_LON =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 
 if [ -z "${FIX_DIR}" ]; then
     if [ ! -z "${HOMEhafs}" ]; then
@@ -197,31 +200,25 @@ FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
 # Define a maximum number of cycles to be processed based on the experiment
-MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
-if [ -z "${MAX_CYCLES}" ]; then
-    if [ "${EXPT}" == "GFS_Forecast" ]; then
-        MAX_CYCLES=6
-    else
-        MAX_CYCLES=25
-    fi
-fi
+#MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MAX_CYCLES=100
 echo "MSG: Will produce graphics for up to ${MAX_CYCLES} forecast cycles."
 
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
     echo ${OCEAN_DIR}
-    CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+    CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r 2>/dev/null` )
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r  | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `find ${OCEAN_DIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${OCEAN_DIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " 2>/dev/null` )
+        CYCLES=( `ls -rd ${OCEAN_DIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
 else
     CYCLES=( "${IDATE[@]}" )
@@ -266,7 +263,7 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAXCOUNT=25
+MAX_JOBS=25
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -704,7 +701,9 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         IFHRS=()
                         while [ -z "${IFILES[*]}" ]; do
                             OCEAN_DIR_FULL="$(echo "${OCEAN_DIR}/${OCEAN_DIR_OPTS[$F]}" | sed s#//*#/#g)"
-
+                            
+                            #echo "DEBUG:: OCEAN_DIR_FULL: ${OCEAN_DIR_FULL}"
+                            
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${OCEAN_DIR_FULL} ]; then
                                 ((F=F+1))
@@ -726,17 +725,20 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
     
                                 # Search for a matching file. If found, append the file and forecast hour to their respective arrays
                                 FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
+                                #echo "DEBUG:: FILE_SEARCH3: ${FILE_LS}"
                                 if [ "${#FILE_LS[@]}" -eq "1" ]; then
                                     IFILES+=("${FILE_LS[*]}")
                                     IFHRS+=( ${FHR} )
                                 else
                                     FILE_LS=( `ls ${FILE_SEARCH2} 2>/dev/null` )
+                                    #echo "DEBUG:: FILE_SEARCH2: ${FILE_LS}"
                                     if [ "${#FILE_LS[@]}" -eq "1" ]; then
                                         IFILES+=("${FILE_LS[*]}")
                                         IFHRS+=( ${FHR} )
                                     else
                                         if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
                                             FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
+                                            #echo "DEBUG:: FILE_SEARCH: ${FILE_LS}"
                                             if [ "${#FILE_LS[@]}" -eq "1" ]; then
                                                 IFILES+=("${FILE_LS[*]}")
                                                 IFHRS+=( ${FHR} )
@@ -744,6 +746,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                         fi
                                     fi
                                 fi
+                                #echo "DEBUG:: IFILES: ${IFILES[*]}"
                             done
 
 
@@ -1015,7 +1018,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         elif [ "${BATCH_MODE^^}" == "BACKGROUND" ]; then
                             JOB_TEST=""
                         else
-                            JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}"
+                            JOB_NAME="GPLOT.${EXPT}.${CYCLE}${ENSIDTAG}.ocean_${DMN}${STORMTAG}.${TR}"
                             JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOB_NAME}"`
                         fi
 
@@ -1046,7 +1049,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                             echo "MSG: Submitting GPLOT child batch job. BATCH_MODE ${BATCH_MODE}, DMN ${DMN}"
                             FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PYTHON_DIR}${OCEAN_MAPS_PYTHONFILE} ${LOGFILE1} ${NMLIST} ${ENSID}"
                             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${DMN} ${TR} ${RESOLUTION} ${RMAX} ${LEVS} ${FORCE}"
-                            FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR}"
+                            FULL_CMD="${FULL_CMD} ${OCEAN_SOURCE} ${OCEAN_CFG} ${FIX_DIR} ${OCEAN_WRAP_LON}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
                                 ${FULL_CMD}
@@ -1055,14 +1058,15 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                 ${FULL_CMD} &
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.
                             ((N++))
-                            if [ "$N" -ge "$MAXCOUNT" ]; then
+                            if [ "$N" -ge "$MAX_JOBS" ]; then
                                 echo "MSG: Maximum number of batch submissions has been reached."
                                 echo "MSG: Further jobs will be submitted later."
                                 echo "MSG: spawn_ocean_maps.sh completed at `date`"

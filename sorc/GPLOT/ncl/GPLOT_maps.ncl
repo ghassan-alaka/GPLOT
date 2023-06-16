@@ -1029,9 +1029,13 @@ do fff = 0,nFiles-1
 				else if(DSOURCE.eq."ECMWF")then	G_BASE_LEVS := ""
 				end if  end if  end if  end if
 				end if
+			else if(any((/"PRATE"/).eq.G_BASE(0,ppp)))then
+				if(DSOURCE.eq."HAFS")then	G_BASE_LEVS := (/"","3h"/)
+				else				G_BASE_LEVS := ""
+				end if
 			else
 				G_BASE_LEVS := G_BASE(1,ppp)
-                        end if
+                        end if  end if
                         
                         ;================================================================
                         ; vi. Determine which file contains the G_BASE variable
@@ -1039,6 +1043,7 @@ do fff = 0,nFiles-1
                         ;================================================================
 			do ggg = 0,dimsizes(G_BASE_LEVS)-1
 				BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE_LEVS(ggg))
+print(G_BASE(0,ppp)+"  "+G_BASE_LEVS(ggg)+"  "+BASEVAR)
 	                        varStatus = False
 	                        do aaa = 0,dimsizes(myInd)-1
 	                                if(aaa.eq.0)then        f := f1
@@ -1145,7 +1150,7 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ; xi. Read dimension data (only for available dims)
                         ;================================================================
-			if(any((/"HWRF","HMON"/).eq.DSOURCE) .and. any((/"d03","alld03"/).eq.DOMAIN))then   BOCO@doPivot = False   end if
+			if(any((/"HWRF","HMON","HAFS"/).eq.DSOURCE) .and. any((/"d03","alld03"/).eq.DOMAIN))then   BOCO@doPivot = False   end if
                         do ddd = 0,nDims-1
                                 ; 1. Y-DOORDINATE --> LATITUDE
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then

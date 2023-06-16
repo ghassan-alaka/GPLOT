@@ -156,7 +156,8 @@ fi
 
 
 # Set the maximum number of job submissions
-NMAX=25
+# This is a safeguard to avoid overloading the batch scheduler.
+MAX_JOBS=25
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -217,10 +218,10 @@ done
 #printf '%s\n' "${ATCF_ALL[@]}"
 
 
-# Limit the ATCF list based on NMAX
+# Limit the ATCF list based onMAX_JOBS 
 NATCF="${#ATCF_ALL[*]}"
-#if [[ NATCF -gt NMAX ]]; then
-#    C=$((NATCF - NMAX))
+#if [[ NATCF -gt MAX_JOBS ]]; then
+#    C=$((NATCF - MAX_JOBS))
 #    ATCF_ALL=("${ATCF_ALL[@]:$C}" "${ATCF_ALL[@]:0:$C}")
 #fi
 
@@ -552,8 +553,8 @@ if [ "${DO_STATS}" = "True" ]; then
             N=$((N+1))
 
             # Limit the number of jobs to now overwhelm the batch scheduler
-            if [[ N -ge NMAX ]]; then
-                echo "WARNING: Maximum number of jobs reached (${NMAX})."
+            if [[ N -ge MAX_JOBS ]]; then
+                echo "WARNING: Maximum number of jobs reached (${MAX_JOBS})."
                 break
             fi
         else

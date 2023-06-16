@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=12
+##SBATCH --ntasks-per-node=12
 #SBATCH --time=00:59:00
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -31,7 +31,7 @@ FORCE="${11:-False}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
-    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
 # 3. Source GPLOT modulefile to optimize the environment

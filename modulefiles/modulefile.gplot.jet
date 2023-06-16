@@ -6,7 +6,7 @@
 A=${1:-0}
 
 # Determine the GPLOT source code directory
-if [ -z "${GPLOT_DIR}" ]; then
+if [ ! -v GPLOT_DIR ]; then
     export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
 fi
 
@@ -14,9 +14,7 @@ fi
 if ( ! eval module help > /dev/null 2>&1 ) ; then
     source /apps/lmod/lmod/init/sh
 fi
-if [ -z "${MODULEPATH}" ]; then
-    export MODULEPATH="/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles"
-fi
+export MODULEPATH=${MODULEPATH:-"/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles"}
 
 # Turn off core dump files
 ulimit -c 0
@@ -25,7 +23,8 @@ ulimit -c 0
 module purge
 module load intel/2022.1.2
 module load wgrib/1.8.1.0b
-module load wgrib2/2.0.8
+module load gnu/9.2.0
+module load wgrib2/3.1.1_ncep
 if [ "${A}" -eq 0 ]; then
     module load netcdf/4.6.1
     module load hdf5/1.10.4

@@ -47,10 +47,10 @@ EXT = .grib2
 ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2023/
 ATCF1_TAG = trak.ecmo.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2022/
-ATCF2_TAG = trak.ecmo.atcfunix
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2023/
+ATCF2_TAG = trak.ecmx.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC/
@@ -73,12 +73,6 @@ DO_RMWHITE = True
 ; 1P. TOGGLE TITLE
 DO_SRCLBL = True
 
-; 1Q. AUTO-CHOOSE SETUP VARIABLES
-AUTO_VAR = False
-
-; 1R. AUTO-CHOOSE EXPERIMENT
-AUTO_DIR = False
-
 ; 1S. FORCE
 FORCE = False
 
@@ -100,7 +94,7 @@ CPU_ACCT = hur-aoml
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = basin atl epac wlant elant eus gom wpac cpac nio sio spac d01 d03
+DOMAIN = global basin atl epac wpac cpac nio sio spac d03 wlant elant eus gom
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1

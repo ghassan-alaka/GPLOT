@@ -1094,6 +1094,7 @@ begin
 	; This should be integrated into the actual variable name, as with UV10, T2, etc.
 	if(any((/"GFS","HAFS","HMON"/).eq.DSOURCE))then
 		if(isStrSubset(VAR,"PRCP") .and. isStrSubset(LEV,"h"))then	NEWVAR = NEWVAR+LEV   end if
+		if(isStrSubset(VAR,"PRATE") .and. isStrSubset(LEV,"h"))then	NEWVAR = NEWVAR+LEV   end if
 	end if
 	
 	
@@ -2919,10 +2920,14 @@ begin
                         List_Title	= "700mb  Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; contours), and Wind (kt; barbs)"
                 else if(short_name.eq."RH700_UV700_MSLP")then
                         List_Title	= "700mb Relative Humidity (%; shaded), Wind (kt), and MSLP (mb; lines and centers)"
+                else if(short_name.eq."PRATE_MSLP_Z1000500")then
+                        List_Title      = "Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
                 else if(short_name.eq."PRCP_MSLP_Z1000500")then
-                        List_Title	= "Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
+                        List_Title	= "Bulk Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
+                else if(short_name.eq."PRATE_MSLP")then
+                        List_Title      = "Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
                 else if(short_name.eq."PRCP_MSLP")then
-                        List_Title	= "Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
+                        List_Title	= "Bulk Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
                 else if(short_name.eq."TPRCP_MSLP")then
                         List_Title	= "Total Precip. (inches; shaded), MSLP (mb; centers)"
                 else if(short_name.eq."TPW_MSLP")then
@@ -2990,7 +2995,7 @@ begin
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if  end if
 
 
 		; If nothing from this above matches, then return a default title

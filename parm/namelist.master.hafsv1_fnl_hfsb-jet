@@ -12,7 +12,7 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = HAFS
+EXPT = hafsv1_fnl_hfsb
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
@@ -35,29 +35,33 @@ ENSMEM = 0
 SYS_ENV = JET
 
 ; 1F. FORECAST CYCLE
-IDATE =
+IDATE = 
 
 ; 1G. STORM ID
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /PLEASE/SET/THE/INPUT/PATH
+;IDIR; = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
+IDIR = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
 ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /PLEASE/SET/THE/OUTPUT/PATH
-ODIR_TYPE = 1
+;ODIR; = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPOUT/
+ODIR = /lfs4/HFIP/hur-aoml/Lew.Gramer/GPOUT/
+ODIR_TYPE = 0
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /PLEASE/SET/THE/ATCF1/DIRECTORY
+;ATCF1_DIR; = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/hafsv1_fnl_hfsb/coupled/adeck
+ATCF1_DIR = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/hafsv1_fnl_hfsb/coupled/adeck
 ATCF1_TAG = hfsb.trak.atcfunix
-ATCF2_DIR = /PLEASE/SET/THE/ATCF2/DIRECTORY
+;ATCF2_DIR; = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
+ATCF2_DIR = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
 ATCF2_TAG = hfsb.trak.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /PLEASE/SET/THE/ADECK/DIRECTORY
-BDECK_DIR = /PLEASE/SET/THE/BDECK/DIRECTORY
+ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
@@ -152,10 +156,11 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = polar_cylindrical_structure.py
+PYTHONFILE = make_rz_plots_heightcoordinates_research.py
 RESOLUTION = 2.0
 RMAX = 600
 LEVS = 46
+
 
 ;================================================================
 ; SECTION 6: GPLOT_Airsea variables
@@ -168,10 +173,13 @@ AIRSEA_PYTHONFILE = plot_airsea_pbl.py
 ; Script to produce ocean map graphics
 OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
 ; Ocean data input directory
-OCEAN_DIR = /PLEASE/SET/THE/OCEAN/INPUT/DIR
-; Ocean model (codes)
+;OCEAN_DIR; = /scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
+OCEAN_DIR = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
+; Ocean model
 OCEAN_SOURCE = HYCOM
 ; Ocean graphical regions to plot
 OCEAN_DOMAIN = domain d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
+;FIX_DIR; = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20221219-fix/fix/fix_hycom/
+FIX_DIR = /lfs4/HFIP/hwrf-data/hafs-fix-files/hafs-20221219-fix/fix/fix_hycom/

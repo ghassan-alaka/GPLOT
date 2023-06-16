@@ -47,9 +47,9 @@ EXT =
 ODIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/HMON_Forecast_2022/
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/pytmp/HMON_Forecast_2023/
 ATCF1_TAG = trak.hmon.atcfunix
-ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/HMON_Forecast_2022/
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/HMON_Forecast_2023/
 ATCF2_TAG = atcfunix
 
 ; 1K. ADECK & BDECK PATHS
@@ -72,12 +72,6 @@ DO_RMWHITE = True
 
 ; 1P. TOGGLE TITLE
 DO_SRCLBL = True
-
-; 1Q. AUTO-CHOOSE SETUP VARIABLES
-AUTO_VAR = False
-
-; 1R. AUTO-CHOOSE EXPERIMENT
-AUTO_DIR = False
 
 ; 1S. FORCE
 FORCE = False
@@ -160,7 +154,7 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots.py
+PYTHONFILE = polar_cylindrical_structure.py
 RESOLUTION = 2.0
 RMAX = 300
 LEVS = 46
