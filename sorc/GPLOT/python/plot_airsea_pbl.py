@@ -45,6 +45,9 @@ import subprocess
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
+def debug_dump_range(FHR,varnm,var):
+  print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var)},{np.nanpercentile(var,25)},{np.nanmedian(var)},{np.nanpercentile(var,75)},{np.nanmax(var)}');
+
 ##############################
 def main():
 
@@ -489,20 +492,21 @@ def main():
     theta_e_550_levs = np.arange(330,380+1e-6,2.0);    theta_e_550_ticks = np.arange(330,380+1e-6,5.0)
     theta_e_700_levs = np.arange(330,380+1e-6,2.0);    theta_e_700_ticks = np.arange(330,380+1e-6,5.0)
     theta_e_850_levs = np.arange(330,380+1e-6,2.0);    theta_e_850_ticks = np.arange(330,380+1e-6,5.0)
-    delta_t_levs = np.arange(-6,12+1e-6,0.2);    delta_t_ticks = np.arange(-6,12+1e-6,0.5)
-    delta_q_levs = np.arange(0.5,2.5+1e-6,0.05);    delta_q_ticks = np.arange(0.5,2.5+1e-6,0.1)
+    delta_t_levs = np.arange(-6,12+1e-6,0.2);          delta_t_ticks = np.arange(-6,12+1e-6,0.5)
+    #delta_q_levs = np.arange(0.5,2.5+1e-6,0.05);       delta_q_ticks = np.arange(0.5,2.5+1e-6,0.1)
+    delta_q_levs = np.arange(1.05,1.20+1e-6,0.002);    delta_q_ticks = np.arange(1.05,1.20+1e-6,0.01)
     
     DELTA_T = sst - temp[...,0].squeeze();
     # DPT=SST at sfc
     sfcq = mpcalc.specific_humidity_from_dewpoint((sst+273.15)*metpy.units.units.K,\
-                                                   mslp.squeeze()*metpy.units.units.hPa)
+                                                  mslp.squeeze()*metpy.units.units.hPa)
     DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
     DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\
-                                                             temp*metpy.units.units.K,\
-                                                             levs*metpy.units.units.hPa)
+                                                 temp*metpy.units.units.K,\
+                                                 levs*metpy.units.units.hPa)
     THETA_E = mpcalc.equivalent_potential_temperature(levs*metpy.units.units.hPa,\
-                                                                  temp*metpy.units.units.K,DPT);
-
+                                                      temp*metpy.units.units.K,DPT);
+    
     if ( np.all(np.isnan(THETA_E)) ):
       print(f'WARNING: THETA_E ALL NaNs in {CTL_FILE}: Skipping this forecast hour')
       ga('close 1')
@@ -643,6 +647,8 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, DELTA_Q, levels=delta_q_levs, cmap='seismic',extend='both')
+      #DEBUG:
+      debug_dump_range(FHR,'DELTA_Q',DELTA_Q)
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
