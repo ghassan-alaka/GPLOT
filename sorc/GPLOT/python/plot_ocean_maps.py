@@ -268,7 +268,12 @@ def main():
     maxwind = ATCF_DATA[list(FHRIND),8][0]
     minpressure = ATCF_DATA[list(FHRIND),9][0]
     rmwnmi = ATCF_DATA[list(FHRIND),19][0]
-
+    #trey additions start
+    neq34 = float(ATCF_DATA[list(FHRIND),13][0]) 
+    seq34 = float(ATCF_DATA[list(FHRIND),14][0]) 
+    swq34 = float(ATCF_DATA[list(FHRIND),15][0]) 
+    nwq34 = float(ATCF_DATA[list(FHRIND),16][0])
+    #treyend
     # HACK: This should be revisited.
     if centerlat > 50.0:
       print('WARNING: The latitude is poleward of +/- 50. Skipping.')
@@ -608,19 +613,53 @@ def main():
       aa = ((np.sin(dlats/2))**2 + np.cos((centerlat*(math.pi)/180)) * np.cos((lat * (math.pi)/180)) * (np.sin(dlons/2))**2)
       cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
       rad_distances = cc * 6371.      
+      bearings1 = ((np.arctan2 ( (np.sin (dlons)) * (np.cos(lat * (math.pi)/180.)) , ((np.cos(centerlat*(math.pi)/180.)) * (np.sin(lat * (math.pi)/180.))) - (((np.sin(centerlat*(math.pi)/180.)) * (np.cos(lat * (math.pi)/180.))) * (np.cos(dlons))))) * (180./(math.pi))) % 360
+      bearings1 = np.array(bearings1)
+      bearings = np.transpose(bearings1) 
       where500 = np.where(rad_distances <= 500.)
-      T500 = np.nanmean(T0[where500])
-      OHC500 = np.nanmean(OHC[where500])
+      where200 = np.where(rad_distances <= 200.)    
+
+      #print(bearings[0,0])
+      #print(bearings[0,2400])
+      #print(bearings[950,2400])
+      #print(bearings[950,0])
+      #print(lat[0])
+      #print(lat[900])
+      #print(lon[0])
+      #print(lon[950])
+      #sys.exit()
+      #make sure there's at least 50% ocean coverage
+      wherecov = np.where(T0 > 0.)
+      if ((np.size(wherecov) / np.size(where500)) < .5):
+        T500 = np.nan
+        OHC500 = np.nan
+      else: 
+        T500 = np.nanmean(T0[where500])
+        OHC500 = np.nanmean(OHC[where500])
  
+      if ((np.size(wherecov) / np.size(where200)) < .5):
+        T200 = np.nan
+        OHC200 = np.nan
+      else:
+        T200 = np.nanmean(T0[where200])
+        OHC200 = np.nanmean(OHC[where200])
+      #sst where 34kt quadrant wind---------
+      where34 = np.where(((bearings < 90.) & (rad_distances < neq34)) | ((bearings < 180.) & (bearings >= 90.) & (rad_distances < seq34)) | ((bearings < 270.) & (bearings >= 180.) & (rad_distances < swq34)) | ((bearings < 360.) & (bearings >= 270.) & (rad_distances < nwq34)))
+      print(np.size(where34))
+      print(neq34)
+      T34 = np.nanmean(T0[where34])
+      OHC34 = np.nanmean(OHC[where34])
+
+      #write to files----------
       sstfname = ODIR+'/'+LONGSID.lower()+'.ships.sst.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.dat'
       ohcfname = ODIR+'/'+LONGSID.lower()+'.ships.ohc.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.dat'
       
       f = open(sstfname,'a+')
-      print(f'{FHR}, {T500}',file=f)
+      print(f'{FHR}, {T200}, {T500}, {T34} ',file=f)
       f.close()      
 
       f = open(ohcfname,'a+')    
-      print(f'{FHR}, {OHC500}',file=f)
+      print(f'{FHR}, {OHC200}, {OHC500}, {OHC34}',file=f)
       f.close()
 
       pass;
