@@ -47,6 +47,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def debug_dump_range(FHR,varnm,var):
   print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var)},{np.nanpercentile(var,25)},{np.nanmedian(var)},{np.nanpercentile(var,75)},{np.nanmax(var)}');
+  pass;
 
 ##############################
 def main():
@@ -647,8 +648,7 @@ def main():
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(lon,lat, DELTA_Q, levels=delta_q_levs, cmap='seismic',extend='both')
-      #DEBUG:
-      debug_dump_range(FHR,'DELTA_Q',DELTA_Q)
+      #DEBUG:      debug_dump_range(FHR,'DELTA_Q',DELTA_Q)
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24

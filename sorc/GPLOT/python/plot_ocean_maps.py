@@ -49,7 +49,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def debug_dump_range(FHR,varnm,var):
-  print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var.values)},{np.nanpercentile(var.values,25)},{np.nanmedian(var.values)},{np.nanpercentile(var.values,75)},{np.nanmax(var.values)}');
+  #print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var.values)},{np.nanpercentile(var.values,25)},{np.nanmedian(var.values)},{np.nanpercentile(var.values,75)},{np.nanmax(var.values)}');
+  pass;
 
 def add_center_label(ax1,centerlon,centerlat,minpressure):
   ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='black',fontsize=28,fontweight='extra bold');
@@ -183,7 +184,7 @@ def main():
     depths_ds = xr.open_dataset(DEPTH_FILE);
     depths = depths_ds.depth.values
     depths_ds.close();
-  print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
+  #DEBUG:  print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
   
   #Get parameters from input file
   resolution = float(RESOLUTION)
@@ -336,7 +337,7 @@ def main():
         all_ds['Longitude'] = all_ds.Longitude + 360
       ds = all_ds.where(~depths.mask);
       if ( OCEAN_DOMAIN == 'd03' ):
-        print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
+        #DEBUG:        print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
         ds = ds.where((lonmin<=all_ds.Longitude) & (all_ds.Longitude<=lonmax) & (latmin<=all_ds.Latitude) & (all_ds.Latitude<=latmax));
       lon = ds.Longitude.squeeze();
       lat = ds.Latitude.squeeze();
@@ -375,8 +376,7 @@ def main():
           all_ods['Longitude'] = all_ods.Longitude + 360
         ods = all_ods.where(~depths.mask);
         if ( OCEAN_DOMAIN == 'd03' ):
-          #DEBUG:
-          print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');
+          #DEBUG:          print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');
           ods = ods.where((lonmin<=all_ods.Longitude) & (all_ods.Longitude<=lonmax) \
                 & (latmin<=all_ods.Latitude) & (all_ods.Latitude<=latmax));
         SHF = ods.surface_heat_flux.squeeze()
@@ -407,8 +407,7 @@ def main():
       #ds = all_ds.where(~depths.mask);
       ds = all_ds;
       if ( OCEAN_DOMAIN == 'd03' ):
-        #DEBUG:
-        print(f'DEBUG: ds.where( {lonmin}<={all_ds.geolon.min().values} & {all_ds.geolon.max().values}<={lonmax} & {latmin}<={all_ds.geolat.min().values} & {all_ds.geolat.max().values}<={latmax} )');
+        #DEBUG:        print(f'DEBUG: ds.where( {lonmin}<={all_ds.geolon.min().values} & {all_ds.geolon.max().values}<={lonmax} & {latmin}<={all_ds.geolat.min().values} & {all_ds.geolat.max().values}<={latmax} )');
         #ds = ds.where((lonmin<=all_ds.geolon) & (all_ds.geolon<=lonmax) & (latmin<=all_ds.geolat) & (all_ds.geolat<=latmax));
         ds = ds.where((lonmin<=all_ds.xh) & (all_ds.xh<=lonmax) & (latmin<=all_ds.yh) & (all_ds.yh<=latmax));
       #lon = ds.geolon.squeeze();
