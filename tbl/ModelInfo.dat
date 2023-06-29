@@ -50,6 +50,8 @@ T21I,       T21I: Interp. T21D,  7,             magenta,                        
 F206,             F206: SHiELD,  6,          goldenrod4, System for High-res. prediction on Earth-to-Local Domains
 F20I,       F20I: Interp. F206,  6,          goldenrod4,                                 SHiELD (Early)
 HAFS,  HFSA: HAFS V0.3A CYGNSS,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.3A CYGNSS DA
+HMOM,    HMOM: HAFS V1.0A/MOM6,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V1.0A w/ MOM6
+HMOI,       HMOI: Interp. HMOM,  9,      darkolivegreen,                            HAFS V1.0A w/ MOM6 (Early)
 
 
 # HAFS ENSEMBLE #

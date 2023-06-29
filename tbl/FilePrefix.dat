@@ -15,5 +15,6 @@ HAFSV1.0      hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.
 HAFS          hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
 HAFS_HYCOM    hfs[a-z].hycom.3z       hfs[a-z].hycom.3z          hfs[a-z].hycom.3z
 HAFSV0.3_HYCOM hafs.hycom.3z          hafs.hycom.3z              hafs.hycom.3z
+HAFS_MOM6     hfs[a-z].mom6           hfs[a-z].mom6              hfs[a-z].mom6
 ECMWF         ecmwf.oper-fc           ecmwf.oper-fc              ecmwf.oper-fc
 HMON          hmonprs.d1.0p20         hmonprs.d2.0p06            hmonprs.d3.0p02
