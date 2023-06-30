@@ -34,11 +34,10 @@ while test $# -gt 0; do
             echo " "
             echo "options:"
             echo "-h, --help               show help"
-            echo "-i, --input              input data directory"
+            echo "-d, --dsource            data source (PUB, HWRF)"
+            echo "-i1, --input1            1st input data directory"
+            echo "-i2, --input2            2nd input data directory"
             echo "-o, --output             output data directory"
-            echo "-n, --name               file name search string"
-            echo "-m1, --modelin           input model name (AAAA)"
-            echo "-m2, --modelout          output model name (BBBB)"
             exit 0
             ;;
         -d|--dsource)
@@ -107,7 +106,7 @@ echo "MSG: GFS_grabber.sh started at `date`."
 date_old=`/bin/date +"%Y%m%d%H" --date="10 days ago"`
 date_now=`/bin/date +"%Y%m%d%H"`
 echo "MSG: Maintain links to GFS data between ${date_old} and ${date_now}."
-
+echo $DSOURCE
 # For the public data directory
 if [ "$DSOURCE" == "PUB" ]; then
 
