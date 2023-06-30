@@ -1022,9 +1022,9 @@ begin
 	; Read the MASTER Variable Table
 	DATA		= asciiread(GPLOT_DIR+"/tbl/Vtable.master",-1,"string")
 	MASTER_LIST	= new((/3,dimsizes(DATA)/),"string")
-	MASTER_LIST(0,:)= str_get_field(DATA,1,"	")
-	MASTER_LIST(1,:)= str_get_field(DATA,2,"	")
-	MASTER_LIST(2,:)= str_get_field(DATA,3,"	")
+	MASTER_LIST(0,:)= str_get_field(DATA,1,"	 ")
+	MASTER_LIST(1,:)= str_get_field(DATA,2,"	 ")
+	MASTER_LIST(2,:)= str_get_field(DATA,3,"	 ")
 
 	
 	; If the level is non-pressure, we need to add it to the variable name
@@ -1077,9 +1077,9 @@ begin
 
 	; Read the variable table into 'VAR_LIST'
 	VAR_LIST = new((/3,dimsizes(DATA)/),"string")
-	VAR_LIST(0,:) = str_get_field(DATA,1,"	")
-	VAR_LIST(1,:) = str_get_field(DATA,2,"	")
-	VAR_LIST(2,:) = str_get_field(DATA,3,"	")
+	VAR_LIST(0,:) = str_get_field(DATA,1,"	 ")
+	VAR_LIST(1,:) = str_get_field(DATA,2,"	 ")
+	VAR_LIST(2,:) = str_get_field(DATA,3,"	 ")
 
 
 	; Look for a matching catalog number in the model variable table
@@ -2296,10 +2296,10 @@ begin
 	if(.not.fileexists(dFile))then	oSID	= "missing"   end if
 
 	data	= asciiread(dFile,-1,"string")
-	SIDlong	= str_squeeze(str_get_field(data,1," "))
-	YYYY	= str_squeeze(str_get_field(data,2," "))
-	tcSID	= str_squeeze(str_get_field(data,3," "))
-	invSID	= str_squeeze(str_get_field(data,4," "))
+	SIDlong	= str_squeeze(str_get_field(data,1,"	 "))
+	YYYY	= str_squeeze(str_get_field(data,2,"	 "))
+	tcSID	= str_squeeze(str_get_field(data,3,"	 "))
+	invSID	= str_squeeze(str_get_field(data,4,"	 "))
 	
 	val	= ind(YYYY.eq.iYYYY .and. tcSID.eq.iSID)
 	

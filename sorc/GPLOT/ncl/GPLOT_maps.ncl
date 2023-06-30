@@ -398,55 +398,55 @@ print("MSG: Using this graphics namelist: "+VAR_NML)
 
 ; 2. Read the Graphics Namelist
 data            := asciiread(VAR_NML,-1,"string")
-headers         := str_split(data(0),"   ")
-tmp             := str_squeeze(str_get_field(data(1:),ind(headers.eq."PLOT_ON")+1,"   "))
+headers         := str_split(data(0),"	 ")
+tmp             := str_squeeze(str_get_field(data(1:),ind(headers.eq."PLOT_ON")+1,"	 "))
 nPlots          = dimsizes(tmp)
 What2Plot       = where(tmp.eq."True",True,False)
 
 ; 2a. BASE - Contour Fill
 G_BASE          = new((/2,nPlots/),"string")
-G_BASE(0,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."BASE_CN_FILL")+1,"   "))
-G_BASE(1,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV1")+1,"   "))
+G_BASE(0,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."BASE_CN_FILL")+1,"	 "))
+G_BASE(1,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV1")+1,"	 "))
 G_BASE          = where(G_BASE.eq."N/A","",G_BASE)
 
 ; 2b. OVERLAY 1 - Wind Vectors
 G_OV1           = G_BASE
-G_OV1(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_VC_WIND")+1,"   "))
-G_OV1(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV4")+1,"   "))
+G_OV1(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_VC_WIND")+1,"	 "))
+G_OV1(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV4")+1,"	 "))
 G_OV1           = where(G_OV1.eq."N/A","",G_OV1)
 
 ; 2c. OVERLAY 2 - Streamlines  (bottom)
 G_OV2   = G_BASE
-G_OV2(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE")+1,"   "))
-G_OV2(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV6")+1,"   "))
+G_OV2(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE")+1,"	 "))
+G_OV2(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV6")+1,"	 "))
 G_OV2   = where(G_OV2.eq."N/A","",G_OV2)
 
 ; 2d. OVERLAY 2.5 - Streamlines (top)
 G_OV25   = G_BASE
-G_OV25(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE2")+1,"   "))
-G_OV25(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV7")+1,"   "))
+G_OV25(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE2")+1,"	 "))
+G_OV25(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV7")+1,"	 "))
 G_OV25   = where(G_OV25.eq."N/A","",G_OV25)
 
 ; 2e. OVERLAY 3 - Contour Lines (bottom)
 G_OV3   = G_BASE
-G_OV3(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE2")+1,"   "))
-G_OV3(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV3")+1,"   "))
+G_OV3(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE2")+1,"	 "))
+G_OV3(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV3")+1,"	 "))
 G_OV3   = where(G_OV3.eq."N/A","",G_OV3)
 
 ; 2f. OVERLAY 4 - Contour Lines (top)
 G_OV4           = G_BASE
-G_OV4(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE")+1,"   "))
-G_OV4(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV2")+1,"   "))
+G_OV4(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE")+1,"	 "))
+G_OV4(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV2")+1,"	 "))
 G_OV4           = where(G_OV4.eq."N/A","",G_OV4)
 
 ; 2g. OVERLAY 5 - Max/Min Values & Labels
 G_OV5           = G_BASE
-G_OV5(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_MAX_MIN")+1,"   "))
-G_OV5(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV5")+1,"   "))
+G_OV5(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_MAX_MIN")+1,"	 "))
+G_OV5(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV5")+1,"	 "))
 G_OV5           = where(G_OV5.eq."N/A","",G_OV5) 
 
 ; 2h. Graphic Name
-FNAME           = str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")+1,"   "))
+FNAME           = str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")+1,"	 "))
 if(DSOURCE.eq."GFS" .and. any(FNAME.eq."REFL_MSLP"))then
         What2Plot = where(FNAME.eq."REFL_MSLP",False,What2Plot)
 end if
