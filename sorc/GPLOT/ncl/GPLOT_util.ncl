@@ -1648,6 +1648,7 @@ begin
                             "nio",     "bob",     "arab",\                                       ; North Indian Ocean domains
 			    "sio",     "spac",    "aust",\					 ; Southern Hemisphere domains
                             "hwrf",    "d01",     "d02",     "d03",     "all_d03", \             ; Model Nest domains
+			    "storm",   "core",    "tcparent",\					 ; Model Nest domains
                             "tkfull",  "ships",   "data"/)                                       ; Other domains
 
         do bbb = 0,nBds-1
@@ -1681,6 +1682,9 @@ begin
                 if(nameBds(bbb).eq."ships")then         allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
                 if(nameBds(bbb).eq."global")then        allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
 		if(nameBds(bbb).eq."alld03")then	allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."core")then          allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."storm")then         allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."tcparent")then      allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
         end do
 
 	if(nBds.eq.1)then   allBds := allBds(0,:)   end if
@@ -1714,7 +1718,8 @@ begin
 			    "d01",   "d02",\
 			    "tkfull", "ships",\
 			    "sfla",  "neamer",\
-			    "wmexico", "global"/)
+			    "wmexico", "global",\
+			    "core", "storm"/)
 	if(.not.any(MASTER_DOMAIN.eq.DOMAIN))then
 		print("ERROR: getDmnInfo: DOMAIN '"+DOMAIN+"' not recognized. Assigning defaults.")
 	end if
@@ -1723,36 +1728,40 @@ begin
 	; Set the boundary type to properly find the domain
 	; in which the data is extracted.
 	if(INFO.eq."bdstype")then
-		if(     DOMAIN.eq."basin")then	OUT = 0
-		else if(DOMAIN.eq."fvgfs")then	OUT = 0
-		else if(DOMAIN.eq."atl")then	OUT = 0
-		else if(DOMAIN.eq."wlant")then	OUT = 0
-		else if(DOMAIN.eq."clant")then  OUT = 0
-		else if(DOMAIN.eq."elant")then	OUT = 0
-		else if(DOMAIN.eq."epac")then	OUT = 0
-		else if(DOMAIN.eq."cpac")then	OUT = 0
-		else if(DOMAIN.eq."gom")then	OUT = 0
-		else if(DOMAIN.eq."eus")then	OUT = 0
-		else if(DOMAIN.eq."bob")then	OUT = 0
-		else if(DOMAIN.eq."nio")then	OUT = 0
-		else if(DOMAIN.eq."bigd01")then	OUT = 0
-		else if(DOMAIN.eq."hwrf")then	OUT = 0
-		else if(DOMAIN.eq."d01")then	OUT = 0
-		else if(DOMAIN.eq."d02")then	OUT = 2
-		else if(DOMAIN.eq."d03")then
-			if(DSOURCE.eq."HAFS")then	OUT = 8
-			else				OUT = 3
-			end if
-		else if(DOMAIN.eq."tkfull")then	OUT = 4
-		else if(DOMAIN.eq."ships")then	OUT = 7
-		else if(DOMAIN.eq."global")then OUT = 1
-		else if(DOMAIN.eq."alld03")then	OUT = 1
-		else if(DO_VALUE)then		OUT = 6
-		else				OUT = 0
+		if(     DOMAIN.eq."basin")then		OUT = 0
+		else if(DOMAIN.eq."fvgfs")then		OUT = 0
+		else if(DOMAIN.eq."atl")then		OUT = 0
+		else if(DOMAIN.eq."wlant")then		OUT = 0
+		else if(DOMAIN.eq."clant")then  	OUT = 0
+		else if(DOMAIN.eq."elant")then		OUT = 0
+		else if(DOMAIN.eq."epac")then		OUT = 0
+		else if(DOMAIN.eq."cpac")then		OUT = 0
+		else if(DOMAIN.eq."gom")then		OUT = 0
+		else if(DOMAIN.eq."eus")then		OUT = 0
+		else if(DOMAIN.eq."bob")then		OUT = 0
+		else if(DOMAIN.eq."nio")then		OUT = 0
+		else if(DOMAIN.eq."bigd01")then		OUT = 0
+		else if(DOMAIN.eq."hwrf")then		OUT = 0
+		else if(DOMAIN.eq."tcparent")then	OUT = 0
+		else if(DOMAIN.eq."d01")then		OUT = 0
+		else if(DOMAIN.eq."d02")then		OUT = 2
+		else if(DOMAIN.eq."d03")then		OUT = 3
+			;if(DSOURCE.eq."HAFS")then	OUT = 8
+			;else				OUT = 3
+			;end if
+		else if(DOMAIN.eq."core")then		OUT = 3
+		else if(DOMAIN.eq."storm")then		OUT = 8
+		else if(DOMAIN.eq."tkfull")then		OUT = 4
+		else if(DOMAIN.eq."ships")then		OUT = 7
+		else if(DOMAIN.eq."global")then 	OUT = 1
+		else if(DOMAIN.eq."alld03")then		OUT = 1
+		else if(DO_VALUE)then			OUT = 6
+		else					OUT = 0
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if  end if
+		end if  end if  end if  end if  end if  end if
+		end if
 	; Set the maximum number of High pressure markers
 	else if(INFO.eq."maxH")then
 		if(     DOMAIN.eq."basin")then	OUT = 10
@@ -1767,13 +1776,15 @@ begin
 		else if(DOMAIN.eq."tkfull")then	OUT = 10
 		else if(DOMAIN.eq."d02")then	OUT = 10
 		else if(DOMAIN.eq."d03")then	OUT = 2
+		else if(DOMAIN.eq."core")then	OUT = 2
+		else if(DOMAIN.eq."storm")then	OUT = 4
 		else if(DOMAIN.eq."global")then OUT = 25
 		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else if(DOMAIN.eq."alld03")then	OUT = 2
 		else				OUT = 10
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if  end if
 	
 	; Set the maximum number of Low pressure markers
 	else if(INFO.eq."maxL")then
@@ -1788,13 +1799,15 @@ begin
 		else if(DOMAIN.eq."tkfull")then	OUT = 12
 		else if(DOMAIN.eq."d02")then	OUT = 12
 		else if(DOMAIN.eq."d03")then	OUT = 2
+		else if(DOMAIN.eq."core")then	OUT = 2
+		else if(DOMAIN.eq."storm")then	OUT = 5
 		else if(DOMAIN.eq."global")then OUT = 25
 		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else if(DOMAIN.eq."alld03")then	OUT = 2
 		else				OUT = 12
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if  end if
 	
 	; Set the minimum lat/lon box for each High/Low MSLP marker
 	; This "thins" the markers
@@ -1811,13 +1824,15 @@ begin
 		else if(DOMAIN.eq."tkfull")then	OUT = 7.5
 		else if(DOMAIN.eq."d02")then	OUT = 7.5
 		else if(DOMAIN.eq."d03")then	OUT = 2.5
+		else if(DOMAIN.eq."core")then	OUT = 2.5
+		else if(DOMAIN.eq."storm")then	OUT = 7.5
 		else if(DOMAIN.eq."global")then OUT = 20.
 		else if(DOMAIN.eq."wmexico")then OUT = 4.
 		else if(DOMAIN.eq."alld03")then	OUT = 2.5
 		else				OUT = 10.
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if  end if
 
 	end if  end if  end if  end if
 

@@ -418,7 +418,7 @@ if [ "${DO_MAPS}" = "True" ]; then
     
                     # Skip some domains for Tier3. VERY SUBJECTIVE.
                     if [ "${TR}" == "Tier3" ]; then
-                        if [ "${DMN}" == "basin" ] || [ "${DMN}" == "bigd01" ] || [ "${DMN}" == "d03" ]; then
+                        if [ "${DMN}" == "basin" ] || [ "${DMN}" == "bigd01" ] || [ "${DMN}" == "d03" ] || [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ]; then
                             continue
                         fi
                         if [ "${DSOURCE}" == "HWRF" ] && [ "${DMN}" == "d01" ]; then
@@ -438,7 +438,7 @@ if [ "${DO_MAPS}" = "True" ]; then
     
                     # Get ATCF_REQD to check if it is required.
                     # This is optional for MAPS.
-                    if [ "${DMN}" == "d03" ] || [ "${DMN}" == "alld03" ]; then
+                    if [ "${DMN}" == "d03" ] || [ "${DMN}" == "alld03" ] || [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ]; then
                         ATCF_REQD="True"
                     else
                         ATCF_REQD=`sed -n -e 's/^ATCF_REQD =\s//p' ${NMLIST} | sed 's/^\t*//'`
@@ -453,7 +453,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                     # to most file names.
                     # GJA: Integrate SC as 3rd column in DomainInfo.dat
                     if [ "${DMN}" == "hwrf" ] || [ "${DMN}" == "d03" ] || \
-                       [ "${DMN}" == "d02" ] || [ "${DMN}" == "tkfull" ] || [ "${DMN}" == "alld03" ]; then
+                       [ "${DMN}" == "d02" ] || [ "${DMN}" == "tkfull" ] || [ "${DMN}" == "alld03" ] || \
+                       [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ] || [ "${DMN}" == "tcparent" ]; then
                         SC="True"
                         STORMTAG=".${STORM^^}"
                     else
