@@ -516,12 +516,12 @@ for ADECK in ${ALL_ADECKS[@]}; do
         fi
 
         # 5) If TCNAME is "INVEST", but Storm Number < 50, try to rename it.
-        if [ ! -z "${BDECK}" ] && [ "$(echo ${SNUM} | cut -c1)" != "9" ] && [ "${TCNAME^^}" == "INVEST" ]; then
-          TMP="`awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -F, '$1==BASIN && $2==SNUM' ${BDECK} | tail -1 | cut -d "," -f28 | awk '{$1=$1};1'`"
-          if [ ! -z "${TMP}" ] && [ "${TMP^^}" != "INVEST" ]; then
-            TCNAME="${TMP}"
-          fi
-        fi
+        #if [ ! -z "${BDECK}" ] && [ "$(echo ${SNUM} | cut -c1)" != "9" ] && [ "${TCNAME^^}" == "INVEST" ]; then
+        #  TMP="`awk -v BASIN="${BASIN^^}" -v SNUM="${SNUM}" -F, '$1==BASIN && $2==SNUM' ${BDECK} | tail -1 | cut -d "," -f28 | awk '{$1=$1};1'`"
+        #  if [ ! -z "${TMP}" ] && [ "${TMP^^}" != "INVEST" ]; then
+        #    TCNAME="${TMP}"
+        #  fi
+        #fi
 
         echo "MSG: TCNAME=${TCNAME}"
 
@@ -561,7 +561,8 @@ for ADECK in ${ALL_ADECKS[@]}; do
               '$1==BASIN && $2==SNUM && $3==CYCLE && $5==MODEL' | \
               sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE}
           if [ ! -z "${OMODEL}" ]; then
-            sed -i 's/'"${MODEL}"'/'"${OMODEL}"'/g' ${TMPFILE}
+            #sed -i 's/'"${MODEL}"'/'"${OMODEL}"'/g' ${TMPFILE}
+            sed -i 's/'"$(printf '%4s' "${MODEL}")"'/'"$(printf '%4s' "${OMODEL}")"'/g' ${TMPFILE}
           fi
           #cat ${OFILE} ${TMPFILE} | tac | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${TMPFILE2}
           #rm -f ${TMPFILE}
@@ -602,7 +603,8 @@ for ADECK in ${ALL_ADECKS[@]}; do
                   '$1==BASIN && $2==SNUM && $3==CYCLE && $5==MODEL' | \
                   sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${OFILE}
           if [ ! -z "${OMODEL}" ]; then
-            sed -i 's/'"${MODEL}"'/'"${OMODEL}"'/g' ${OFILE}
+            #sed -i 's/'"${MODEL}"'/'"${OMODEL}"'/g' ${OFILE}
+            sed -i 's/'"$(printf '%4s' "${MODEL}")"'/'"$(printf '%4s' "${OMODEL}")"'/g' ${TMPFILE}
           fi
           echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
         fi
