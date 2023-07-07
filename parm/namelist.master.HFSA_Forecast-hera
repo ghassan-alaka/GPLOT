@@ -103,6 +103,9 @@ TIER = Tier1 Tier2
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
 
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
+
 
 
 ;================================================================
