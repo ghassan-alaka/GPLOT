@@ -1,4 +1,8 @@
 # OPERATIONAL MODELS #
+HFSA,         HFSA: HAFS V1.0A,  7,      darkolivegreen,   Hurricane Analysis and Forecast System V1.0A
+HFAI,       HFAI: Interp. HFSA,  7,      darkolivegreen,                            HAFS V1.0A (Early)
+HFSB,         HFSB: HAFS V1.0B,  8,           orangered,   Hurricane Analysis and Forecast System V1.0B
+HFBI,       HFBI: Interp. HFSB,  8,           orangered,                            HAFS V1.0B (Early)
 HWRF,         HWRF: Oper. HWRF,  9,              purple,                              Operational HWRF
 HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Operational HWRF (Early)
 AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
@@ -7,17 +11,17 @@ GFSO,          GFSO: Oper. GFS,  6,                blue,                        
 GFSI,        GFSI: Interp. GFS,  6,                blue.                Global Forecast System (Early)
 HMON,         HMON: Oper. HMON,  4,               green,                              Operational HMON
 HMNI,       HMNI: Interp. HMON,  4,               green,                      Operational HMON (Early)
-NVGM,       NVGM: Oper. NAVGEM, 11,               brown,                            Operational NAVGEM
-NVGI,       NVGI: Interp. NVGM, 11,               brown,                    Operational NAVGEM (Early)
-CTCX,          CTCX: COAMPS-TC,  8,                cyan,                              COAMPS-TC w/ GFS
-CTCI,       CTCI: Interp. CTCX,  8,                cyan,                               Early COAMPS-TC
+NVGM,       NVGM: Oper. NAVGEM, 15,               brown,                            Operational NAVGEM
+NVGI,       NVGI: Interp. NVGM, 15,               brown,                    Operational NAVGEM (Early)
+CTCX,          CTCX: COAMPS-TC, 11,                cyan,                              COAMPS-TC w/ GFS
+CTCI,       CTCI: Interp. CTCX, 11,                cyan,                               Early COAMPS-TC
 EGRR,              EGRR: UKMet,  3,           violetred,                                 UK Met Office
 EGRI,      EGRI: Interp. UKMet,  3,           violetred,                           Early UK Met Office
 CMC,       CMC: Oper. Canadian,  3,                plum,     CMC Global Environmental Multiscale Model
 CMCI,        CMCI: Interp. CMC,  3,                plum, CMC Global Environmental Multiscale Model (Early)
-ECMO,          ECMO: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
-ECMI,       ECMI: Interp. ECMO,  8,               coral,      ECMWF Integrated Forecast System (Early)
-EMX,            EMX: ECMWF IFS,  8,               coral,              ECMWF Integrated Forecast System
+ECMO,          ECMO: ECMWF IFS,  7,               coral,              ECMWF Integrated Forecast System
+ECMI,       ECMI: Interp. ECMO,  7,               coral,      ECMWF Integrated Forecast System (Early)
+EMX,            EMX: ECMWF IFS,  7,               coral,              ECMWF Integrated Forecast System
 OFCL,       OFCL: NHC Official, 12,                 red,                         NHC Official Forecast
 OFCI,       OFCI: Interp. OFCL, 12,                 red,                 NHC Official Forecast (Early)
 DSHP,        DSHP: Decay SHIPS,  6,           darkgreen,                                   Decay SHIPS
@@ -30,21 +34,16 @@ SHF5,   SHF5: Intensity CLIPER,  4,       darkslategray,                        
 
 
 # EXPERIMENTAL MODELS #
-HFSA,         HFSA: HAFS V1.0A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V1.0A
-HFAI,       HFAI: Interp. HFSA,  9,      darkolivegreen,                            HAFS V1.0A (Early)
-HFSB,         HFSB: HAFS V1.0B,  8,           orangered,   Hurricane Analysis and Forecast System V1.0B
-HFBI,       HFBI: Interp. HFSB,  8,           orangered,                            HAFS V1.0B (Early)
+THP8,      THP8: GFSv17p8-THmp, 10,          goldenrod4,    Global Forecast System (v17p8) w/ Thomp. MP
+TH8I,        TH8I: Interp THP8, 10,          goldenrod4,    Global Forecast System (v17p8) w/ Thomp. MP
+C3P8,      C3P8: GFSv17p8-C3cu, 15,            seagreen,        Global Forecast System (v17p8) w/ C3 Cu
+C38I,        C38I: Interp C3P8, 15,            seagreen,        Global Forecast System (v17p8) w/ C3 Cu
+MYP8,      MYP8: GFSv17p8-MYNN, 11,             salmon4,     Global Forecast System (v17p8) w/ MYNN PBL
+MY8I,        MY8I: Interp MYP8, 11,             salmon4,     Global Forecast System (v17p8) w/ MYNN PBL
 HF3A,         HF3A: HAFS V0.3A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.3A
 HF3S,         HF3S: HAFS V0.3S,  8,           orangered,   Hurricane Analysis and Forecast System V0.3S
 HFSI,     HFSI: Interp. HAFS-S,  8,           orangered,                            HAFS V0.3S (Early)
 HF3B,     HF3B: HAFS V0.3Basin,  4,          dodgerblue,   Hurricane Analysis and Forecast System V0.3Basin
-HAFA,         HAFA: HAFS V0.2A,  9,      darkolivegreen,   Hurricane Analysis and Forecast System V0.2A
-HAFB,         HAFB: HAFS V0.2B,  8,           orangered,   Hurricane Analysis and Forecast System V0.2B
-HFBI,     HFBI: Interp. HAFS-B,  8,           orangered,                            HAFS V0.2B (Early)
-GFP8,      GFP8: GFSv17p8-GFcu, 15,            seagreen,        Global Forecast System (v17p8) w/ GF Cu
-GF8I,        GF8I: Interp GFP8, 15,            seagreen,        Global Forecast System (v17p8) w/ GF Cu
-MYP8,      MYP8: GFSv17p8-MYNN, 11,             salmon4,     Global Forecast System (v17p8) w/ MYNN PBL
-MY8I,        MY8I: Interp MYP8, 11,             salmon4,     Global Forecast System (v17p8) w/ MYNN PBL
 T21D,           T21D: T-SHiELD,  7,             magenta, Tropical System for High-res. prediction on Earth-to-Local Domains
 T21I,       T21I: Interp. T21D,  7,             magenta,                               T-SHiELD (Early)
 F206,             F206: SHiELD,  6,          goldenrod4, System for High-res. prediction on Earth-to-Local Domains

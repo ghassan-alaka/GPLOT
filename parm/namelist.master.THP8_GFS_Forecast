@@ -13,7 +13,7 @@
 
 
 ; 1A. EXPERIMENT NAME.
-EXPT = MYP8_GFS_Forecast
+EXPT = THP8_GFS_Forecast
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
@@ -40,7 +40,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT
-IDIR = /lfs1/BMC/gsd-fv3-test/HFIP/GFSv17p8_HFIP23/FV3GFSrun/rt_v17p8_mynn/
+IDIR = /lfs1/BMC/gsd-fv3-test/HFIP/GFSv17p8_HFIP23/FV3GFSrun/rt_v17p8_thompson/
 ITAG =
 EXT = 
 
@@ -49,9 +49,9 @@ ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/GFSv17p8_HFIP23/tracker_2023/
-ATCF1_TAG = myp8.trak.atcfunix
+ATCF1_TAG = thp8.trak.atcfunix
 ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/GFSv17p8_HFIP23/tracker_2023/
-ATCF2_TAG = myp8.trak.atcfunix
+ATCF2_TAG = thp8.trak.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT_2023/
@@ -126,10 +126,10 @@ PIV = 20
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = MYP8
-MCODE = MYP8
-MCODEI = MY8I
-MCODE12 = MY82
+MORIG = THP8
+MCODE = THP8
+MCODEI = TH8I
+MCODE12 = TH82
 
 ; 3B. FORECAST GUIDANCE MODELS
 TRKM = MYP8 C3P8 THP8 HFSA HFSB HWRF AVNO ECMO HMON CTCX EGRR
