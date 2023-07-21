@@ -153,6 +153,7 @@ fi
 if [ -z "${FORCE}" ]; then
     FORCE="False"
 fi
+FORCE_ORIG="${FORCE}"
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -503,6 +504,9 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                             MODEL="${MID[NID]}"
                         fi
                         ((NID++))
+
+                        # Reset FORCE
+                        FORCE="${FORCE_ORIG}"
 
                         # Create full output path
                         if [ "${ODIR_TYPE}" == "1" ]; then
