@@ -1214,19 +1214,38 @@ print(G_BASE(0,ppp)+"  "+G_BASE_LEVS(ggg)+"  "+BASEVAR)
 			if(ismissing(lat(0)))then
 				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
 				OUT_OF_BDS = True
-				continue
+				;continue
 			end if
 			end if
 			if(isvar("lon"))then
 			if(ismissing(lon(0)))then
 				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
 				OUT_OF_BDS = True
-				continue
+				;continue
 			end if
 			end if
 
 			; Mark the current file as processed if data is out of bounds.
 			if(OUT_OF_BDS)then
+
+				; Get the Input File base name
+				IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+				IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+
+				NATCF_NOW = 0
+				if(.not.all(ismissing(ndtooned(tcFHR))))then
+					do sss = 0,NATCF-1
+						vals1 = ind(tcFHR(sss,:).eq.FHR(fff))
+						if(.not.ismissing(vals1(0)))then
+							if(.not.ismissing(tcLats(sss,vals1)))then
+								NATCF_NOW = NATCF_NOW+1
+							end if
+						else if(FNL_ATCF(sss))then
+							NATCF_NOW = NATCF_NOW+1
+						end if  end if
+					end do
+				end if
+
 		                if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
 		                        if(fileexists(PLOTTED_FILES))then
 						system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
@@ -1244,6 +1263,7 @@ print(G_BASE(0,ppp)+"  "+G_BASE_LEVS(ggg)+"  "+BASEVAR)
 		                end if  end if
 		                system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
 		                system("mv "+PLOTTED_FILES+".TMP "+PLOTTED_FILES)
+				continue
 			end if
 
                 
