@@ -1136,6 +1136,7 @@ if(ismissing(vals(0)))then
 	print("ERROR: No cycles in the A-Deck match "+MCODE+". Can't continue.")
 
         ; Update the status file.
+	LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
         system("echo 'failed' > "+STATUS_FILE)
@@ -1487,6 +1488,7 @@ if(fileexists(ADIR+BDECK))then
 	print("MSG: Reading BDECK file --> "+ADIR+BDECK)
 
 	; Update the status file.
+	LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").") 
 	system("echo 'working' > "+STATUS_FILE)
@@ -1598,6 +1600,7 @@ print("MSG: *************STEP THREE************")
 print("MSG: PRODUCE GUIDANCE GRAPHICS.")
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
@@ -3065,6 +3068,7 @@ print("MSG: *************STEP FOUR************")
 print("MSG: PRODUCE TREND & LIFETIME GRAPHICS.")
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
@@ -4333,6 +4337,7 @@ if(DO_VERIFICATION)then
 	print("MSG: time (HU,TS,TD,SS,SD).")
 	
         ; Update the status file.
+	LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
         system("echo 'working' > "+STATUS_FILE)
@@ -4685,6 +4690,7 @@ if(DO_VERIFICATION)then
 	if(DO_LI_VER)then
 
 	        ; Update the status file.
+		LOCK_FILE = STATUS_FILE+".lock"
 	        system("lockfile -r-1 -l 180 "+LOCK_FILE)
 	        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 	        system("echo 'working' > "+STATUS_FILE)
@@ -4868,6 +4874,7 @@ if(DO_VERIFICATION)then
 	if(DO_ET_VER)then
 
                 ; Update the status file.
+		LOCK_FILE = STATUS_FILE+".lock"
                 system("lockfile -r-1 -l 180 "+LOCK_FILE)
                 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
                 system("echo 'working' > "+STATUS_FILE)
@@ -5056,6 +5063,7 @@ if(DO_VERIFICATION)then
 	if(DO_EI_VER)then
 
                 ; Update the status file.
+		LOCK_FILE = STATUS_FILE+".lock"
                 system("lockfile -r-1 -l 180 "+LOCK_FILE)
                 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
                 system("echo 'working' > "+STATUS_FILE)
@@ -5246,6 +5254,7 @@ print("MSG: *************STEP SIX************")
 print("MSG: CHECK ON THE GRAPHICAL PRODUCTION.")
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
@@ -5346,10 +5355,13 @@ end if  end if  end if
 ;================================================================
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 if(FNL_ATCF)then	system("echo 'complete' > "+STATUS_FILE)
+			print("MSG: The final status is 'complete'.")
 else			system("echo 'incomplete' > "+STATUS_FILE)
+			print("MSG: The final status is 'incomplete'.")
 end if
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
