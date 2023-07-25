@@ -219,9 +219,12 @@ if [ "$BDECK_ON" == "1" ]; then
         # Decide if/how to copy the file to BDIR
         if [ -f ${BDIR}/${D} ]; then
             DIFF=$(diff ${BDIR}/${D} ${WORKDIR}/${D})
+            #touch -r ${WORKDIR}/${D} ${BDIR}/${D}
             if [ "${DIFF}" != "" ] && [ "${INVEST}" == "YES" ]; then
                 #cat ${BDIR}/${D} ${WORKDIR}/${D} | sort -t, -k3,3  | sort -k3,3 -k5,5 -k6,6n > ${WORKDIR}/TMP.${D}
-                cat ${BDIR}/${D} ${WORKDIR}/${D} | sort -t, -k3,3 -k12,12n -k13,13 | awk -F, '{ $12 = ($12 == 0 ? "  34" : $12) } 1' OFS=, | sort -r -t, -k3,3 -k12,12n -k13,13 | sort -k3,3 -k12,12n -u -t, > ${WORKDIR}/TMP.${D}
+                #cat ${BDIR}/${D} ${WORKDIR}/${D} | sort -t, -k3,3 -k12,12n -k13,13 | awk -F, '{ $12 = ($12 == 0 ? "  34" : $12) } 1' OFS=, | sort -r -t, -k3,3 -k12,12n -k13,13 | sort -k3,3 -k12,12n -u -t, > ${WORKDIR}/TMP.${D}
+                tac ${BDIR}/${D} ${WORKDIR}/${D} | sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${WORKDIR}/TMP.${D}
+                touch -r ${WORKDIR}/${D} ${WORKDIR}/TMP.${D}
                 DIFF=$(diff ${BDIR}/${D} ${WORKDIR}/TMP.${D})
                 if [ "${DIFF}" != "" ]; then
                     mv ${WORKDIR}/TMP.${D} ${BDIR}/${D}

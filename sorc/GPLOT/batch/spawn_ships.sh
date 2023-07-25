@@ -152,6 +152,7 @@ fi
 if [ -z "${FORCE}" ]; then
     FORCE="False"
 fi
+FORCE_ORIG="${FORCE}"
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -166,21 +167,25 @@ fi
 FHRS=( $(seq ${INIT_HR} ${DT} ${FNL_HR} | tr "\n" " ") )
 echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 
+# Define a maximum number of cycles to be processed
+#MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
+MAX_CYCLES=100
+
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
     echo ${IDIR}
-    CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
+    CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -25 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/${DSOURCE,,}.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regextype sed -regex ".*/[A-Za-z0-9]*\.[0-9]\{10\}$" -exec basename {} \; | sort -u -r | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `find ${IDIR}/ -maxdepth 4 -type d -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -25 2>/dev/null` )
+        CYCLES=( `find ${IDIR}/ -maxdepth 4 \( -type d -o -xtype d \) -regex ".*/\(00\|06\|12\|18\)" | grep -E "[0-9]{8}" | sort -u -r | rev | cut -d'/' -f-2 | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
     if [ -z "${CYCLES}" ]; then
-        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -25 2>/dev/null` )
+        CYCLES=( `ls -rd ${IDIR}/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/{00,06,12,18} 2>/dev/null | rev | cut -d'/' -f-2 2>/dev/null | sed 's@/@@g' | cut -d'.' -f1 | rev | tr "\n" " " | head -${MAX_CYCLES} 2>/dev/null` )
     fi
 else
     CYCLES=( "${IDATE[@]}" )
@@ -225,7 +230,7 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAXCOUNT=25
+MAX_JOBS=25
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -435,7 +440,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                     # Get file hour format information from table or namelist
                     if [ -z "${FHRFMT}" ]; then
                         FHRFMT="%0`awk -v DSRC=${DSOURCE} '($1 == DSRC) { print $3 }' ${TBL_DIR}FileTimeFormat.dat`d"
-                    else
+                    elif [ "${FHRFMT:0:1}" != "%" ]; then
                         FHRFMT="%0${FHRFMT}d"
                     fi
                     if [ -z "${FHRFMT}" ]; then
@@ -502,6 +507,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             MODEL="${MID[NID]}"
                         fi
                         ((NID++))
+
+                        # Reset FORCE
+                        FORCE="${FORCE_ORIG}"
 
                         # Create full output path
                         if [ "${ODIR_TYPE}" == "1" ]; then
@@ -629,7 +637,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
                                    "${ENSID}/com/${CYCLE_STR}/${STORM}/" "com/${CYCLE_STR}/${STORM}/" "${ENSID}/" "${CYCLE_STR}/00L/" \
                                    "com/${CYCLE_STR}/00L/" "${EXPT}/com/${CYCLE_STR}/00L/" "${EXPT}${ENSID}/com/${CYCLE_STR}/00L/" \
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
-                                   "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/")
+                                   "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/" \
+                                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
 
                         # Get the right list of lead times
                         if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
@@ -996,14 +1005,15 @@ if [ "${DO_SHIPS}" = "True" ]; then
                                 ${FULL_CMD} &
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --mem=48G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
 
                             # Increase the batch job counter and check if we're over the limit.
                             ((N++))
-                            if [ "$N" -ge "$MAXCOUNT" ]; then
+                            if [ "$N" -ge "$MAX_JOBS" ]; then
                                 echo "MSG: Maximum number of batch submissions has been reached."
                                 echo "MSG: Further jobs will be submitted later."
                                 echo "MSG: spawn_ships.sh completed at `date`"

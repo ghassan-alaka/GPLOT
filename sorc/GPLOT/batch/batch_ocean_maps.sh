@@ -1,7 +1,7 @@
 #!/bin/sh -x
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=12
+##SBATCH --ntasks-per-node=12
 #SBATCH --time=00:59:00
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -32,11 +32,12 @@ FORCE="${13}"
 OCEAN_SOURCE="${14}"
 OCEAN_CFG="${15}"
 FIX_DIR="${16}"
+OCEAN_WRAP_LON="${17}"
 
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
-    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
 # 3. Source the .profile to optimize the environment
@@ -107,6 +108,12 @@ fi
 
 if [ ! -z "$FIX_DIR" ]; then
     PYTHON_ARGS+=("${FIX_DIR}")
+else
+    PYTHON_ARGS+=("MISSING")
+fi
+
+if [ ! -z "$OCEAN_WRAP_LON" ]; then
+    PYTHON_ARGS+=("${OCEAN_WRAP_LON}")
 else
     PYTHON_ARGS+=("MISSING")
 fi
