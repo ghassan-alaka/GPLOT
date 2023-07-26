@@ -6,7 +6,7 @@
 A="${1:-0}"
 
 # Determine the GPLOT source code directory
-if [ -z "${GPLOT_DIR}" ]; then
+if [ ! -v GPLOT_DIR ]; then
     export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
 fi
 
@@ -14,29 +14,30 @@ fi
 if ( ! eval module help > /dev/null 2>&1 ) ; then
     source /apps/lmod/lmod/init/sh
 fi
-if [ -z "${MODULEPATH}" ]; then
-    export MODULEPATH="/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles:/opt/cray/modulefiles:/opt/cray/craype/default/modulefiles"
-fi
+export MODULEPATH=${MODULEPATH:-"/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles/Linux:/apps/modules/modulefiles:/opt/cray/modulefiles:/opt/cray/craype/default/modulefiles"}
 
 # Turn off core dump files
 ulimit -c 0
 
 # Load modules
 module purge
-module load intel/2022.1.2
-module load wgrib/1.8.1.0b
-module load wgrib2/2.0.8
 if [ "${A}" -eq 0 ]; then
+    module load intel/2022.1.2
     module use -a /contrib/anaconda/modulefiles
     module load anaconda/latest
     module use -a /contrib/met/modulefiles
     module load met/10.1.0
+    module load ncl/6.6.2
+elif [ "${A}" -eq 1 ]; then
+    module load gnu/9.2.0
+    module load wgrib2/3.1.1_ncep
+    module load grads/2.2.1
 fi
-module load ncl/6.6.2
-module load grads/2.2.1
 
 # NCAR Command Language (NCL)
-export NCARG_COLORMAPS="${GPLOT_DIR}/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+if [ "${A}" -eq 0 ]; then
+    export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+fi
 
 # Model Evaluation Tools (MET)
 

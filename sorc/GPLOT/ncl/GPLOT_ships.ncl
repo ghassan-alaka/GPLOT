@@ -29,16 +29,12 @@
 ; Load scripts
 ;================================================================
 
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_func.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_main.ncl"
 
 ;external FILTER121 "$GPLOT_DIR/ncl/wrapit/filter121.so"
-external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
+external SPH2CART "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/sph2cart.so"
 ;external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
 
 
@@ -123,10 +119,10 @@ print("MSG: Verbose level = "+tostring(verbose))
 ; 1. Set the namelist path.
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
-if(.not.isvar("MASTER_NML_IN"))then		MASTER_NML = GPLOT_DIR+"/nmlist/namelist.input.default"
+if(.not.isvar("MASTER_NML_IN"))then		MASTER_NML = GPLOT_DIR+"/parm/namelist.input.default"
 else
 	if(fileexists(MASTER_NML_IN))then	MASTER_NML = MASTER_NML_IN
-	else					MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+	else					MASTER_NML = GPLOT_DIR+"/parm/"+MASTER_NML_IN
 	end if
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
@@ -282,6 +278,16 @@ MM	= systemfunc("echo "+IDATE+" | cut -c5-6")
 DD	= systemfunc("echo "+IDATE+" | cut -c7-8")
 HH	= systemfunc("echo "+IDATE+" | cut -c9-10")
 
+; 12. Determine the extension of post-processed graphics.
+if(DO_CONVERTGIF)then	wtype2 = "gif"
+else			wtype2 = wtype
+end if
+
+
+; 12. Determine the extension of post-processed graphics.
+if(DO_CONVERTGIF)then	wtype2 = "gif"
+else			wtype2 = wtype
+end if
 
 
 
@@ -291,29 +297,29 @@ HH	= systemfunc("echo "+IDATE+" | cut -c9-10")
 
 ; 1. Set the Graphics Namelist (VAR_NML)
 ;    Uncomment this to set default namelist.
-;VAR_NML		= "~/GPLOT/nmlist/namelist.ships.test"
+;VAR_NML		= "~/GPLOT/parm/namelist.ships.test"
 if(isvar("VAR_NML"))then
 	print("MSG: Detected custom graphics namelist. Will try that first.")
-	if(fileexists(GPLOT_DIR+"/nmlist/"+VAR_NML))then
-		VAR_NML = GPLOT_DIR+"/nmlist/"+VAR_NML
+	if(fileexists(GPLOT_DIR+"/parm/"+VAR_NML))then
+		VAR_NML = GPLOT_DIR+"/parm/"+VAR_NML
 	else
 		print("WARNING: Custom graphics namelist not found. Trying defaults.")
 		delete(VAR_NML)
 	end if
 end if
 if(.not.isvar("VAR_NML"))then   
-	if(fileexists(GPLOT_DIR+"/nmlist/namelist.ships."+EXPT+"."+TIER))then
-		VAR_NML = GPLOT_DIR+"/nmlist/namelist.ships."+EXPT+"."+TIER
+	if(fileexists(GPLOT_DIR+"/parm/namelist.ships."+EXPT+"."+TIER))then
+		VAR_NML = GPLOT_DIR+"/parm/namelist.ships."+EXPT+"."+TIER
 	end if
 end if
 if(.not.isvar("VAR_NML"))then
-	if(fileexists(GPLOT_DIR+"/nmlist/namelist.ships.default."+TIER))then
-		VAR_NML = GPLOT_DIR+"/nmlist/namelist.ships.default."+TIER
+	if(fileexists(GPLOT_DIR+"/parm/namelist.ships.default."+TIER))then
+		VAR_NML = GPLOT_DIR+"/parm/namelist.ships.default."+TIER
 	end if
 end if
 if(.not.isvar("VAR_NML"))then
-	if(fileexists(GPLOT_DIR+"/nmlist/namelist.ships.default"))then
-		VAR_NML	= GPLOT_DIR+"/nmlist/namelist.ships.default"
+	if(fileexists(GPLOT_DIR+"/parm/namelist.ships.default"))then
+		VAR_NML	= GPLOT_DIR+"/parm/namelist.ships.default"
 	end if
 end if
 if(.not.fileexists(VAR_NML))then	print("ERROR: Graphics namelist not available.")
@@ -632,7 +638,7 @@ do fff = 0,nFiles-1
 		if(DATA_ON(ppp))then
 			DAT_FILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
 			;DAT_FILE2	= ODIR+str_lower(LONGSID)+".TC_CenterFix."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))+".dat"
-	
+
 			; Get the TC centers based on the geopotential height centroid
 			if(FNAME(ppp).eq."TCCEN")then		NCOL = 5
 			else if(FNAME(ppp).eq."TCHODO")then	NCOL = 4
@@ -640,7 +646,7 @@ do fff = 0,nFiles-1
 			end if  end if
 				
 			; 1) Check if the file exists, and if the data
-			; for this particular forecast hours has been written.
+			; for this particular forecast hour has been written.
 			if(fileexists(DAT_FILE))then
 				DAT_SZ	:= toint(systemfunc("stat -c %s "+DAT_FILE))
 				if(ismissing(DAT_SZ(0)))then	FHRDONE = False
@@ -662,15 +668,15 @@ do fff = 0,nFiles-1
 			break
 		end if
 	end do
-	print("MSG: Made it! Does at least one graphic type requires more processing? "+FHRDONE)
+	print("MSG: Made it! Have all expected graphics been prduced for this lead time? "+FHRDONE)
 	if(.not.FORCE)then
 		if(FHRDONE .and. FHR(fff).ne.max(FHR))then
 			print("MSG: Data already completed for this forecast hour.")
 			continue
 		end if
 	end if
-	print("MSG: Yes, looks like at least one graphic type requires more processing for this lead time.")
-	
+	if(.not.FHRDONE)then  print("MSG: I found at least one graphic type requires more processing for this lead time --> "+FNAME(ppp))  end if
+
 
 	;================================================================
 	; Read the file
@@ -696,15 +702,20 @@ do fff = 0,nFiles-1
 		nDims@dNames = dNames
 		
 		; Get info based on domain
-		B = getDmnInfo("ships","bdstype",False)
+		B = getDmnInfo("ships",DSOURCE,"bdstype",False)
 
 		; Loop over all available dimensions
 		; Only need to do this once
 		if(ppp2.eq.0)then
 		do ddd = 0,nDims-1
+			BOCO@doPivot = False
 			; LATITUDE
 			if(isStrSubset(dNames(ddd),"lat"))then
 				lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats,tcLons,fff,B)
+				if(dimsizes(lat).eq.2)then	lat := 9.96921e+36
+								lat@_FillValue = 9.96921e+36
+				end if
+				if(ismissing(lat(0)))then   break   end if
 				dy := abs(lat(1)-lat(0))
 				dym := dy*111200.
 				BOCO = lat@BOCO
@@ -715,6 +726,10 @@ do fff = 0,nFiles-1
 			if(isStrSubset(dNames(ddd),"lon"))then
 				BOCO@PivotLon = PIV
 				lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons,tcLats,fff,B)
+                                if(dimsizes(lon).eq.2)then      lon := 9.96921e+36
+                                                                lon@_FillValue = 9.96921e+36
+                                end if
+                                if(ismissing(lon(0)))then   break   end if
 				dx := abs(lon(1)-lon(0))
 				dxm := dx*111200.
 				BOCO = lon@BOCO
@@ -747,6 +762,45 @@ do fff = 0,nFiles-1
 				mf	= 1.
 			end if
 		end do
+
+		OUT_OF_BDS = False
+		if(isvar("lat"))then
+		if(ismissing(lat(0)))then
+		        print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+		        OUT_OF_BDS = True
+		end if
+		end if
+		if(isvar("lon"))then
+		if(ismissing(lon(0)))then
+		        print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
+		        OUT_OF_BDS = True
+		end if
+		end if
+		if(OUT_OF_BDS)then
+		        ; Update PlottedFiles file if all files are done and:
+		        ;    -- ATCF is required and forecast hour is less than or equal to the minimum hour from ATCFs
+		        ;    -- ATCF is not required
+	                print("MSG: All graphics & data files found for the current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
+		
+	                ; Get the input file base name
+	                IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+	                IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+		
+	                PLOTTED_FILES = ODIR+"PlottedFiles."+DOMAIN+"."+TIER+SIDtag+".log"
+	                ;if(ATCF_REQD .and. ALL_ATCF)then
+	                if(FHR(fff).le.FNL_HR)then
+	                        if(fileexists(PLOTTED_FILES))then
+	                                system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+	                                system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" >> "+PLOTTED_FILES)
+	                        else
+	                                system("echo "+str_get_dq()+iFiles(myInd(0))+" 1"+str_get_dq()+" > "+PLOTTED_FILES)
+	                        end if
+	                end if
+	                system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
+	                system("mv "+PLOTTED_FILES+".TMP "+PLOTTED_FILES)
+
+			continue
+	        end if
 		
 		
 		; mf is the multiplicative factor for the vertical coordinate
@@ -790,8 +844,8 @@ do fff = 0,nFiles-1
 		res@tiMainFontHeightF	= 0.025
 		res@tiMainOffsetYF	= 0.05
 		res@tiXAxisString	= "Forecast Time [h]"
-		res@tiXAxisOffsetYF	= 0.015
-		res@tiYAxisOffsetXF	= 0.015
+		res@tiXAxisOffsetYF	= 0.00
+		res@tiYAxisOffsetXF	= 0.00
 		res@tmXBMode		= "Explicit"	
 		res@tmXTOn		= False
 		res@tmYLMode		= "Explicit"	
@@ -868,12 +922,11 @@ do fff = 0,nFiles-1
 
 		; IF APPLICABLE, compute values and write to a file for future use
 		; For simplicity, we will only do this for HWRF D03
-		print("MSG: Printing values for: "+FNAME(ppp))
-			
+		print("MSG: Processing this parameter: "+FNAME(ppp))
 			
 		; Find pre-written data for this variable
 		DAT_FILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".dat"
-		W	= "w"
+		W = "w"
 		if(.not.any((/"TCCEN","TCHODO"/).eq.FNAME(ppp)))then
 			OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN
 			NCOL := 2
@@ -884,7 +937,8 @@ do fff = 0,nFiles-1
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
 				; If the forecast hour exists in the file and is not the maximum hour.
-				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. FHR(fff).ne.max(FHR))then  
+				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. FHR(fff).ne.max(FHR))then
+					print("MSG: Skipping "+FNAME(ppp)+" because it has already been processed.")
 					continue  
 				; If the forecast hour exists in the file and is the maximum hour.
 				else if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. FHR(fff).eq.max(FHR))then
@@ -902,17 +956,23 @@ do fff = 0,nFiles-1
 			; 1) Check if the file exists. If YES, change the write option
 			;    from overwrite (w) to append (a). Check if the data for
 			;    this particular forecast hour has been written. 
-			if(fileexists(DAT_FILE) .and. fileexists(OFILE+"."+wtype))then
+			if(fileexists(DAT_FILE))then
 				NL	:= dimsizes(asciiread(DAT_FILE,-1,"string"))
 				data	:= asciiread(DAT_FILE,(/NL,NCOL/),"float")
-				if(.not.FORCE)then
-					if(any(toint(data(:,0)).eq.FHR(fff)))then   continue   end if
-				end if
-				;system("rm -f "+tmpDir2+tmpFile2)
-				W	= "a"
+				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. fileexists(OFILE+"."+wtype2))then
+					print("MSG: Skipping "+FNAME(ppp)+" because it has already been processed.")
+					continue
+				else if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)) .and. .not.fileexists(OFILE+"."+wtype2))then
+					W = "NO"
+				else
+					W = "a"
+				end if  end if
+			end if
+			if(fileexists(OFILE+"."+wtype2))then	SKIP_PLOT = True
+			else					SKIP_PLOT = False
 			end if
 		end if
-			
+
 			
 		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		; Deep Layer Vertical Wind Shear (200-800km) ;
@@ -950,11 +1010,16 @@ do fff = 0,nFiles-1
 			U1	= where(     sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.800.,\
 					U1,U1@_FillValue)
-			U1	:= avg(U1)
+
+			if(all(ismissing(U1)))then	U1 := U@_FillValue
+			else				U1 := avg(U1)
+			end if
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 					V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 
 			; 6) Calculate the variable here
 			if(any((/"SHRD","SHRS"/).eq.FNAME(ppp)))then
@@ -966,18 +1031,21 @@ do fff = 0,nFiles-1
 			else if(any((/"SHTD","SHTS"/).eq.FNAME(ppp)))then
 				; 6) FOR WIND SHEAR DIRECTION
 				V1	:= C@r2d*atan2(U1,V1)
-				if(V1.lt.0)then   V1 = 360.+V1   end if
+				if(.not.ismissing(V1))then
+					if(V1.lt.0)then   V1 = 360.+V1   end if
+				end if
 				V1@units = "degrees"
 				V1@long_name = "VWS Direction"
 			end if  end if
-				
+
 			; 7) Write data to a .DAT file.
 			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 			
 			; 8) Write data to table (if applicable)	
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1023,13 +1091,19 @@ do fff = 0,nFiles-1
 
 			; 5) Average U & V in a 500km annulus (see SHIPS)
 			U1	= where(sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.500.,U1,U1@_FillValue)
-			U1	:= avg(U1)
+			if(all(ismissing(U1)))then	U1 := U@_FillValue
+			else				U1 := avg(U1)
+			end if
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 
 			; 6) FOR WIND SHEAR DIRECTION
 			V2	= C@r2d*atan2(U1,V1)
-			if(V2.lt.0)then   V2 = 360.+V2   end if
+			if(ismissing(V2))then
+				if(V2.lt.0)then   V2 = 360.+V2   end if
+			end if
 				
 			; 7) FOR WIND SHEAR MAGNITUDE
 			V3	= sqrt(U1^2. + V1^2.)
@@ -1041,8 +1115,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V3/)
 			
 			; 9) Write data to table (if applicable)	
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 				
@@ -1052,18 +1127,21 @@ do fff = 0,nFiles-1
 			;    this particular forecast hour has been written. Then, get
 			;    the data and write it to a .DAT file.
 			DAT_FILE2 = str_sub_str(DAT_FILE,FNAME(ppp),"SDDC")
-			;tmpFile2 = ODIR+str_lower(LONGSID)+".SDDC."+IDATE+"."+DOMAIN+".dat"
-			W	= "w"
+			W = "w"
 			if(fileexists(DAT_FILE2))then
 				NL	:= dimsizes(asciiread(DAT_FILE2,-1,"string"))
 				data	:= asciiread(DAT_FILE2,(/NL,NCOL/),"float")
-				W	= "a"
+				if(.not.FORCE .and. any(toint(data(:,0)).eq.FHR(fff)))then	W = "NO"
+				else								W = "a"
+				end if
 			end if
 			data	:= new((/1,2/),"float")
 			data(0,:)= (/tofloat(FHR(fff)), V2/)
-			write_table(DAT_FILE2,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
-			system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE2+" > "+DAT_FILE2+".TMP")
-			system("mv "+DAT_FILE2+".TMP "+DAT_FILE2)
+			if(W.ne."NO")then	print("MSG: Printing values for: SDDC")
+						write_table(DAT_FILE2,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE2+" | sort -u > "+DAT_FILE2+".TMP")
+						system("mv "+DAT_FILE2+".TMP "+DAT_FILE2)
+			end if
 			
 			; 9) Update the title for the graphic.
 			TITLE = "Deep Shear w/ Vortex Removed"
@@ -1087,7 +1165,9 @@ do fff = 0,nFiles-1
 			
 			; 2) Define MSLP
 			if(FNAME(ppp).eq."MSLP")then
-				V1	= min(V)
+				if(all(ismissing(V)))then	V1 := V@_FillValue
+				else				V1 := min(V)
+				end if
 				TITLE	= "Min. Mean Sea-Level Pressure"
 			
 			; or Define PENV
@@ -1104,7 +1184,9 @@ do fff = 0,nFiles-1
 				V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 						.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-				V1	:= avg(V1)
+				if(all(ismissing(V1)))then	V1 := V@_FillValue
+				else				V1 := avg(V1)
+				end if
 				TITLE	= "Environmental Surface Pressure"
 			end if  end if
 			copy_VarAtts(V,V1)
@@ -1114,8 +1196,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 4) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %10.3f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %10.3f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1142,7 +1225,9 @@ do fff = 0,nFiles-1
 			
 			; 2) Define VMAX
 			if(FNAME(ppp).eq."VMAX")then
-				V1	:= max(V)  ;MK
+				if(all(ismissing(V)))then	V1 := V@_FillValue
+				else				V1 := max(V)
+				end if
 				copy_VarAtts(V,V1)
 				V1@units = "kts"
 				V1@long_name = "Max. Intensity"
@@ -1187,8 +1272,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/(/tofloat(FHR(fff))/), (/V1/)/)
 				
 			; 4) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i%8.3f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i%8.3f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1222,7 +1308,9 @@ do fff = 0,nFiles-1
 				V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 						.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-				V1	:= avg(V1)
+				if(all(ismissing(V1)))then	V1 := V@_FillValue
+				else				V1 := avg(V1)
+				end if
 				TITLE	= "200 hPa Zonal Wind (200-800km)"
 			
 			; or Define U20C
@@ -1237,7 +1325,9 @@ do fff = 0,nFiles-1
 				
 				; 5) Average U in a 200-800km annulus (see SHIPS)
 				V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-				V1	:= avg(V1)
+				if(all(ismissing(V1)))then	V1 := V@_FillValue
+				else				V1 := avg(V1)
+				end if
 				TITLE	= "200 hPa Zonal Wind (0-500km)"
 			end if  end if
 			copy_VarAtts(V,V1)
@@ -1247,8 +1337,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 4) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1278,7 +1369,9 @@ do fff = 0,nFiles-1
 				
 			; 5) Average U & V in a 200-800km annulus (see SHIPS)
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 8) Append new entry
@@ -1286,8 +1379,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 9) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1334,7 +1428,9 @@ do fff = 0,nFiles-1
 			V1	= where(V1.gt.100. .or. V1.lt.0., V1@_FillValue, V1)
 
 			; 6) Average all non-missing values of V1
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 7) Append new entry
@@ -1342,8 +1438,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 8) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1377,7 +1474,9 @@ do fff = 0,nFiles-1
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 5) Append new entry
@@ -1385,8 +1484,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 6) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1423,7 +1523,9 @@ do fff = 0,nFiles-1
 				
 			; 5) Average U & V in a 200-800km annulus (see SHIPS)
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.1000.,V1,V1@_FillValue)
-			V1	:= 100.*avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := 100.*avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 			V1@units = "s-1 x 10**-7"
 
@@ -1432,8 +1534,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 7) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1497,7 +1600,9 @@ do fff = 0,nFiles-1
 				
 			; 4) Average U & V in a 200-800km annulus (see SHIPS)
 			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.1000.,V1,V1@_FillValue)
-			V1	:= 10000000.*avg(V1)/C@ms2kts
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := 10000000.*avg(V1)/C@ms2kts
+			end if
 			copy_VarAtts(V,V1)
 			V1@units = "s-1 x 10**-7"
 
@@ -1506,8 +1611,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 6) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
 			
@@ -1539,7 +1645,9 @@ do fff = 0,nFiles-1
 			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
 						V1,V1@_FillValue)
-			V1	:= avg(V1)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
 			copy_VarAtts(V,V1)
 
 			; 8) Append new entry
@@ -1547,8 +1655,9 @@ do fff = 0,nFiles-1
 			data(0,:)= (/tofloat(FHR(fff)), V1/)
 				
 			; 9) Write data block to .DAT file
-			if(W.ne."NO")then	write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
-						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" > "+DAT_FILE+".TMP")
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %9.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
 						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 						
 			end if
@@ -1564,6 +1673,7 @@ do fff = 0,nFiles-1
 		else if(FNAME(ppp).eq."TCCEN")then
 			; 1) Use NCL & Fortran functions to find the TC centers
 			CTR	:= findCenter(f,DSOURCE,"HGT",LEV,lat,lonF,flipFlag,BOCO2,1)
+			if(all(ismissing(CTR)))then   continue   end if
 			;print(CTR@value)
 			;exit				
 			
@@ -1576,11 +1686,14 @@ do fff = 0,nFiles-1
 			data(:,4)= (/where(CTR@use,1,0)/)
 				
 			; 3) Write data block to .DAT file
-			write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3), toint(data(:,4))/],"%0.3i  %6.0i  %9.3f  %10.3f  %0.1i")
-			system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
-			system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			if(W.ne."NO")then
+				print("MSG: Printing values for: "+FNAME(ppp))
+				write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3), toint(data(:,4))/],"%0.3i  %6.0i  %9.3f  %10.3f  %0.1i")
+				system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
+				system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
 				
-			if(PLOT_ON(ppp))then
+			if(PLOT_ON(ppp) .and. .not.SKIP_PLOT)then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
 				OFILE = ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 				
@@ -2077,23 +2190,31 @@ do fff = 0,nFiles-1
 			U2	:= where(     sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).le.800.,\
 					U2,U2@_FillValue)
-			U2	:= dim_avg_n(U2,(/1,2/))
+			if(all(ismissing(U2)))then	U2 := new(dimsizes(LEVC),"float",U1@_FillValue)
+							U2 = U1@_FillValue
+			else				U2 := dim_avg_n(U2,(/1,2/))
+			end if
 			V2	:= where(     sqrt(conform(V2,X,2)^2.+conform(V2,Y,1)^2.).ge.200.\
 					.and.sqrt(conform(V2,X,2)^2.+conform(V2,Y,1)^2.).le.800.,\
 					V2,V2@_FillValue)
-			V2	:= dim_avg_n(V2,(/1,2/))
+			if(all(ismissing(V2)))then	V2 := new(dimsizes(LEVC),"float",V1@_FillValue)
+							V2 = V1@_FillValue
+			else				V2 := dim_avg_n(V2,(/1,2/))
+			end if
 
 			; 4D) FOR WIND MAGNITUDE
 			V3	:= sqrt(U2^2. + V2^2.)
 			V3@units = "kts"
 			V3@long_name = "Wind Magnitude"
 			V3@_FillValue = U1@_FillValue
+			if(all(ismissing(V3)))then   continue   end if
 					
 			; 4E) FOR WIND DIRECTION
 			V4	:= C@r2d*atan2(U2,V2)
 			if(any(V4.lt.0))then	V4(ind(V4.lt.0)) = 360.+V4(ind(V4.lt.0))   end if
 			V4@units = "degrees"
 			V4@long_name = "Wind Direction"
+			if(all(ismissing(V4)))then   continue   end if
 
 			; 4F) Delete the large arrays to release memory
 			delete([/U1,V1/])
@@ -2104,12 +2225,15 @@ do fff = 0,nFiles-1
 			data(:,1) = (/tofloat(LEVC)/)
 			data(:,2) = (/V3/)
 			data(:,3) = (/V4/)
-			
-			write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3)/], "%0.3i  %6.0i  %8.2f  %8.2f")
-			system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
-			system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+
+			if(W.ne."NO")then
+				print("MSG: Printing values for: "+FNAME(ppp))
+				write_table(DAT_FILE,W,[/toint(data(:,0)), toint(data(:,1)), data(:,2), data(:,3)/], "%0.3i  %6.0i  %8.2f  %8.2f")
+				system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
+				system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
 				
-			if(PLOT_ON(ppp))then
+			if(PLOT_ON(ppp) .and. .not.SKIP_PLOT)then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
 				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
 			
@@ -2467,13 +2591,15 @@ do fff = 0,nFiles-1
 				if(fileexists(DAT_FILE2))then
 					NL	:= dimsizes(asciiread(DAT_FILE2,-1,"string"))
 					data	:= asciiread(DAT_FILE2,(/NL,2/),"float")
-					FHR2(iii,:NL-1)	= data(:,0)+tofloat(ddd)
-					Vp(iii,:NL-1)	= data(:,1)
+					vals := dim_pqsort_n(data(:,0),1,0)
+					FHR2(iii,:NL-1)	= data(vals,0)+tofloat(ddd)
+					Vp(iii,:NL-1)	= data(vals,1)
 				else if(fileexists(DAT_FILE3))then
 					NL	:= dimsizes(asciiread(DAT_FILE3,-1,"string"))
 					data	:= asciiread(DAT_FILE3,(/NL,2/),"float")
-					FHR2(iii,:NL-1)	= data(:,0)+tofloat(ddd)
-					Vp(iii,:NL-1)	= data(:,1)
+					vals := dim_pqsort_n(data(:,0),1,0)
+					FHR2(iii,:NL-1)	= data(vals,0)+tofloat(ddd)
+					Vp(iii,:NL-1)	= data(vals,1)
 				end if  end if
 						
 				iii=iii+1
@@ -2535,7 +2661,7 @@ do fff = 0,nFiles-1
 				end if
 
 			end if  end if
-			myHrs	:= ispan(-24,FNL_HR,12)
+			myHrs	:= ispan(-24,toint(max(FHR2)),12)
 	
 			; Set up the output file
 			OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN
@@ -2808,8 +2934,12 @@ end if
 if(DO_CONVERTGIF)then	print("MSG:   Convert to GIF:     ON")
 else			print("MSG:   Convert to GIF:     OFF")
 end if
-print("MSG:   Plotted Files file: "+PLOTTED_FILES)
-print("MSG:   Status file:        "+STATUS_FILE)
+if(isvar("PLOTTED_FILES"))then
+	print("MSG:   Plotted Files file: "+PLOTTED_FILES)
+end if
+if(isvar("STATUS_FILE"))then
+	print("MSG:   Status file:        "+STATUS_FILE)
+end if
 print("********************")
 
 

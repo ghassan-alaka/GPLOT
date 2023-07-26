@@ -13,18 +13,21 @@
 
 echo "MSG: parse_atcf.sh started at `date`"
 
-MODEL="$1"
-ODIR="$2"
-ADECKDIR="$3"
-BDECKDIR="$4"
-TCVDIR="$5"
-TYPE="$6"
-AAA="$7"
+MODEL="${1}"
+ISNUM="${2}"
+IBASIN="${3}"
+ODIR="${4}"
+ADECKDIR="${5}"
+BDECKDIR="${6}"
+TCVDIR="${7}"
+SID_FILE="${8:-/home/${USER}/GPLOT/tbl/SIDs_Old_New.dat}"
+TYPE="${9}"
+AAA="${10}"
 #ODIR="/lfs2/projects/hur-aoml/Ghassan.Alaka/noscrub/GFS_Forecast/"
 #ADECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/adeck/NHC/"
 #BDECKDIR="/lfs1/projects/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/"
 MMIN="-720"
-SID_FILE="/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
+#SID_FILE="/home/Ghassan.Alaka/GPLOT/tbl/SIDs_Old_New.dat"
 
 mkdir -p ${ODIR}
 cd ${ODIR}
@@ -74,7 +77,11 @@ for ADECK in ${ALL_ADECKS[@]}; do
     echo "MSG: Found this ADECK --> ${ADECK}"
 
     #ALL_SNUM=( `awk -v MODEL="${MODEL}" -F ', ' '$5==MODEL && $2!="00"' ${ADECK} | cut -d "," -f2 | sort -u | sed -e 's/^[[:space:]]*//'` )
-    ALL_SNUM=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -F, '$5==MODEL && $2!="00"' | cut -d "," -f2 | sort -u` )
+    if [ "${ISNUM}" == "all" ]; then
+        ALL_SNUM=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -F, '$5==MODEL && $2!="00"' | cut -d "," -f2 | sort -u` )
+    else
+        ALL_SNUM=( "${ISNUM}" )
+    fi
     for SNUM in ${ALL_SNUM[@]}; do
         echo "MSG: Found this Storm Number --> ${SNUM}"
         if [ "$SNUM" == "00" ]; then
@@ -87,7 +94,11 @@ for ADECK in ${ALL_ADECKS[@]}; do
         for CYCLE in ${ALL_CYCLES[@]}; do
             echo "MSG: Found this cycle --> ${CYCLE}"
             # Get basin and year information. This will help build the output ATCF
-            ALL_BASINS=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u` )
+            if [ "${IBASIN}" == "all" ]; then
+                ALL_BASINS=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u` )
+            else
+                ALL_BASINS=( "${IBASIN}" )
+            fi
 
             YEAR="`echo "${CYCLE}" | cut -c1-4`"
             YMD="`echo "${CYCLE}" | cut -c1-8`"

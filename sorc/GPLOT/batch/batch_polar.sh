@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=hur-aoml
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=12
+##SBATCH --ntasks-per-node=12
 #SBATCH --time=00:59:00
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -31,13 +31,26 @@ FORCE="${13}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
-    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 2. Build list in input arguments for Python
+# 4. Check/Build custom Python modules
+if [ ! -f ${GPLOT_DIR}/sorc/GPLOT/python/modules/build.done ]; then
+    cd ${GPLOT_DIR}/sorc/GPLOT/python
+    python -c "import modules.centroid"
+    if [ "$?" == "1" ]; then
+        cd ${GPLOT_DIR}/sorc/GPLOT/python/modules
+        python -m numpy.f2py -c ${GPLOT_DIR}/sorc/GPLOT/fortran/centroid.f90 -m centroid
+        if [ "$?" == "0" ]; then
+            echo "done" > ${GPLOT_DIR}/sorc/GPLOT/python/modules/build.done
+        fi
+    fi
+fi
+
+# 5. Build list in input arguments for Python
 PYTHON_ARGS=()
 if [ ! -z "$IDATE" ]; then
     PYTHON_ARGS+=("${IDATE}")
@@ -89,13 +102,8 @@ if [ ! -z "$NMLIST" ]; then
 else
     PYTHON_ARGS+=("MISSING")
 fi
-if [ ! -z "${PYTHONDIR}" ]; then
-    PYTHON_ARGS+=("${PYTHONDIR}")
-else
-    PYTHON_ARGS+=("${GPLOT_DIR}/python")
-fi
 
-# 2. Submit the Python job
+# 6. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
 python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
 

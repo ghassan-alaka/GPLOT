@@ -1,0 +1,158 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+; 1A. EXPERIMENT NAME.
+EXPT = HFSA_Forecast
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+DO_MAPS = True
+DO_STATS = True
+DO_SHIPS = True
+DO_POLAR = True
+
+; 1C. DATA SOURCE
+DSOURCE = HAFS
+
+; 1D. BASIN-SCALE HWRF DATA?
+IS_MSTORM = False
+
+; 1E. ENSEMBLE MEMBER NUMBER
+ENSMEM = 0
+
+; 1E. SYSTEM ENVIRONMENT
+SYS_ENV = JET
+
+; 1F. FORECAST CYCLE
+IDATE = 
+
+; 1G. STORM ID
+SID = 
+
+; 1H. INPUT PATH
+IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/oper/
+ITAG =
+EXT =
+
+; 1I. OUTPUT PATH
+ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
+
+; 1J. ATCF PATH
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/tracker_2023
+ATCF1_TAG = hfsa.trak.atcfunix
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/tracker_2023
+ATCF2_TAG = atcfunix
+
+; 1K. ADECK & BDECK PATHS
+ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT/
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+
+; 1L. FORECAST HOUR INFORMATION
+INIT_HR = 0
+FNL_HR = 126
+FMT_HR = 3
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+DT = 3
+
+; 1N. MASK TOPOGRAPHY
+DO_TOPOMASK = False
+
+; 1O. REMOVE WHITE SPACE
+DO_RMWHITE = True
+
+; 1P. TOGGLE TITLE
+DO_SRCLBL = True
+
+; 1S. FORCE
+FORCE = False
+
+; 1T. BATCH SUBMISSION MODE
+;BATCH_MODE; = Foreground
+;BATCH_MODE; = Background
+BATCH_MODE = SBatch
+
+; 1U. CONVERT FROM PNG TO GIF
+;DO_CONVERTGIF; = False
+DO_CONVERTGIF = True
+
+; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
+CPU_ACCT = hur-aoml
+
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+DOMAIN = hwrf d03
+
+; 2B. MAP GRAPHICS TIER
+TIER = Tier1 Tier2
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = False
+
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES
+MORIG = HFSA
+MCODE = HFSA
+MCODEI = HFAI
+MCODE12 = HFA2
+
+; 3B. FORECAST GUIDANCE MODELS
+TRKM = HFSA HFSB HWRF AVNO HMON CTCX EGRR
+INTM = HFSA HFSB HWRF AVNO HMON DSHP LGEM CTCX
+PRSM = HFSA HFSB HWRF AVNO HMON CTCX
+TRKMI = HFAI HFBI HWFI AVNI HMNI EGRI CTCI TVCN OFCL
+INTMI = HFAI HFBI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = HFSA HFSB HWRF HMON AVNO EGRR OFCL
+INTMT = HFSA HFSB HWRF HMON DSHP OFCL
+
+; 3C. VERIFICATION MODELS
+ETM = HFAI HFBI HWFI GFSI HMNI CTCI TVCN OFCL
+EIM = HFAI HFBI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = HFSA HFSB HWRF GFSO HMON CTCX
+LIM = HFSA HFSB HWRF GFSO HMON CTCX
+
+; 3D. VERIFICATION TIMES
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
+; 3F. INTERPOLATION
+DO_INTERP = False
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; SECTION 5: GPLOT_Polar variables
+;================================================================
+
+PYTHONFILE = polar_cylindrical_structure.py
+RESOLUTION = 2.0
+RMAX = 600
+LEVS = 46
+

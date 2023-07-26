@@ -40,16 +40,12 @@
 ; Load scripts
 ;================================================================
 
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_func.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_main.ncl"
 
 ;external FILTER121 "$GPLOT_DIR/ncl/wrapit/filter121.so"
-external SPH2CART "$GPLOT_DIR/ncl/wrapit/sph2cart.so"
+external SPH2CART "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/sph2cart.so"
 ;external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
 
 
@@ -221,15 +217,6 @@ end if
 print("MSG: I will place graphics in this location --> "+ODIR)
 
 
-; The maximum number of files to process.
-val := ind(isStrSubset2(data,"NMAX_MAPS"))
-if(.not.ismissing(val(0)))then	NMAX = data(val)
-				NMAX := str_squeeze(str_split(NMAX," = "))
-				NMAX := toint(NMAX(1))
-else				NMAX = 100
-end if
-
-
 
 
 ;================================================================
@@ -315,7 +302,8 @@ BOCO    = getDmnBds(DOMAIN,DSOURCE)
 SC_DOMAIN   = False
 SC_DSOURCE  = False
 SC_GRAPHICS = False
-if(any((/"d02","d03","tkfull","hwrf"/).eq.DOMAIN))then    SC_DOMAIN  = True     end if
+NSTDMN = (/"d03","alld03","storm","core"/)
+if(any((/"d02","d03","tkfull","hwrf","alld03","storm","core","tcparent"/).eq.DOMAIN))then    SC_DOMAIN  = True     end if
 ;if(.not.IS_MSTORM .and. isStrSubset(DSOURCE,"HWRF"))then   SC_DSOURCE = True     end if
 if(SC_DOMAIN .or. SC_DSOURCE)then
         print("MSG: Determined that these graphics are storm-centered.")
@@ -371,36 +359,36 @@ OUT_OF_BDS = False
 ;VAR_NML                = GPLOT_DIR+"/nmlist/namelist.maps.test"
 if(isvar("VAR_NML"))then
         print("MSG: Detected custom graphics namelist. Will try that first.")
-        if(fileexists(GPLOT_DIR+"/nmlist/"+VAR_NML))then
-                VAR_NML = GPLOT_DIR+"/nmlist/"+VAR_NML
+        if(fileexists(GPLOT_DIR+"/parm/"+VAR_NML))then
+                VAR_NML = GPLOT_DIR+"/parm/"+VAR_NML
         else
                 print("WARNING: Custom graphics namelist not found. Trying defaults.")
                 delete(VAR_NML)
         end if
 end if
 if(.not.isvar("VAR_NML"))then   
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+DOMAIN+"."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then   
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps."+EXPT+"."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps."+EXPT+"."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps."+DOMAIN+"."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps."+DOMAIN+"."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps."+DOMAIN+"."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps."+DOMAIN+"."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps.default."+TIER))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps.default."+TIER
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps.default."+TIER))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps.default."+TIER
         end if
 end if
 if(.not.isvar("VAR_NML"))then
-        if(fileexists(GPLOT_DIR+"/nmlist/namelist.maps.default"))then
-                VAR_NML = GPLOT_DIR+"/nmlist/namelist.maps.default"
+        if(fileexists(GPLOT_DIR+"/parm/namelist.maps.default"))then
+                VAR_NML = GPLOT_DIR+"/parm/namelist.maps.default"
         end if
 end if
 if(.not.isvar("VAR_NML"))then   print("ERROR: Graphics namelist not available. Something went wrong.")
@@ -411,65 +399,65 @@ print("MSG: Using this graphics namelist: "+VAR_NML)
 
 ; 2. Read the Graphics Namelist
 data            := asciiread(VAR_NML,-1,"string")
-headers         := str_split(data(0),"   ")
-tmp             := str_squeeze(str_get_field(data(1:),ind(headers.eq."PLOT_ON")+1,"   "))
+headers         := str_split(data(0),"	 ")
+tmp             := str_squeeze(str_get_field(data(1:),ind(headers.eq."PLOT_ON")+1,"	 "))
 nPlots          = dimsizes(tmp)
 What2Plot       = where(tmp.eq."True",True,False)
 
 ; 2a. BASE - Contour Fill
 G_BASE          = new((/2,nPlots/),"string")
-G_BASE(0,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."BASE_CN_FILL")+1,"   "))
-G_BASE(1,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV1")+1,"   "))
+G_BASE(0,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."BASE_CN_FILL")+1,"	 "))
+G_BASE(1,:)     = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV1")+1,"	 "))
 G_BASE          = where(G_BASE.eq."N/A","",G_BASE)
 
 ; 2b. OVERLAY 1 - Wind Vectors
 G_OV1           = G_BASE
-G_OV1(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_VC_WIND")+1,"   "))
-G_OV1(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV4")+1,"   "))
+G_OV1(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_VC_WIND")+1,"	 "))
+G_OV1(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV4")+1,"	 "))
 G_OV1           = where(G_OV1.eq."N/A","",G_OV1)
 
 ; 2c. OVERLAY 2 - Streamlines  (bottom)
 G_OV2   = G_BASE
-G_OV2(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE")+1,"   "))
-G_OV2(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV6")+1,"   "))
+G_OV2(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE")+1,"	 "))
+G_OV2(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV6")+1,"	 "))
 G_OV2   = where(G_OV2.eq."N/A","",G_OV2)
 
 ; 2d. OVERLAY 2.5 - Streamlines (top)
 G_OV25   = G_BASE
-G_OV25(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE2")+1,"   "))
-G_OV25(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV7")+1,"   "))
+G_OV25(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_STLINE2")+1,"	 "))
+G_OV25(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV7")+1,"	 "))
 G_OV25   = where(G_OV25.eq."N/A","",G_OV25)
 
 ; 2e. OVERLAY 3 - Contour Lines (bottom)
 G_OV3   = G_BASE
-G_OV3(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE2")+1,"   "))
-G_OV3(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV3")+1,"   "))
+G_OV3(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE2")+1,"	 "))
+G_OV3(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV3")+1,"	 "))
 G_OV3   = where(G_OV3.eq."N/A","",G_OV3)
 
 ; 2f. OVERLAY 4 - Contour Lines (top)
 G_OV4           = G_BASE
-G_OV4(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE")+1,"   "))
-G_OV4(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV2")+1,"   "))
+G_OV4(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_CN_LINE")+1,"	 "))
+G_OV4(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV2")+1,"	 "))
 G_OV4           = where(G_OV4.eq."N/A","",G_OV4)
 
 ; 2g. OVERLAY 5 - Max/Min Values & Labels
 G_OV5           = G_BASE
-G_OV5(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_MAX_MIN")+1,"   "))
-G_OV5(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV5")+1,"   "))
+G_OV5(0,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."OV_MAX_MIN")+1,"	 "))
+G_OV5(1,:)      = str_squeeze(str_get_field(data(1:),ind(headers.eq."LEV5")+1,"	 "))
 G_OV5           = where(G_OV5.eq."N/A","",G_OV5) 
 
 ; 2h. Graphic Name
-FNAME           = str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")+1,"   "))
+FNAME           = str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")+1,"	 "))
 if(DSOURCE.eq."GFS" .and. any(FNAME.eq."REFL_MSLP"))then
         What2Plot = where(FNAME.eq."REFL_MSLP",False,What2Plot)
 end if
 if(DSOURCE.eq."GFS" .and. any(FNAME.eq."REFL_UV750"))then
         What2Plot = where(FNAME.eq."REFL_UV750",False,What2Plot)
 end if
-if(DOMAIN.eq."d03" .and. any(FNAME.eq."PRCP_MSLP_Z1000500"))then
+if(any(NSTDMN.eq.DOMAIN) .and. any(FNAME.eq."PRCP_MSLP_Z1000500"))then
         What2Plot = where(FNAME.eq."PRCP_MSLP_Z1000500",False,What2Plot)
 end if
-if(DOMAIN.eq."d03" .and. any(FNAME.eq."PRCP_MSLP"))then
+if(any(NSTDMN.eq.DOMAIN) .and. any(FNAME.eq."PRCP_MSLP"))then
         What2Plot = where(FNAME.eq."PRCP_MSLP",False,What2Plot)
 end if
 if(.not.any(What2Plot))then     print("ERROR: No graphics turned on in this namelist. Exiting.")
@@ -562,10 +550,10 @@ print("MSG: GPLOT Status file is "+STATUS_FILE)
 
 
 ; 6. Limit the total number of files to process, if required.
-if(nFiles.gt.NMAX)then
-	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
-	nFiles = NMAX
-end if
+;if(nFiles.gt.NMAX)then
+;	print("MSG: Will only process "+NMAX+" files to avoid memory contraints.")
+;	nFiles = NMAX
+;end if
 
 
 
@@ -774,6 +762,10 @@ if(SC_FHR)then
 if(DO_PLOT)then
 do fff = 0,nFiles-1
 
+        ;psrep = systemfunc("ps u | grep ' ncl ' | head -1 | awk -F"+str_get_dq()+" "+str_get_dq()+" '{ print $5,$6 }'")
+        ;print("MEMORY CHECK 01: VSZ,RSS = "+psrep+" (Kb)")
+	;delete(psrep)
+
         ;================================================================
         ; 1. START WORKING ON THE NEXT INPUT FILE
         ;    Tell the STATUS file that we're still working...
@@ -833,23 +825,13 @@ do fff = 0,nFiles-1
         
         
         ;================================================================
-        ; 5. Clean up old variables
-        ; THIS MAY BE DEPRECATED
-        ;================================================================
-        ;if(DOMAIN.eq."d03")then
-        ;       if(isvar("UV10max"))then delete(UV10max) end if
-        ;       if(isvar("MSLPmin"))then delete(MSLPmin) end if
-        ;end if
-        
-
-        ;================================================================
         ; 6. Check if an ATCF entry exists for the current forecast hour.
         ;    Required for "d03" graphics
         ;    Suggested for large-scale graphics
         ;================================================================
  
         if(.not.ONE_FILE)then
-                if(SC_GRAPHICS .and. DOMAIN.ne."hwrf")then
+                if(any(NSTDMN.eq.DOMAIN))then
                         myFHR := ind(tcFHR(0,:).eq.FHR(fff))
                         if(ismissing(myFHR(0)))then
                                 print("WARNING: No ATCF entry for "+sprinti(FMT_HR,FHR(fff)))
@@ -964,10 +946,10 @@ do fff = 0,nFiles-1
                         else if(DSOURCE.eq."GFS" .and. isStrSubset(FNAME(ppp),"REFL"))then
                                 print("WARNING: Graphic '"+FNAME(ppp)+"' might not work for DSOURCE="+DSOURCE+".")
                                 print("WARNING: Turn this graphic off in "+VAR_NML)
-                        else if(DSOURCE.eq."GFS" .and. DOMAIN.eq."d03" .and. isStrSubset(FNAME(ppp),"TPRCP"))then
+                        else if(DSOURCE.eq."GFS" .and. any(NSTDMN.eq.DOMAIN) .and. isStrSubset(FNAME(ppp),"TPRCP"))then
                                 print("WARNING: Graphic '"+FNAME(ppp)+"' might not work for DOMAIN="+DOMAIN+" and DSOURCE="+DSOURCE+".")
                                 print("WARNING: Turn this graphic off in "+VAR_NML)
-                        else if(DOMAIN.eq."d03" .and. any((/"PRCP_MSLP_Z1000500","PRCP_MSLP","PRCP24_MSLP"/).eq.FNAME(ppp)))then
+                        else if(any(NSTDMN.eq.DOMAIN) .and. any((/"PRCP_MSLP_Z1000500","PRCP_MSLP","PRCP24_MSLP"/).eq.FNAME(ppp)))then
                                 print("WARNING: Graphic '"+FNAME(ppp)+"' might not work for DOMAIN="+DOMAIN+".")
                                 print("WARNING: Turn this graphic off in "+VAR_NML)
                         end if  end if  end if  end if
@@ -1035,10 +1017,16 @@ do fff = 0,nFiles-1
 				else if(DSOURCE.eq."HAFS")then	G_BASE_LEVS := (/"","3h","6h"/)
 				else if(DSOURCE.eq."HWRF")then	G_BASE_LEVS := ""
 				else if(DSOURCE.eq."HMON")then	G_BASE_LEVS := (/"","3h","6h"/)
+				else if(DSOURCE.eq."ECMWF")then	G_BASE_LEVS := ""
 				end if  end if  end if  end if
+				end if
+			else if(any((/"PRATE"/).eq.G_BASE(0,ppp)))then
+				if(DSOURCE.eq."HAFS")then	G_BASE_LEVS := (/"","3h"/)
+				else				G_BASE_LEVS := ""
+				end if
 			else
 				G_BASE_LEVS := G_BASE(1,ppp)
-                        end if
+                        end if  end if
                         
                         ;================================================================
                         ; vi. Determine which file contains the G_BASE variable
@@ -1046,6 +1034,7 @@ do fff = 0,nFiles-1
                         ;================================================================
 			do ggg = 0,dimsizes(G_BASE_LEVS)-1
 				BASEVAR = findVarName(DSOURCE,G_BASE(0,ppp),G_BASE_LEVS(ggg))
+print(G_BASE(0,ppp)+"  "+G_BASE_LEVS(ggg)+"  "+BASEVAR)
 	                        varStatus = False
 	                        do aaa = 0,dimsizes(myInd)-1
 	                                if(aaa.eq.0)then        f := f1
@@ -1131,6 +1120,7 @@ do fff = 0,nFiles-1
                                                 ;if(BOCO(2).gt.180.)then   BOCO(2) = BOCO(2) - 360.   end if
                                                 BOCO(3) = max(LONTEST)
                                                 ;if(BOCO(3).gt.180.)then   BOCO(3) = BOCO(3) - 360.   end if
+						if(BOCO@doPivot)then   BOCO@PivotLon = ceil(BOCO(3))+1   end if
                                         end if
                                 end do
                         end if
@@ -1142,7 +1132,7 @@ do fff = 0,nFiles-1
                         ;    'B' is used to determine how to set the figure domain size.
                         ;    Force B=1 to use the lat/lon provided by the BOCO.
                         ;================================================================
-                        B = getDmnInfo(DOMAIN,"bdstype",False)
+                        B = getDmnInfo(DOMAIN,DSOURCE,"bdstype",False)
                         if(SC_GRAPHICS .and. .not.ATCF_REQD .and. any((/ATCF_FILES(0),SID/).eq."NONE"))then
                                 B = 1
                         end if
@@ -1151,12 +1141,16 @@ do fff = 0,nFiles-1
                         ;================================================================
                         ; xi. Read dimension data (only for available dims)
                         ;================================================================
-			if(any((/"HWRF","HMON"/).eq.DSOURCE) .and. DOMAIN.eq."d03")then   BOCO@doPivot = False   end if
+			if(any((/"HWRF","HMON","HAFS"/).eq.DSOURCE) .and. any(NSTDMN.eq.DOMAIN))then   BOCO@doPivot = False   end if
                         do ddd = 0,nDims-1
                                 ; 1. Y-DOORDINATE --> LATITUDE
                                 if(isStrSubset(dNames(ddd),"lat") .or. isStrSubset(dNames(ddd),"grid_yt"))then
                                         y = ddd
                                         lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats(0,:),tcLons(0,:),ti,B)
+					if(dimsizes(lat).le.2 .and. dimsizes(lat).gt.1)then
+						lat := 9.96921e+36
+						lat@_FillValue = 9.96921e+36
+					end if
 					if(ismissing(lat(0)))then   break   end if
                                         BOCO = lat@BOCO
 
@@ -1170,9 +1164,13 @@ do fff = 0,nFiles-1
                                 ; 2. X-COORDINATE --> LONGITUDE
                                 if(isStrSubset(dNames(ddd),"lon") .or. isStrSubset(dNames(ddd),"grid_xt"))then
                                         x = ddd
-					BOCO@PivotLon = PIV
+					if(.not.isatt(BOCO,"PivotLon"))then   BOCO@PivotLon = PIV   end if
 					if(SC_DOMAIN)then	lon := get_dim_lon(f,dNames(ddd),BOCO,tcLons(0,:),tcLats(0,:),ti,B)
 					else			lon := get_dim_lon(f,dNames(ddd),BOCO,9.96921e+36,9.96921e+36,ti,B)
+					end if
+					if(dimsizes(lon).le.2 .and. dimsizes(lon).gt.1)then
+						lon := 9.96921e+36
+						lon@_FillValue = 9.96921e+36
 					end if
 					if(ismissing(lon(0)))then   break   end if
                                         BOCO = lon@BOCO
@@ -1216,16 +1214,58 @@ do fff = 0,nFiles-1
 			if(ismissing(lat(0)))then
 				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
 				OUT_OF_BDS = True
-				continue
+				;continue
 			end if
 			end if
 			if(isvar("lon"))then
 			if(ismissing(lon(0)))then
 				print("WARNING: Model domain and graphic domain do not overlap. Nothing to do.")
 				OUT_OF_BDS = True
+				;continue
+			end if
+			end if
+
+			; Mark the current file as processed if data is out of bounds.
+			if(OUT_OF_BDS)then
+
+				; Get the Input File base name
+				IFILE_BASE := str_split(iFiles(myInd(0)),"/")
+				IFILE_BASE := IFILE_BASE(dimsizes(IFILE_BASE)-1)
+
+				NATCF_NOW = 0
+				if(.not.all(ismissing(ndtooned(tcFHR))))then
+					do sss = 0,NATCF-1
+						vals1 = ind(tcFHR(sss,:).eq.FHR(fff))
+						if(.not.ismissing(vals1(0)))then
+							if(.not.ismissing(tcLats(sss,vals1)))then
+								NATCF_NOW = NATCF_NOW+1
+							end if
+						else if(FNL_ATCF(sss))then
+							NATCF_NOW = NATCF_NOW+1
+						end if  end if
+					end do
+				end if
+
+		                if(ATCF_REQD .and. FHR(fff).le.min(tcMAXHR))then
+		                        if(fileexists(PLOTTED_FILES))then
+						system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+		                        else
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+		                        end if
+		                else if(.not.ATCF_REQD)
+		                        if(fileexists(PLOTTED_FILES))then
+						system("sed -i '/"+IFILE_BASE+"/d' "+PLOTTED_FILES)
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" >> "+PLOTTED_FILES)
+		                        else
+						system("echo "+str_get_dq()+iFiles(myInd(0))+" "+NATCF_NOW+" "+ALL_ATCF+str_get_dq()+" > "+PLOTTED_FILES)
+		                        end if
+		                end if  end if
+		                system("sort -u "+PLOTTED_FILES+" > "+PLOTTED_FILES+".TMP")
+		                system("mv "+PLOTTED_FILES+".TMP "+PLOTTED_FILES)
 				continue
 			end if
-			end if
+
                 
                         ;================================================================
                         ; xii. 'mf' is the multiplicative factor for the vertical
@@ -1263,9 +1303,9 @@ do fff = 0,nFiles-1
                         ;     Most of the time, BOCO=BOCO2. Found that this was critical
                         ;     for the 'hwrf' domain centered on the HWRF outer nest.
                         ;================================================================
-                        BOCO@PivotLon = PIV
+                        if(.not.isatt(BOCO,"PivotLon"))then   BOCO@PivotLon = PIV   end if
 			BOCO2 = (/max(lat),min(lat),min(lon),max(lon)/)
-			BOCO2@PivotLon = PIV
+			BOCO2@PivotLon = BOCO@PivotLon
 			
                         ;================================================================f
                         ;================================================================
@@ -1308,7 +1348,7 @@ do fff = 0,nFiles-1
                         ;      time. If either variable can't be found, then it will be
                         ;      missing.
                         ;================================================================
-                      	if(.not.isvar("UV10max") .and. DOMAIN.eq."d03")then
+                      	if(.not.isvar("UV10max") .and. any(NSTDMN.eq.DOMAIN))then
                         
                                 ; 1. GET 10M WIND
                                 ; 1a. Determine which file contains the UV10max variable.
@@ -1337,7 +1377,7 @@ do fff = 0,nFiles-1
                                 end if
 			end if
                         
-			if(.not.isvar("MSLPmin") .and. DOMAIN.eq."d03")then
+			if(.not.isvar("MSLPmin") .and. any(NSTDMN.eq.DOMAIN))then
                                 ; 2. GET THE MINIMUM MSLP
                                 ; 2a. Determine which file contains the MSLPmin variable
                                 varStatus = False
@@ -1410,7 +1450,7 @@ do fff = 0,nFiles-1
                         ; EVENTUALLY THIS WILL BE MOVED INTO A SEPARATE GPLOT MODULE (e.g., "XSECT")
                         if(isStrSubset(G_BASE(1,ppp),"x") .or. isStrSubset(G_BASE(1,ppp),"y"))then
                                 res     := GenPlotRes(10,False)
-                                if(DOMAIN.eq."d03")then         if(isStrSubset(G_BASE(1,ppp),"x"))then
+                                if(any(NSTDMN.eq.DOMAIN))then	if(isStrSubset(G_BASE(1,ppp),"x"))then
                                                                         res@tmXBValues          := ispan(toint(tcLons(0,ti))-(toint(tcLons(0,ti))%2)-6,toint(tcLons(0,ti))-(toint(tcLons(0,ti))%2)+6,2)
                                                                         res@tmXBLabels          := where(res@tmXBValues.lt.0,tostring(abs(res@tmXBValues))+"W",tostring(res@tmXBValues)+"E")
                                                                 else if(isStrSubset(G_BASE(1,ppp),"y"))
@@ -1441,7 +1481,7 @@ do fff = 0,nFiles-1
                                 res@mpCenterLonF                = (res@mpMaxLonF+res@mpMinLonF)/2.
                                 res@mpMaxLatF                   = BOCO(0)
                                 res@mpMinLatF                   = BOCO(1)
-                                if(DOMAIN.eq."d03")then
+                                if(any(NSTDMN.eq.DOMAIN))then
                                         ;res@gsnRightString = ""+NameIDTag
                                         res@mpGridLatSpacingF   = 2.
                                         res@mpGridLonSpacingF   = 2.
@@ -1616,10 +1656,10 @@ do fff = 0,nFiles-1
 					end if  end if
 				end if  end if
 				if(isvar("DT_TPRCP"))then
-		                        if(SC_GRAPHICS)then	PFILE1 = ODIR+"PRCPDATA/"+str_lower(ALL_LONGSID(0))+".TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"
+
+		                        if(SC_GRAPHICS)then	PFILE1 := systemfunc("ls "+ODIR+"PRCPDATA/*"+str_lower(ALL_LONGSID(0))+".TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"+" 2>/dev/null")
 		                        else			PFILE1 = ODIR+"PRCPDATA/TPRCP."+str_sub_str(IDATE,"gfs.","")+"."+DOMAIN+".f"+sprinti("%0.3i",FHR3(ttt)-DT_TPRCP)+".nc"
 		                        end if
-
 					if(.not.fileexists(PFILE1))then
 						print("WARNING: Can't compute total precipitation because data from forecast hours is missing. Skipping...")
 						continue
@@ -1830,7 +1870,7 @@ do fff = 0,nFiles-1
 					resOv1@vcLevelSelectionMode     = "ExplicitLevels"
 					resOv1@vcLevels                 = ispan(5,150,5)
 					if(FNAME(ppp).eq."RH700_UV700_MSLP")then	resOv1@vcWindBarbColor = "black"   end if
-					if(DOMAIN.eq."d03")then				resOv1@vcWindBarbLineThicknessF = 5.0
+					if(any(NSTDMN.eq.DOMAIN))then			resOv1@vcWindBarbLineThicknessF = 5.0
 											resOv1@vcMinDistanceF = 0.03
 					end if
 				end if
@@ -1844,7 +1884,6 @@ do fff = 0,nFiles-1
                         ; xxxxi. Enter here if Overlay #1 is still active.
                         ;================================================================
                         if(DO_OV1)then          
-                                
                                 ; 1. DRAW OVERLAY #1 HERE
                                 plot_Ov1= gsn_csm_vector(wks,UOv1,VOv1,resOv1)
                                 overlay(plot,plot_Ov1)
@@ -1970,7 +2009,7 @@ do fff = 0,nFiles-1
                                 ; 1. Set graphical Resources
                                 resOv2 := GenPlotRes(6,True)
                                 if(any((/"SHDL","SHML","SHSL"/).eq.FNAME(ppp)))then   resOv2@stLineColor = "black"   end if
-                                if(DOMAIN.eq."d03")then   resOv2@stLineColor = "black"   end if
+                                if(any(NSTDMN.eq.DOMAIN))then  resOv2@stLineColor = "black"   end if
                                 resOv2@gsnLeftString = ""
                                 resOv2@gsnRightString = ""
 
@@ -2109,7 +2148,7 @@ do fff = 0,nFiles-1
                                 resOv25@gsnLeftString = ""
                                 resOv25@gsnRightString = ""
                                 if(any((/"SHDL","SHML","SHSL"/).eq.FNAME(ppp)))then   resOv25@stLineColor = "black"   end if
-                                if(DOMAIN.eq."d03")then   
+                                if(any(NSTDMN.eq.DOMAIN))then   
                                         resOv25@stLineColor = "grey90" ;"white"   
                                         resOv25@stLineThicknessF = 3.5
                                         resOv25@stMinDistanceF     = 0.05
@@ -2565,12 +2604,12 @@ do fff = 0,nFiles-1
 				;    llbox -  minimum distance that the closest High/Low can be
 				;    maxH -  maximum number of Highs to be marked on the map
 				;    maxL -  maximum number of Lows to be marked on the map
-				llbox = getDmnInfo(DOMAIN,"llbox",False)
+				llbox = getDmnInfo(DOMAIN,DSOURCE,"llbox",False)
 				dx = abs(lon(1)-lon(0))
 				dxi = floor(llbox/dx)
 				if(dxi.eq.0)then   print("WARNING: 'llbox' is smaller than 'dx'. Defaulting to 1.")   end if
-				maxH = getDmnInfo(DOMAIN,"maxH",False)
-				maxL = getDmnInfo(DOMAIN,"maxL",False)
+				maxH = getDmnInfo(DOMAIN,DSOURCE,"maxH",False)
+				maxL = getDmnInfo(DOMAIN,DSOURCE,"maxL",False)
 			end if
 			
 			;================================================================
@@ -2580,7 +2619,7 @@ do fff = 0,nFiles-1
 
 				; 1. Find the local High Pressure locations.
 				;    These aren't necessary for 'd03' graphics.
-				if(DOMAIN.ne."d03")then
+				if(.not.any(NSTDMN.eq.DOMAIN))then
                                         
 					;Find the local Highs. Could be 0
 					VOv5_max := local_max(VOv5B, False, 0.0)
@@ -2930,8 +2969,8 @@ do fff = 0,nFiles-1
                 	;================================================================
                         ; lxvii. Graphic Title
 			;================================================================
-	                if(DOMAIN.eq."d03")then         add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.012)
-	                else                            add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.010)
+	                if(any(NSTDMN.eq.DOMAIN))then	add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.012)
+	                else				add_graphic_title(wks,FNAME(ppp),vpLFT,vpTOP+0.023,0.010)
 	                end if
                 
 	                ;================================================================
@@ -2939,34 +2978,34 @@ do fff = 0,nFiles-1
 			;================================================================
 	                TimeTitle       = "Init: "+changeTimeFmt(str_sub_str(IDATE,"gfs.",""),"YYYYMMDDHH","HHz DOW, Month DD YYYY",0)+\
 	                                  "  Forecast Hour:["+str_sub_str(sprinti("%0.3i",FHR3(ttt)),"f","")+"]  valid at "+validDate
-	                if(DOMAIN.eq."d03")then         add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.010,"left")
-	                else                            add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
+	                if(any(NSTDMN.eq.DOMAIN))then	add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.010,"left")
+	                else				add_time_title(wks,TimeTitle,vpLFT,vpTOP+0.008,0.008,"left")
 	                end if
                 
 	                ;================================================================
                         ; lxix. Storm Title
 			;================================================================
 	                if(LONGSID_LIST.ne."")then
-	                        if(DOMAIN.eq."d03")then         add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.010,"right")
-	                        else                            add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.008,"right")
+	                        if(any(NSTDMN.eq.DOMAIN))then	add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.010,"right")
+	                        else				add_storm_title(wks,str_upper(LONGSID_LIST),vpRGT,vpTOP+0.008,0.008,"right")
 	                        end if
 	                end if
                 
 			;================================================================
                         ; lxxx. Max Wind & Min MSLP information
 			;================================================================
-	                if(DOMAIN.eq."d03")then         add_vmax_label (wks,UV10max,vpLFT+vpWID,vpTOP+0.035,0.009,"right")
-	                                                add_mslp_label (wks,MSLPmin,vpLFT+vpWID,vpTOP+0.022,0.009,"right")
+	                if(any(NSTDMN.eq.DOMAIN))then	add_vmax_label(wks,UV10max,vpLFT+vpWID,vpTOP+0.035,0.009,"right")
+							add_mslp_label(wks,MSLPmin,vpLFT+vpWID,vpTOP+0.022,0.009,"right")
 	                end if
                 
 			;================================================================
                         ; lxxi. Model Title & Disclaimer
 			;================================================================
 	                if(DO_SRCLBL)then
-	                        if(DOMAIN.eq."d03")then         add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.015,"left")
-	                                                        add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.015)
-	                        else                            add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.009,"left")
-	                                                        add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
+	                        if(any(NSTDMN.eq.DOMAIN))then	add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.015,"left")
+								add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.015)
+	                        else				add_disclaimer(wks,plot,EXPT,BOCO(2)+2.*pctLon,BOCO(1)+2.*pctLon,0.009,"left")
+								add_model_title(wks,EXPT,ENSID,vpLFT,vpTOP+0.04,0.010)
 	                        end if
 	                end if
 			
@@ -3001,14 +3040,18 @@ do fff = 0,nFiles-1
                         ; NOTE: These are handled together, so we can call
                         ;  'convert' only once per plot when both are True
 			;================================================================
-			;if(DO_RMWHITE)then   system("convert -trim "+OFILE+".png "+OFILE+".png")   end if
-			if (DO_RMWHITE .and. DO_CONVERTGIF) then
-			    system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_CONVERTGIF) then
-			    system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
-			else if (DO_RMWHITE) then
-			    system("convert -trim "+OFILE+".png "+OFILE+".png")
-			end if  end if  end if
+			if(DO_RMWHITE .or. DO_CONVERTGIF)then
+				CHK = 1
+				do while(CHK.ne.0)
+					CHK = toint(systemfunc("identify "+OFILE+".png >/dev/null 2>&1; echo $?"))
+					sleep(1)
+				end do
+
+				if(.not.DO_RMWHITE)then			system("convert "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				else if(.not.DO_CONVERTGIF)then		system("convert -trim "+OFILE+".png "+OFILE+".png")
+				else					system("convert -trim "+OFILE+".png +repage gif:"+OFILE+".gif && /bin/rm "+OFILE+".png")
+				end if  end if
+			end if
 
 		end do ;ppp
         
@@ -3022,7 +3065,9 @@ do fff = 0,nFiles-1
 	;     missing graphics.
 	;================================================================
         print("MSG: Checking that all graphics were produced for current forecast hour ("+sprinti("%0.3i", FHR(fff))+").")
-        if(.not.isvar("FILE_DONE"))then   FILE_DONE = new(nFiles,logical)   end if
+        if(.not.isvar("FILE_DONE"))then FILE_DONE = new(nFiles,logical)
+					FILE_DONE = False
+	end if
         FILE_DONE(fff) = True
         do ppp = 0,dimsizes(FNAME2)-1
                 ; Skip variables that are not expected for current FHR
@@ -3031,7 +3076,7 @@ do fff = 0,nFiles-1
                 if(FHR(fff).lt.24 .and. isStrSubset(FNAME2(ppp),"PRCP24_"))then continue   end if
                 if(DSOURCE.eq."GFS" .and. \
                    isStrSubset(FNAME2(ppp),"REFL"))then                         continue   end if
-                if(      DOMAIN.eq."d03"\
+                if(any(NSTDMN.eq.DOMAIN) \
                    .and. isStrSubset(FNAME2(ppp),"PRCP"))then                   continue   end if
                                                         
                 PNGname = FNAME2(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i", FHR(fff))+".gif"

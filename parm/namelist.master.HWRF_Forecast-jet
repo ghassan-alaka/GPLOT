@@ -32,9 +32,6 @@ ENSMEM = 0
 ; 1E. SYSTEM ENVIRONMENT
 SYS_ENV = JET
 
-; 1FF. Operation or Research Mode?
-IS_REAL = True
-
 ; 1F. FORECAST CYCLE
 IDATE = 
 
@@ -42,7 +39,7 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/
+IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HWRF/oper/
 ITAG =
 EXT =
 
@@ -50,17 +47,14 @@ EXT =
 ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/pytmp/HWRF_Forecast/
-ATCF1_TAG = trak.hwrf.raw
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HWRF_Forecast/
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HWRF/tracker_2023/
+ATCF1_TAG = trak.hwrf.atcfunix
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HWRF_Forecast_2023/
 ATCF2_TAG = atcfunix
-ATCF3_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/HWRF_Forecast/
-ATCF3_TAG = trak.hwrf.raw
 
 ; 1K. ADECK & BDECK PATHS
 ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC/
-BDECK1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/ftp.nhc.noaa.gov/atcf/btk/
-BDECK2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
@@ -78,12 +72,6 @@ DO_RMWHITE = True
 
 ; 1P. TOGGLE TITLE
 DO_SRCLBL = True
-
-; 1Q. AUTO-CHOOSE SETUP VARIABLES
-AUTO_VAR = False
-
-; 1R. AUTO-CHOOSE EXPERIMENT
-AUTO_DIR = False
 
 ; 1S. FORCE
 FORCE = False
@@ -115,6 +103,9 @@ TIER = Tier1 Tier2
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
 
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
+
 
 
 ;================================================================
@@ -128,19 +119,19 @@ MCODEI = HWFI
 MCODE12 = HWF2
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM = HWRF AVNO HMON CTCX EGRR
-INTM = HWRF AVNO HMON DSHP LGEM CTCX
-PRSM = HWRF AVNO HMON CTCX
-TRKMI = HWFI AVNI HMNI EGRI CTCI TVCN OFCL
-INTMI = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-TRKMT = HWRF HMON AVNO EGRR OFCL
-INTMT = HWRF HMON DSHP OFCL
+TRKM = HWRF HFSA HFSB AVNO HMON CTCX EGRR
+INTM = HWRF HFSA HFSB AVNO HMON DSHP LGEM CTCX
+PRSM = HWRF HFSA HFSB AVNO HMON CTCX
+TRKMI = HWFI HFAI HFBI AVNI HMNI EGRI CTCI TVCN OFCL
+INTMI = HWFI HFAI HFBI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = HWRF HFSA HFSB HMON AVNO EGRR OFCL
+INTMT = HWRF HFSA HFSB HMON DSHP OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HWFI GFSI HMNI CTCI TVCN OFCL
-EIM = HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-LTM = HWRF GFSO HMON CTCX
-LIM = HWRF GFSO HMON CTCX
+ETM = HWFI HFAI HFBI GFSI HMNI CTCI TVCN OFCL
+EIM = HWFI HFAI HFBI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = HWRF HFSA HFSB GFSO HMON CTCX
+LIM = HWRF HFSA HFSB GFSO HMON CTCX
 
 ; 3D. VERIFICATION TIMES
 LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
@@ -160,7 +151,7 @@ DO_INTERP = False
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots_heightcoordinates_research.py
+PYTHONFILE = polar_cylindrical_structure.py
 RESOLUTION = 1.5
 RMAX = 600
 MODELTAG = hwrfprs.storm.0p015

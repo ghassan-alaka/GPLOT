@@ -10,6 +10,11 @@ GFS           pgrb2.0p25              pgrb2.0p25                 pgrb2.0p25
 HFVGFS        nest02_nested_ltd       nest02_nested_ltd          nest02_nested_ltd
 fvGFS_ATL     nest02_nested_ltd       nest02_nested_ltd          nest02_nested_ltd
 GEFS          gep                     gep                        gep
-HAFS          hafsprs.synoptic.0p03   hafsprs.synoptic.0p03      hafsprs.synoptic.0p03
-ECMWF         global.0p5              global.0p5                 global.0p5
+HAFSV0.3      hafs.grid01             hafs.grid02                hafs.grid02
+HAFSV1.0      hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
+HAFS          hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
+HAFS_HYCOM    hfs[a-z].hycom.3z       hfs[a-z].hycom.3z          hfs[a-z].hycom.3z
+HAFSV0.3_HYCOM hafs.hycom.3z          hafs.hycom.3z              hafs.hycom.3z
+HAFS_MOM6     hfs[a-z].mom6           hfs[a-z].mom6              hfs[a-z].mom6
+ECMWF         ecmwf.oper-fc           ecmwf.oper-fc              ecmwf.oper-fc
 HMON          hmonprs.d1.0p20         hmonprs.d2.0p06            hmonprs.d3.0p02

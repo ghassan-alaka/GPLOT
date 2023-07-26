@@ -49,10 +49,10 @@
 ; Universal Constants
 ;================================================================
 
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
 
-external MWAVG    "$GPLOT_DIR/ncl/wrapit/mwavg.so"
-external HBFILTER "$GPLOT_DIR/ncl/wrapit/hbfilter.so"
+external MWAVG    "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/mwavg.so"
+external HBFILTER "$GPLOT_DIR/sorc/GPLOT/ncl/wrapit/hbfilter.so"
 
 g		= 9.80665
 pi		= 3.14159265359
@@ -749,20 +749,39 @@ begin
 				end if
 				BDS(0) = TCLATS(i)+20.
 				BDS(1) = TCLATS(i)-20.
-	end if  end if  end if  end if  end if  end if  end if
-	
+
+	; TYPE 8: Take +/- 6 degrees around a TC center	for the HAFSv0.3 moving nest
+	else if(TYPE.eq.8)then	if(ismissing(TCLATS(i)))then	print("ERROR: get_dim_lat: TC latitude not found.")
+								exit
+				end if
+				BDS(0) = TCLATS(i)+6.
+				BDS(1) = TCLATS(i)-6.
+
+	end if  end if  end if  end if
+	end if  end if  end if  end if
+
+	; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(0:1).eq.0.))then
+	        if(max(f->$DIM$).lt.BDS(1))then		LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        else if(min(f->$DIM$).gt.BDS(0))then	LAT = fval
+							LAT@_FillValue = fval
+							return(LAT)
+	        end if  end if
+	end if
 	
 	; Create LAT if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LAT, then adjust
 	; to coordinates that are outside of BDS.
 	if(.not.isvar("LAT"))then
-		if(BDS(0).lt.max(f->$DIM$))then
+		if(BDS(0).lt.max(f->$DIM$) .and. BDS(0).ge.min(f->$DIM$))then
 			if(f->$DIM$({BDS(0)}).ne.BDS(0))then
 				IBDS0 = BDS(0)+abs(f->$DIM$(0) - f->$DIM$(1))
 			end if
 		end if
 		if(.not.isvar("IBDS0"))then   IBDS0 = BDS(0)   end if
-		if(BDS(1).gt.min(f->$DIM$))then
+		if(BDS(1).gt.min(f->$DIM$) .and. BDS(1).le.max(f->$DIM$))then
 			if(f->$DIM$({BDS(1)}).ne.BDS(1))then
 				IBDS1 = BDS(1)-abs(f->$DIM$(0) - f->$DIM$(1))
 			end if
@@ -814,13 +833,13 @@ begin
 	if(isatt(BOCO,"doPivot"))then	DO_PIVOT = BOCO@doPivot
 	else				DO_PIVOT = True
 	end if
-	
+
 	; Check if the longitude coordinate is as expected.
 	; -180<->180 needs to be treated differently than 0<->360
 	if(min(f->$DIM$).eq.0.)then
 		if(DO_PIVOT)then		LONF	= lonPivot(f->$DIM$,PIV)
 						LONF	:= (/where(LONF.ge.PIV,LONF-360.,LONF)/)
-						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
+						if(PIV.ge.0 .and. max(array_append_record(TCLONS,BDS(2:3),0)).gt.PIV)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF 	= (/f->$DIM$/)
 						flipFlag= False
@@ -832,7 +851,7 @@ begin
 						flipFlag= False
 	else
 		if(DO_PIVOT)then		LONF    = lonPivot(f->$DIM$,PIV)
-						if(max(array_append_record(TCLONS,BDS(2:3),0)).gt.20)then   LONF := LONF+360.   end if
+						if(PIV.ge.0 .and. max(array_append_record(TCLONS,BDS(2:3),0)).gt.PIV)then   LONF := LONF+360.   end if
 						flipFlag= True
 		else				LONF    := (/f->$DIM$/)
 						flipFlag= False
@@ -863,12 +882,6 @@ begin
 	else if(TYPE.eq.2)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-					LONF    = (/LONF - 360./)
-				else if(TCLONS(i).gt.max(LONF))then
-					LONF    = (/LONF + 360./)
-                                end if  end if
-                                
 				BDS(3) = TCLONS(i)+15.
 				BDS(2) = TCLONS(i)-15.
 	
@@ -876,11 +889,6 @@ begin
 	else if(TYPE.eq.3)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(i).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(i)+4.
 				BDS(2) = TCLONS(i)-4.
 
@@ -907,11 +915,6 @@ begin
 	else if(TYPE.eq.5)then	if(ismissing(TCLONS(0)))then	print("ERROR: get_dim_lon: Initial TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(0).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(0).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(0)+40.
 				BDS(2) = TCLONS(0)-40.
 	
@@ -919,11 +922,6 @@ begin
 	else if(TYPE.eq.6)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(i).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(i)+10.
 				BDS(2) = TCLONS(i)-10.
 	
@@ -931,29 +929,52 @@ begin
 	else if(TYPE.eq.7)then	if(ismissing(TCLONS(i)))then	print("ERROR: get_dim_lon: TC longitude not found.")
 								exit
 				end if
-                                if(TCLONS(i).lt.min(LONF))then
-                                        LONF    = (/LONF - 360./)
-                                else if(TCLONS(i).gt.max(LONF))then
-                                        LONF    = (/LONF + 360./)
-                                end if  end if
 				BDS(3) = TCLONS(i)+20.
 				BDS(2) = TCLONS(i)-20.
-	end if  end if  end if  end if  end if  end if  end if
+
+	; TYPE 8: Take +/- 6 degrees around a TC center (for HAFSv0.3 12x12 moving nest)
+	else if(TYPE.eq.8)then  if(ismissing(TCLONS(i)))then    print("ERROR: get_dim_lon: TC longitude not found.")
+                                                                exit
+				end if
+				BDS(3) = TCLONS(i)+6.
+				BDS(2) = TCLONS(i)-6.
+
+	end if  end if  end if  end if
+	end if  end if  end if  end if
 	LONF!0   = "lon"
 	LONF&lon = LONF
 	LONF@units = "degrees_east"
+
+        ; Check that the model domain and the graphic domain overlap.
+	if(.not.all(BDS(2:3).eq.0.))then
+	        if(max(LONF).lt.BDS(2))then		LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		else if(min(LONF).gt.BDS(3))then	LON = fval
+							LON@_FillValue = fval
+							return(LON)
+		end if  end if
+	end if
+
+	; Adjust the full longitude array based on the bounds
+	if(any((/2,3,5,6,7,8/).eq.TYPE))then
+		if(BDS(3).lt.min(LONF))then		LONF = (/LONF - 360./)
+		else if(BDS(2).gt.max(LONF))then	LONF = (/LONF + 360./)
+		end if  end if
+	end if
+
 
 	; Create LON if not already defined using BDS
 	; If the BDS coordinates are not found exactly in LON, then adjust
 	; to coordinates that are outside of BDS.
 	if(.not.isvar("LON"))then
-		if(BDS(3).lt.max(LONF))then
+		if(BDS(3).lt.max(LONF) .and. BDS(3).ge.min(LONF))then
 			if(LONF({BDS(3)}).ne.BDS(3))then
 				IBDS3 = BDS(3)+abs(LONF(0) - LONF(1))
 			end if
 		end if
 		if(.not.isvar("IBDS3"))then   IBDS3 = BDS(3)   end if
-		if(BDS(2).gt.min(LONF))then
+		if(BDS(2).gt.min(LONF) .and. BDS(2).le.max(LONF))then
 			if(LONF({BDS(2)}).ne.BDS(2))then
 				IBDS2 = BDS(2)-abs(LONF(0) - LONF(1))
 			end if
@@ -977,7 +998,6 @@ begin
 	LON@units	= "degrees_east"
 	LON!0		= "lon"
 	LON&lon		= LON
-	
 
 	return(LON)
 
@@ -1160,7 +1180,6 @@ begin
 	end if
 	;print(rmVortex)
 
-
 	; Longer string means we are dealing with multiple vertical levels
 	; e.g., average, difference, etc.
 	if(strlen(varInfo(1)).gt.4)then
@@ -1196,11 +1215,7 @@ begin
 				JSZ	= dimsizes(tmpU1(:,0))
 				if(isatt(tmpU1,"units"))then   units = tmpU1@units   end if
 				
-				if(flipFlag)then	;tmpU1	:= lonFlip(tmpU1)
-							;tmpU2	:= lonFlip(tmpU2)
-							;tmpV1	:= lonFlip(tmpV1)
-							;tmpV2	:= lonFlip(tmpV2)
-							tmpU1	:= lonPivot(tmpU1,PIV)
+				if(flipFlag)then	tmpU1	:= lonPivot(tmpU1,PIV)
 							tmpU2	:= lonPivot(tmpU2,PIV)
 							tmpV1	:= lonPivot(tmpV1,PIV)
 							tmpV2	:= lonPivot(tmpV2,PIV)
@@ -1591,7 +1606,9 @@ begin
 			else			V@units = "m s-1"
 			end if
 			delete([/tmpU,tmpV/])
-		else if(any((/"RVO","AVO"/).eq.varInfo(0)) .and. .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		;else if(any((/"RVO","AVO"/).eq.varInfo(0)) .and. .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
+		else if(varInfo(0).eq."RVO" .and. .not.isfilevar(f,findVarName(dSource,"RVO",varInfo(1))) \
+                        .or. varInfo(1).eq."AVO" .and. .not.isfilevar(f,findVarName(dSource,"AVO",varInfo(1))))then
 			if(latDim .and. lonDim .and. .not.levDim .and. .not.timeDim)then
 				tmpU	= f->$findVarName(dSource,"U",varInfo(1))$({iBds(0):iBds(1)},:)
 				tmpV	= f->$findVarName(dSource,"V",varInfo(1))$({iBds(0):iBds(1)},:)

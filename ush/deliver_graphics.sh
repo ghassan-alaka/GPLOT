@@ -25,10 +25,13 @@
 ## Script history log:
 ##
 ## 2020-07-02  Ghassan J. Alaka, Jr. -- Original version.
+## 2022-07-07  Ghassan J. Alaka, Jr. -- Improved input argument parsing
+##                                      Added input arg for max time since modification
+##                                      Added structure files to file copy list
 ##
 ## Usage: deliver_graphics.sh <Input Directory> <Output Directory>
 ##                            <Graphics Subdirectory Name> <Forecast Cycle>
-##                            <Experiment Name>
+##                            <Experiment Name> <Max Minutes Modified>
 ##
 ################################################################################
 
@@ -43,29 +46,32 @@ ODIR="$2"    # Output top-level directory
 if [ ! -d ${ODIR} ]; then
     echo "ERROR: Output directory must exist."
 fi
-LOC="$3"     # Graphics subdirectory name
+LOC="${3:-hrdgraphics}"     # Graphics subdirectory name
 if [ "${LOC}" == "0" ]; then
     echo "MSG: Defaulting graphics subdirectory name to 'hrdgraphics'."
     LOC="hrdgraphics"
 fi
-CYCLE="$4"   # Forecast cycle (YYYYMMDDHH)
+CYCLE="${4:-0}"   # Forecast cycle (YYYYMMDDHH)
 GET_CYCLE="NO"
 if [ "$CYCLE" == "0" ]; then
     GET_CYCLE="YES"
 fi
-EXPT="$5"    # Experiment name, required for creating full output path
+EXPT="${5:-0}"    # Experiment name, required for creating full output path
 GET_EXPT="NO"
 if [ "${EXPT}" == "0" ]; then
     echo "WARNING: Experiment name is undefined. Will attempt to parse from the input path."
     GET_EXPT="YES"
 fi
+MMIN="${6:-"-1000000"}"
 
 # Define the rsync executable
-X_RSYNC="/home/Ghassan.Alaka/GPLOT/shell/rsync_no_vanished.sh"
+X_RSYNC="${7:-${HOME}/GPLOT/ush/rsync_no_vanished.sh}"
 
 # Find all matching input directories beneath IDIR
-echo "find ${IDIR} -type d -name \"${LOC}\""
-ALL_DIRS=`find "${IDIR}"/ -type d -name "${LOC}"`
+echo "find ${IDIR} -type d -name \"${LOC}\" -mmin ${MMIN}"
+ALL_DIRS=`find "${IDIR}"/ -type d -name "${LOC}" -mmin ${MMIN}`
+echo "MSG: I found these matching directories --> ${ALL_DIRS[*]}"
+
 
 # Loop over all directories
 for D in ${ALL_DIRS[@]}; do
@@ -112,7 +118,7 @@ for D in ${ALL_DIRS[@]}; do
 
     # Copy all modified files.
     #${X_RSYNC} -zav --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
-    ${X_RSYNC} -zauv --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
+    ${X_RSYNC} -zauv --include="*/" --include="*gif" --include="*ships.dat" --include="*structure*.txt" --exclude="*" ${D}/* ${ODIR_FULL}
 
 done
 

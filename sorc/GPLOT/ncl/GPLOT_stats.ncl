@@ -42,9 +42,9 @@
 ; Load scripts
 ;================================================================
 
-load "$GPLOT_DIR/ncl/GPLOT_func.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_util.ncl"
-load "$GPLOT_DIR/ncl/GPLOT_main.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_func.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_util.ncl"
+load "$GPLOT_DIR/sorc/GPLOT/ncl/GPLOT_main.ncl"
 
 
 
@@ -129,10 +129,10 @@ print("MSG: Verbose level = "+tostring(verbose))
 ; 1. Set the namelist path.
 ;    Preferable to get this from the command line.
 ;    Default namelist is set as a backup.
-if(.not.isvar("MASTER_NML_IN"))then             MASTER_NML = GPLOT_DIR+"/nmlist/namelist.master.default"
+if(.not.isvar("MASTER_NML_IN"))then             MASTER_NML = GPLOT_DIR+"/parm/namelist.master.default"
 else
         if(fileexists(MASTER_NML_IN))then       MASTER_NML = MASTER_NML_IN
-        else                                    MASTER_NML = GPLOT_DIR+"/nmlist/"+MASTER_NML_IN
+        else                                    MASTER_NML = GPLOT_DIR+"/parm/"+MASTER_NML_IN
         end if
 end if
 print("MSG: Using this master namelist:  "+MASTER_NML)
@@ -293,10 +293,10 @@ system("mkdir -p "+ODIR_ADECK)
 ; Graphics Namelist
 ; Comment this to set default namelist.
 if(.not.isvar("VAR_NML"))then   
-	if(fileexists(GPLOT_DIR+"/nmlist/namelist.stats."+EXPT))then
-		VAR_NML = GPLOT_DIR+"/nmlist/namelist.stats."+EXPT
-	else if(fileexists(GPLOT_DIR+"/nmlist/namelist.stats.default"))then
-		VAR_NML = GPLOT_DIR+"/nmlist/namelist.stats.default"
+	if(fileexists(GPLOT_DIR+"/parm/namelist.stats."+EXPT))then
+		VAR_NML = GPLOT_DIR+"/parm/namelist.stats."+EXPT
+	else if(fileexists(GPLOT_DIR+"/parm/namelist.stats.default"))then
+		VAR_NML = GPLOT_DIR+"/parm/namelist.stats.default"
 	else
 		print("ERROR: Default variable namelist not available.")
 		exit
@@ -306,7 +306,7 @@ print("MSG: Using this variable namelist: "+VAR_NML)
 
 
 NML_DATA	:= asciiread(VAR_NML,-1,"string")
-headers		:= str_squeeze(str_split(NML_DATA(0)," "))
+headers		:= str_squeeze(str_split(NML_DATA(0),"	 "))
 
 
 
@@ -317,7 +317,7 @@ headers		:= str_squeeze(str_split(NML_DATA(0)," "))
 ; Guidance
 val := ind(isStrSubset2(NML_DATA,"GUIDANCE"))
 if(.not.ismissing(val(0)))then
-	DO_GUIDANCE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+	DO_GUIDANCE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 	
 	if(DO_GUIDANCE)then
 		
@@ -325,14 +325,14 @@ if(.not.ismissing(val(0)))then
 		val := ind(isStrSubset2(NML_DATA,"LATE_TK_GUIDE"))
 		if(ismissing(val(0)))then
 			DO_LT_GUIDE = False
-		else	DO_LT_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LT_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 
 		; Late Track/Intensity Guidance
 		val := ind(isStrSubset2(NML_DATA,"LATE_TKINT_GUIDE"))
 		if(ismissing(val(0)))then
 			DO_LTI_GUIDE = False
-		else	DO_LTI_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LTI_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 
 		
@@ -340,28 +340,28 @@ if(.not.ismissing(val(0)))then
 		val := ind(isStrSubset2(NML_DATA,"EARLY_TK_GUIDE"))
 		if(ismissing(val(0)))then
 			DO_ET_GUIDE = False
-		else	DO_ET_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_ET_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Late Intensity Guidance
 		val := ind(isStrSubset2(NML_DATA,"LATE_INT_GUIDE"))
 		if(ismissing(val(0)))then
 			DO_LI_GUIDE = False
-		else	DO_LI_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LI_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Early Intensity Guidance
 		val := ind(isStrSubset2(NML_DATA,"EARLY_INT_GUIDE"))
 		if(ismissing(val(0)))then
 			DO_EI_GUIDE = False
-		else	DO_EI_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_EI_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Late Pressure Guidance
 		val := ind(isStrSubset2(NML_DATA,"LATE_PRS_GUIDE"))
 		if(ismissing(val(0)))then
 			DO_LP_GUIDE = False
-		else	DO_LP_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LP_GUIDE = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 	else
 		; If no guidance, then set all of these to False.
@@ -384,7 +384,7 @@ end if
 ; Trends
 val := ind(isStrSubset2(NML_DATA,"TRENDS"))
 if(.not.ismissing(val(0)))then
-	DO_TRENDS = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+	DO_TRENDS = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 	
 	if(DO_TRENDS)then
 		
@@ -392,21 +392,21 @@ if(.not.ismissing(val(0)))then
 		val := ind(isStrSubset2(NML_DATA,"LATE_TK_TREND"))
 		if(ismissing(val(0)))then
 			DO_LT_TREND = False
-		else	DO_LT_TREND = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LT_TREND = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Late Intensity Trends
 		val := ind(isStrSubset2(NML_DATA,"LATE_INT_TREND"))
 		if(ismissing(val(0)))then
 			DO_LI_TREND = False
-		else	DO_LI_TREND = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LI_TREND = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Late Pressure Trends
 		val := ind(isStrSubset2(NML_DATA,"LATE_PRS_TREND"))
 		if(ismissing(val(0)))then
 			DO_LP_TREND = False
-		else	DO_LP_TREND = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LP_TREND = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 	else
 		; If no trends, then set all of these to False.
@@ -423,7 +423,7 @@ end if
 ; Verification
 val := ind(isStrSubset2(NML_DATA,"VERIFICATION"))
 if(.not.ismissing(val(0)))then
-	DO_VERIFICATION	= where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+	DO_VERIFICATION	= where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 	
 	if(DO_VERIFICATION)then
 		
@@ -431,28 +431,28 @@ if(.not.ismissing(val(0)))then
 		val := ind(isStrSubset2(NML_DATA,"EARLY_TK_VER"))
 		if(ismissing(val(0)))then
 			DO_ET_VER = False
-		else	DO_ET_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_ET_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Early Intensity Verification
 		val := ind(isStrSubset2(NML_DATA,"EARLY_INT_VER"))
 		if(ismissing(val(0)))then
 			DO_EI_VER = False
-		else	DO_EI_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_EI_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Late Track Verification
 		val := ind(isStrSubset2(NML_DATA,"LATE_TK_VER"))
 		if(ismissing(val(0)))then
 			DO_LT_VER = False
-		else	DO_LT_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LT_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 		
 		; Late Intensity Verification
 		val := ind(isStrSubset2(NML_DATA,"LATE_INT_VER"))
 		if(ismissing(val(0)))then
 			DO_LI_VER = False
-		else	DO_LI_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1," ")).eq."True",True,False)
+		else	DO_LI_VER = where(str_squeeze(str_get_field(NML_DATA(val(0)),ind(headers.eq."CHOICE")+1,"	 ")).eq."True",True,False)
 		end if
 	else
 		; If no verification, then set all of these to False
@@ -614,8 +614,8 @@ XYHrs2	:= array_append_record((/-24,-12/),LEAD_TIMES,0)	; trends
 
 
 ; Define some executables
-ADECK_EXE = GPLOT_DIR+"/shell/createADeck.ksh"
-INTERP_HOME = GPLOT_DIR+"/NHC_interp/"
+ADECK_EXE = GPLOT_DIR+"/ush/createADeck.ksh"
+INTERP_HOME = GPLOT_DIR+"/sorc/NHC_interp/"
 INTERP_EXE = "run.sh"
 INTERP_NML = "intrfcst.input"
 
@@ -685,7 +685,9 @@ end if
 print("MSG: Found this ATCF file --> "+ATCF_FILE)
 ATCF_BASE = systemfunc("basename "+ATCF_FILE)
 ATCF_DIR = str_sub_str(ATCF_FILE,ATCF_BASE,"")
-ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+if(ODIR_TYPE.eq.1)then	ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +20")
+else			ATCF_MOD = systemfunc("find "+ATCF_FILE+" -mmin +60")
+end if
 
 
 ; Check if the ATCF file is the final ATCF
@@ -703,9 +705,13 @@ end if  end if
 fSplit	:= str_split(ATCF_BASE,".")
 LONGSID	:= fSplit(0)
 tmp	:= tochar(LONGSID)
-TC_NAME	:= str_upper(tostring(tmp(0)))+""+tostring(tmp(1:dimsizes(tmp)-4))
-TC_NUM	:= tostring(tmp(dimsizes(tmp)-3:dimsizes(tmp)-2))
-BASIN1	:= tostring(tmp(dimsizes(tmp)-1))
+if(dimsizes(tmp).ge.4)then
+	TC_NAME	:= str_upper(tostring(tmp(0:dimsizes(tmp)-4)))
+else
+	TC_NAME := "MISSING"
+end if
+TC_NUM  := tostring(tmp(dimsizes(tmp)-3:dimsizes(tmp)-2))
+BASIN1  := tostring(tmp(dimsizes(tmp)-1))
 if(BASIN1.eq."l")then   BASIN2 = "al"   end if
 if(BASIN1.eq."e")then   BASIN2 = "ep"   end if
 if(BASIN1.eq."c")then   BASIN2 = "cp"   end if
@@ -1026,7 +1032,11 @@ if(MCODEI.ne."MISSING" .and. MCODE12.ne."MISSING")then
 	system("sed -i 's/BBBB/"+MCODE12+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/CCCC/"+MCODEI+"/g' "+INTERP_DIR+"/"+INTERP_NML)
 	system("sed -i 's/DDD/006/g' "+INTERP_DIR+"/"+INTERP_NML)
-	system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	if(DSOURCE.eq."HAFS")then
+		system("sed -i 's/EEE/036/g' "+INTERP_DIR+"/"+INTERP_NML)
+	else
+		system("sed -i 's/EEE/"+sprinti("%0.3i",FNL_HR)+"/g' "+INTERP_DIR+"/"+INTERP_NML)
+	end if
 	
 
 	; Run the interpolation executable to produce early forecasts.
@@ -1126,6 +1136,7 @@ if(ismissing(vals(0)))then
 	print("ERROR: No cycles in the A-Deck match "+MCODE+". Can't continue.")
 
         ; Update the status file.
+	LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
         system("echo 'failed' > "+STATUS_FILE)
@@ -1199,6 +1210,7 @@ if(DO_LT_GUIDE)then
 	vals := ind(.not.ismissing(aTRK(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late track models at "+IDATE+" --> "+stringOut(TRKmodels(vals)))
 	else				print("WARNING: None of the late track models were found.")
+					DO_LT_GUIDE = False
 	end if
 end if
 
@@ -1220,6 +1232,7 @@ if(DO_LTI_GUIDE)then
 	vals := ind(.not.ismissing(aTRKINT(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late track/intensity models at "+IDATE+" --> "+stringOut(TRKINTmodels(vals)))
 	else				print("WARNING: None of the late track models were found.")
+					DO_LTI_GUIDE = False
 	end if
 end if
 
@@ -1227,7 +1240,7 @@ end if
 
 ; EARLY TRACK GUIDANCE	
 if(DO_ET_GUIDE)then
-	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+	if(ODIR_TYPE.eq.0)then	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))  end if
 	print("MSG: Retrieving these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI))
 	aTRKI	= new((/dimsizes(TRKmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(TRKmodelsI)-1
@@ -1243,6 +1256,7 @@ if(DO_ET_GUIDE)then
 	vals := ind(.not.ismissing(aTRKI(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these early track models at "+IDATE06+" --> "+stringOut(TRKmodelsI(vals)))
 	else				print("WARNING: None of the early track models were found.")
+					DO_ET_GUIDE = False
 	end if
 end if
 
@@ -1278,7 +1292,7 @@ if(DO_LT_TREND)then
 		end do
 		vals := ind(.not.ismissing(aTRK2(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(IDATES(vals)))
-		else				print("WARNING: No cycles were found.")
+		else				print("WARNING: No cycles were found for "+TRKmodelsT(mmm)+".")
 		end if
 	
 		; Get all forecast cycles for each model
@@ -1299,11 +1313,13 @@ if(DO_LT_TREND)then
 		end do
 		vals := ind(.not.ismissing(aTRK3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
-		else				print("WARNING: No cycles were found.")
+		else				print("WARNING: No cycles were found for "+TRKmodelsT(mmm)+".")
 		end if
 	end do
-end if
 
+	if(all(ismissing(aTRK2)) .and. all(ismissing(aTRK3)))then   DO_LT_TREND = False   end if
+
+end if
 
 
 ; LATE INTENSITY GUIDANCE
@@ -1322,6 +1338,7 @@ if(DO_LI_GUIDE)then
 	vals := ind(.not.ismissing(aINT(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late intensity models at "+IDATE+" --> "+stringOut(INTmodels(vals)))
 	else				print("WARNING: None of the late intensity models were found.")
+					DO_LI_GUIDE = False
 	end if
 	aINT(:,0,:) = where(aINT(:,0,:).le.0, aINT@_FillValue, aINT(:,0,:))
 end if
@@ -1329,7 +1346,7 @@ end if
 
 ; EARLY INTENSITY GUIDANCE
 if(DO_EI_GUIDE)then
-	system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))
+	if(ODIR_TYPE.eq.0)then  system("mkdir -p "+str_sub_str(ODIR,IDATE,IDATE06))  end if
 	print("MSG: Retrieving these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI))
 	aINTI	= new((/dimsizes(INTmodelsI),3,100/),"float",fval3)
 	do aaa = 0,dimsizes(INTmodelsI)-1
@@ -1341,6 +1358,7 @@ if(DO_EI_GUIDE)then
 	vals := ind(.not.ismissing(aINTI(:,0,0)))
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these early intensity models at "+IDATE06+" --> "+stringOut(INTmodelsI(vals)))
 	else					print("WARNING: None of the early intensity models were found.")
+						DO_EI_GUIDE = False
 	end if
 	aINTI(:,0,:) = where(aINTI(:,0,:).le.0, aINTI@_FillValue, aINTI(:,0,:))
 end if
@@ -1376,7 +1394,7 @@ if(DO_LI_TREND)then
 		end do
 		vals := ind(.not.ismissing(aINT2(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then		print("MSG: Found these cycles --> "+stringOut(IDATES2(vals)))
-		else					print("WARNING: No cycles were found.")
+		else					print("WARNING: No cycles were found for "+INTmodelsT(mmm)+".")
 		end if
 		
 		; Get all forecast cycles for each model
@@ -1397,11 +1415,13 @@ if(DO_LI_TREND)then
 		end do
 		vals := ind(.not.ismissing(aINT3(mmm,:,0,0)))
 		if(.not.ismissing(vals(0)))then	print("MSG: Found these cycles --> "+stringOut(allDates(vals)))
-		else				print("WARNING: No cycles were found.")
+		else				print("WARNING: No cycles were found for "+INTmodelsT(mmm)+".")
 		end if
 	end do
 	aINT2(:,:,0,:) = where(aINT2(:,:,0,:).le.0, aINT2@_FillValue, aINT2(:,:,0,:))
 	aINT3(:,:,0,:) = where(aINT3(:,:,0,:).le.0, aINT3@_FillValue, aINT3(:,:,0,:))
+
+	if(all(ismissing(aINT2)) .and. all(ismissing(aINT2)))then   DO_LI_TREND = False   end if
 end if
 
 
@@ -1422,6 +1442,7 @@ if(DO_LP_GUIDE)then
 	vals := ind(.not.ismissing(aPRS(:,0,0)))
 	if(.not.ismissing(vals(0)))then	print("MSG: Found these late pressure models at "+IDATE+" --> "+stringOut(PRSmodels(vals)))
 	else				print("WARNING: None of the late pressure models were found.")
+					DO_LP_GUIDE = False
 	end if
 end if
 
@@ -1451,13 +1472,14 @@ if(DO_LP_TREND)then
 	vals := ind(.not.ismissing(aPRS2(:,0,0)))
 	if(.not.ismissing(vals(0)))then		print("MSG: Found these cycles --> "+stringOut(IDATES3(vals)))
 	else					print("WARNING: No cycles were found.")
+						DO_LP_TREND = False
 	end if
 end if
 
 
 
 
-;================================================================
+ ;================================================================
 ; Read BDECK data.
 ;================================================================
 
@@ -1466,6 +1488,7 @@ if(fileexists(ADIR+BDECK))then
 	print("MSG: Reading BDECK file --> "+ADIR+BDECK)
 
 	; Update the status file.
+	LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").") 
 	system("echo 'working' > "+STATUS_FILE)
@@ -1577,6 +1600,7 @@ print("MSG: *************STEP THREE************")
 print("MSG: PRODUCE GUIDANCE GRAPHICS.")
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
@@ -2201,7 +2225,14 @@ if(DO_ET_GUIDE)then
 								rngLon = abs(maxLon-minLon)
 	end if  end if
 	if(ismissing(rngLon) .or. ismissing(rngLat) .or. rngLon.eq.0)then
-		print("WARNING: Late model track guidance can't be produced.")
+		print("WARNING: Early model track guidance can't be produced.")
+		DO_THIS = False
+		DO_ET_GUIDE = False
+	end if
+
+	vals := ind(.not.ismissing(aTRKI(:,0,0)))
+	if(ismissing(vals(0)))then
+		print("WARNING: Early model track guidance can't be produced.")
 		DO_THIS = False
 		DO_ET_GUIDE = False
 	end if
@@ -2227,7 +2258,9 @@ if(DO_ET_GUIDE)then
 	
 
 		; Set up the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		if(ODIR_TYPE.eq.1)then	OFILE = ODIR+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		else			OFILE = str_sub_str(ODIR,IDATE,IDATE06)+"TrackGuidance."+LONGSID+"."+IDATE06+".early"
+		end if
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2569,7 +2602,7 @@ if(DO_LI_GUIDE)then
 			; Add legend info for each model
 			if(DO_MARKERS)then
 				mkres2@gsMarkerColor := INTcolors(ppp2)
-				mkres2@gsMarkerIndex := INTmarkers(ppp3)
+				mkres2@gsMarkerIndex := INTmarkers(ppp2)
 				gsn_polymarker_ndc(wks,vpLFT+(tofloat(ppp3%4)*0.25*vpWID)+0.02,vpTOP+vpHEAD-0.02*tofloat(ppp3/4),mkres2)
 			end if
 			gsn_polyline_ndc(wks,(/vpLFT+(tofloat(ppp3%4)*0.25*vpWID),vpLFT+(tofloat(ppp3%4)*0.25*vpWID)+0.04/),\
@@ -2663,7 +2696,9 @@ if(DO_EI_GUIDE)then
 
 
 		; Setup the output file
-		OFILE	= str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		if(ODIR_TYPE.eq.1)then	OFILE = ODIR+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		else			OFILE = str_sub_str(ODIR,IDATE,IDATE06)+"IntensityGuidance."+LONGSID+"."+IDATE06+".early"
+		end if
 		if(fileexists(OFILE))then   system("rm -f "+OFILE)   end if
 		wks	= gsn_open_wks(wtype,OFILE)
                 setvalues NhlGetWorkspaceObjectId()
@@ -2696,9 +2731,9 @@ if(DO_EI_GUIDE)then
 	
 		; Plot the best track
 		if(.not.ismissing(vals(0)) .and. dimsizes(vals).ge.2)then
-			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2a)
+			plot	:= gsn_csm_xy(wks,bHrs(vals),bINT(0,vals),xyres2b)
 		else
-			plot	:= gsn_csm_blank_plot(wks,xyres2a)
+			plot	:= gsn_csm_blank_plot(wks,xyres2b)
 		end if
 
 		; Info about plot size
@@ -2765,7 +2800,7 @@ if(DO_EI_GUIDE)then
 	
 			plres2@gsLineColor   := INTcolorsI(ppp2)
 			txres4@txFontColor   := INTcolorsI(ppp2)
-	
+
 			; Overlay the new intensity line
 			overlay(plot,gsn_csm_xy(wks,aINTI(ppp2,1,vals),aINTI(ppp2,0,vals),xyres2b))
 
@@ -3033,6 +3068,7 @@ print("MSG: *************STEP FOUR************")
 print("MSG: PRODUCE TREND & LIFETIME GRAPHICS.")
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
@@ -3238,7 +3274,7 @@ if(DO_LT_TREND)then
 				; Add model tracks
 				do ttt = 0,nTrend-1
 	
-					; Check if the HWRF-B track is available
+					; Check if the track is available
 					if(all(ismissing(aTRK2(mmm,ttt,0,:))))then
 						print("WARNING: "+thisModel+" track is unavailable for "+IDATES(ttt)+".")
 						continue
@@ -3248,7 +3284,7 @@ if(DO_LT_TREND)then
 					tmp	:= toint(where(ismissing(aTRK2(mmm,ttt,2,:)), fval2, aTRK2(mmm,ttt,2,:)))
 					vals	:= ind(tmp%6.eq.0)
 					vals2	:= ind(tmp%12.eq.0)
-					;vals3	:= vals2(ind(.not.ismissing(aTRK2(mmm,ttt,0,vals2))))
+					if(ismissing(vals2(0)))then  vals2 := ind((tmp+6)%12.eq.0)  end if	;; extra step in case lead times are 6,18,30,42,...
 					if(ismissing(vals2(0)) .or. ismissing(vals(0)))then   continue   end if
 					if(dimsizes(vals).eq.1)then   continue   end if
 					vals3	:= vals2(ind(.not.ismissing(aTRK2(mmm,ttt,0,vals2))))
@@ -3649,7 +3685,7 @@ if(DO_LI_TREND)then
 	else if(1.2*rngInt3.ge.50. .and. 1.2*rngInt3.lt.100.)then
 		IntMjrGrd3 := ispan(toint(minInt3-(0.10*rngInt3)) - toint(minInt3-(0.10*rngInt3))%10 + 10,\
 				    toint(maxInt3+(0.10*rngInt3)) - toint(maxInt3+(0.10*rngInt3))%10,10)
-	else if(1.2*rngInt.lt.50.)then
+	else if(1.2*rngInt3.lt.50.)then
 		IntMjrGrd3 := ispan(toint(minInt3-(0.10*rngInt3)) - toint(minInt3-(0.10*rngInt3))%5 + 5,\
 				    toint(maxInt3+(0.10*rngInt3)) - toint(maxInt3+(0.10*rngInt3))%5,5)
 	end if  end if  end if
@@ -4301,6 +4337,7 @@ if(DO_VERIFICATION)then
 	print("MSG: time (HU,TS,TD,SS,SD).")
 	
         ; Update the status file.
+	LOCK_FILE = STATUS_FILE+".lock"
         system("lockfile -r-1 -l 180 "+LOCK_FILE)
         print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
         system("echo 'working' > "+STATUS_FILE)
@@ -4336,15 +4373,15 @@ if(DO_VERIFICATION)then
 
 	; 2. set up files and directories
 	system("mkdir -p "+ODIR+"mettc/")
-	system("cp "+GPLOT_DIR+"/mettc/config/TCPairsConfig_match "+TCPconf)
+	system("cp "+GPLOT_DIR+"/parm/mettc/config/TCPairsConfig_match "+TCPconf)
 	if(.not.fileexists(TCPconf))then	print("ERROR: TC_PAIRS config file not found.")
 						exit
 	end if
-	system("cp "+GPLOT_DIR+"/mettc/config/TCStatConfig_filter "+TCSconf_f)
+	system("cp "+GPLOT_DIR+"/parm/mettc/config/TCStatConfig_filter "+TCSconf_f)
 	if(.not.fileexists(TCSconf_f))then	print("ERROR: TC_STAT filter config file not found.")
 						exit
 	end if
-	system("cp "+GPLOT_DIR+"/mettc/config/TCStatConfig_summary "+TCSconf_s)
+	system("cp "+GPLOT_DIR+"/parm/mettc/config/TCStatConfig_summary "+TCSconf_s)
 	if(.not.fileexists(TCSconf_s))then	print("ERROR: TC_STAT summary config file not found.")
 						exit
 	end if
@@ -4533,12 +4570,12 @@ if(DO_VERIFICATION)then
 	
 			; Read and categorize the output of the TC-STAT output
 			data	:= asciiread(tmp,-1,"string")
-			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:")))," ")
+			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:"))),"	 ")
 			vals	:= ind(isStrSubset2(data,"SUMMARY:"))
 			if(ismissing(vals(0)))then continue end if
 			data	:= data(vals)
-			errModels	:= str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1," "))
-			errFields	:= str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1," "))
+			errModels	:= str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1,"	 "))
+			errFields	:= str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1,"	 "))
 			
 			; Find track errors, along-track errors, and cross-track errors for each late track model.
 			do mmm = 0,dimsizes(ltModels)-1
@@ -4547,18 +4584,18 @@ if(DO_VERIFICATION)then
 				if(ismissing(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."TK_ERR"))))then
 					continue
 				else
-					TK_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."MEAN")+1," ")))
-					N_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."TOTAL")+1," ")))
+					TK_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."MEAN")+1,"	 ")))
+					N_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."TOTAL")+1,"	 ")))
 				end if
 				if(ismissing(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."ALTK_ERR"))))then
 					continue
 				else
-					ALTK_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."ALTK_ERR")),ind(errCols.eq."MEAN")+1," ")))
+					ALTK_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."ALTK_ERR")),ind(errCols.eq."MEAN")+1,"	 ")))
 				end if
 				if(ismissing(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."CRTK_ERR"))))then
 					continue
 				else
-					CRTK_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."CRTK_ERR")),ind(errCols.eq."MEAN")+1," ")))
+					CRTK_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.ltModels(mmm) .and. errFields.eq."CRTK_ERR")),ind(errCols.eq."MEAN")+1,"	 ")))
 				end if
 			end do
 			
@@ -4653,6 +4690,7 @@ if(DO_VERIFICATION)then
 	if(DO_LI_VER)then
 
 	        ; Update the status file.
+		LOCK_FILE = STATUS_FILE+".lock"
 	        system("lockfile -r-1 -l 180 "+LOCK_FILE)
 	        print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 	        system("echo 'working' > "+STATUS_FILE)
@@ -4721,12 +4759,12 @@ if(DO_VERIFICATION)then
 	
 			; Read and categorize the output of the TC-STAT output
 			data	:= asciiread(tmp,-1,"string")
-			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:")))," ")
+			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:"))),"	 ")
 			vals	:= ind(isStrSubset2(data,"SUMMARY:"))
 			if(ismissing(vals(0)))then continue end if
 			data	:= data(vals)
-			errModels := str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1," "))
-			errFields := str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1," "))
+			errModels := str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1,"	 "))
+			errFields := str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1,"	 "))
 	
 			; Find intensity error and absolute intensity error for each late intensity model.
 			do mmm = 0,dimsizes(liModels)-1
@@ -4735,13 +4773,13 @@ if(DO_VERIFICATION)then
 				if(ismissing(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."ABS(AMAX_WIND-BMAX_WIND)"))))then
 					continue
 				else
-					ABS_WIND_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."ABS(AMAX_WIND-BMAX_WIND)")),ind(errCols.eq."MEAN")+1," ")))
+					ABS_WIND_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."ABS(AMAX_WIND-BMAX_WIND)")),ind(errCols.eq."MEAN")+1,"	 ")))
 				end if
 				if(ismissing(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND"))))then
 					continue
 				else
-					WIND_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."MEAN")+1," ")))
-					N_ERR(mmm,fff)	  = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."TOTAL")+1," ")))
+					WIND_ERR(mmm,fff) = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."MEAN")+1,"	 ")))
+					N_ERR(mmm,fff)	  = tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.liModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."TOTAL")+1,"	 ")))
 				end if
 			end do
 		end do
@@ -4836,6 +4874,7 @@ if(DO_VERIFICATION)then
 	if(DO_ET_VER)then
 
                 ; Update the status file.
+		LOCK_FILE = STATUS_FILE+".lock"
                 system("lockfile -r-1 -l 180 "+LOCK_FILE)
                 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
                 system("echo 'working' > "+STATUS_FILE)
@@ -4905,12 +4944,12 @@ if(DO_VERIFICATION)then
 	
 			; Read and categorize the output of the TC-STAT output.
 			data	:= asciiread(tmp,-1,"string")
-			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:")))," ")
+			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:"))),"	 ")
 			vals	:= ind(isStrSubset2(data,"SUMMARY:"))
 			if(ismissing(vals(0)))then continue end if
 			data	:= data(vals)
-			errModels	:= str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1," "))
-			errFields	:= str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1," "))
+			errModels	:= str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1,"	 "))
+			errFields	:= str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1,"	 "))
 	
 			; Find track error, along-track error, and cross-track error for each early track model.
 			do mmm = 0,dimsizes(etModels)-1
@@ -4919,18 +4958,18 @@ if(DO_VERIFICATION)then
 				if(ismissing(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."TK_ERR"))))then
 					continue
 				else
-					TK_ERR(mmm,fff)		= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."MEAN")+1," ")))
-					N_ERR(mmm,fff)		= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."TOTAL")+1," ")))
+					TK_ERR(mmm,fff)		= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."MEAN")+1,"	 ")))
+					N_ERR(mmm,fff)		= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."TK_ERR")),ind(errCols.eq."TOTAL")+1,"	 ")))
 				end if
 				if(ismissing(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."ALTK_ERR"))))then
 					continue
 				else
-					ALTK_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."ALTK_ERR")),ind(errCols.eq."MEAN")+1," ")))
+					ALTK_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."ALTK_ERR")),ind(errCols.eq."MEAN")+1,"	 ")))
 				end if
 				if(ismissing(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."CRTK_ERR"))))then
 					continue
 				else
-					CRTK_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."CRTK_ERR")),ind(errCols.eq."MEAN")+1," ")))
+					CRTK_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.etModels(mmm) .and. errFields.eq."CRTK_ERR")),ind(errCols.eq."MEAN")+1,"	 ")))
 				end if
 			end do
 		end do
@@ -5024,6 +5063,7 @@ if(DO_VERIFICATION)then
 	if(DO_EI_VER)then
 
                 ; Update the status file.
+		LOCK_FILE = STATUS_FILE+".lock"
                 system("lockfile -r-1 -l 180 "+LOCK_FILE)
                 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
                 system("echo 'working' > "+STATUS_FILE)
@@ -5092,12 +5132,12 @@ if(DO_VERIFICATION)then
 	
 			; Read and categorize the output of the TC-STAT output.
 			data	:= asciiread(tmp,-1,"string")
-			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:")))," ")
+			errCols	= str_split(data(ind(isStrSubset2(data,"COL_NAME:"))),"	 ")
 			vals	:= ind(isStrSubset2(data,"SUMMARY:"))
 			if(ismissing(vals(0)))then continue end if
 			data	:= data(vals)
-			errModels	:= str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1," "))
-			errFields	:= str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1," "))
+			errModels	:= str_squeeze(str_get_field(data,ind(errCols.eq."AMODEL")+1,"	 "))
+			errFields	:= str_squeeze(str_get_field(data,ind(errCols.eq."COLUMN")+1,"	 "))
 	
 			; Find absolute intensity errors and intensity bias for all early intensity models.
 			do mmm = 0,dimsizes(eiModels)-1
@@ -5106,13 +5146,13 @@ if(DO_VERIFICATION)then
 				if(ismissing(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."ABS(AMAX_WIND-BMAX_WIND)"))))then
 					continue
 				else
-					ABS_WIND_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."ABS(AMAX_WIND-BMAX_WIND)")),ind(errCols.eq."MEAN")+1," ")))
+					ABS_WIND_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."ABS(AMAX_WIND-BMAX_WIND)")),ind(errCols.eq."MEAN")+1,"	 ")))
 				end if
 				if(ismissing(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND"))))then
 					continue
 				else
-					WIND_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."MEAN")+1," ")))
-					N_ERR(mmm,fff)		= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."TOTAL")+1," ")))
+					WIND_ERR(mmm,fff)	= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."MEAN")+1,"	 ")))
+					N_ERR(mmm,fff)		= tofloat(str_squeeze(str_get_field(data(ind(errModels.eq.eiModels(mmm) .and. errFields.eq."AMAX_WIND-BMAX_WIND")),ind(errCols.eq."TOTAL")+1,"	 ")))
 				end if
 			end do
 	
@@ -5214,6 +5254,7 @@ print("MSG: *************STEP SIX************")
 print("MSG: CHECK ON THE GRAPHICAL PRODUCTION.")
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 system("echo 'working' > "+STATUS_FILE)
@@ -5232,7 +5273,9 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_ET_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		if(ODIR_TYPE.eq.1)then	chk := systemfunc("ls "+ODIR+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		else			chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/TrackGuidance*"+IDATE+".early.* 2>/dev/null")
+		end if
 		if(ismissing(chk(0)))then	print("ERROR: Early Track Guidance graphic ot produced.")
 						exit
 		end if
@@ -5242,7 +5285,9 @@ if(DO_GUIDANCE)then
 						exit
 		end if
 	else if(DO_EI_GUIDE)then
-		chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		if(ODIR_TYPE.eq.1)then	chk := systemfunc("ls "+ODIR+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		else			chk := systemfunc("ls "+str_sub_str(ODIR,IDATE,IDATE06)+"/IntensityGuidance*"+IDATE+".early.* 2>/dev/null")
+		end if
 		if(ismissing(chk(0)))then	print("ERROR: Early Intensity Guidance graphic not produced.")
 						exit
 		end if
@@ -5310,10 +5355,13 @@ end if  end if  end if
 ;================================================================
 
 ; Update the status file.
+LOCK_FILE = STATUS_FILE+".lock"
 system("lockfile -r-1 -l 180 "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been locked ("+LOCK_FILE+").")
 if(FNL_ATCF)then	system("echo 'complete' > "+STATUS_FILE)
+			print("MSG: The final status is 'complete'.")
 else			system("echo 'incomplete' > "+STATUS_FILE)
+			print("MSG: The final status is 'incomplete'.")
 end if
 system("rm -f "+LOCK_FILE)
 print("MSG: "+STATUS_FILE+" has been unlocked ("+LOCK_FILE+").")
