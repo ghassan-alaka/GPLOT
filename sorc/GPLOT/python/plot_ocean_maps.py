@@ -38,7 +38,7 @@ import xarray as xr
 #import modules.skewTmodelTCpolar as skewTmodelTCpolar
 #import modules.shearandrhplot as shearandrhplot
 #import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 #import modules.plotting as plotting
 #import modules.multiprocess as mproc
 import glob

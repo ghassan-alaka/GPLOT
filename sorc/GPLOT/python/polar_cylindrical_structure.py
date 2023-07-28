@@ -28,7 +28,7 @@ import modules.skewTmodelTCpolar as skewTmodelTCpolar
 import modules.shearandrhplot as shearandrhplot
 import modules.centroid as centroid
 import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 import modules.plotting as plotting
 import modules.multiprocess as mproc
 import modules.tdr_tc_centering_with_example as tdrcenter
