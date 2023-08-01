@@ -216,6 +216,7 @@ for NML in "${NML_LIST[@]}"; do
             else
                 SLRM_OPTS="--job-name=${JOBNAME}  --output=${SPAWNLOG2} --error=${SPAWNLOG2}"
                 SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
+                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=1G"
                 ${X_SBATCH} ${SLRM_OPTS} ${SPAWNFILE} ${NML}
             fi
         elif [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
