@@ -1,7 +1,8 @@
 #!/bin/sh
 #SBATCH --account=hur-aoml
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node=1
+#SBATCH --ntasks=1
 #SBATCH --time=00:19:30
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -10,7 +11,7 @@
 #SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
 #SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
-#SBATCH --mem=16G
+#SBATCH --mem=1G
 
 
 #set -x
@@ -1079,7 +1080,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
                                 #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
