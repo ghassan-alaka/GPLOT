@@ -35,7 +35,7 @@ import sys #To change the path
 #import modules.shearandrhplot as shearandrhplot
 #import modules.centroid as centroid
 #import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 #import modules.plotting as plotting
 #import modules.multiprocess as mproc
 import glob

@@ -1,6 +1,7 @@
 #!/bin/sh
 #SBATCH --account=hur-aoml
-#SBATCH --nodes=1
+##SBATCH --nodes=1
+#SBATCH --ntasks=1
 #SBATCH --time=00:59:00
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -9,7 +10,7 @@
 #SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
 #SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
-#SBATCH --mem=16G
+#SBATCH --mem=128G
 
 set -x
 

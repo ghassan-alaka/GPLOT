@@ -757,8 +757,16 @@ begin
 				BDS(0) = TCLATS(i)+6.
 				BDS(1) = TCLATS(i)-6.
 
+        ; TYPE 9: Take +/- 5 degrees around a TC center finding centers at higher levels.
+        else if(TYPE.eq.9)then  if(ismissing(TCLATS(i)))then    print("ERROR: get_dim_lat: TC latitude not found.")
+                                                                exit
+                                end if
+                                BDS(0) = TCLATS(i)+5.
+                                BDS(1) = TCLATS(i)-5.
+
 	end if  end if  end if  end if
 	end if  end if  end if  end if
+	end if
 
 	; Check that the model domain and the graphic domain overlap.
 	if(.not.all(BDS(0:1).eq.0.))then
@@ -832,6 +840,9 @@ begin
 	; Check if the longitude should be pivoted
 	if(isatt(BOCO,"doPivot"))then	DO_PIVOT = BOCO@doPivot
 	else				DO_PIVOT = True
+	end if
+	if(PIV.gt.max(f->$DIM$) .or. PIV.lt.min(f->$DIM$))then
+		DO_PIVOT = False
 	end if
 
 	; Check if the longitude coordinate is as expected.
@@ -939,8 +950,16 @@ begin
 				BDS(3) = TCLONS(i)+6.
 				BDS(2) = TCLONS(i)-6.
 
+        ; TYPE 9: Take +/- 5 degrees around a TC center finding centers at higher levels.
+        else if(TYPE.eq.9)then  if(ismissing(TCLONS(i)))then    print("ERROR: get_dim_lon: TC longitude not found.")
+                                                                exit
+                                end if
+                                BDS(3) = TCLONS(i)+5.
+                                BDS(2) = TCLONS(i)-5.
+
 	end if  end if  end if  end if
 	end if  end if  end if  end if
+	end if
 	LONF!0   = "lon"
 	LONF&lon = LONF
 	LONF@units = "degrees_east"
