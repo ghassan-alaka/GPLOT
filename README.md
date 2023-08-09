@@ -4,7 +4,7 @@
 [Git repository URL](https://github.com/ghassan-alaka/GPLOT.git):  https://github.com/ghassan-alaka/GPLOT.git
 
 
-## Instructions for installation
+## Instructions for installation.
 
 ### 1. Add 'GPLOT_DIR' to environment [MANDATORY]
         Define GPLOT_DIR as the path where you cloned the GPLOT repository.
