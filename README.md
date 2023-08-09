@@ -26,7 +26,7 @@
 ### 3. Install NCL (NCAR Command Language) [MANDATORY FOR NON-NOAA MACHINES]
 	* Pre-compiled libraries are preferred. To learn more, start at the [NCL Download Page](https://www.ncl.ucar.edu/Download/).
 
-	* [NCL Version 6.5.0](https://www.earthsystemgrid.org/dataset/ncl.650.html) has been well-tested for GPLOT.
+	* [NCL Version 6.6.2](https://www.earthsystemgrid.org/dataset/ncl.662.html) has been well-tested for GPLOT.
 
 ```
         NOTE:  The NCL project is "feature frozen" as of September 2019, meaning
@@ -37,7 +37,7 @@
 
 	* NCL is automatically loaded as part of the GPLOT environment. To manually load NCL on NOAA's Jet/Hera/Orion:
 ```
-		module load ncl/6.5.0
+		module load ncl/6.6.2
 ```
 
 	* Customize .hluresfile:
