@@ -866,6 +866,9 @@ def main():
     rmw_2km = rmw_mean[4]
     vt_p_mean_max = np.max(vt_p_mean,0)
     vt_p_mean_max_2km = vt_p_mean_max[4]
+    if (rmw_2km < 2):
+     rmw_2km = np.nan
+
     if np.isnan(rmw_2km):
       print('WARNING: RMW @ 2km (rmw_2km) is NaN. Skipping this file.')
       ga('close 1')
@@ -891,7 +894,6 @@ def main():
     rmw_pbl_mean = np.ones(zsize_pbl)*np.nan
     for k in range(zsize_pbl):
       rmw_pbl_mean[k] = np.round(np.median(r[vt_pbl_p_mean[:,k] > 0.95*np.max(vt_pbl_p_mean[:,k])]))
-
 
     #Calculate Variables Normalized by RMW
     vt_p_mean_norm = np.ones((np.shape(rnorm)[0],zsize))*np.nan
