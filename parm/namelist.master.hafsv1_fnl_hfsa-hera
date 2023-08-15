@@ -12,7 +12,7 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = hafsv1_fnl_hfsb
+EXPT = hafsv1_fnl_hfsa
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
@@ -41,8 +41,8 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsb
-;IDIR; = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
+IDIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsa
+;IDIR; = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsa
 ITAG =
 EXT = .grb2
 
@@ -51,13 +51,13 @@ ODIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPOUT/
 ODIR_TYPE = 0
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsb/adeck_names
-ATCF1_TAG = hfsb.trak.atcfunix
-ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsb/adeck_names
-ATCF2_TAG = hfsb.trak.atcfunix
+ATCF1_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsa/adeck_names
+ATCF1_TAG = hfsa.trak.atcfunix
+ATCF2_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/staging/hafsv1_fnl_hfsa/adeck_names
+ATCF2_TAG = hfsa.trak.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/hafsv1_fnl_hfsb
+ADECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/hafsv1_fnl_hfsa
 ;ADECK_DIR; = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC
 ;ADECK_DIR; = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC
 BDECK_DIR = /scratch2/AOML/aoml-hafs1/Ghassan.Alaka/bdeck
@@ -117,26 +117,26 @@ NMAX_MAPS = 8
 ;================================================================
 
 ; 3A. MODEL NAMES
-MORIG = HFSB
-MCODE = HFSB
-MCODEI = HFBI
-MCODE12 = HFB2
+MORIG = HFSA
+MCODE = HFSA
+MCODEI = HFAI
+MCODE12 = HFA2
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM = HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR
-TRKIM = HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR CMC
-INTM = HFSB HFSA AVNO HWRF HMON DSHP LGEM CTCX
-PRSM = HFSB HFSA AVNO HWRF HMON CTCX
-TRKMI = HFBI HFAI AVNI HWFI HMNI EGRI CTCI TVCN OFCL
-INTMI = HFBI HFAI AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
-TRKMT = HFSB HFSA AVNO HWRF HMON CTCX EGRR OFCL
-INTMT = HFSB HFSA AVNO HWRF HMON DSHP CTCX OFCL
+TRKM = HFSA HFSB AVNO HWRF HMON NVGM CTCX EGRR
+TRKIM = HFSA HFSB AVNO HWRF HMON NVGM CTCX EGRR CMC
+INTM = HFSA HFSB AVNO HWRF HMON DSHP LGEM CTCX
+PRSM = HFSA HFSB AVNO HWRF HMON CTCX
+TRKMI = HFAI HFBI AVNI HWFI HMNI EGRI CTCI TVCN OFCL
+INTMI = HFAI HFBI AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = HFSA HFSB AVNO HWRF HMON CTCX EGRR OFCL
+INTMT = HFSA HFSB AVNO HWRF HMON DSHP CTCX OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HFBI HFAI GFSI HWFI HMNI TVCN OFCL
-EIM = HFBI HFAI HWFI HMNI DSHP LGEM IVCN OFCL
-LTM = HFSB HFSA GFSO HWRF HMON
-LIM = HFSB HFSA HWRF HMON
+ETM = HFAI HFBI GFSI HWFI HMNI TVCN OFCL
+EIM = HFAI HFBI HWFI HMNI DSHP LGEM IVCN OFCL
+LTM = HFSA HFSB GFSO HWRF HMON
+LIM = HFSA HFSB HWRF HMON
 
 ; 3D. VERIFICATION TIMES
 LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
@@ -156,6 +156,7 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
+;PYTHONFILE; = make_rz_plots_heightcoordinates_research.py
 PYTHONFILE = polar_cylindrical_structure.py
 RESOLUTION = 2.0
 RMAX = 600
@@ -173,8 +174,8 @@ AIRSEA_PYTHONFILE = plot_airsea_pbl.py
 ; Script to produce ocean map graphics
 OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
 ; Ocean data input directory
-OCEAN_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsb
-;OCEAN_DIR; = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsb
+OCEAN_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsa
+;OCEAN_DIR; = /lfs4/HFIP/hur-aoml/Lew.Gramer/ocean/GPLOT/hafsv1_fnl_hfsa
 ; Ocean model
 OCEAN_SOURCE = HYCOM
 ; Ocean graphical regions to plot
