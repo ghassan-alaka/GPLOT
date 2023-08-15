@@ -35,7 +35,7 @@ import sys #To change the path
 #import modules.shearandrhplot as shearandrhplot
 #import modules.centroid as centroid
 #import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 #import modules.plotting as plotting
 #import modules.multiprocess as mproc
 import glob
@@ -653,7 +653,7 @@ def main():
       cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')

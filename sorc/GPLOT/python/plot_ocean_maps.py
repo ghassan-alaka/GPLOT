@@ -38,7 +38,7 @@ import xarray as xr
 #import modules.skewTmodelTCpolar as skewTmodelTCpolar
 #import modules.shearandrhplot as shearandrhplot
 #import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 #import modules.plotting as plotting
 #import modules.multiprocess as mproc
 import glob
@@ -629,19 +629,28 @@ def main():
       #sys.exit()
       #make sure there's at least 50% ocean coverage
       wherecov = np.where(T0 > 0.)
-      if ((np.size(wherecov) / np.size(where500)) < .5):
-        T500 = np.nan
-        OHC500 = np.nan
-      else: 
-        T500 = np.nanmean(T0[where500])
-        OHC500 = np.nanmean(OHC[where500])
- 
-      if ((np.size(wherecov) / np.size(where200)) < .5):
-        T200 = np.nan
-        OHC200 = np.nan
-      else:
-        T200 = np.nanmean(T0[where200])
-        OHC200 = np.nanmean(OHC[where200])
+      try:
+        if ((np.size(wherecov) / np.size(where500)) < .5):
+          T500 = np.nan
+          OHC500 = np.nan
+        else: 
+          T500 = np.nanmean(T0[where500])
+          OHC500 = np.nanmean(OHC[where500])
+      except:
+          T500 = np.nan
+          OHC500 = np.nan
+      
+      try:
+        if ((np.size(wherecov) / np.size(where200)) < .5):
+          T200 = np.nan
+          OHC200 = np.nan
+        else:
+          T200 = np.nanmean(T0[where200])
+          OHC200 = np.nanmean(OHC[where200])
+      except:
+          T200 = np.nan
+          OHC200 = np.nan
+      
       #sst where 34kt quadrant wind---------
       where34 = np.where(((bearings < 90.) & (rad_distances < neq34)) | ((bearings < 180.) & (bearings >= 90.) & (rad_distances < seq34)) | ((bearings < 270.) & (bearings >= 180.) & (rad_distances < swq34)) | ((bearings < 360.) & (bearings >= 270.) & (rad_distances < nwq34)))
       print(np.size(where34))

@@ -28,7 +28,7 @@ import modules.skewTmodelTCpolar as skewTmodelTCpolar
 import modules.shearandrhplot as shearandrhplot
 import modules.centroid as centroid
 import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 import modules.plotting as plotting
 import modules.multiprocess as mproc
 import modules.tdr_tc_centering_with_example as tdrcenter
@@ -866,6 +866,9 @@ def main():
     rmw_2km = rmw_mean[4]
     vt_p_mean_max = np.max(vt_p_mean,0)
     vt_p_mean_max_2km = vt_p_mean_max[4]
+    if (rmw_2km < 2):
+     rmw_2km = np.nan
+
     if np.isnan(rmw_2km):
       print('WARNING: RMW @ 2km (rmw_2km) is NaN. Skipping this file.')
       ga('close 1')
@@ -891,7 +894,6 @@ def main():
     rmw_pbl_mean = np.ones(zsize_pbl)*np.nan
     for k in range(zsize_pbl):
       rmw_pbl_mean[k] = np.round(np.median(r[vt_pbl_p_mean[:,k] > 0.95*np.max(vt_pbl_p_mean[:,k])]))
-
 
     #Calculate Variables Normalized by RMW
     vt_p_mean_norm = np.ones((np.shape(rnorm)[0],zsize))*np.nan
@@ -1923,6 +1925,7 @@ def main():
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig1.clf()
       plt.close(fig1)
 
 
@@ -1944,6 +1947,7 @@ def main():
       fig2.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig2.clf()
       plt.close(fig2)
 
 
@@ -1965,6 +1969,7 @@ def main():
       fig3.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig3.clf()
       plt.close(fig3)
 
 
@@ -1986,6 +1991,7 @@ def main():
       fig4.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig4.clf()
       plt.close(fig4)
 
 
@@ -2007,6 +2013,7 @@ def main():
       fig5.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig5.clf()
       plt.close(fig5)
 
 
@@ -2032,6 +2039,7 @@ def main():
       fig6.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig6.clf()
       plt.close(fig6)
 
 
@@ -2056,6 +2064,7 @@ def main():
       fig7.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig7.clf()
       plt.close(fig7)
 
 
@@ -2081,6 +2090,7 @@ def main():
       fig8.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig8.clf()
       plt.close(fig8)
 
 
@@ -2106,6 +2116,7 @@ def main():
       fig9.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig9.clf()
       plt.close(fig9)
 
 
@@ -2131,6 +2142,7 @@ def main():
       fig10.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig10.clf()
       plt.close(fig10)
 
 
@@ -2156,6 +2168,7 @@ def main():
       fig11.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig11.clf()
       plt.close(fig11)
 
 
@@ -2181,6 +2194,7 @@ def main():
       fig12.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig12.clf()
       plt.close(fig12)
 
 
@@ -2206,6 +2220,7 @@ def main():
       fig13.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig13.clf()
       plt.close(fig13)
 
 
@@ -2269,6 +2284,7 @@ def main():
       figfname = f'{ODIR}/{LONGSID.lower()}.dbz5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
       #fig14.tight_layout()
       fig14.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      fig14.clf()
       plt.close(fig14)
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
@@ -2333,6 +2349,7 @@ def main():
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.rh5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
       fig15.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      fig15.clf()
       plt.close(fig15)
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
@@ -2397,6 +2414,7 @@ def main():
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.vt10_wavenumber.{forecastinit}.polar.f{FHR:03}'
       fig16.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      fig16.clf()
       plt.close(fig16)      
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
@@ -2423,6 +2441,7 @@ def main():
       fig17.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig17.clf()
       plt.close(fig17)
 
       # Mean Vertical Advection
@@ -2443,6 +2462,7 @@ def main():
       fig18.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig18.clf()
       plt.close(fig18)
 
       # Mean Eddy Flux
@@ -2463,6 +2483,7 @@ def main():
       fig19.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig19.clf()
       plt.close(fig19)
 
       # Mean Vertical Eddy Advection
@@ -2483,6 +2504,7 @@ def main():
       fig20.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig20.clf()
       plt.close(fig20)
 
       # Sum of Mean Tendency Terms
@@ -2503,6 +2525,7 @@ def main():
       fig21.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig21.clf()
       plt.close(fig21)
 
     # FIGURES 22-26: Vorticity Tendency Terms
@@ -2526,6 +2549,8 @@ def main():
       fig22.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig22.clf()
+      plt.close(fig22)
 
       # Mean Vertical Advection
       fig23 = plt.figure(figsize=(20.5,10.5))
@@ -2545,6 +2570,7 @@ def main():
       fig23.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig23.clf()
       plt.close(fig23)
 
       # Mean Stretching COnvergence
@@ -2565,6 +2591,7 @@ def main():
       fig24.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig24.clf()
       plt.close(fig24)
 
       # Mean Tilting
@@ -2585,6 +2612,7 @@ def main():
       fig25.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig25.clf()
       plt.close(fig25)
 
       # Sum of Mean Tendency Terms
@@ -2605,6 +2633,7 @@ def main():
       fig26.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig26.clf()
       plt.close(fig26)
 
     if ( do_ur_pbl_p_mean == 'Y'):
@@ -2628,6 +2657,7 @@ def main():
       fig27.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
+      fig27.clf()
       plt.close(fig27)
   
     if ( do_radar_plots == 'Y'):  
