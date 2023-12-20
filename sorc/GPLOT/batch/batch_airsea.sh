@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=hur-aoml
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=12
+##SBATCH --nodes=1
+#SBATCH --ntasks=1
 #SBATCH --time=00:59:00
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -10,7 +10,7 @@
 #SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
 #SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
-#SBATCH --mem=16G
+#SBATCH --mem=128G
 
 set -x
 
@@ -31,7 +31,7 @@ FORCE="${13}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
-    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
 # 3. Source the .profile to optimize the environment

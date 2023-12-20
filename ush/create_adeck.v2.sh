@@ -153,7 +153,14 @@ while read FILE; do
 
     i=0
     for SID in ${SIDS[@]}; do
-        RAWFILE="${OUTDIR}/${TMP}.a${SID,,}.dat"
+        SBASIN="$(echo ${SID} | cut -c1-2)"
+        if [ "${SBASIN,,}" == "aa" ] || [ "${SBASIN,,}" == "bb" ]; then
+            RAWFILE="${OUTDIR}/${TMP}.aio$(echo ${SID} | cut -c3-).dat"
+        elif [ "${SBASIN,,}" == "ss" ] || [ "${SBASIN,,}" == "pp" ]; then
+            RAWFILE="${OUTDIR}/${TMP}.ash$(echo ${SID} | cut -c3-).dat"
+        else
+            RAWFILE="${OUTDIR}/${TMP}.a${SBASIN,,}$(echo ${SID} | cut -c3-).dat"
+        fi
         awk -v SNUM="${SNUMS[i]}" -v BASIN="${SBASINS[i]}" -F ",[ \t]" '$1==BASIN && $2==SNUM' ${FILE} >> ${RAWFILE}
         if [ -f "${RAWFILE}" ]; then
             RAWFILES+=( "${RAWFILE}" )

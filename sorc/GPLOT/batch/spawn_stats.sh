@@ -1,7 +1,8 @@
 #!/bin/sh
 #SBATCH --account=hur-aoml
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node=1
+#SBATCH --ntasks=1
 #SBATCH --time=00:15:00
 #SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
@@ -10,7 +11,7 @@
 #SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
 #SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
-#SBATCH --mem=16G
+#SBATCH --mem=1G
 
 
 #set -x
@@ -156,7 +157,8 @@ fi
 
 
 # Set the maximum number of job submissions
-NMAX=25
+# This is a safeguard to avoid overloading the batch scheduler.
+MAX_JOBS=25
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -202,11 +204,11 @@ DATE_NOW="`date +'%Y%m%d%H'`"
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
 ATCF_TMP=()
+ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
-    ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 fi
-ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
-ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 ATCF_ALL=()
 for ATCF in "${ATCF_TMP[@]}"; do
     ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
@@ -217,10 +219,10 @@ done
 #printf '%s\n' "${ATCF_ALL[@]}"
 
 
-# Limit the ATCF list based on NMAX
+# Limit the ATCF list based onMAX_JOBS 
 NATCF="${#ATCF_ALL[*]}"
-#if [[ NATCF -gt NMAX ]]; then
-#    C=$((NATCF - NMAX))
+#if [[ NATCF -gt MAX_JOBS ]]; then
+#    C=$((NATCF - MAX_JOBS))
 #    ATCF_ALL=("${ATCF_ALL[@]:$C}" "${ATCF_ALL[@]:0:$C}")
 #fi
 
@@ -552,8 +554,8 @@ if [ "${DO_STATS}" = "True" ]; then
             N=$((N+1))
 
             # Limit the number of jobs to now overwhelm the batch scheduler
-            if [[ N -ge NMAX ]]; then
-                echo "WARNING: Maximum number of jobs reached (${NMAX})."
+            if [[ N -ge MAX_JOBS ]]; then
+                echo "WARNING: Maximum number of jobs reached (${MAX_JOBS})."
                 break
             fi
         else

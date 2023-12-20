@@ -1022,9 +1022,9 @@ begin
 	; Read the MASTER Variable Table
 	DATA		= asciiread(GPLOT_DIR+"/tbl/Vtable.master",-1,"string")
 	MASTER_LIST	= new((/3,dimsizes(DATA)/),"string")
-	MASTER_LIST(0,:)= str_get_field(DATA,1,"	")
-	MASTER_LIST(1,:)= str_get_field(DATA,2,"	")
-	MASTER_LIST(2,:)= str_get_field(DATA,3,"	")
+	MASTER_LIST(0,:)= str_get_field(DATA,1,"	 ")
+	MASTER_LIST(1,:)= str_get_field(DATA,2,"	 ")
+	MASTER_LIST(2,:)= str_get_field(DATA,3,"	 ")
 
 	
 	; If the level is non-pressure, we need to add it to the variable name
@@ -1077,9 +1077,9 @@ begin
 
 	; Read the variable table into 'VAR_LIST'
 	VAR_LIST = new((/3,dimsizes(DATA)/),"string")
-	VAR_LIST(0,:) = str_get_field(DATA,1,"	")
-	VAR_LIST(1,:) = str_get_field(DATA,2,"	")
-	VAR_LIST(2,:) = str_get_field(DATA,3,"	")
+	VAR_LIST(0,:) = str_get_field(DATA,1,"	 ")
+	VAR_LIST(1,:) = str_get_field(DATA,2,"	 ")
+	VAR_LIST(2,:) = str_get_field(DATA,3,"	 ")
 
 
 	; Look for a matching catalog number in the model variable table
@@ -1094,6 +1094,7 @@ begin
 	; This should be integrated into the actual variable name, as with UV10, T2, etc.
 	if(any((/"GFS","HAFS","HMON"/).eq.DSOURCE))then
 		if(isStrSubset(VAR,"PRCP") .and. isStrSubset(LEV,"h"))then	NEWVAR = NEWVAR+LEV   end if
+		if(isStrSubset(VAR,"PRATE") .and. isStrSubset(LEV,"h"))then	NEWVAR = NEWVAR+LEV   end if
 	end if
 	
 	
@@ -1647,6 +1648,7 @@ begin
                             "nio",     "bob",     "arab",\                                       ; North Indian Ocean domains
 			    "sio",     "spac",    "aust",\					 ; Southern Hemisphere domains
                             "hwrf",    "d01",     "d02",     "d03",     "all_d03", \             ; Model Nest domains
+			    "storm",   "core",    "tcparent",\					 ; Model Nest domains
                             "tkfull",  "ships",   "data"/)                                       ; Other domains
 
         do bbb = 0,nBds-1
@@ -1680,6 +1682,9 @@ begin
                 if(nameBds(bbb).eq."ships")then         allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
                 if(nameBds(bbb).eq."global")then        allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
 		if(nameBds(bbb).eq."alld03")then	allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."core")then          allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."storm")then         allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
+                if(nameBds(bbb).eq."tcparent")then      allBds(bbb,:) = (/ 0.,  0.,   0.,  0./)   end if
         end do
 
 	if(nBds.eq.1)then   allBds := allBds(0,:)   end if
@@ -1713,7 +1718,8 @@ begin
 			    "d01",   "d02",\
 			    "tkfull", "ships",\
 			    "sfla",  "neamer",\
-			    "wmexico", "global"/)
+			    "wmexico", "global",\
+			    "core", "storm"/)
 	if(.not.any(MASTER_DOMAIN.eq.DOMAIN))then
 		print("ERROR: getDmnInfo: DOMAIN '"+DOMAIN+"' not recognized. Assigning defaults.")
 	end if
@@ -1722,36 +1728,40 @@ begin
 	; Set the boundary type to properly find the domain
 	; in which the data is extracted.
 	if(INFO.eq."bdstype")then
-		if(     DOMAIN.eq."basin")then	OUT = 0
-		else if(DOMAIN.eq."fvgfs")then	OUT = 0
-		else if(DOMAIN.eq."atl")then	OUT = 0
-		else if(DOMAIN.eq."wlant")then	OUT = 0
-		else if(DOMAIN.eq."clant")then  OUT = 0
-		else if(DOMAIN.eq."elant")then	OUT = 0
-		else if(DOMAIN.eq."epac")then	OUT = 0
-		else if(DOMAIN.eq."cpac")then	OUT = 0
-		else if(DOMAIN.eq."gom")then	OUT = 0
-		else if(DOMAIN.eq."eus")then	OUT = 0
-		else if(DOMAIN.eq."bob")then	OUT = 0
-		else if(DOMAIN.eq."nio")then	OUT = 0
-		else if(DOMAIN.eq."bigd01")then	OUT = 0
-		else if(DOMAIN.eq."hwrf")then	OUT = 0
-		else if(DOMAIN.eq."d01")then	OUT = 0
-		else if(DOMAIN.eq."d02")then	OUT = 2
-		else if(DOMAIN.eq."d03")then
-			if(DSOURCE.eq."HAFS")then	OUT = 8
-			else				OUT = 3
-			end if
-		else if(DOMAIN.eq."tkfull")then	OUT = 4
-		else if(DOMAIN.eq."ships")then	OUT = 7
-		else if(DOMAIN.eq."global")then OUT = 1
-		else if(DOMAIN.eq."alld03")then	OUT = 1
-		else if(DO_VALUE)then		OUT = 6
-		else				OUT = 0
+		if(     DOMAIN.eq."basin")then		OUT = 0
+		else if(DOMAIN.eq."fvgfs")then		OUT = 0
+		else if(DOMAIN.eq."atl")then		OUT = 0
+		else if(DOMAIN.eq."wlant")then		OUT = 0
+		else if(DOMAIN.eq."clant")then  	OUT = 0
+		else if(DOMAIN.eq."elant")then		OUT = 0
+		else if(DOMAIN.eq."epac")then		OUT = 0
+		else if(DOMAIN.eq."cpac")then		OUT = 0
+		else if(DOMAIN.eq."gom")then		OUT = 0
+		else if(DOMAIN.eq."eus")then		OUT = 0
+		else if(DOMAIN.eq."bob")then		OUT = 0
+		else if(DOMAIN.eq."nio")then		OUT = 0
+		else if(DOMAIN.eq."bigd01")then		OUT = 0
+		else if(DOMAIN.eq."hwrf")then		OUT = 0
+		else if(DOMAIN.eq."tcparent")then	OUT = 0
+		else if(DOMAIN.eq."d01")then		OUT = 0
+		else if(DOMAIN.eq."d02")then		OUT = 2
+		else if(DOMAIN.eq."d03")then		OUT = 3
+			;if(DSOURCE.eq."HAFS")then	OUT = 8
+			;else				OUT = 3
+			;end if
+		else if(DOMAIN.eq."core")then		OUT = 3
+		else if(DOMAIN.eq."storm")then		OUT = 8
+		else if(DOMAIN.eq."tkfull")then		OUT = 4
+		else if(DOMAIN.eq."ships")then		OUT = 7
+		else if(DOMAIN.eq."global")then 	OUT = 1
+		else if(DOMAIN.eq."alld03")then		OUT = 1
+		else if(DO_VALUE)then			OUT = 6
+		else					OUT = 0
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if  end if
+		end if  end if  end if  end if  end if  end if
+		end if
 	; Set the maximum number of High pressure markers
 	else if(INFO.eq."maxH")then
 		if(     DOMAIN.eq."basin")then	OUT = 10
@@ -1766,13 +1776,15 @@ begin
 		else if(DOMAIN.eq."tkfull")then	OUT = 10
 		else if(DOMAIN.eq."d02")then	OUT = 10
 		else if(DOMAIN.eq."d03")then	OUT = 2
+		else if(DOMAIN.eq."core")then	OUT = 2
+		else if(DOMAIN.eq."storm")then	OUT = 4
 		else if(DOMAIN.eq."global")then OUT = 25
 		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else if(DOMAIN.eq."alld03")then	OUT = 2
 		else				OUT = 10
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if  end if
 	
 	; Set the maximum number of Low pressure markers
 	else if(INFO.eq."maxL")then
@@ -1787,13 +1799,15 @@ begin
 		else if(DOMAIN.eq."tkfull")then	OUT = 12
 		else if(DOMAIN.eq."d02")then	OUT = 12
 		else if(DOMAIN.eq."d03")then	OUT = 2
+		else if(DOMAIN.eq."core")then	OUT = 2
+		else if(DOMAIN.eq."storm")then	OUT = 5
 		else if(DOMAIN.eq."global")then OUT = 25
 		else if(DOMAIN.eq."wmexico")then OUT = 4
 		else if(DOMAIN.eq."alld03")then	OUT = 2
 		else				OUT = 12
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if  end if
 	
 	; Set the minimum lat/lon box for each High/Low MSLP marker
 	; This "thins" the markers
@@ -1810,13 +1824,15 @@ begin
 		else if(DOMAIN.eq."tkfull")then	OUT = 7.5
 		else if(DOMAIN.eq."d02")then	OUT = 7.5
 		else if(DOMAIN.eq."d03")then	OUT = 2.5
+		else if(DOMAIN.eq."core")then	OUT = 2.5
+		else if(DOMAIN.eq."storm")then	OUT = 7.5
 		else if(DOMAIN.eq."global")then OUT = 20.
 		else if(DOMAIN.eq."wmexico")then OUT = 4.
 		else if(DOMAIN.eq."alld03")then	OUT = 2.5
 		else				OUT = 10.
 		end if  end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if  end if
 
 	end if  end if  end if  end if
 
@@ -2295,10 +2311,10 @@ begin
 	if(.not.fileexists(dFile))then	oSID	= "missing"   end if
 
 	data	= asciiread(dFile,-1,"string")
-	SIDlong	= str_squeeze(str_get_field(data,1," "))
-	YYYY	= str_squeeze(str_get_field(data,2," "))
-	tcSID	= str_squeeze(str_get_field(data,3," "))
-	invSID	= str_squeeze(str_get_field(data,4," "))
+	SIDlong	= str_squeeze(str_get_field(data,1,"	 "))
+	YYYY	= str_squeeze(str_get_field(data,2,"	 "))
+	tcSID	= str_squeeze(str_get_field(data,3,"	 "))
+	invSID	= str_squeeze(str_get_field(data,4,"	 "))
 	
 	val	= ind(YYYY.eq.iYYYY .and. tcSID.eq.iSID)
 	
@@ -2919,10 +2935,14 @@ begin
                         List_Title	= "700mb  Rel. Vorticity (10~S~-5~N~ s~S~-1~N~, shaded), GPH (dam; contours), and Wind (kt; barbs)"
                 else if(short_name.eq."RH700_UV700_MSLP")then
                         List_Title	= "700mb Relative Humidity (%; shaded), Wind (kt), and MSLP (mb; lines and centers)"
+                else if(short_name.eq."PRATE_MSLP_Z1000500")then
+                        List_Title      = "Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
                 else if(short_name.eq."PRCP_MSLP_Z1000500")then
-                        List_Title	= "Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
+                        List_Title	= "Bulk Precip. Rate (mm/hr; shaded), MSLP (mb; lines, centers), 1000-500mb Z (dam; dashed lines)"
+                else if(short_name.eq."PRATE_MSLP")then
+                        List_Title      = "Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
                 else if(short_name.eq."PRCP_MSLP")then
-                        List_Title	= "Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
+                        List_Title	= "Bulk Precip. Rate (mm/hr; shaded), MSLP (mb; centers)"
                 else if(short_name.eq."TPRCP_MSLP")then
                         List_Title	= "Total Precip. (inches; shaded), MSLP (mb; centers)"
                 else if(short_name.eq."TPW_MSLP")then
@@ -2990,7 +3010,7 @@ begin
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if
+		end if  end if  end if  end if
 
 
 		; If nothing from this above matches, then return a default title
