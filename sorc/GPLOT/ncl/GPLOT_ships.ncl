@@ -994,32 +994,33 @@ do fff = 0,nFiles-1
 			else if(any((/"SHRS","SHTS"/).eq.FNAME(ppp)))then	levCode = "05000850d"
 			end if  end if
 			
-			; 3) Get U & V data (uncombined)
+			; 3) Get U data & convert to cartesian (KM) coordinates
 			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 			U(0,:,:)= getVar2d(f,DSOURCE,(/"U",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			U@_FillValue = -999.
-			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-			V@_FillValue = -999.
-				
-			; 4) Convert both U & V to cartesian (X,Y) coordinates
-			U1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
-			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
-			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),U@_FillValue)
-			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
+			U1      := new((/1,dimsizes(X),dimsizes(X)/),"float",U@_FillValue)
 
+			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),U@_FillValue)
+
+			; 4) Get V data & convert to cartesian (KM) coordinates (reuse U-array)
+			;U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"V",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			U@_FillValue = -999.
+			V1      := new((/1,dimsizes(X),dimsizes(X)/),"float",U@_FillValue)
+			SPH2CART::sph2cart(U,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),X,dimsizes(X),tcLons(fff),tcLats(fff),U@_FillValue)
+	
 			; 5) Average U & V in a 200-800km annulus (see SHIPS)
-			U1	= where(     sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).ge.200.\
-					.and.sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.800.,\
+			U1	= where(     sqrt(conform(U1,X,2)^2.+conform(U1,X,1)^2.).ge.200.\
+					.and.sqrt(conform(U1,X,2)^2.+conform(U1,X,1)^2.).le.800.,\
 					U1,U1@_FillValue)
 
 			if(all(ismissing(U1)))then	U1 := U@_FillValue
 			else				U1 := avg(U1)
 			end if
-			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
-					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
+			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,X,1)^2.).ge.200.\
+					.and.sqrt(conform(V1,X,2)^2.+conform(V1,X,1)^2.).le.800.,\
 					V1,V1@_FillValue)
-			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			if(all(ismissing(V1)))then	V1 := U@_FillValue
 			else				V1 := avg(V1)
 			end if
 
@@ -1068,16 +1069,8 @@ do fff = 0,nFiles-1
 		else if(FNAME(ppp).eq."SHDC")then
 			; 1) Set up the cartesian coordinates
 			X	:= tofloat(ispan(-500,500,10))
-			Y	:= tofloat(ispan(-500,500,10))
+			;Y	:= tofloat(ispan(-500,500,10))
 				
-			; 2) Get U & V data (uncombined)
-			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-			U@_FillValue = -999.
-			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-			V@_FillValue = -999.
-
 			; 3) Get 850 hPa TC center
 			DAT_FILE2 = str_sub_str(DAT_FILE,FNAME(ppp),"TCCEN")
 			if(.not.fileexists(DAT_FILE2))then   continue   end if
@@ -1087,18 +1080,24 @@ do fff = 0,nFiles-1
 			LON850	:= data(ind(toint(data(:,0)).eq.FHR(fff) .and. toint(data(:,1)).eq.850),3)
 				
 			; 4) Convert both U & V to cartesian (X,Y) coordinates
+			U       := new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			U@_FillValue = -999.
 			U1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
-			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
-			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),LON850,LAT850,U@_FillValue)
-			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),LON850,LAT850,V@_FillValue)
+			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),X,dimsizes(X),LON850,LAT850,U@_FillValue)
+
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			U@_FillValue = -999.
+			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
+			SPH2CART::sph2cart(U,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),X,dimsizes(X),LON850,LAT850,V@_FillValue)
 
 			; 5) Average U & V in a 500km annulus (see SHIPS)
-			U1	= where(sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.500.,U1,U1@_FillValue)
+			U1	= where(sqrt(conform(U1,X,2)^2.+conform(U1,X,1)^2.).le.500.,U1,U1@_FillValue)
 			if(all(ismissing(U1)))then	U1 := U@_FillValue
 			else				U1 := avg(U1)
 			end if
-			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,X,1)^2.).le.500.,V1,V1@_FillValue)
+			if(all(ismissing(V1)))then	V1 := U@_FillValue
 			else				V1 := avg(V1)
 			end if
 
@@ -2267,7 +2266,6 @@ do fff = 0,nFiles-1
 				LEVC := default_fillvalue("float")
 			end if
 			if(all(ismissing(LEVC)))then   LEVC := LEV/mf   end if
-			
 
 			; 4A) Get U & V data (uncombined)
 			;U1	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
@@ -2276,20 +2274,26 @@ do fff = 0,nFiles-1
 			;V1	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 			V1 := getVar3d(f,DSOURCE,(/"V",sprinti("%0.4i",toint(min(LEVC)))+sprinti("%0.4i",toint(max(LEVC)))/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V1@_FillValue = -999.
-			
 				
 			; 4B) Convert both U & V to cartesian (X,Y) coordinates
 			U2	:= new((/dimsizes(LEVC),dimsizes(Y),dimsizes(X)/),"float",U1@_FillValue)
 			V2	:= new((/dimsizes(LEVC),dimsizes(Y),dimsizes(X)/),"float",V1@_FillValue)
 			if(all(ismissing(CTR)))then	SPH2CART::sph2cart(U1,U2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   conform(LEVC,tcLons(fff),-1),conform(LEVC,tcLats(fff),-1),U1@_FillValue)
-							SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;		conform(LEVC,tcLons(fff),-1),conform(LEVC,tcLats(fff),-1),V1@_FillValue)
+							U1=V1  ; Fix to reuse the U1 array (perhaps to preserve memory)
+							SPH2CART::sph2cart(U1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   conform(LEVC,tcLons(fff),-1),conform(LEVC,tcLats(fff),-1),V1@_FillValue)
 			else				SPH2CART::sph2cart(U1,U2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   CTR(:,1),CTR(:,0),U1@_FillValue)
-							SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;                   CTR(:,1),CTR(:,0),U1@_FillValue)
+							U1=V1  ; Fix to reuse the U1 array (perhaps to preserve memory)
+							SPH2CART::sph2cart(U1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   CTR(:,1),CTR(:,0),V1@_FillValue)
 			end if
+
 
 			; 4C) Average U & V in a 200-800km annulus (see SHIPS)
 			U2	:= where(     sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).ge.200.\
@@ -2337,7 +2341,7 @@ do fff = 0,nFiles-1
 				system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
 				system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
-				
+
 			if(PLOT_ON(ppp) .and. .not.SKIP_PLOT)then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
 				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
