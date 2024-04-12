@@ -4,7 +4,7 @@
 ##SBATCH --ntasks-per-node=12
 #SBATCH --ntasks=1
 #SBATCH --time=00:59:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
