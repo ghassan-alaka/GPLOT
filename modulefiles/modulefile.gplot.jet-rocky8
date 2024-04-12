@@ -36,6 +36,7 @@ fi
 module load cairo/1.14.2
 module load pyncl/6.6.2
 module load grads/2.2.3
+module load imagemagick/7.1.1-11
 
 # NCL
 export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
