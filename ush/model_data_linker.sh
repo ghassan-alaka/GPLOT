@@ -38,6 +38,13 @@ while test $# -gt 0; do
         MACHINE=${1}
       fi
       shift;;
+    -r)
+      shift
+      if test $# -gt 0; then
+        echo "MSG: -r was triggered, Description: realtime, Parameter: ${OPTARG}" >&2
+        REALTIME=${1}
+      fi
+      shift;;
     *)
       break;;
   esac
@@ -46,6 +53,7 @@ done
 ODIR="${ODIR}"
 EXT="${EXT:-"*grb2"}"
 MACHINE="${MACHINE:-JET}"
+REALTIME="${REALTIME:-NO}"
 if [ ${MACHINE} == "JET" ]; then
   IDIR="${IDIR:-"/public/data/grids/hwrf/"}"
 elif [ ${MACHINE} == "HERA" ]; then
@@ -58,7 +66,11 @@ mkdir -p ${ODIR}
 
 
 # Get an array of all files
-ALLFILES=( $(find ${IDIR} -type f -name "${EXT}" | xargs -n 1 basename 2>/dev/null) )
+if [ "${REALTIME}" == "YES" ]; then
+  ALLFILES=( $(find ${IDIR} -type f -name "${EXT}" -mmin "-10800" | xargs -n 1 basename 2>/dev/null) )
+else
+  ALLFILES=( $(find ${IDIR} -type f -name "${EXT}" | xargs -n 1 basename 2>/dev/null) )
+fi
 
 # Loop over all files
 for FILE in ${ALLFILES[@]}; do
@@ -100,7 +112,20 @@ for FILE in "${ALL_HWRF[@]}"; do
 
   # Remove the link if the source file does not exist in $IDIR
   if ls ${IDIR}/${HWRF_BASE} 2> /dev/null; then
-    echo "MSG: MODEL file is available for ${YMDH}. Keeping link."
+    if [ "${REALTIME}" == "YES" ]; then
+      if [[ $(find ${IDIR}/${HWRF_BASE} -mmin "+10800") ]]; then
+        echo "MSG: MODEL file is too old for ${YMDH}. Deleting link."
+        rm -f ${FILE}
+        if [ -z "$(ls -A ${HWRF_PATH})" ]; then
+          echo "MSG: Directory is empty. Deleting it."
+          rm -rf ${HWRF_PATH}
+        fi
+      else
+        echo "MSG: MODEL file is available and new enough for ${YMDH}. Keeping link."
+      fi
+    else
+      echo "MSG: MODEL file is available for ${YMDH}. Keeping link."
+    fi
   else
     echo "MSG: MODEL file is no longer available for ${YMDH}. Deleting link."
     rm -f ${FILE}

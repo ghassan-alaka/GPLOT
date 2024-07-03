@@ -122,7 +122,7 @@ while test $# -gt 0; do
       shift
       if test $# -gt 0; then
         OMODEL="${1}"
-        echo "MSG: Output model specified. Will change model ID to ${ODMOEL}"
+        echo "MSG: Output model specified. Will change model ID to ${ODMODEL}"
       fi
       shift
       ;;
@@ -265,6 +265,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
       # Get basin and year information. This will help build the output ATCF
       ALL_BASINS=( `cat ${ADECK} | tr -d "[:blank:]" | awk -v MODEL="${MODEL^^}" -v SNUM="${SNUM}" -v CYCLE="${CYCLE}" -F, '$5==MODEL && $2==SNUM && $3==CYCLE' | cut -d "," -f1 | sort -u` )
       YEAR="`echo "$CYCLE" | cut -c1-4`"
+      MONTH="$(echo "$CYCLE" | cut -c5-6)"
       YMD="`echo "$CYCLE" | cut -c1-8`"
       HH="`echo "$CYCLE" | cut -c9-10`"
       YMDH="${YMD}${HH}"
@@ -315,18 +316,22 @@ for ADECK in ${ALL_ADECKS[@]}; do
         if [ "${BASIN,,}" = "al" ]; then
           BASIN2="l"
           BASIN3="AL"
+          YEAR2="${YEAR}"
           echo "MSG: ATCF basin --> North Atlantic Ocean"
         elif [ "${BASIN,,}" = "ep" ]; then
           BASIN2="e"
           BASIN3="EP"
+          YEAR2="${YEAR}"
           echo "MSG: ATCF basin --> eastern North Pacific Ocean"
         elif [ "${BASIN,,}" = "cp" ]; then
           BASIN2="c"
           BASIN3="CP"
+          YEAR2="${YEAR}"
           echo "MSG: ATCF basin --> central North Pacific Ocean"
         elif [ "${BASIN,,}" = "wp" ]; then
           BASIN2="w"
           BASIN3="WP"
+          YEAR2="${YEAR}"
           echo "MSG: ATCF basin --> western North Pacific Ocean"
         elif [ "${BASIN,,}" = "io" ]; then
           if [ "${LON}" -ge "800" ]; then
@@ -338,15 +343,18 @@ for ADECK in ${ALL_ADECKS[@]}; do
           fi
           BASIN="IO"
           BASIN3="IO"
+          YEAR2="${YEAR}"
         elif [ "${BASIN,,}" = "aa" ]; then
           BASIN="IO"
           BASIN2="a"
           BASIN3="AA"
+          YEAR2="${YEAR}"
           echo "MSG: ATCF basin --> North Indian Ocean (Arabian Sea)"
         elif [ "${BASIN,,}" = "bb" ]; then
           BASIN="IO"
           BASIN2="b"
           BASIN3="BB"
+          YEAR2="${YEAR}"
           echo "MSG: ATCF basin --> North Indian Ocean (Bay of Bengal)"
         elif [ "${BASIN,,}" = "sh" ]; then
           BASIN="SH"
@@ -358,15 +366,40 @@ for ADECK in ${ALL_ADECKS[@]}; do
             echo "MSG: ATCF basin --> Southern Hemisphere (South Indian Ocean)"
             BASIN2="s"
           fi
+          if [ "${MONTH}" -ge "7" ]; then
+            YEAR2="$((YEAR+1))"
+          else
+            YEAR2="${YEAR}"
+          fi
+        elif [ "${BASIN,,}" = "sp" ]; then
+          BASIN="SH"
+          BASIN2="p"
+          BASIN3="SP"
+          if [ "${MONTH}" -ge "7" ]; then
+            YEAR2="$((YEAR+1))"
+          else
+            YEAR2="${YEAR}"
+          fi
+          echo "MSG: ATCF basin --> South Hemisphere (South Pacific Ocean)"
         elif [ "${BASIN,,}" = "pp" ]; then
           BASIN="SH"
           BASIN2="p"
           BASIN3="PP"
+          if [ "${MONTH}" -ge "7" ]; then
+            YEAR2="$((YEAR+1))"
+          else
+            YEAR2="${YEAR}"
+          fi
           echo "MSG: ATCF basin --> South Hemisphere (South Pacific Ocean)"
         elif [ "${BASIN,,}" = "ss" ]; then
           BASIN="SH"
           BASIN2="s"
           BASIN3="SS"
+          if [ "${MONTH}" -ge "7" ]; then
+            YEAR2="$((YEAR+1))"
+          else
+            YEAR2="${YEAR}"
+          fi
           echo "MSG: ATCF basin --> South Hemisphere (South Indian Ocean)"
         elif [ "${BASIN,,}" = "ls" ]; then
           BASIN2="q"
@@ -377,10 +410,9 @@ for ADECK in ${ALL_ADECKS[@]}; do
           continue
         fi
 
-
         # Check that the B-Deck is available
         if [ -z "${BDECK}" ]; then
-          BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR}.dat
+          BDECK=${BDECKDIR}/b${BASIN,,}${SNUM}${YEAR2}.dat
           if [ -f ${BDECK} ]; then
             echo "MSG: B-Deck file found --> ${BDECK}"
           else
@@ -604,7 +636,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
                   sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${OFILE}
           if [ ! -z "${OMODEL}" ]; then
             #sed -i 's/'"${MODEL}"'/'"${OMODEL}"'/g' ${OFILE}
-            sed -i 's/'"$(printf '%4s' "${MODEL}")"'/'"$(printf '%4s' "${OMODEL}")"'/g' ${TMPFILE}
+            sed -i 's/'"$(printf '%4s' "${MODEL}")"'/'"$(printf '%4s' "${OMODEL}")"'/g' ${OFILE}
           fi
           echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
         fi
