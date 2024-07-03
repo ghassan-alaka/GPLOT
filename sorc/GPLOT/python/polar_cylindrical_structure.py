@@ -861,7 +861,7 @@ def main():
     for k in range(zsize):
       rmw_mean[k] = np.round(np.median(r[vt_p_mean[:,k] > 0.95*np.nanmax(vt_p_mean[:,k])]))
       rmw_mean_index[k] = np.argmin(abs(r-rmw_mean[k])) 
-      vt_rmw_mean[k] = vt_p_mean[np.int(rmw_mean_index[k]),k]
+      vt_rmw_mean[k] = vt_p_mean[int(rmw_mean_index[k]),k]
 
     rmw_2km = rmw_mean[4]
     vt_p_mean_max = np.max(vt_p_mean,0)
@@ -933,7 +933,7 @@ def main():
         ygrad = np.nanmean(np.gradient(y_sr))
 
       for k in range(zsize):
-        vort[:,:,k] = np.sign(centerlat)*np.array(mpcalc.vorticity(uwind[:,:,k]* units.meter / units.second,vwind[:,:,k]* units.meter / units.second,xgrad*1e3* units.meter,ygrad*1e3* units.meter,dim_order='yx'))
+        vort[:,:,k] = np.sign(centerlat)*np.array(mpcalc.vorticity(uwind[:,:,k]*units.meter/units.second, vwind[:,:,k]*units.meter/units.second, dx=xgrad*1e3*units.meter, dy=ygrad*1e3*units.meter))
 
       vort_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 
@@ -1672,8 +1672,8 @@ def main():
         y_sr_200km = y_sr[ymin:ymax]
         lon_sr_200km = lon[xmin:xmax]
         lat_sr_200km = lat[ymin:ymax]
-        x_sr_200km_interp = np.linspace(-200,200,np.int(400/res)+1)
-        y_sr_200km_interp = np.linspace(-200,200,np.int(400/res)+1)
+        x_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
+        y_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
 
         newcenter_xindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
         newcenter_yindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)

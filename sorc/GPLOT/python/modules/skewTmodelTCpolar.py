@@ -39,7 +39,7 @@ def skewTmodelTCpolar(r_grid, theta_grid, p_sounding_polar, u_sounding_polar, v_
   v_sounding_polar = v_sounding_polar*1.94
   temp_sounding_polar = temp_sounding_polar-273.15
 
-  td_sounding_polar = mpcalc.dewpoint_rh(temp_sounding_polar * units.celsius,rh_sounding_polar * units.percent)
+  td_sounding_polar = mpcalc.dewpoint_from_relative_humidity(temp_sounding_polar*units.celsius, rh_sounding_polar*units.percent)
 
   index_r_rmw = np.argmin(np.abs(r_grid-1.852*rmw))
   index_r_050 = np.argmin(np.abs(r_grid-1.852*50))

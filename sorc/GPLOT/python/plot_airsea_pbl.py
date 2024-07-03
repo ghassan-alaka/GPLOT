@@ -49,6 +49,10 @@ def debug_dump_range(FHR,varnm,var):
   print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var)},{np.nanpercentile(var,25)},{np.nanmedian(var)},{np.nanpercentile(var,75)},{np.nanmax(var)}');
   pass;
 
+def add_center_label(ax1,centerlon,centerlat,minpressure):
+  ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='black',fontsize=28,fontweight='extra bold');
+  ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='red',fontsize=28);
+
 ##############################
 def main():
 
@@ -110,8 +114,8 @@ def main():
   
   
   # Read the master namelist
-  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   BASEDIR = ODIR
   try:
@@ -152,6 +156,15 @@ def main():
   resolution = float(RESOLUTION)
   rmax = float(RMAX)
   zsize_pressure = int(LEVS)
+  
+  # Read the plot title
+  TBLDIR = GPLOT_DIR+'/tbl'
+  print(f'EXPT --> {EXPT}');
+  try:
+    EXPT_TITLE = subprocess.run(['grep',f'^  *{EXPT} *,',f'{TBLDIR}/ExptInfo.dat'], stdout=subprocess.PIPE).stdout.decode('utf-8').split(",")[1].strip()
+  except:
+    EXPT_TITLE = EXPT
+  print(f'EXPT_TITLE --> {EXPT_TITLE}');
   
   # Get the ATCF file.
   ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
@@ -499,14 +512,15 @@ def main():
     
     DELTA_T = sst - temp[...,0].squeeze();
     # DPT=SST at sfc
-    sfcq = mpcalc.specific_humidity_from_dewpoint((sst+273.15)*metpy.units.units.K,\
-                                                  mslp.squeeze()*metpy.units.units.hPa)
+    sfcq = mpcalc.specific_humidity_from_dewpoint(mslp.squeeze()*metpy.units.units.hPa,\
+                                                  (sst+273.15)*metpy.units.units.K)
     DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
-    DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\
+    DPT = mpcalc.dewpoint_from_specific_humidity(levs*metpy.units.units.hPa,\
                                                  temp*metpy.units.units.K,\
-                                                 levs*metpy.units.units.hPa)
+                                                 q*metpy.units.units("kg/kg"))
     THETA_E = mpcalc.equivalent_potential_temperature(levs*metpy.units.units.hPa,\
-                                                      temp*metpy.units.units.K,DPT);
+                                                      temp*metpy.units.units.K,\
+                                                      DPT);
     
     if ( np.all(np.isnan(THETA_E)) ):
       print(f'WARNING: THETA_E ALL NaNs in {CTL_FILE}: Skipping this forecast hour')
@@ -535,8 +549,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=turb_flux_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.turb_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -553,8 +568,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=total_flux_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.total_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -573,8 +589,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=theta_e_550_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_550,vwind_550,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_550.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -593,8 +610,9 @@ def main():
       #cbar1 = plt.colorbar(co1, ticks=np.linspace(350,380,7,endpoint=True))
       cbar1 = plt.colorbar(co1, ticks=theta_e_700_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_700,vwind_700,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_700.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -617,8 +635,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=theta_e_850_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_850.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -634,8 +653,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_t_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_t.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -652,8 +672,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
