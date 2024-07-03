@@ -19,6 +19,8 @@ DO_MAPS = True
 DO_STATS = True
 DO_SHIPS = True
 DO_POLAR = True
+DO_AIRSEA = True
+DO_OCEAN_MAPS = False
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -39,22 +41,22 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/oper/
+IDIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/oper/
 ITAG =
 EXT =
 
 ; 1I. OUTPUT PATH
-ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
+ODIR = /lfs4/HFIP/hur-aoml/rthr-aoml/HRDGRAPHICS_RT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/tracker_2023
+ATCF1_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/tracker_2024
 ATCF1_TAG = hfsa.trak.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/tracker_2023
+ATCF2_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/HAFS/HFSA/tracker_2024
 ATCF2_TAG = atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT/
-BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+ADECK_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/adeck/NHC_2024/
+BDECK_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0

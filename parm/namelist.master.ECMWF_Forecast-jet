@@ -39,22 +39,22 @@ IDATE =
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/ECMWF/0p4-beta/oper/
+IDIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/ECMWF/0p4-beta/oper/
 ITAG =
 EXT = .grib2
 
 ; 1I. OUTPUT PATH
-ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
+ODIR = /lfs4/HFIP/hur-aoml/rthr-aoml/HRDGRAPHICS_RT/
 
 ; 1J. ATCF PATH
-ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2023/
+ATCF1_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2024/
 ATCF1_TAG = trak.ecmo.atcfunix
-ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2023/
+ATCF2_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/noscrub/ECMWF_Forecast_2024/
 ATCF2_TAG = trak.ecmx.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT_2023/
-BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+ADECK_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT_2024/
+BDECK_DIR = /lfs5/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
