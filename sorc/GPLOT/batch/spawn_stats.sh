@@ -4,7 +4,7 @@
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=sjet,vjet,xjet,kjet
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
@@ -131,13 +131,13 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     fi
 fi
 
@@ -204,10 +204,14 @@ DATE_NOW="`date +'%Y%m%d%H'`"
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
 ATCF_TMP=()
-ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP+=( $(find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -25) )
 if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
-    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
-    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+    ATCF_TMP+=( $(find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -25) )
+fi
+ATCF_TMP+=( $(find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}' | shuf) )
+if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
+    ATCF_TMP+=( $(find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}' | shuf) )
+    #ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 fi
 ATCF_ALL=()
 for ATCF in "${ATCF_TMP[@]}"; do
@@ -306,6 +310,14 @@ if [ "${DO_STATS}" = "True" ]; then
             BASIN2="cp"
         elif [ "${BASIN1,,}" == "w" ]; then
             BASIN2="wp"
+        elif [ "${BASIN1,,}" == "b" ] || [ "${BASIN1,,}" == "a" ]; then
+            BASIN2="io"
+        elif [ "${BASIN1,,}" == "p" ] || [ "${BASIN1,,}" == "s" ]; then
+            BASIN2="sh"
+        elif [ "${BASIN1,,}" == "q" ]; then
+            BASIN2="ls"
+        else
+            BASIN2="xx"
         fi
         YYYY=`echo "${CYCLE}" | cut -c1-4`
         MM=`echo "${CYCLE}" | cut -c5-6`

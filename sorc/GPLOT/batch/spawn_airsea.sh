@@ -4,7 +4,7 @@
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=sjet,vjet,xjet,kjet
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
@@ -1000,7 +1000,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                                 ${FULL_CMD} &
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-                                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=128G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=32G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi

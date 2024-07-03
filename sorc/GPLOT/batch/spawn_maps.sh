@@ -3,8 +3,8 @@
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
-#SBATCH --time=00:19:30
-#SBATCH --partition=sjet,vjet,xjet,kjet
+#SBATCH --time=00:25:00
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
@@ -129,13 +129,13 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     fi
 fi
 
@@ -173,7 +173,7 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # Define a maximum number of cycles to be processed based on the experiment
 MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
 if [ -z "${MAX_CYCLES}" ]; then
-    if [ "${EXPT}" == "GFS_Forecast" ]; then
+    if [[ "${EXPT}" == *"GFS_Forecast" ]] || [ "${EXPT}" == "ECMWF_Forecast" ]; then
         MAX_CYCLES=6
     else
         MAX_CYCLES=25
@@ -301,13 +301,13 @@ if [ "${DO_MAPS}" = "True" ]; then
     ###########################
     for TR in ${TIER[@]}; do
         echo ""
-    
+
         ##################################
         # LOOP OVER ALL AVAILABLE CYCLES #
         ##################################
         for CYCLE in ${CYCLES[@]}; do
             echo ""
-    
+
             # Only retain the numbers for the cycle
             # Parse the prefix (e.g., gfs.) if it exists.
             CPREFIX=`echo "${CYCLE}" | grep -E '^[A-Za-z0-9]*\..*$' | sed 's/\([A-Za-z0-9]*\.\)\([0-9]*\)/\1/'`
@@ -1010,25 +1010,25 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
                             RUNTIME="04:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
                             RUNTIME="04:59:59"
+                        else
+                            RUNTIME="05:29:59"
                         fi
 
 

@@ -4,7 +4,7 @@
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=sjet,vjet,xjet,kjet
+#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
@@ -131,13 +131,13 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     fi
 fi
 
@@ -928,25 +928,25 @@ if [ "${DO_POLAR}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="04:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="04:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
                             RUNTIME="05:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
                             RUNTIME="05:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="06:29:59"
+                        else
+                            RUNTIME="06:59:59"
                         fi
 
                         # Check if a similar job is already submitted
@@ -996,8 +996,9 @@ if [ "${DO_POLAR}" = "True" ]; then
                                 ${FULL_CMD} &
                             else
                                 SLRM_OPTS="--account=${CPU_ACCT} --job-name=${JOB_NAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-                                #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=64G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
-                                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=64G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                SLRM_OPTS="${SLRM_OPTS} --nodes=1 --ntasks-per-node=12 --mem=64G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                #SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=64G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
+                                #SLRM_OPTS="${SLRM_OPTS} --nodes=1 --mem=64G --time=${RUNTIME} --qos=${QOS} --partition=${PARTITION}"
                                 echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}]."
                                 ${X_SBATCH} ${SLRM_OPTS} ${FULL_CMD}
                             fi
