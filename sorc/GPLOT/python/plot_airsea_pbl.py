@@ -757,7 +757,7 @@ def main():
 
         fig1 = plt.figure(figsize=(15.5,15.5))
         ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-        ax1.set_extent([np.int(lonplotmin),np.int(lonplotmax),np.int(latplotmin),np.int(latplotmax)], crs=ccrs.PlateCarree())
+        ax1.set_extent([int(lonplotmin),int(lonplotmax),int(latplotmin),int(latplotmax)], crs=ccrs.PlateCarree())
         plt.contourf(lon, lat, wstt2_new*1.94, levs_wind, cmap=colormap_wind, norm=norm_wind, extend='both', transform=ccrs.PlateCarree())
         ax1.set_title(EXPT_TITLE.strip()+'\n'+ 'Gusts (kt)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
@@ -801,7 +801,7 @@ def main():
         latplot = np.arange(int(round(latplotmin,0))-1,int(round(latplotmax,0))+1,1)
         fig1 = plt.figure(figsize=(15.5,15.5))
         ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-        ax1.set_extent([np.int(lonplotmin),np.int(lonplotmax),np.int(latplotmin),np.int(latplotmax)], crs=ccrs.PlateCarree())
+        ax1.set_extent([int(lonplotmin),int(lonplotmax),int(latplotmin),int(latplotmax)], crs=ccrs.PlateCarree())
         plt.contourf(lon, lat, gf2_new, levs_gf, cmap='Reds', norm=norm_gf, extend='both', transform=ccrs.PlateCarree())
         cbar = plt.colorbar(ticks=[1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0],shrink=0.8)
         cbar.ax.tick_params(labelsize=24)
