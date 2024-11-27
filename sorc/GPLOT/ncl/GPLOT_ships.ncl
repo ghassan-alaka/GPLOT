@@ -333,11 +333,11 @@ print("MSG: Using this graphics namelist: "+VAR_NML)
 ;    PLOT_ON --> produce graphics of the data type
 ;    FNAME   --> name of the data (for ASCII and graphic files)
 data		:= asciiread(VAR_NML,-1,"string")
-headers		:= str_split(data(0),"   ")
-DATA_ON		= where(str_squeeze(str_get_field(data(1:),ind(headers.eq."DATA_ON")+1,"   ")).eq."T",True,False)
+headers		:= str_split(data(0),"	 ")
+DATA_ON		= where(str_squeeze(str_get_field(data(1:),ind(headers.eq."DATA_ON")+1,"	 ")).eq."T",True,False)
 nData		= dimsizes(DATA_ON)
-PLOT_ON		= where(str_squeeze(str_get_field(data(1:),ind(headers.eq."PLOT_ON")+1,"   ")).eq."T",True,False)
-FNAME		= str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")+1,"   "))
+PLOT_ON		= where(str_squeeze(str_get_field(data(1:),ind(headers.eq."PLOT_ON")+1,"	 ")).eq."T",True,False)
+FNAME		= str_squeeze(str_get_field(data(1:),ind(headers.eq."FILE_NAME")+1,"	 "))
 print("MSG: Will produce data for:     "+stringOut(FNAME(ind(DATA_ON))))
 print("MSG: Will produce graphics for: "+stringOut(FNAME(ind(PLOT_ON))))
 if(verbose.ge.1)then	print(VAR_NML)
@@ -702,12 +702,15 @@ do fff = 0,nFiles-1
 		nDims@dNames = dNames
 		
 		; Get info based on domain
-		B = getDmnInfo("ships",DSOURCE,"bdstype",False)
+		if(FNAME(ppp).eq."TCCEN")then	B = 9
+		else				B = getDmnInfo("ships",DSOURCE,"bdstype",False)
+		end if
 
 		; Loop over all available dimensions
 		; Only need to do this once
 		if(ppp2.eq.0)then
 		do ddd = 0,nDims-1
+			BOCO@doPivot = True
 			; LATITUDE
 			if(isStrSubset(dNames(ddd),"lat"))then
 				lat := get_dim_lat(f,dNames(ddd),BOCO,tcLats,tcLons,fff,B)
@@ -1069,18 +1072,19 @@ do fff = 0,nFiles-1
 				
 			; 2) Get U & V data (uncombined)
 			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,True/),lonF)
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			U@_FillValue = -999.
 			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,True/),lonF)
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V@_FillValue = -999.
 
 			; 3) Get 850 hPa TC center
-			if(.not.fileexists(str_sub_str(DAT_FILE,FNAME(ppp),"TCCEN")))then   continue   end if
-			NL	:= dimsizes(asciiread(str_sub_str(DAT_FILE,FNAME(ppp),"TCCEN"),-1,"string"))
-			data	:= asciiread(tmpDir2+NameIDTag+".TCCEN."+IDATE_s+".dat",(/NL,5/),"float")
-			LAT850	:= data(ind(toint(data(:,0)).eq.fHr(fff) .and. toint(data(:,1)).eq.850),2)
-			LON850	:= data(ind(toint(data(:,0)).eq.fHr(fff) .and. toint(data(:,1)).eq.850),3)
+			DAT_FILE2 = str_sub_str(DAT_FILE,FNAME(ppp),"TCCEN")
+			if(.not.fileexists(DAT_FILE2))then   continue   end if
+			NL	:= dimsizes(asciiread(DAT_FILE2,-1,"string"))
+			data	:= asciiread(DAT_FILE2,(/NL,5/),"float")
+			LAT850	:= data(ind(toint(data(:,0)).eq.FHR(fff) .and. toint(data(:,1)).eq.850),2)
+			LON850	:= data(ind(toint(data(:,0)).eq.FHR(fff) .and. toint(data(:,1)).eq.850),3)
 				
 			; 4) Convert both U & V to cartesian (X,Y) coordinates
 			U1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
@@ -1099,13 +1103,17 @@ do fff = 0,nFiles-1
 			end if
 
 			; 6) FOR WIND SHEAR DIRECTION
-			V2	= C@r2d*atan2(U1,V1)
-			if(ismissing(V2))then
+			V2	:= C@r2d*atan2(U1,V1)
+			V2@units = "degrees"
+			V2@long_name = "VWS Direction"
+			if(.not.ismissing(V2))then
 				if(V2.lt.0)then   V2 = 360.+V2   end if
 			end if
 				
 			; 7) FOR WIND SHEAR MAGNITUDE
-			V3	= sqrt(U1^2. + V1^2.)
+			V3	:= sqrt(U1^2. + V1^2.)
+			V3@units = "kt"
+			V3@long_name = "VWS Magnitude"
 
 			; 8) SHDC: Same as SHRD but with vortex removed and averaged from 0-500 km relative
 			;          to 850 mb vortex center
@@ -1144,7 +1152,7 @@ do fff = 0,nFiles-1
 			
 			; 9) Update the title for the graphic.
 			TITLE = "Deep Shear w/ Vortex Removed"
-			TITLE = TITLE+" ["+V1@units+"]"	
+			TITLE = TITLE+" ["+V2@units+"]"	
 			
 		
 		;;;;;;;;;;;;;;;;;;;;;;;;;;;	
@@ -1448,17 +1456,17 @@ do fff = 0,nFiles-1
 			
 		else if(any((/"R000"/).eq.FNAME(ppp)))then				
 			; 1) Retrieve RH data
-			if(isvar("V") .and. V@long_name.ne."1000 hPa Relative Humidity")then
+			;if(isvar("V") .and. V@long_name.ne."1000 hPa Relative Humidity")then
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 				V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V@long_name = "Relative Humidity"
 				TITLE	= "1000 hPa Relative Humidity (200-800km)"
-			else if(.not.isvar("V"))then
-				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-				V@long_name = "Relative Humidity"
-				TITLE	= "1000 hPa Relative Humidity (200-800km)"
-			end if  end if
+			;else if(.not.isvar("V"))then
+			;	V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			;	V(0,:,:)= getVar2d(f,DSOURCE,(/"RH","1000"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			;	V@long_name = "Relative Humidity"
+			;	TITLE	= "1000 hPa Relative Humidity (200-800km)"
+			;end if  end if
 			V@_FillValue = -999.
 				
 			; 2) Set up the cartesian coordinates
@@ -1499,17 +1507,17 @@ do fff = 0,nFiles-1
 		; SHIPS --> Z850: 850 hPa Relative Vorticity (0-1000km)
 		else if(any((/"Z850"/).eq.FNAME(ppp)))then
 			; 1) Retrieve Vorticity data
-			if(isvar("V") .and. V@long_name.ne."850 hPa Relative Vorticity")then
+			;if(isvar("V") .and. V@long_name.ne."850 hPa Relative Vorticity")then
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 				V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V@long_name = "Relative Vorticity"
 				TITLE = "850 hPa Relative Vorticity (0-1000km)"
-			else if(.not.isvar("V"))then
-				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-				V@long_name = "Relative Vorticity"
-				TITLE = "850 hPa Relative Vorticity (0-1000km)"
-			end if  end if
+			;else if(.not.isvar("V"))then
+			;	V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			;	V(0,:,:)= getVar2d(f,DSOURCE,(/"RVO","0850"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			;	V@long_name = "Relative Vorticity"
+			;	TITLE = "850 hPa Relative Vorticity (0-1000km)"
+			;end if  end if
 			V@_FillValue = -999.
 				
 			; 2) Set up the cartesian coordinates
@@ -1550,7 +1558,7 @@ do fff = 0,nFiles-1
 		;	--> DIVC: Same as D200, but centered at 850 hPa vortex location
 		else if(any((/"D200","DIVC"/).eq.FNAME(ppp)))then
 			; 1)  Retrieve wind data
-			if(isvar("V") .and. V@long_name.ne."200 hPa Meridional Wind")then
+			;if(isvar("V") .and. V@long_name.ne."200 hPa Meridional Wind")then
 				U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 				U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
@@ -1558,15 +1566,15 @@ do fff = 0,nFiles-1
 				V	:= uv2dv_cfd(U,V,lat,lon,2)
 				V@long_name = "Divergence"
 				V@units = "s-1"
-			else if(.not.isvar("V") .and. .not.isvar("U"))then
-				U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-				V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-				V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-				V	:= uv2dv_cfd(U,V,lat,lon,2)
-				V@long_name = "Divergence"
-				V@units = "s-1"
-			end if  end if
+			;else if(.not.isvar("V") .and. .not.isvar("U"))then
+			;	U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			;	U(0,:,:)= getVar2d(f,DSOURCE,(/"U","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			;	V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			;	V(0,:,:)= getVar2d(f,DSOURCE,(/"V","0200"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			;	V	:= uv2dv_cfd(U,V,lat,lon,2)
+			;	V@long_name = "Divergence"
+			;	V@units = "s-1"
+			;end if  end if
 			U@_FillValue = -999.
 			V@_FillValue = -999.
 
@@ -1663,7 +1671,105 @@ do fff = 0,nFiles-1
 			
 			; 9) Update the title
 			TITLE = TITLE+" ["+V1@units+"]"	
+
+		;;;;;;;;;;;;;;;;;;
+		; CAPE (0-200km) ;
+		;;;;;;;;;;;;;;;;;;
+		; Non-SHIPS parameter created by George Trey Alvey
+		else if(any((/"CAPE"/).eq.FNAME(ppp)))then
+
+			; 0) Set up dimensions
+			nDims	:= dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,"CAPE","")))
+			dNames	:= getfilevardims(f,findVarName(DSOURCE,"CAPE",""))
+			nDims@dNames = dNames
+
+			; 1) Set up the cartesian coordinates
+			X	:= tofloat(ispan(-200,200,10))
+			Y	:= tofloat(ispan(-200,200,10))
+				
+			; 3) Get CAPE data
+			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"CAPE",""/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			V@_FillValue = -999.
+                        V@long_name = "Convective Available Potential Energy"
+                        V@units = "J/kg"
+				
+			; 4) Convert both CAPE to cartesian (X,Y) coordinates
+			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
+			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
+
+			; 5) Average CAPE in a 0-200km annulus (see SHIPS)
+			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.0.\
+					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.200.,\
+					V1,V1@_FillValue)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
+			copy_VarAtts(V,V1)
+
+			; 7) Write data to a .DAT file.
+			data	:= new((/1,2/),"float")
+			data(0,:)= (/tofloat(FHR(fff)), V1/)
 			
+			; 8) Write data to table (if applicable)	
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
+						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
+			
+			; 9) Update the title
+			TITLE = "CAPE ["+V1@units+"]"			
+			
+		;;;;;;;;;;;;;;;;;;;;;;
+		; Helicity (0-200km) ;
+		;;;;;;;;;;;;;;;;;;;;;;
+		; Non-SHIPS parameter created by George Trey Alvey
+		else if(any((/"HLCY"/).eq.FNAME(ppp)))then
+
+			; 0) Set up dimensions
+			nDims	:= dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,"HLCY","")))
+			dNames	:= getfilevardims(f,findVarName(DSOURCE,"HLCY",""))
+			nDims@dNames = dNames
+
+			; 1) Set up the cartesian coordinates
+			X	:= tofloat(ispan(-200,200,10))
+			Y	:= tofloat(ispan(-200,200,10))
+				
+			; 3) Get Helicity data
+			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"HLCY",""/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			V@_FillValue = -999.
+                        V@long_name = "t"
+                        V@units = "J/kg"
+				
+			; 4) Convert both Helicity to cartesian (X,Y) coordinates
+			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
+			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
+
+			; 5) Average HLCY in a 0-200km annulus (see SHIPS)
+			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.0.\
+					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.200.,\
+					V1,V1@_FillValue)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
+			copy_VarAtts(V,V1)
+
+			; 7) Write data to a .DAT file.
+			data	:= new((/1,2/),"float")
+			data(0,:)= (/tofloat(FHR(fff)), V1/)
+			
+			; 8) Write data to table (if applicable)	
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
+						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
+			
+			; 9) Update the title
+			TITLE = "Storm-Relative Helicity ["+V1@units+"]"			
+	
 		
 		;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		; Tropical Cyclone Centers ;
@@ -2550,7 +2656,7 @@ do fff = 0,nFiles-1
 				
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if  end if
 			
 			
 			
@@ -2612,12 +2718,13 @@ do fff = 0,nFiles-1
 			else if(any((/"RHLO","RHMD","RHHI"/).eq.FNAME(ppp)))then
 				IntMjrGrd := ispan(0,100,20)
 			else
-				if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then	minInt = 0.
-														maxInt = ceil(max(Vp)+0.10*max(Vp))
-				else if(any((/"PENV","MSLP"/).eq.FNAME(ppp)))then				minInt = floor(min(Vp))
-														maxInt = ceil(max(Vp))
-				else										minInt = floor(min(Vp)-0.10*abs(min(Vp)))
-														maxInt = ceil(max(Vp)+0.10*abs(max(Vp)))
+				if(any((/"VMAX","IKE34","IKE50","IKE64",\
+					 "SHRD","SHRS","CAPE"/)           .eq.FNAME(ppp)))then		minInt = 0.
+													maxInt = ceil(max(Vp)+0.10*max(Vp))
+				else if(any((/"PENV","MSLP"/).eq.FNAME(ppp)))then			minInt = floor(min(Vp))
+													maxInt = ceil(max(Vp))
+				else									minInt = floor(min(Vp)-0.10*abs(min(Vp)))
+													maxInt = ceil(max(Vp)+0.10*abs(max(Vp)))
 				end if  end if
 				rngInt	:= abs(maxInt-minInt)
 				if(maxInt.eq.minInt)then

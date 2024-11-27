@@ -12,3 +12,5 @@ do_mld,Y
 do_sss,Y
 do_mlt,Y
 do_mls,Y
+do_ssh_tendency,Y
+do_ships_output,Y

@@ -6,7 +6,7 @@
 A="${1:-0}"
 
 # Determine the GPLOT source code directory
-if [ -z "${GPLOT_DIR}" ]; then
+if [ ! -v GPLOT_DIR ]; then
     export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
 fi
 
@@ -21,17 +21,20 @@ module purge
 #module use /apps/contrib/modulefiles
 #module use /apps/contrib/NCEPLIBS/lib/modulefiles
 #module use /apps/contrib/NCEPLIBS/orion/modulefiles
-module load intel/2020.2
-module load wgrib/2.0.8
+module load contrib/0.1
 if [ "${A}" -eq 0 ]; then
-    module load contrib/0.1
-    module load intelpython3/2020.2
-    module load contrib met/10.1.0
+    module load intel-oneapi-compilers/2022.2.1
+    module load met/12.0.0-beta3
 fi
-module load ncl/6.6.2
+module load cairo/1.16.0
+module load udunits/2.2.28
 module load grads/2.2.1
+module load imagemagick/7.0.8-7
 
 # NCL
+if [ ! -v NCARG_ROOT ]; then
+    export NCARG_ROOT="$( which ncl | rev | cut -d'/' -f3- | rev )"
+fi
 export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 
 # Python 3 Anaconda

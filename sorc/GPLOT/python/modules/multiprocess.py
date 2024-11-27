@@ -1,7 +1,7 @@
 import concurrent.futures
 import numpy as np
 import modules.interp as interp
-import modules.io as io
+import modules.io_extra as io
 
 ##############################
 def multiprocess_polar_vars(x, y, xi, yi, varList=None, levels=None):

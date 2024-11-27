@@ -1,0 +1,172 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+
+; 1A. EXPERIMENT NAME.
+EXPT = C3P8_GFS_Forecast
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+DO_MAPS = True
+DO_STATS = True
+DO_SHIPS = True
+DO_POLAR = True
+
+; 1C. DATA SOURCE
+DSOURCE = GFS
+
+; 1D. IS THIS MULTISTORM DATA?
+IS_MSTORM = True
+
+; 1E. ENSEMBLE MEMBER NUMBER
+ENSMEM = 0
+
+; 1E. SYSTEM ENVIRONMENT
+SYS_ENV = JET
+
+; 1F. FORECAST CYCLE
+IDATE = 
+
+; 1G. STORM ID
+SID = 
+
+; 1H. INPUT
+IDIR = /lfs1/BMC/gsd-fv3-test/HFIP/GFSv17p8_HFIP23/FV3GFSrun/rt_v17p8_c3/
+ITAG =
+EXT = 
+
+; 1I. OUTPUT PATH
+ODIR = /lfs4/HFIP/hur-aoml/Ghassan.Alaka/GPOUT/
+
+; 1J. ATCF PATH
+ATCF1_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/GFSv17p8_HFIP23/tracker_2023/
+ATCF1_TAG = c3p8.trak.atcfunix
+ATCF2_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/DATA/MODEL_OUTPUT/GFSv17p8_HFIP23/tracker_2023/
+ATCF2_TAG = c3p8.trak.atcfunix
+
+; 1K. ADECK & BDECK PATHS
+ADECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/adeck/GPLOT_2023/
+BDECK_DIR = /lfs1/HFIP/hur-aoml/Ghassan.Alaka/bdeck/
+
+; 1L. FORECAST HOUR INFORMATION
+INIT_HR = 0
+FNL_HR = 168
+FMT_HR = 3
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+DT = 6
+
+; 1N. MASK TOPOGRAPHY
+DO_TOPOMASK = False
+
+; 1O. REMOVE WHITE SPACE
+DO_RMWHITE = True
+
+; 1P. TOGGLE TITLE
+DO_SRCLBL = True
+
+; 1Q. AUTO-CHOOSE SETUP VARIABLES
+AUTO_VAR = False
+
+; 1R. AUTO-CHOOSE EXPERIMENT
+AUTO_DIR = False
+
+; 1S. FORCE
+FORCE = False
+
+; 1T. BATCH SUBMISSION MODE
+BATCH_MODE = SBatch
+
+; 1U. CONVERT FROM PNG TO GIF
+DO_CONVERTGIF = True
+
+; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
+CPU_ACCT = hur-aoml
+
+; 1W. QUALITY OF SERVICE (for BATCH_MODE = SBatch)
+QOS = batch
+
+; 1X. PARTITION(S) (for BATCH_MODE = SBatch)
+PARTITION = tjet,ujet,sjet,vjet,xjet,kjet
+
+; 1Y. AUTOMATICALLY SETUP BATCH SUBMISSIONS BASED ON SYS_ENV (1E).
+AUTO_BATCH = True
+
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+DOMAIN = basin atl wlant elant gom epac cpac d01 d03
+
+; 2B. MAP GRAPHICS TIER
+TIER = Tier1 Tier2
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = False
+
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES
+MORIG = C3P8
+MCODE = C3P8
+MCODEI = C38I
+MCODE12 = C382
+
+; 3B. FORECAST GUIDANCE MODELS
+TRKM = MYP8 C3P8 THP8 HFSA HFSB HWRF AVNO ECMO HMON CTCX EGRR
+INTM = MYP8 C3P8 THP8 HFSA HFSB HWRF AVNO ECMO HMON DSHP LGEM CTCX
+PRSM = MYP8 C3P8 THP8 HFSA HFSB HWRF AVNO ECMO HMON CTCX
+TRKMI = MY8I C38I TH8I HFAI HFBI HWFI AVNI HMNI EGRI CTCI TVCN OFCL
+INTMI = MY8I C38I TH8I HFAI HFBI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = MYP8 C3P8 THP8 HFSA HFSB HWRF HMON AVNO ECMO EGRR OFCL
+INTMT = MYP8 C3P8 THP8 HFSA HFSB HWRF HMON DSHP OFCL
+
+; 3C. VERIFICATION MODELS
+ETM = MY8I C38I TH8I HFAI HFBI HWFI GFSI HMNI CTCI TVCN OFCL
+EIM = MY8I C38I TH8I HFAI HFBI HWFI GFSI HMNI DSHP LGEM CTCI IVCN OFCL
+LTM = MYP8 C3P8 THP8 HFSA HFSB HWRF GFSO HMON CTCX
+LIM = MYP8 C3P8 THP8 HFSA HFSB HWRF GFSO HMON CTCX
+
+; 3D. VERIFICATION TIMES
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120 132 144 156 168
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
+; 3F. INTERPOLATION
+DO_INTERP = True
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; SECTION 5: GPLOT_Polar variables
+;================================================================
+
+PYTHONFILE = polar_cylindrical_structure.py
+RESOLUTION = 25
+RMAX = 600
+LEVS = 41
+DO_DBZ = False
+
