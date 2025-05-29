@@ -729,6 +729,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                         IFHRS=()
                         while [ -z "${IFILES[*]}" ]; do
                             IDIR_FULL="$(echo "${IDIR}/${IDIR_OPTS[$F]}" | sed s#//*#/#g)"
+                            #DEBUG:                            echo "SEARCHING ${IDIR_FULL}"
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
                                 ((F=F+1))
@@ -748,6 +749,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                                     FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
     
+                                #DEBUG:                                echo "FILE_SEARCH=${FILE_SEARCH}"
+                                #DEBUG:                                echo "FILE_SEARCH2=${FILE_SEARCH2}"
+                                #DEBUG:                                echo "FILE_SEARCH3=${FILE_SEARCH3}"
                                 # Search for a matching file. If found, append the file and forecast hour to their respective arrays
                                 FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
                                 if [ "${#FILE_LS[@]}" -eq "1" ]; then

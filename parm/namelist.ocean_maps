@@ -14,3 +14,6 @@ do_mlt,Y
 do_mls,Y
 do_ssh_tendency,Y
 do_ships_output,Y
+do_sst_tendency,Y
+do_ohc_tendency,Y
+do_obs_profiles,N

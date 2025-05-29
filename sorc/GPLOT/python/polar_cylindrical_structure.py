@@ -58,7 +58,7 @@ def main():
 
   #Define Pygrads interface
   ga = Grads(verbose=False)
-  
+
   #Get command lines arguments
   if len(sys.argv) < 11:
     print(f'ERROR: Expected 11 command line arguments. Got {len(sys.argv)} args.')
@@ -94,11 +94,11 @@ def main():
     print("ERROR: I couldn't find the Master Namelist.")
     sys.exit()
   PYTHONDIR = f'{GPLOT_DIR}/sorc/GPLOT/python'
-  
-  
+
+
   # Read the master namelist
-  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   BASEDIR = ODIR
   try:
@@ -112,7 +112,7 @@ def main():
     ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
     BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
 
-  figext = '.png'  
+  figext = '.png'
   try:
     DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
     DO_CONVERTGIF = (DO_CONVERTGIF == 'True')
@@ -120,9 +120,9 @@ def main():
   except:
     DO_CONVERTGIF = False
     figext2 = '.png'
-  
-  try:  
-    DO_RESEARCH_MODE = subprocess.run(['grep','^DO_RESEARCH_MODE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip() 
+
+  try:
+    DO_RESEARCH_MODE = subprocess.run(['grep','^DO_RESEARCH_MODE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
     DO_RESEARCH_MODE = (DO_RESEARCH_MODE == 'True')
   except:
     DO_RESEARCH_MODE = True
@@ -132,13 +132,13 @@ def main():
     DO_DBZ = (DO_DBZ == 'True')
   except:
     DO_DBZ = True
-  
+
   print(f'MSG: Research Mode? {str(DO_RESEARCH_MODE)}')
 
   # Create the temporary directory for GrADs files
   TMPDIR = BASEDIR.strip()+'grads/'
   if not os.path.exists(TMPDIR):  os.mkdir(TMPDIR)
-  
+
   # Define some important file names
   UNPLOTTED_FILE = f'{ODIR.strip()}UnplottedFiles.{DOMAIN.strip()}.{TIER.strip()}.{SID.strip()}.log'
   PLOTTED_FILE = f'{ODIR.strip()}PlottedFiles.{DOMAIN.strip()}.{TIER.strip()}.{SID.strip()}.log'
@@ -146,11 +146,20 @@ def main():
   STATUS_FILE = f'{ODIR.strip()}status.{DOMAIN.strip()}.{TIER.strip()}.{SID.strip()}.log'
   ST_LOCK_FILE = f'{STATUS_FILE}.lock'
   ATCF_FILE = f'{ODIR.strip()}ATCF_FILES.dat'
-  
-  
+
+
   #Get parameters from input file
   resolution, rmax, zsize_pressure = float(RESOLUTION), float(RMAX), int(LEVS)
-  
+
+  # Read the plot title
+  TBLDIR = GPLOT_DIR+'/tbl'
+  print(f'EXPT --> {EXPT}');
+  try:
+    EXPT_TITLE = subprocess.run(['grep',f'^  *{EXPT} *,',f'{TBLDIR}/ExptInfo.dat'], stdout=subprocess.PIPE).stdout.decode('utf-8').split(",")[1].strip()
+  except:
+    EXPT_TITLE = EXPT
+  print(f'EXPT_TITLE --> {EXPT_TITLE}');
+
   # Get the ATCF file.
   ATCF_LIST = np.genfromtxt(f'{ODIR}ATCF_FILES.dat',dtype='str')
   if ATCF_LIST.size > 1:
@@ -171,38 +180,38 @@ def main():
   BASINID = BASINID[0]
   ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
   ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
-  
-  
+
+
   # Get the list of unplotted files
   UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
-  
+
   # Get the list of forecast lead time in hours
   FHR_LIST = np.array( np.genfromtxt(ALLFHR_FILE,dtype='int') )
   if (FHR_LIST.size == 1):
     FHR_LIST = np.append(FHR_LIST,"999")
     UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
-  
+
   # Define executables
   X_G2CTL = f'{GPLOT_DIR}/sorc/GPLOT/grads/g2ctl.pl'
-  
+
   for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
-  
+
     if FILE == 'MISSING':  continue
-  
+
     print(f'MSG: Working on this file --> {FILE}  {str(fff)}  {datetime.datetime.now()}')
-  
+
     os.system(f'lockfile -r-1 -l 180 {ST_LOCK_FILE}')
     os.system(f'echo "working" > {STATUS_FILE}')
     os.system(f'rm -f {ST_LOCK_FILE}')
-  
+
     # Get some useful information about the file name
     FILE_BASE = os.path.basename(FILE)
     FILE_DIR = os.path.dirname(FILE)
-  
+
     # Find the index of the forecast lead time in the ATCF file.
     FHR = int(FHR_LIST[fff])
     FHRIND = [i for i, s in enumerate(ATCF_DATA[:,5]) if int(s)==FHR]
-  
+
     # Get coordinate information from ATCF
     lonstr = ATCF_DATA[list(FHRIND),7][0]
     lonstr1 = lonstr[::-1]
@@ -279,7 +288,7 @@ def main():
     while not os.path.exists(IDX_FILE):
       print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
       time.sleep(5)
-    
+
     # Open GrADs data file
     print('MSG: GrADs control and index files should be available.')
     ga(f'open {CTL_FILE}')
@@ -313,6 +322,11 @@ def main():
     # Read lat & lon
     lon = ga.exp('lon')[0,:]
     lat = ga.exp('lat')[:,0]
+    #edit12/23
+    lon_full = ga.exp('lon')[:,:]
+    lat_full = ga.exp('lat')[:,:]
+    #edit12/23end
+
     if np.any(lon[1:] < lon[:-1]):   do_reshape = True
     elif np.any(lat[1:] < lat[:-1]): do_reshape = True
     else:                            do_reshape = False
@@ -322,6 +336,10 @@ def main():
       shape = np.shape(lon2d)
       lon = lon2d.reshape((shape[1], shape[0]))[0,:]
       lat = lat2d.reshape((shape[1], shape[0]))[:,0]
+      #edit12/23
+      lon_full = lon2d.reshape((shape[1], shape[0]))[:,:]
+      lat_full = lat2d.reshape((shape[1], shape[0]))[:,:]
+      #edit12/23end
 
     # Get pressure levels
     ga(f'set z 1 {zsize_pressure}')
@@ -351,7 +369,25 @@ def main():
        print('WARNING: Skipped reading dbz because DO_DBZ=False')
     q, rh = ga.exp('spfhprs'), ga.exp('rhprs')
     print('MSG: Done reading: q, rh')
-  
+    # Lew.Gramer@noaa.gov 2024-01-18, 2024-01-25
+    sst = ga.exp('wtmpsfc')
+    if ( len(sst.squeeze().shape) > 2 ):
+      print('WARNING: SST had three dimensions!');
+      sst = sst[...,0].squeeze()
+    else:
+      sst = sst.squeeze()
+    sst = sst - 273.14 #[K -> oC]
+    pblz = ga.exp('hpblsfc')
+    if ( len(pblz.squeeze().shape) > 2 ):
+      print('WARNING: PBLZ had three dimensions!');
+      pblz_upp = pblz[...,0].squeeze()
+    else:
+      pblz_upp = pblz.squeeze()
+    lhtflx = ga.exp('lhtflsfc')[...,0]
+    shtflx = ga.exp('shtflsfc')[...,0]
+    print('MSG: Done with sst, pblz_upp, lhtflx, shtflx')
+    # LJG
+
     #Get 2-d Data
     ga('set z 1')
     u10, v10 = ga.exp('ugrd10m'), ga.exp('vgrd10m')
@@ -359,7 +395,7 @@ def main():
     else:      mslp = ga.exp('prmslmsl')
     tmp2m, q2m, rh2m = ga.exp('tmp2m'), ga.exp('spfh2m'), ga.exp('rh2m')
     print('MSG: Done reading u10,v10,mslp,tmp2m,q2m')
-    
+
     #Get u850, v850, u200, v200 for Shear Calculation
     ga('set lev 850')
     u850, v850, z850 = ga.exp('ugrdprs'), ga.exp('vgrdprs'), ga.exp('hgtprs')
@@ -410,6 +446,9 @@ def main():
     temp_v = temp*(1+0.61*mixr)
     rho = (levs*1e2)/(287*temp_v)
     wwind = -omega/(rho*9.81)
+    #12/23edit-------------------------------------------
+    wwind_store = wwind
+    #12/23editend-------------------------------------------
 
     #Get storm-centered data
     lon_sr, lat_sr = lon-centerlon, lat-centerlat
@@ -434,7 +473,7 @@ def main():
     Rnorm, THETAnorm = np.meshgrid(rnorm,theta)
     XInorm = Rnorm * np.cos(THETAnorm)
     YInorm = Rnorm * np.sin(THETAnorm)
-    
+
     # Interpolate to Height Coordinates
     print('MSG: Doing Height Coordinate Interpolation Now')
     start = time.perf_counter()
@@ -456,7 +495,7 @@ def main():
     uwind, vwind, wwind = HeightData[0,:,:,:], HeightData[1,:,:,:], HeightData[2,:,:,:]
     dbz, temp, q = HeightData[3,:,:,:], HeightData[4,:,:,:], HeightData[5,:,:,:]
     rh, pressure = HeightData[6,:,:,:], HeightData[7,:,:,:]
-    
+
     uwind[:,:,0], vwind[:,:,0], wwind[:,:,0] = u10, v10, np.nan
     dbz[:,:,0], temp[:,:,0], pressure[:,:,0] = np.nan, tmp2m, mslp
     q[:,:,0], rh[:,:,0] = q2m, rh2m
@@ -468,7 +507,7 @@ def main():
     HeightData = mproc.multiprocess_height_vars(hgt=hgtT, varList=varList, levels=heightlevs_pbl)
     uwind_pbl, vwind_pbl = HeightData[0,:,:,:], HeightData[1,:,:,:]
     rho_pbl, pressure_pbl = HeightData[2,:,:,:], HeightData[3,:,:,:]
-    
+
     uwind_pbl[:,:,0], vwind_pbl[:,:,0] = u10, v10
     pressure_pbl[:,:,0], rho_pbl[:,:,0] = mslp, rho2m
     finish = time.perf_counter()
@@ -498,7 +537,7 @@ def main():
     #  f_q = interpolate.RegularGridInterpolator((y_sr, x_sr), q[:,:,k])
     #  f_rh = interpolate.RegularGridInterpolator((y_sr, x_sr), rh[:,:,k])
     #  f_pressure = interpolate.RegularGridInterpolator((y_sr, x_sr), pressure[:,:,k])
-    
+
     #  u_p[:,:,k] = f_uwind((YI,XI),method='linear')
     #  v_p[:,:,k] = f_vwind((YI,XI),method='linear')
     #  w_p[:,:,k] = f_wwind((YI,XI),method='linear')
@@ -517,7 +556,7 @@ def main():
     rh_p, pressure_p = PolarData[6,:,:,:], PolarData[7,:,:,:]
     finish = time.perf_counter()
     print(f'MSG: Total time for polar interpolation: {finish-start:.2f} second(s)')
-    
+
 
     #Calculate tangential and radial wind
     vt_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
@@ -534,7 +573,7 @@ def main():
     for k in range(zsize_pbl):
       f_uwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), uwind_pbl[:,:,k])
       f_vwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vwind_pbl[:,:,k])
-  
+
       u_pbl_p[:,:,k] = f_uwind_pbl((YI,XI),method='linear')
       v_pbl_p[:,:,k] = f_vwind_pbl((YI,XI),method='linear')
 
@@ -544,10 +583,18 @@ def main():
       for k in range(zsize_pbl):
         vt_pbl_p[:,j,k] = np.sign(centerlat)*(-u_pbl_p[:,j,k]*np.sin(theta)+v_pbl_p[:,j,k]*np.cos(theta))
         ur_pbl_p[:,j,k] = u_pbl_p[:,j,k]*np.cos(theta)+v_pbl_p[:,j,k]*np.sin(theta)
-
+    # Lew.Gramer@noaa.gov 2024-01-19
+    #pblz_vt_max = heightlevs_pbl[vt_pbl_p.argmax(axis=0).argmax(axis=1)]
+    pblz_vt_max = heightlevs_pbl[vt_pbl_p.argmax(axis=2)]
+    # Lew.Gramer@noaa.gov 2024-01-19
+    # fh = plt.figure(figsize=(9,9)); plt.contourf(pblz_upp); plt.colorbar(); fh.savefig('pblz_upp_test.png');
+    # fh = plt.figure(figsize=(9,9)); ax = fh.add_subplot(111, projection='polar')
+    # plt.contourf((r),theta,pblz_vt_max); plt.colorbar(); fh.savefig('pblz_vt_max_test.png');
+    # breakpoint();
+    # LJG
 
     #Get Polar u10, v10, u850, v850, u200, v200
-    u10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan  
+    u10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     v10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     f_u10 = interpolate.RegularGridInterpolator((y_sr, x_sr), u10[:,:])
     f_v10 = interpolate.RegularGridInterpolator((y_sr, x_sr), v10[:,:])
@@ -558,7 +605,7 @@ def main():
     u200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     v200_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     u850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-    v850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan      
+    v850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     vt10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     ur10_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     vt850_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
@@ -570,7 +617,7 @@ def main():
     f_v200 = interpolate.RegularGridInterpolator((y_sr, x_sr), v200[:,:])
     f_u850 = interpolate.RegularGridInterpolator((y_sr, x_sr), u850[:,:])
     f_v850 = interpolate.RegularGridInterpolator((y_sr, x_sr), v850[:,:])
-    
+
     u200_p = f_u200((YI,XI),method='linear')
     v200_p = f_v200((YI,XI),method='linear')
     u850_p = f_u850((YI,XI),method='linear')
@@ -582,11 +629,11 @@ def main():
       vt850_p[:,j] = np.sign(centerlat)*(-u850_p[:,j]*np.sin(theta)+v850_p[:,j]*np.cos(theta))
       ur850_p[:,j] = u850_p[:,j]*np.cos(theta)+v850_p[:,j]*np.sin(theta)
       vt200_p[:,j] = np.sign(centerlat)*(-u200_p[:,j]*np.sin(theta)+v200_p[:,j]*np.cos(theta))
-      ur200_p[:,j] = u200_p[:,j]*np.cos(theta)+v200_p[:,j]*np.sin(theta)      
-    
+      ur200_p[:,j] = u200_p[:,j]*np.cos(theta)+v200_p[:,j]*np.sin(theta)
+
     #Calculate shear
     #Two Metrics: 200 km - RMAX average, 0-500 km/rmax with vortex removed
-    
+
     #First Do the 200 km - rmax average
     u850_p_ring = u850_p[:,int(np.round(200/resolution)):int(np.round(rmax/resolution))]
     v850_p_ring = v850_p[:,int(np.round(200/resolution)):int(np.round(rmax/resolution))]
@@ -641,7 +688,7 @@ def main():
     ur200_p_filtered = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 
     with warnings.catch_warnings():
-      warnings.filterwarnings(action='ignore', message='Mean of empty slice')  
+      warnings.filterwarnings(action='ignore', message='Mean of empty slice')
       vt850_p_filtered[:,:] = vt850_p[:,:]-np.nanmean(vt850_p,0)
       ur850_p_filtered[:,:] = ur850_p[:,:]-np.nanmean(ur850_p,0)
       vt200_p_filtered[:,:] = vt200_p[:,:]-np.nanmean(vt200_p,0)
@@ -694,7 +741,7 @@ def main():
     u850_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     v850_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 
-    #3D      
+    #3D
     u_p_rot = np.roll(u_p,[-sheardir_index, 0, 0],axis=(0,1,2))
     v_p_rot = np.roll(v_p,[-sheardir_index, 0, 0],axis=(0,1,2))
     w_p_rot = np.roll(w_p,[-sheardir_index, 0, 0],axis=(0,1,2))
@@ -777,11 +824,11 @@ def main():
       dbz_p_rightshear_mean = np.nanmean(dbz_p_rightshear,0)
       rh_p_rightshear_mean = np.nanmean(rh_p_rightshear,0)
 
-    #Calculate wavenumber-0,1,2 fits for both rotated and non-rotated grids 
+    #Calculate wavenumber-0,1,2 fits for both rotated and non-rotated grids
     dbz5_p = dbz_p[:,:,10]
     dbz5_p_w0 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     dbz5_p_w1 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-    dbz5_p_w2 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan  
+    dbz5_p_w2 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     dbz5_p_whigher = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 
     rh5_p = rh_p[:,:,10]
@@ -795,7 +842,7 @@ def main():
     vt10_p_whigher  = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     ur10_p_w0 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
     ur10_p_w1 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
-    ur10_p_w2 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan      
+    ur10_p_w2 = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
 
     for j in range(np.shape(r)[0]):
       dbzdata = dbz5_p[:,j]
@@ -840,7 +887,7 @@ def main():
         A = 2*np.real(fourier_vt10[h])
         B = -2*np.imag(fourier_vt10[h])
         vt10_p_whigher[:,j] = vt10_p_whigher[:,j]+A*np.cos(h*theta) + B*np.sin(h*theta)
-          
+
       ur10data = ur10_p[:,j]
       fourier_ur10 = np.fft.fft(ur10data)/len(ur10data)
       amp0_ur10 = np.real(fourier_ur10[0])
@@ -851,7 +898,7 @@ def main():
       ur10_p_w0[:,j] = amp0_ur10
       ur10_p_w1[:,j] = A1_ur10*np.cos(theta) + B1_ur10*np.sin(theta)
       ur10_p_w2[:,j] = A2_ur10*np.cos(2*theta) + B2_ur10*np.sin(2*theta)
-  
+
     #Calculate 2-km RMW and Average Vmax
 
     rmw_mean = np.ones(zsize)*np.nan
@@ -860,8 +907,8 @@ def main():
 
     for k in range(zsize):
       rmw_mean[k] = np.round(np.median(r[vt_p_mean[:,k] > 0.95*np.nanmax(vt_p_mean[:,k])]))
-      rmw_mean_index[k] = np.argmin(abs(r-rmw_mean[k])) 
-      vt_rmw_mean[k] = vt_p_mean[np.int(rmw_mean_index[k]),k]
+      rmw_mean_index[k] = np.argmin(abs(r-rmw_mean[k]))
+      vt_rmw_mean[k] = vt_p_mean[int(rmw_mean_index[k]),k]
 
     rmw_2km = rmw_mean[4]
     vt_p_mean_max = np.max(vt_p_mean,0)
@@ -890,7 +937,7 @@ def main():
       Rnorm, THETAnorm = np.meshgrid(rnorm,theta)
       XInorm = Rnorm * np.cos(THETAnorm)
       YInorm = Rnorm * np.sin(THETAnorm)
-    
+
     rmw_pbl_mean = np.ones(zsize_pbl)*np.nan
     for k in range(zsize_pbl):
       rmw_pbl_mean[k] = np.round(np.median(r[vt_pbl_p_mean[:,k] > 0.95*np.max(vt_pbl_p_mean[:,k])]))
@@ -905,7 +952,7 @@ def main():
 
         vt_p_mean_norm[:,k] = f_vt_p_mean_norm(rnorm)
         ur_p_mean_norm[:,k] = f_ur_p_mean_norm(rnorm)
-    
+
     u2km = uwind[:,:,4]
     v2km = vwind[:,:,4]
     u5km = uwind[:,:,10]
@@ -933,7 +980,7 @@ def main():
         ygrad = np.nanmean(np.gradient(y_sr))
 
       for k in range(zsize):
-        vort[:,:,k] = np.sign(centerlat)*np.array(mpcalc.vorticity(uwind[:,:,k]* units.meter / units.second,vwind[:,:,k]* units.meter / units.second,xgrad*1e3* units.meter,ygrad*1e3* units.meter,dim_order='yx'))
+        vort[:,:,k] = np.sign(centerlat)*np.array(mpcalc.vorticity(uwind[:,:,k]*units.meter/units.second, vwind[:,:,k]*units.meter/units.second, dx=xgrad*1e3*units.meter, dy=ygrad*1e3*units.meter))
 
       vort_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 
@@ -977,7 +1024,7 @@ def main():
       d_vt_p_mean_dz[:,0] = np.nan
       d_vt_p_mean_dz[0,:] = np.nan
       term2_vt_tendency_mean_vertical_advection = -w_p_mean*d_vt_p_mean_dz
-      
+
       #Term3 (Eddy Flux)
       eddy_vort_flux_p = ur_p_perturbation*vort_p_perturbation
       with warnings.catch_warnings():
@@ -1035,7 +1082,7 @@ def main():
           centerlat_tm1 = float(latstr1_tm1)/10
         else:
           centerlat_tm1 = -1*float(latstr1_tm1)/10
-      
+
         dt = (float(FHR)-float(FHR_tm1))*3600
         dx = (centerlon-centerlon_tm1)*111.1e3*np.cos(centerlat*3.14159/180)
         dy = (centerlat-centerlat_tm1)*111.1e3
@@ -1110,7 +1157,7 @@ def main():
       terms_vort_tendency_sum = term1_vort_tendency_horizontal_advection+term2_vort_tendency_vertical_advection+term3_vort_tendency_stretching_convergence+term4_vort_tendency_tilting
 
       ##################################################################################################################
-          
+
 
       ###################################################################################################################
       #Code to calculate precipitation partitioning (from Michael Fischer)
@@ -1182,8 +1229,11 @@ def main():
                 if sref[pi,yi,xi,levi_ref] >= zti:
                   ptype[pi,yi,xi] = 3.
                   # Check to see if reflecitivty at grid point is less than weak echo threshold:
-                elif sref[pi,yi,xi,levi_ref] < zwe:
+                #12/23edit--------------------------------------------------------------------------------
+                elif (sref[pi,yi,xi,levi_ref] < zwe) & (sref[pi,yi,xi,levi_ref] > 0):
+                #elif (sref[pi,yi,xi,levi_ref] < zwe):
                   ptype[pi,yi,xi] = 1.
+                #12/23editend-------------------------------
                 # If reflectivity is between extrema, use peakedness:
                 elif np.logical_and(sref[pi,yi,xi,levi_ref] >= zwe, sref[pi,yi,xi,levi_ref] < zti):
                   # Determine background reflectivity (zbg)
@@ -1222,9 +1272,12 @@ def main():
                     #print np.shape(curr_y_dist),np.shape(curr_x_dist),np.shape(sref[pi,:,:,levi_ref])
                     ptype[pi,conv_ry,conv_rx] = 3. #fill in all grid points within convective radius as convective
 
-                # Otherwise the pixel is classified to be stratiform:
-                if np.logical_and(np.isfinite(sref[pi,yi,xi,levi_ref]),ptype[pi,yi,xi] == 0.):
+                #12/23edit--------------------------------------------------------------------------------
+               # if np.logical_and(np.isfinite(sref[pi,yi,xi,levi_ref]),ptype[pi,yi,xi] == 0.):
+                if np.logical_and(sref[pi,yi,xi,levi_ref] > 0.,ptype[pi,yi,xi] == 0.):
                   ptype[pi,yi,xi] = 2.
+                #12/23editend--------------------------------------------------------------------------------
+
 
         ### Reclassify type of convection ###
         #Change From Michael Fischer
@@ -1248,8 +1301,8 @@ def main():
                 if np.logical_and(max_height >= mod_height, max_height < deep_height):
                   ptype[pi,yi,xi] = 4.
                 elif max_height >= deep_height:
-                  ptype[pi,yi,xi] = 5.  
-      
+                  ptype[pi,yi,xi] = 5.
+
       #Do Interpolation of P type to polar coordinates
       ptype = np.squeeze(ptype)
       ptype_p = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
@@ -1260,10 +1313,14 @@ def main():
       f_ptype_norm = interpolate.RegularGridInterpolator((y_sr/rmw_2km, x_sr/rmw_2km), ptype[:,:])
       ptype_p_norm = f_ptype_norm((YInorm,XInorm),method='linear')
       ptype_p_norm = np.round(ptype_p_norm)
+      #12/23edit
+      ptype_p_rot = np.ones((np.shape(XI)[0],np.shape(XI)[1]))*np.nan
+      ptype_p_rot = np.roll(ptype_p,[-sheardir_index, 0],axis=(0,1))
+      #12/23editend
 
       #End of Block to Calculate Precipitation Partitioning
       ############################################################################################################################################
-      
+
       ############################################################################################################################################
       #Calculate some important structure metrics and write them and others to a text file
       vmax = float(maxwind)
@@ -1271,6 +1328,12 @@ def main():
 
       rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vt_dynamic = vortex_depth_vt_static = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
       #if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
+
+      dlats = (lat_full * (math.pi)/180.) - (centerlat* (math.pi)/180.)
+      dlons = (lon_full * (math.pi)/180.) - (centerlon* (math.pi)/180.)
+      aa = ((np.sin(dlats/2))**2 + np.cos((centerlat*(math.pi)/180)) * np.cos((lat_full * (math.pi)/180)) * (np.sin(dlons/2))**2)
+      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+      rad_distance_sfc = cc * 6371.      
       
       #Calculate Vortex Depth based on Vt
       vt_rmw_ratio = vt_rmw_mean/vt_rmw_mean[4]
@@ -1280,10 +1343,10 @@ def main():
         index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
       else:
         vortex_depth_vt_dynamic = np.nan
-      
+
       if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
         vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
-        index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))    
+        index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
       else:
         vortex_depth_vt_static = np.nan
 
@@ -1301,8 +1364,11 @@ def main():
       vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
       threshold_ratio_vort = 0.5
       if (np.min(vort_ratio) < 0.5):
-        vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
-        index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
+        try:
+          vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
+          index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
+        except:
+          vortex_depth_vort = np.nan
       else:
         vortex_depth_vort = np.nan
 
@@ -1314,7 +1380,7 @@ def main():
       center_indices_vort = np.zeros((np.shape(vort_centroid)[2],2),order='F').astype(np.int32)
       threshold_pressure = np.zeros((np.shape(pressure_centroid)[2]))
       threshold_vort = np.zeros((np.shape(vort_centroid)[2]))
-      
+
       for k in range(ivd):
         x1 = np.argmin(abs(-rmw_mean[k]-x_sr))
         x2 = np.argmin(abs(rmw_mean[k]-x_sr))
@@ -1334,7 +1400,7 @@ def main():
 
         threshold_pressure[k] = np.nanmin(pressure_p_mean[0:r2+1,k])+0.2*(np.nanmax(pressure_p_mean[0:r2+1,k])-np.nanmin(pressure_p_mean[0:r2+1,k]))
         threshold_vort[k] = 0.80*np.nanmax(vort_p_mean[0:r2+1,k])
-    
+
       #print('MSG: HERE ARE THE THRESHOLDS')
       #for k in range(ivd):
       #  print(threshold_pressure[k],threshold_vort[k])
@@ -1346,14 +1412,14 @@ def main():
       center_lon_pressure = np.ones(zsize)*np.nan
       center_lat_pressure = np.ones(zsize)*np.nan
 
-      if ( np.min(threshold_vort) > 0):  
+      if ( np.min(threshold_vort) > 0):
         centroid.centroid(pressure_centroid,center_indices_pressure,threshold_pressure,-1,np.shape(pressure_centroid)[0],np.shape(pressure_centroid)[1],np.shape(pressure_centroid)[2])
         centroid.centroid(vort_centroid,center_indices_vort,threshold_vort,1,np.shape(vort_centroid)[0],np.shape(vort_centroid)[1],np.shape(vort_centroid)[2])
-        
+
         #print('HERE ARE THE INDICES')
         #for k in range(ivd):
         #  print(center_indices_vort[k,:])
-  
+
         center_x_vort[0:ivd] = x_sr[center_indices_vort[:,1]]
         center_y_vort[0:ivd] = y_sr[center_indices_vort[:,0]]
         center_x_pressure[0:ivd] = x_sr[center_indices_pressure[:,1]]
@@ -1369,7 +1435,7 @@ def main():
             tiltdir_deep_pressure = 90-tiltdir_deep_pressure
           else:
             tiltdir_deep_pressure = 360-(tiltdir_deep_pressure-90)
-      
+
           tiltmag_deep_vort = np.hypot(center_x_vort[20]-center_x_vort[4],center_y_vort[20]-center_y_vort[4])
           tiltdir_deep_vort = np.arctan2(center_y_vort[20]-center_y_vort[4],center_x_vort[20]-center_x_vort[4])*180/np.pi
           if tiltdir_deep_vort <=90:
@@ -1381,15 +1447,15 @@ def main():
           tiltdir_mid_pressure = np.arctan2(center_y_pressure[10]-center_y_pressure[4],center_x_pressure[10]-center_x_pressure[4])*180/np.pi
           if tiltdir_mid_pressure <=90:
             tiltdir_mid_pressure = 90-tiltdir_mid_pressure
-          else:   
+          else:
             tiltdir_mid_pressure = 360-(tiltdir_mid_pressure-90)
-          
+
           tiltmag_mid_vort = np.hypot(center_x_vort[10]-center_x_vort[4],center_y_vort[10]-center_y_vort[4])
           tiltdir_mid_vort = np.arctan2(center_y_vort[10]-center_y_vort[4],center_x_vort[10]-center_x_vort[4])*180/np.pi
           if tiltdir_mid_vort <=90:
             tiltdir_mid_vort = 90-tiltdir_mid_vort
           else:
-            tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)    
+            tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)
         elif ( vortex_depth_vort >= 5. and vortex_depth_vort <= 10. ):
           tiltmag_deep_pressure = np.nan
           tiltdir_deep_pressure = np.nan
@@ -1407,23 +1473,23 @@ def main():
           tiltdir_mid_vort = np.arctan2(center_y_vort[10]-center_y_vort[4],center_x_vort[10]-center_x_vort[4])*180/np.pi
           if tiltdir_mid_vort <=90:
             tiltdir_mid_vort = 90-tiltdir_mid_vort
-          else:   
+          else:
             tiltdir_mid_vort = 360-(tiltdir_mid_vort-90)
         else:
           tiltmag_deep_pressure = np.nan
           tiltdir_deep_pressure = np.nan
           tiltmag_deep_vort = np.nan
           tiltdir_deep_vort = np.nan
-          
+
           tiltmag_mid_pressure = np.nan
           tiltdir_mid_pressure = np.nan
           tiltmag_mid_vort = np.nan
-          tiltdir_mid_vort = np.nan    
-            
+          tiltdir_mid_vort = np.nan
+
       #First, percentage of area in the inner and outer core with each precip type
       ptype_p_norm_inner = ptype_p_norm[:,15:26]
       ptype_p_norm_outer = ptype_p_norm[:,26:41]
-    
+
       innersize = np.shape(ptype_p_norm_inner)[0]*np.shape(ptype_p_norm_inner)[1]
       if innersize > 0:
         weakpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 1.])[0]/innersize
@@ -1437,9 +1503,9 @@ def main():
         shallowpercent_inner = np.nan
         moderatepercent_inner = np.nan
         deeppercent_inner = np.nan
-  
+
       outersize = np.shape(ptype_p_norm_outer)[0]*np.shape(ptype_p_norm_outer)[1]
-      if outersize > 0:  
+      if outersize > 0:
         weakpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 1.])[0]/outersize
         stratiformpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 2.])[0]/outersize
         shallowpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 3.])[0]/outersize
@@ -1452,6 +1518,116 @@ def main():
         moderatepercent_outer = np.nan
         deeppercent_outer = np.nan
 
+      #edit12/23 - Add ptype calc. and text output within 100 km of 2 km center and 5 km center, shear-relative quadrants, RH, mass flux at each height level, and vorticity at each height level---------------------------------------------------------------
+      #Create array of center lat/long that is same dimensions as lat_full and lon_full grids
+      ih = lat_full.shape[0]
+      jh = lat_full.shape[1]
+      centerx_full_2km = np.full((ih,jh),0.0)
+      centery_full_2km = np.full((ih,jh),0.0)
+      centerx_full_5km = np.full((ih,jh),0.0)
+      centery_full_5km = np.full((ih,jh),0.0)
+      centerx_full_2km[:,:] = center_lon_pressure[4]
+      centery_full_2km[:,:] = center_lat_pressure[4]
+      centerx_full_5km[:,:] = center_lon_pressure[10]
+      centery_full_5km[:,:] = center_lat_pressure[10]
+      #Create rad_distance grids w/ distance [km] from 2km and 5km centers in each array
+      dlats = (centery_full_2km * (math.pi)/180.) - (lat_full* (math.pi)/180.)
+      dlons = (centerx_full_2km * (math.pi)/180.) - (lon_full* (math.pi)/180.)
+      aa = ((np.sin(dlats/2))**2 + np.cos((lat_full*(math.pi)/180)) * np.cos((centery_full_2km * (math.pi)/180)) * (np.sin(dlons/2))**2)
+      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+      rad_distance_2km = cc * 6371.
+
+      dlats = (centery_full_5km * (math.pi)/180.) - (lat_full* (math.pi)/180.)
+      dlons = (centerx_full_5km * (math.pi)/180.) - (lon_full* (math.pi)/180.)
+      aa = ((np.sin(dlats/2))**2 + np.cos((lat_full*(math.pi)/180)) * np.cos((centery_full_5km * (math.pi)/180)) * (np.sin(dlons/2))**2)
+      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+      rad_distance_5km = cc * 6371.
+
+      wherearea_2km = np.where(rad_distance_2km < 100.)
+      wherearea_5km = np.where(rad_distance_5km < 100.)
+      wherearea_2km_50 = np.where(rad_distance_2km < 50.)
+      wherearea_5km_50 = np.where(rad_distance_5km < 50.)
+      #precip. partition within 100km of 2km and 5km centers
+      partition_center = []
+      loopp_part = -1
+      for loopp in range(0,10):
+          loopp_part = loopp_part + 1
+          if loopp < 5:
+              annulusarea = np.size(wherearea_2km[0][:])
+              wherepart = np.where((rad_distance_2km < 100) & (ptype < loopp_part+1.5) & (ptype > loopp_part+.5))
+          if loopp == 5:
+              loopp_part = 0
+          if loopp >= 5:
+              annulusarea = np.size(wherearea_5km[0][:])
+              wherepart = np.where((rad_distance_5km < 100) & (ptype < loopp_part+1.5) & (ptype > loopp_part+.5))
+          if np.size(wherepart) > 0:
+              partition_center.append(np.size(wherepart[0][:]) / annulusarea)
+          else:
+              partition_center.append(0)
+
+      #Add shear-relative ptype % w.r.t. sfc center -------------------------------------Loop through each ptype by quadrant w/i 0-100km and 0-200km - DSL, USL, USR, DSR
+      shearquadindex = [0,18,36,54,72]
+      loopp_part = -1
+      for loopp in range(0,5):
+          loopp_part = loopp_part + 1
+          for loopquad in range(0,4):
+              wherepart = np.where((ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50] < loopp_part+1.5) & (ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50] > loopp_part+.5))
+              if np.size(wherepart) > 0:
+                  partition_center.append(np.size(wherepart[0][:]) / np.size(ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50]))
+              else:
+                  partition_center.append(0)
+              #w/i 0-200km
+              wherepart = np.where((ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100] < loopp_part+1.5) & (ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100] > loopp_part+.5))
+              if np.size(wherepart) > 0:
+                  partition_center.append(np.size(wherepart[0][:]) / np.size(ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100]))
+              else:
+                  partition_center.append(0)
+      partition_center = np.array(partition_center)
+
+      #Add RH annulus - 0-200 km 2 km center, 0-200 km 5 km center, 0-200km shear-relative quadrants --------------------------------------------------------------------------------------
+      rh_center = []
+      whererh_2km = np.where(rad_distance_2km < 200.)
+      whererh_5km = np.where(rad_distance_5km < 200.)
+      rh700500 = np.array(np.nanmean(rh[:,:,12:20],axis=2)) #verify 3rd dimension indices for 700-500hPa-------------------------
+      rh_center.append(np.nanmean(rh700500[whererh_2km]))
+      rh_center.append(np.nanmean(rh700500[whererh_5km]))
+      rh_p_dsl = np.nanmean(rh_p_rot[:19,:100,12:20])
+      rh_p_usl = np.nanmean(rh_p_rot[18:37,:100,12:20])
+      rh_p_usr = np.nanmean(rh_p_rot[36:55,:100,12:20])
+      rh_p_dsr = np.nanmean(rh_p_rot[54:73,:100,12:20])
+
+      #text output
+      structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_ptype_rh.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+      f = open(structurefile_new,'w')
+      f.write("%4s, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.1f, %4.1f, %4.1f, %4.1f, %4.1f, %4.1f" % (FHR,partition_center[0],partition_center[1],partition_center[2],partition_center[3],partition_center[4],partition_center[5],partition_center[6],partition_center[7],partition_center[8],partition_center[9],partition_center[10],partition_center[11],partition_center[12],partition_center[13],partition_center[14],partition_center[15],partition_center[16],partition_center[17],partition_center[18],partition_center[19],partition_center[20],partition_center[21],partition_center[22],partition_center[23],partition_center[24],partition_center[25],partition_center[26],partition_center[27],partition_center[28],partition_center[29],partition_center[30],partition_center[31],partition_center[32],partition_center[33],partition_center[34],partition_center[35],partition_center[36],partition_center[37],partition_center[38],partition_center[39],partition_center[40],partition_center[41],partition_center[42],partition_center[43],partition_center[44],partition_center[45],partition_center[46],partition_center[47],partition_center[48],partition_center[49],rh_center[0],rh_center[1],rh_p_dsl,rh_p_usl,rh_p_usr,rh_p_dsr))
+      f.close()
+
+      #Add mass flux and vorticity averaged within 50 km for each vertical level w.r.t. 2km and 5km centers for text output-------------------------------------------
+      massflux5km = []
+      vorticity5km = []
+      massflux2km = []
+      vorticity2km = []
+      for looph in range(0,np.size(wwind_store[0,0,:])):
+          wwindh = wwind_store[:,:,looph]
+          rhoh = rho[:,:,looph]
+          massflux2km.append(np.nanmean(wwindh[wherearea_2km_50] * rhoh[wherearea_2km_50]))
+          massflux5km.append(np.nanmean(wwindh[wherearea_5km_50] * rhoh[wherearea_5km_50]))
+          if looph < 37:
+             vorth = vort[:,:,looph]
+             vorticity2km.append(np.nanmean(vorth[wherearea_2km_50]))
+             vorticity5km.append(np.nanmean(vorth[wherearea_5km_50]))
+
+      structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_massflux.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+      f = open(structurefile_new,'w')
+      f.write("%4s, %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f,\n       %4s, % 7.6f, % 7.6f," % (FHR,levs[0,0,0],massflux2km[0],massflux5km[0],levs[0,0,1],massflux2km[1],massflux5km[1],levs[0,0,2], massflux2km[2],massflux5km[2],levs[0,0,3], massflux2km[3],massflux5km[3],levs[0,0,4], massflux2km[4],massflux5km[4],levs[0,0,5], massflux2km[5],massflux5km[5],levs[0,0,6], massflux2km[6],massflux5km[6],levs[0,0,7], massflux2km[7],massflux5km[7],levs[0,0,8], massflux2km[8],massflux5km[8],levs[0,0,9], massflux2km[9],massflux5km[9],levs[0,0,10], massflux2km[10],massflux5km[10],levs[0,0,11], massflux2km[11],massflux5km[11],levs[0,0,12], massflux2km[12],massflux5km[12],levs[0,0,13], massflux2km[13],massflux5km[13],levs[0,0,14], massflux2km[14],massflux5km[14],levs[0,0,15], massflux2km[15],massflux5km[15],levs[0,0,16], massflux2km[16],massflux5km[16],levs[0,0,17], massflux2km[17],massflux5km[17],levs[0,0,18], massflux2km[18],massflux5km[18],levs[0,0,19], massflux2km[19],massflux5km[19],levs[0,0,20], massflux2km[20],massflux5km[20],levs[0,0,21], massflux2km[21],massflux5km[21],levs[0,0,22], massflux2km[22],massflux5km[22],levs[0,0,23], massflux2km[23],massflux5km[24],levs[0,0,24], massflux2km[24],massflux5km[24],levs[0,0,25], massflux2km[25],massflux5km[25],levs[0,0,26], massflux2km[26],massflux5km[26],levs[0,0,27], massflux2km[27],massflux5km[27],levs[0,0,28], massflux2km[28],massflux5km[28],levs[0,0,29], massflux2km[29],massflux5km[29],levs[0,0,30], massflux2km[30],massflux5km[30],levs[0,0,31], massflux2km[31],massflux5km[31],levs[0,0,32], massflux2km[32],massflux5km[32],levs[0,0,33], massflux2km[33],massflux5km[33]))
+      f.close()
+
+      structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_vorticity.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+      f = open(structurefile_new,'w')
+      f.write("%4s,     %4s, % 8.7f, % 8.7f,\n         %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n        %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f,\n       %4s, % 8.7f, % 8.7f," % (FHR,heightlevs[0],vorticity2km[0],vorticity5km[0],heightlevs[1],vorticity2km[1],vorticity5km[1],heightlevs[2], vorticity2km[2],vorticity5km[2],heightlevs[3], vorticity2km[3],vorticity5km[3],heightlevs[4], vorticity2km[4],vorticity5km[4],heightlevs[5], vorticity2km[5],vorticity5km[5],heightlevs[6], vorticity2km[6],vorticity5km[6],heightlevs[7], vorticity2km[7],vorticity5km[7],heightlevs[8], vorticity2km[8],vorticity5km[8],heightlevs[9], vorticity2km[9],vorticity5km[9],heightlevs[10], vorticity2km[10],vorticity5km[10],heightlevs[11], vorticity2km[11],vorticity5km[11],heightlevs[12], vorticity2km[12],vorticity5km[12],heightlevs[13], vorticity2km[13],vorticity5km[13],heightlevs[14], vorticity2km[14],vorticity5km[14],heightlevs[15], vorticity2km[15],vorticity5km[15],heightlevs[16], vorticity2km[16],vorticity5km[16],heightlevs[17], vorticity2km[17],vorticity5km[17],heightlevs[18], vorticity2km[18],vorticity5km[18],heightlevs[19], vorticity2km[19],vorticity5km[19],heightlevs[20], vorticity2km[20],vorticity5km[20],heightlevs[21], vorticity2km[21],vorticity5km[21],heightlevs[22], vorticity2km[22],vorticity5km[22],heightlevs[23], vorticity2km[23],vorticity5km[24],heightlevs[24], vorticity2km[24],vorticity5km[24],heightlevs[25], vorticity2km[25],vorticity5km[25],heightlevs[26], vorticity2km[26],vorticity5km[26],heightlevs[27], vorticity2km[27],vorticity5km[27],heightlevs[28], vorticity2km[28],vorticity5km[28],heightlevs[29], vorticity2km[29],vorticity5km[29],heightlevs[30], vorticity2km[30],vorticity5km[30],heightlevs[31], vorticity2km[31],vorticity5km[31],heightlevs[32], vorticity2km[32],vorticity5km[32],heightlevs[33], vorticity2km[33],vorticity5km[33]))
+      f.close()
+      #edit12/23end--------------------------------------------------------------------------------
+
       #Next, calculate closure of the eyewall for stratiform, shallow, moderate, and deep convection
       ptype_p_norm_inner_max = np.max(ptype_p_norm_inner,1)
       closure_stratiform = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 2.])[0]/np.shape(ptype_p_norm_inner_max)[0]
@@ -1462,7 +1638,7 @@ def main():
       #RMW Slope
       slope_rmw_1 = np.linalg.lstsq((heightlevs[4:21]/1000-heightlevs[4]/1000).reshape(-1,1), (rmw_mean[4:21]-rmw_mean[4]), rcond=None)[0][0]
       slope_rmw_2 = (rmw_mean[20]-rmw_mean[4])/8
-     
+
       #Alpha Parameter
       if (rmw_2km < 100. and (3*rmw_2km) < rmax):
         alpha = np.log(vt_p_mean_norm[20,4]/vt_p_mean_norm[60,4])/np.log(3)
@@ -1475,7 +1651,7 @@ def main():
       vt10_p_mean = np.nanmean(vt10_p,0)
       coriolis = 2*7.292e-5*np.sin(centerlat*3.14159/180)
       rossby = vt10_p_mean[rmw_mean_index_10m]/(rmw_mean_10m*1000*coriolis)
-      
+
       #Calculate Magnitude and Height of Warm Core Anomaly
       r15km_index = np.argmin(np.abs(r-15))
       r200km_index = np.argmin(np.abs(r-200))
@@ -1484,15 +1660,24 @@ def main():
       temp_p_mean_outer = temp_p_mean[r200km_index:r300km_index+1,:]
       temp_p_mean_core_mean = np.nanmean(temp_p_mean_core,0)
       temp_p_mean_outer_mean = np.nanmean(temp_p_mean_outer,0)
+      temp_p_anomaly = temp_p_mean[0:r200km_index]-temp_p_mean_outer_mean
+      #DEBUG:      plt.figure(figsize=(9,9)); plt.contourf((r[0:r200km_index]),heightlevs,temp_p_anomaly.T,cmap='seismic',levels=np.arange(-10,10,0.2)); plt.colorbar(); plt.contour((r[0:r200km_index]),heightlevs,temp_p_anomaly.T,levels=[1],colors='k',linestyles='-',linewidths=3); plt.savefig('test.png');
+      # At each Z level, find maximum CONTIGUOUS radius where warm anomaly > 1.0
+      # https://stackoverflow.com/questions/16243955/numpy-first-occurrence-of-value-greater-than-existing-value
+      anomaly_extent_ix = (temp_p_anomaly.shape[0]-np.argmin(temp_p_anomaly[::-1,:]<=1.0,axis=0))-1
+      anomaly_extent_ix[anomaly_extent_ix<0] = 0
+      anomaly_extent = r[anomaly_extent_ix]
+      temp_p_anomaly_max = np.max(temp_p_anomaly,axis=0)
+      
       temp_anomaly = temp_p_mean_core_mean-temp_p_mean_outer_mean
       temp_anomaly_max = np.max(temp_anomaly[1::])
-      height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000  
+      height_temp_anomaly_max = heightlevs[np.argmax(temp_anomaly[1::])+1]/1000
 
-      #Calculate symmetry of precipitation 
+      #Calculate symmetry of precipitation
       dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
       dbz5_p_w1_ring = dbz5_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
       dbz5_p_whigher_ring = dbz5_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-      amp_dbz5_p_w0_ring = np.nanmean(np.nanmax(dbz5_p_w0_ring,0)) 
+      amp_dbz5_p_w0_ring = np.nanmean(np.nanmax(dbz5_p_w0_ring,0))
       amp_dbz5_p_w1_ring = np.nanmean(np.nanmax(dbz5_p_w1_ring,0)-np.mean(dbz5_p_w1_ring,0))
       amp_dbz5_p_whigher_ring = np.nanmean(np.nanmax(dbz5_p_whigher_ring,0)-np.mean(dbz5_p_whigher_ring,0))
       symmetry_w1_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring)
@@ -1510,7 +1695,7 @@ def main():
       symmetry_all_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring+amp_vt10_p_whigher_ring)
       if symmetry_w1_vt10_p < 0: symmetry_w1_vt10_p = 0
       if symmetry_all_vt10_p < 0: symmetry_all_vt10_p = 0
-      
+
       #Calculate Local Shear
       if ( np.min(threshold_vort) > 0):
         rmaxlocal = 102
@@ -1600,11 +1785,20 @@ def main():
           sheardir_2km_10km_local = 90-sheardir_2km_10km_local
         else:
           sheardir_2km_10km_local = 360-(sheardir_2km_10km_local-90)
-  
+      
+      # Lew.Gramer@noaa.gov 2024-01-18,2024-01-23
+      sst_100km_annular_avg = np.nanmean(sst[np.where(rad_distance_sfc < 100)])
+      sst_100km_annular_std = np.nanstd(sst[np.where(rad_distance_sfc < 100)])
+      efx_100km_annular_avg = np.nanmean(lhtflx[np.where(rad_distance_sfc < 100)]+shtflx[np.where(rad_distance_sfc < 100)])
+      efx_100km_annular_std = np.nanstd(lhtflx[np.where(rad_distance_sfc < 100)]+shtflx[np.where(rad_distance_sfc < 100)])
+      pblz_upp_100km_annular_avg = np.nanmean(pblz_upp[np.where(rad_distance_sfc < 100)])
+      pblz_upp_100km_annular_std = np.nanstd(pblz_upp[np.where(rad_distance_sfc < 100)])
+      
       structurefile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
       f = open(structurefile,'w')
-      f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vt_dynamic,vortex_depth_vt_static,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local))
+      f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %5.2f, %4.0f, %5.1f, %4.0f, %5.1f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vt_dynamic,vortex_depth_vt_static,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local,sst_100km_annular_avg,sst_100km_annular_std,efx_100km_annular_avg,efx_100km_annular_std,pblz_upp_100km_annular_avg,pblz_upp_100km_annular_std))
       f.close()
+      # LJG
 
       #############################################################################################################
       ###Start of Block of code to do center calculations at each height based on Michael Fischer's methodology
@@ -1672,8 +1866,8 @@ def main():
         y_sr_200km = y_sr[ymin:ymax]
         lon_sr_200km = lon[xmin:xmax]
         lat_sr_200km = lat[ymin:ymax]
-        x_sr_200km_interp = np.linspace(-200,200,np.int(400/res)+1)
-        y_sr_200km_interp = np.linspace(-200,200,np.int(400/res)+1)
+        x_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
+        y_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
 
         newcenter_xindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
         newcenter_yindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
@@ -1718,7 +1912,7 @@ def main():
       #############################################################################################################################################
       do_write_netcdf = namelist_structure_vars[22,1]
       if do_write_netcdf == 'Y':
-      
+
         #Make File With Azimuthal-Means and Structure Variables
         fn = ODIR+'/'+LONGSID.lower()+'.polar_data.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.nc'
         ds = netCDF4.Dataset(fn, 'w', format='NETCDF4')
@@ -1783,6 +1977,13 @@ def main():
         warmcoremagnitude_write.units = 'Unknown'
         warmcoreheight_write = ds.createVariable('warm_core_height','f4')
         warmcoreheight_write.units = 'Unknown'
+        
+        anomaly_write = ds.createVariable('warm_core_anomaly','f4',('rdim','zdim'))
+        anomaly_write.units = 'degC'
+        anomaly_extent_write = ds.createVariable('warm_core_extent','f4',('zdim'))
+        anomaly_extent_write.units = 'km'
+        anomaly_max_write = ds.createVariable('warm_core_max','f4',('zdim'))
+        anomaly_max_write.units = 'degC'
 
         radius_write[:] = r
         height_write[:] = heightlevs
@@ -1812,12 +2013,17 @@ def main():
         warmcoremagnitude_write[:] = temp_anomaly_max
         warmcoreheight_write[:] = height_temp_anomaly_max
 
-        ds.close()
+        anomaly_write[0:temp_p_anomaly.shape[0],:] = temp_p_anomaly
+        anomaly_write[temp_p_anomaly.shape[0]:,:] = np.nan
+        anomaly_extent_write[:] = anomaly_extent
+        anomaly_max_write[:] = temp_p_anomaly_max
         
+        ds.close()
+
       #############################################################################################################################################
       # END OF BLOCK OF CODE TO WRITE A NETCDF FILE
       #############################################################################################################################################
-      
+
     #############################################################################################################################################
     # CREATE THE GRAPHICS HERE
     #############################################################################################################################################
@@ -1859,9 +2065,9 @@ def main():
       do_dbz_mean = 'N'
       do_dbz_alongshear = 'N'
       do_dbz_acrossshear = 'N'
-      do_dbz5km_wavenumber = 'N' 
+      do_dbz5km_wavenumber = 'N'
 
-    #Do the Sounding Plots First Since Those Call an External Function      
+    #Do the Sounding Plots First Since Those Call an External Function
     if ( do_soundings == 'Y'):
       skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
 
@@ -1916,7 +2122,7 @@ def main():
       ax1 = plotting.axes_radhgt(ax1, xmax=rmax)
       cbar1 = plt.colorbar(co1, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar1.ax.tick_params(labelsize=24)
-      ax1.set_title(f'{EXPT.strip()}\n' + \
+      ax1.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Azimuthal Mean Radial Wind ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -1938,7 +2144,7 @@ def main():
       ax2 = plotting.axes_radhgt(ax2, xmax=rmax)
       cbar2 = plt.colorbar(co2, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
       cbar2.ax.tick_params(labelsize=24)
-      ax2.set_title(f'{EXPT.strip()}\n' + \
+      ax2.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Azimuthal Mean Tangential Wind ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -1960,7 +2166,7 @@ def main():
       ax3 = plotting.axes_radhgt(ax3, xmax=rmax)
       cbar3 = plt.colorbar(co3, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
       cbar3.ax.tick_params(labelsize=24)
-      ax3.set_title(f'{EXPT.strip()}\n' + \
+      ax3.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Azimuthal Mean W ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -1982,7 +2188,7 @@ def main():
       ax4 = plotting.axes_radhgt(ax4, xmax=rmax)
       cbar4 = plt.colorbar(co4, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
       cbar4.ax.tick_params(labelsize=24)
-      ax4.set_title(f'{EXPT.strip()}\n' + \
+      ax4.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Azimuthal Mean Reflectivity ($dBZ$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -2004,7 +2210,7 @@ def main():
       ax5 = plotting.axes_radhgt(ax5, xmax=rmax)
       cbar5 = plt.colorbar(co5, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
       cbar5.ax.tick_params(labelsize=24)
-      ax5.set_title(f'{EXPT.strip()}\n' + \
+      ax5.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Azimuthal Mean Relative Humidity ($\%$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -2030,7 +2236,7 @@ def main():
       cbar6.ax.tick_params(labelsize=24)
       ax6.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax6.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax6.set_title(f'{EXPT.strip()}\n' + \
+      ax6.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear Reflectivity ($dBZ$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -2055,7 +2261,7 @@ def main():
       cbar7.ax.tick_params(labelsize=24)
       ax7.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax7.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax7.set_title(f'{EXPT.strip()}\n' + \
+      ax7.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear Radial Wind ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -2081,7 +2287,7 @@ def main():
       cbar8.ax.tick_params(labelsize=24)
       ax8.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax8.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax8.set_title(f'{EXPT.strip()}\n' + \
+      ax8.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear W ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -2107,7 +2313,7 @@ def main():
       cbar9.ax.tick_params(labelsize=24)
       ax9.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax9.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax9.set_title(f'{EXPT.strip()}\n' + \
+      ax9.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear RH ($\%$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
               fontsize=24, weight='bold', loc='left')
@@ -2133,7 +2339,7 @@ def main():
       cbar10.ax.tick_params(labelsize=24)
       ax10.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax10.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax10.set_title(f'{EXPT.strip()}\n' + \
+      ax10.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear Reflectivity ($dBZ$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2159,7 +2365,7 @@ def main():
       cbar11.ax.tick_params(labelsize=24)
       ax11.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax11.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax11.set_title(f'{EXPT.strip()}\n' + \
+      ax11.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear Radial Wind ($m\ s^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2185,7 +2391,7 @@ def main():
       cbar12.ax.tick_params(labelsize=24)
       ax12.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax12.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax12.set_title(f'{EXPT.strip()}\n' + \
+      ax12.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear W ($m\ s^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2211,7 +2417,7 @@ def main():
       cbar13.ax.tick_params(labelsize=24)
       ax13.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
       ax13.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
-      ax13.set_title(f'{EXPT.strip()}\n' + \
+      ax13.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear RH ($\%$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2229,7 +2435,7 @@ def main():
       fig14 = plt.figure(figsize=(15,15))
       ticks14 = [0, 10, 20, 30, 40, 50, 60, 70]
 
-      # Panel A  
+      # Panel A
       ax14a = fig14.add_subplot(2, 2, 1)
       co14a = ax14a.contourf(XI, YI, dbz5_p[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
@@ -2238,7 +2444,7 @@ def main():
       cbar14a.ax.tick_params(labelsize=18)
       ax14a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax14a.set_title(f'{EXPT.strip()}\n' + \
+      ax14a.set_title(f'{EXPT_TITLE.strip()}\n' + \
           r'WV#0,1,2 5-km Reflectivity ($dBZ$, Shading)' + \
           f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
           fontsize=20, weight='bold', loc='left')
@@ -2258,7 +2464,7 @@ def main():
           fontsize=20, color='brown', loc='right')
       ax14b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel C  
+      # Panel C
       ax14c = fig14.add_subplot(2, 2, 3)
       co14c = ax14c.contourf(XI, YI, dbz5_p_w1[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
@@ -2304,7 +2510,7 @@ def main():
       cbar15a.ax.tick_params(labelsize=18)
       ax15a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax15a.set_title(f'{EXPT.strip()}\n' + \
+      ax15a.set_title(f'{EXPT_TITLE.strip()}\n' + \
           r'WV#0,1,2 5-km RH ($\%$, Shading)' + \
           f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
           fontsize=20, weight='bold', loc='left')
@@ -2369,7 +2575,7 @@ def main():
       cbar16a.ax.tick_params(labelsize=18)
       ax16a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax16a.set_title(f'{EXPT.strip()}\n' +\
+      ax16a.set_title(f'{EXPT_TITLE.strip()}\n' +\
           r'WV#0,1,2 10-m Tangential Wind ($m\ s^{-1}$, Shading)' + \
           f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
           fontsize=20, weight='bold', loc='left')
@@ -2415,7 +2621,7 @@ def main():
       figfname = f'{ODIR}/{LONGSID.lower()}.vt10_wavenumber.{forecastinit}.polar.f{FHR:03}'
       fig16.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       fig16.clf()
-      plt.close(fig16)      
+      plt.close(fig16)
       if DO_CONVERTGIF:
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
 
@@ -2432,7 +2638,7 @@ def main():
       cbar17 = plt.colorbar(co17, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar17.ax.tick_params(labelsize=24)
       sc17 = ax17.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax17.set_title(f'{EXPT.strip()}\n' + \
+      ax17.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$-\langle u_{r} \rangle \langle f+\zeta \rangle$ ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2453,7 +2659,7 @@ def main():
       cbar18 = plt.colorbar(co18, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar18.ax.tick_params(labelsize=24)
       sc18 = ax18.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax18.set_title(f'{EXPT.strip()}\n' + \
+      ax18.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$-\langle w \rangle \frac{\partial{\langle v_{t} \rangle}}{\partial z}$ ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2474,7 +2680,7 @@ def main():
       cbar19 = plt.colorbar(co19, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar19.ax.tick_params(labelsize=24)
       sc19 = ax19.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax19.set_title(f'{EXPT.strip()}\n' + \
+      ax19.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$-\langle u^{\prime}_{r}\zeta^{\prime} \rangle$ ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2495,8 +2701,8 @@ def main():
       cbar20 = plt.colorbar(co20, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar20.ax.tick_params(labelsize=24)
       sc20 = ax20.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax20.set_title(f'{EXPT.strip()}\n' + \
-               r'$-\langle w^{\prime}\frac{\partial{v^{\prime}_{t}}}{\partial z} \rangle$ ($10^{-3} m s^{-2}$, Shading)' + 
+      ax20.set_title(f'{EXPT_TITLE.strip()}\n' + \
+               r'$-\langle w^{\prime}\frac{\partial{v^{\prime}_{t}}}{\partial z} \rangle$ ($10^{-3} m s^{-2}$, Shading)' +
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax20.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
@@ -2516,7 +2722,7 @@ def main():
       cbar21 = plt.colorbar(co21, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar21.ax.tick_params(labelsize=24)
       sc21 = ax21.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax21.set_title(f'{EXPT.strip()}\n' + \
+      ax21.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Sum of $\frac{\partial{\langle v_{t} \rangle}}{\partial t}$ Terms ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2540,7 +2746,7 @@ def main():
       cbar22 = plt.colorbar(co22, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar22.ax.tick_params(labelsize=24)
       sc22 = ax22.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax22.set_title(f'{EXPT.strip()}\n' + \
+      ax22.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$\langle -u_{SR}\frac{\partial{\eta}} {\partial x} - v_{SR}\frac{\partial{\eta}} {\partial y} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2561,7 +2767,7 @@ def main():
       cbar23 = plt.colorbar(co23, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar23.ax.tick_params(labelsize=24)
       sc23 = ax23.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax23.set_title(f'{EXPT.strip()}\n' + \
+      ax23.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$\langle -w\frac{\partial{\zeta}} {\partial z} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2582,7 +2788,7 @@ def main():
       cbar24 = plt.colorbar(co24, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar24.ax.tick_params(labelsize=24)
       sc24 = ax24.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax24.set_title(f'{EXPT.strip()}\n' + \
+      ax24.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$\langle -\eta\frac{\partial{u_{SR}}} {\partial x} - \eta\frac{\partial{v_{SR}}} {\partial y} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2603,7 +2809,7 @@ def main():
       cbar25 = plt.colorbar(co25, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar25.ax.tick_params(labelsize=24)
       sc25 = ax25.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax25.set_title(f'{EXPT.strip()}\n' + \
+      ax25.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'$\langle -\frac{\partial{w}}{\partial x}\frac{\partial{v_{SR}}} {\partial z} + \frac{\partial{w}}{\partial y}\frac{\partial{u_{SR}}} {\partial z} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2624,7 +2830,7 @@ def main():
       cbar26 = plt.colorbar(co26, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar26.ax.tick_params(labelsize=24)
       sc26 = ax26.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax26.set_title(f'{EXPT.strip()}\n' + \
+      ax26.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Sum of $\frac{\partial{\langle \zeta \rangle}}{\partial t}$ Terms ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2648,7 +2854,7 @@ def main():
       co27b = ax27.contour(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), \
                levels=[0.1*np.nanmin(ur_pbl_p_mean)], colors='w', linewidths=4)
       sc27 = ax27.scatter(rmw_pbl_mean, heightlevs_pbl, 70, 'k')
-      ax27.set_title(f'{EXPT.strip()}\n' + \
+      ax27.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Radial Wind in PBL ($m\ s^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
@@ -2659,8 +2865,8 @@ def main():
         os.system(f'convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}')
       fig27.clf()
       plt.close(fig27)
-  
-    if ( do_radar_plots == 'Y'):  
+
+    if ( do_radar_plots == 'Y'):
       #Make Plots for Comparison With Radar
       #Make Horizontal Wind and Reflectivity Plot
       plt.figure(figsize=(19.5,12))
@@ -2677,7 +2883,7 @@ def main():
       plt.yticks(np.linspace(-100,100,5),fontsize=14)
       plt.xlabel('East-West Distance (n mi)',fontsize=18)
       plt.ylabel('North-South Distance (n mi)',fontsize=18)
-      plt.title(EXPT.strip()+'\n'+ '2-km Reflectivity (dbz, Shading)'+'\n'+'2-km Wind Barbs (kt)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+ '2-km Reflectivity (dbz, Shading)'+'\n'+'2-km Wind Barbs (kt)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
       plt.barbs(x_sr[::9]*0.54,y_sr[::9]*0.54,u2km[::9,::9]*1.94,v2km[::9,::9]*1.94,length=6,sizes=dict(spacing=0.15,height=0.4))
       ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80]
       ax = plt.gca()
@@ -2703,7 +2909,7 @@ def main():
       plt.yticks(np.linspace(-100,100,5),fontsize=14)
       plt.xlabel('East-West Distance (n mi)',fontsize=18)
       plt.ylabel('North-South Distance (n mi)',fontsize=18)
-      plt.title(EXPT.strip()+'\n'+'2-km Wind (kt, Shading)'+'\n'+'2-km (Black) and 5-km (Gray) Streamlines'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+'2-km Wind (kt, Shading)'+'\n'+'2-km (Black) and 5-km (Gray) Streamlines'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
       plt.text(-127,127,'2-km Max'+r'$\bf\overline{V}_{t}$'+' (RMW):\n'+vmaxstring+' kt ('+rmwstring+' n mi)',fontsize=14,verticalalignment='top', horizontalalignment='left',color='k',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
       plt.text(127,127,'Shear:\n'+shearstring+' kt',fontsize=14,verticalalignment='top', horizontalalignment='right',color='blue',weight = 'bold',bbox=dict(facecolor='white', edgecolor='black'))
       ticks=[7, 16, 25, 34, 40, 46, 52, 58, 64, 80, 96, 110, 125, 140, 155]
@@ -2727,7 +2933,7 @@ def main():
       plt.close()
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      
+
       #Make Plot of Precipitation Type
       plt.figure(figsize=(20.5,12))
       plt.subplot(121)
@@ -2740,7 +2946,7 @@ def main():
       plt.grid()
       plt.xlabel('East-West Distance (n mi)',fontsize=18)
       plt.ylabel('North-South Distance (n mi)',fontsize=18)
-      plt.title(EXPT.strip()+'\n'+'2-km Reflectivity (dBZ)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+'2-km Reflectivity (dBZ)'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
       ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80]
       ax = plt.gca()
       divider = make_axes_locatable(ax)
@@ -2762,21 +2968,21 @@ def main():
       plt.grid()
       plt.xlabel('East-West Distance (n mi)',fontsize=18)
       plt.ylabel('North-South Distance (n mi)',fontsize=18)
-      plt.title(EXPT.strip()+'\n'+'2-km Precipitation Type'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+'2-km Precipitation Type'+'\n'+'Init: '+forecastinit+'\n'+'Forecast Hour:['+format(FHR,'03d')+']',fontsize=20, weight = 'bold',loc='left')
       ax = plt.gca()
       divider = make_axes_locatable(ax)
       cax = divider.append_axes("bottom", size="5%", pad=1.0)
       cbar_l = plt.colorbar(cax=cax,ticks=[0.5,1.5,2.5,3.5,4.5],drawedges=True,orientation='horizontal')
       cbar_l.set_ticklabels(['None','Stratiform', 'Shallow', 'Moderate', 'Deep'])
       cbar_l.ax.tick_params(labelsize=18)
-      
+
       plt.subplots_adjust(wspace=.25)
       figfname = ODIR+'/'+LONGSID.lower()+'.2km_reflectivity_and_precip_type_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
       plt.gcf().savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       plt.close()
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-        
+
       #Make Azimuthal Mean Tangential Wind Plot With Smaller x-axis
       plt.figure()
       plt.gcf().set_size_inches(20.5, 10.5)
@@ -2790,7 +2996,7 @@ def main():
       plt.yticks(np.linspace(0,18,10),fontsize=24)
       plt.xlabel('Radius (km)',fontsize=24)
       plt.ylabel('Height (km)',fontsize=24)
-      plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Tangential Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+ r'Azimuthal Mean Tangential Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
       plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
       #plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.vt_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
       figfname = ODIR+'/'+LONGSID.lower()+'.vt_mean_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
@@ -2798,7 +3004,7 @@ def main():
       plt.close()
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}");
-      
+
       #Make Azimuthal Mean Radial Wind Plot With Smaller x-axis
       plt.figure()
       plt.gcf().set_size_inches(20.5, 10.5)
@@ -2812,7 +3018,7 @@ def main():
       plt.yticks(np.linspace(0,18,10),fontsize=24)
       plt.xlabel('Radius (km)',fontsize=24)
       plt.ylabel('Height (km)',fontsize=24)
-      plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=24, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+ r'Azimuthal Mean Radial Wind ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=24, weight = 'bold',loc='left')
       plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
       #plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.ur_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
       figfname = ODIR+'/'+LONGSID.lower()+'.ur_mean_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
@@ -2820,7 +3026,7 @@ def main():
       plt.close()
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-        
+
       #Make Azimuthal Mean Reflectivity Plot With Smaller x-axis
       plt.figure()
       plt.gcf().set_size_inches(20.5, 10.5)
@@ -2834,7 +3040,7 @@ def main():
       plt.yticks(np.linspace(0,18,10),fontsize=24)
       plt.xlabel('Radius (km)',fontsize=24)
       plt.ylabel('Height (km)',fontsize=24)
-      plt.title(EXPT.strip()+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
+      plt.title(EXPT_TITLE.strip()+'\n'+ r'Azimuthal Mean Reflectivity ($dBZ$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']',fontsize=24, weight = 'bold',loc='left')
       plt.title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=24,color='brown',loc='right')
       #plt.gcf().savefig(ODIR+'/'+LONGSID.lower()+'.dbz_mean.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.png', bbox_inches='tight', dpi='figure')
       figfname = ODIR+'/'+LONGSID.lower()+'.dbz_mean_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
@@ -2862,8 +3068,8 @@ def main():
         anchorlon = centerlon
         anchorlat = centerlat
 
-      titlestring1 = EXPT.strip()+'\n'+ r'2-km Vorticity ($10^{-4} s^{-1}$, Shading) and Storm-Relative Wind'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']'
-      titlestring2 = EXPT.strip()+'\n'+ r'5-km Vorticity ($10^{-4} s^{-1}$, Shading) and Storm-Relative Wind'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']'
+      titlestring1 = EXPT_TITLE.strip()+'\n'+ r'2-km Vorticity ($10^{-4} s^{-1}$, Shading) and Storm-Relative Wind'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']'
+      titlestring2 = EXPT_TITLE.strip()+'\n'+ r'5-km Vorticity ($10^{-4} s^{-1}$, Shading) and Storm-Relative Wind'+'\n'+'Init: '+forecastinit+' Forecast Hour:['+format(FHR,'03d')+']'
       figfname = ODIR+'/'+LONGSID.lower()+'.vort_tilt_aircraft.'+forecastinit+'.polar.f'+format(FHR,'03d')
       tilt_plot.tilt_plot(kmin_tilt,kmax_tilt,x_sr_200km_interp,y_sr_200km_interp,heightlevs/1000,np.flipud(np.rot90(uwind_sr_200km_interp)),np.flipud(np.rot90(vwind_sr_200km_interp)),np.flipud(np.rot90(wwind_200km_interp)),np.flipud(np.rot90(vort_200km_interp)),newcenter_xindex,newcenter_yindex,newcenter_flag,anchorlon,anchorlat,'vort',SHIPS_ShearMagNum,SHIPS_ShearDirMetNum,titlestring1,titlestring2,figfname+figext)
       print(x_sr_200km_interp[newcenter_xindex])
@@ -2877,7 +3083,7 @@ def main():
 
     # Write the input file to a log to mark that it has ben processed
     io.update_plottedfile(PLOTTED_FILE, FILE)
-  
+
   if ( DO_RESEARCH_MODE ):
     print('MSG: DOING THE EXTRA STUFF')
     combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics.{forecastinit}.polar.all.txt'
@@ -2888,7 +3094,36 @@ def main():
     runcmd = f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py {combinedfile} {EXPT.strip()} {ODIR} {forecastinit} {LONGSID}'
     print(f'MSG: runcmd = {runcmd}')
     subprocess.call(runcmd,shell=True)
-    
+
+    #edit12/23-------------------------------
+    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_ptype_rh.{forecastinit}.polar.all.txt'
+    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_ptype_rh.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+    print(f'MSG: pastecmd = {pastecmd}')
+    os.system(pastecmd)
+    pythonexec = sys.executable
+    runcmd = f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py {combinedfile} {EXPT.strip()} {ODIR} {forecastinit} {LONGSID}'
+    print(f'MSG: runcmd = {runcmd}')
+    subprocess.call(runcmd,shell=True)
+
+    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_massflux.{forecastinit}.polar.all.txt'
+    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_massflux.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+    print(f'MSG: pastecmd = {pastecmd}')
+    os.system(pastecmd)
+    pythonexec = sys.executable
+    runcmd = f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py {combinedfile} {EXPT.strip()} {ODIR} {forecastinit} {LONGSID}'
+    print(f'MSG: runcmd = {runcmd}')
+    subprocess.call(runcmd,shell=True)
+
+    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_vorticity.{forecastinit}.polar.all.txt'
+    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_vorticity.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+    print(f'MSG: pastecmd = {pastecmd}')
+    os.system(pastecmd)
+    pythonexec = sys.executable
+    runcmd = f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py {combinedfile} {EXPT.strip()} {ODIR} {forecastinit} {LONGSID}'
+    print(f'MSG: runcmd = {runcmd}')
+    subprocess.call(runcmd,shell=True)
+    #edit12/23end-------------------------------
+
   print('MSG: COMPLETING')
   os.system(f'lockfile -r-1 -l 180 {ST_LOCK_FILE}')
   os.system(f'echo "complete" > {STATUS_FILE}')

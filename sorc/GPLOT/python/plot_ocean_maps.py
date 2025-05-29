@@ -65,7 +65,7 @@ def read_fix_hycom_depth(basefname):
   jdm = int(rangelines[0][3].split(';')[0])
   fname = basefname+'.a';
   ijdm=idm*jdm
-  #DEBUG:    print(f'Loading {fname} at {datetime.datetime.now()}');
+  #DEBUG:    print(f'Loading {fname} at {datetime.now()}');
   res = ma.array([],fill_value=1e30);
   fid=open(fname,'rb')
   fld=fid.read(ijdm*4)
@@ -77,6 +77,48 @@ def read_fix_hycom_depth(basefname):
   res=ma.masked_greater(res,1e5)
   return(res)
 #read_fix_hycom_depth
+
+def load_axbt_data(BASEFDT,ndays=(-3,-2,-1,0,1,2,3,4),ddir='/scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/data'):
+    '''Create XArray Dataset of AXBT float profiles for all flights during days in BASEFDT +/- NDAYS'''
+    basefdt = datetime.strptime(BASEFDT,'%Y%m%d');
+    for nday in ndays:
+        fdt = basefdt + timedelta(days=nday);
+        FDT = fdt.strftime('%Y%m%d');
+        #/scratch2/AOML/aoml-hafs1/Lew.Gramer/ocean/data/axbts/20230910I1/20230910I1_BT_120527.dat
+        fdfpatt = f'{ddir}/axbts/{FDT}*/{FDT}*.dat'
+        for fdfname in sorted(glob.glob(f'{fdfpatt}')):
+            try:
+                fse = pd.read_csv(fdfname,r'\s+',low_memory=False,header=2)
+            except:
+                print(f'Failed read_csv: {fdfname}');
+                breakpoint()
+                continue;
+            
+            flight = os.path.basename(fdfname).split('_')[0]
+            t = datetime.strptime(fse.columns[0]+fse.columns[1], '%Y%m%d%H%M%S')
+            try:
+                lat = np.double(fse.columns[2])
+                lon = np.double(fse.columns[3])
+            except:
+                lat = np.nan
+                lon = np.nan
+            platform = fse.columns[4]
+            storm = fse.columns[5]
+            fse.dropna(axis=1,inplace=True)
+            fse.columns = ['depth','temperature','ignore']
+            T = fse.temperature.values.reshape((1,len(fse.temperature)))
+            T[T<0] = np.nan
+            z = fse.depth
+            
+            fds = xr.Dataset( { "T": (("t","z"),T), "lon": ("t",[lon]), "lat": ("t",[lat]), \
+                                "flight": ("t",[flight]), "storm": ("t",[storm]), "platform": ("t",[platform]), }, \
+                              coords={"t": [t], "z": (("z"), z) }, )
+            if ( 'fdses' in locals() ):
+                fdses = xr.merge([fdses,fds]);
+            else:
+                fdses = fds;
+    return(fdses)
+#load_axbt_data
 
 
 ##############################
@@ -144,9 +186,13 @@ def main():
   
   
   # Read the master namelist
-  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  #OCEAN_DSOURCE = subprocess.run(['grep','^OCEAN_DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+  try:
+    OCEAN_DSOURCE = subprocess.run(['grep','^OCEAN_DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+  except:
+    print(f'DEFAULTING OCEAN_DSOURCE={DSOURCE}');
+    OCEAN_DSOURCE = DSOURCE
+  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   try:
     ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
@@ -167,34 +213,51 @@ def main():
     figext2 = '.png'
   
   # Define some important file names
-  UNPLOTTED_FILE = ODIR.strip()+'UnplottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-  PLOTTED_FILE = ODIR.strip()+'PlottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-  ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-  STATUS_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
-  ST_LOCK_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
+  if ( OCEAN_DOMAIN in ["hwrf", "d03", "d02", "tkfull", "alld03", "storm", "core", "tcparent" ] ):
+    # Set the STORMTAG for file names
+    STORMTAG='.'+SID.strip()
+  else:
+    STORMTAG=""
+  UNPLOTTED_FILE = ODIR.strip()+'UnplottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+STORMTAG+'.log'
+  PLOTTED_FILE = ODIR.strip()+'PlottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+STORMTAG+'.log'
+  ALLFHR_FILE = ODIR.strip()+'AllForecastHours.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+STORMTAG+'.log'
+  STATUS_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+STORMTAG+'.log'
+  ST_LOCK_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+STORMTAG+'.log.lock'
   ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
   
   print(f'DEBUG: OCEAN_SOURCE {OCEAN_SOURCE}')
+  print(f'DEBUG: OCEAN_DSOURCE {OCEAN_DSOURCE}')
   # Get ocean depths (for some reason, generally left out of OCN_POST output files)
   if ( OCEAN_SOURCE == 'HYCOM' ):
-    DEPTH_FILE = FIX_DIR.strip()+DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
+    DEPTH_FILE = FIX_DIR.strip()+OCEAN_DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
     depths = read_fix_hycom_depth(DEPTH_FILE);
   else:
     DEPTH_FILE = f'{FIX_DIR.strip()}/{OCEAN_CFG.strip().lower()}/ocean_topog.nc';
     depths_ds = xr.open_dataset(DEPTH_FILE);
     depths = depths_ds.depth.values
     depths_ds.close();
-  #DEBUG:  print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
+  #DEBUG:
+  print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
   
   #Get parameters from input file
   resolution = float(RESOLUTION)
   rmax = float(RMAX)
   zsize_pressure = int(LEVS)
   
+  # Read the plot title
+  TBLDIR = GPLOT_DIR+'/tbl'
+  print(f'EXPT --> {EXPT}');
+  try:
+    EXPT_TITLE = subprocess.run(['grep',f'^  *{EXPT} *,',f'{TBLDIR}/ExptInfo.dat'], stdout=subprocess.PIPE).stdout.decode('utf-8').split(",")[1].strip()
+  except:
+    EXPT_TITLE = EXPT
+  print(f'EXPT_TITLE --> {EXPT_TITLE}');
+  
   # Get the ATCF file.
   ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
   if ATCF_LIST.size > 1:
     print('Found multiple ATCFs')
+    print(f'DEBUG:: {ATCF_LIST}: {SID.lower()}')
     ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID+'.').lower() in s][:]][0]
   else:
     ATCF = ATCF_LIST
@@ -222,8 +285,13 @@ def main():
     FHR_LIST = np.append(FHR_LIST,"999")
     UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
   
+  SST0 = None
+  dSST = None
+  OHC0 = None
+  dOHC = None
   SSH0 = None
   dSSH = None
+  DFHR = int(FHR_LIST[-1]) - int(FHR_LIST[-2])
   
   for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
     
@@ -331,16 +399,28 @@ def main():
     else:
       print('MSG: Getting Data Now.')
     all_ds = xr.open_dataset(FILE);
+    
+    
+    ################################################################################
+    ########## HANDLE HYbrid Coordinate Ocean Model POST OUTPUT
     if ( OCEAN_SOURCE == 'HYCOM' ):
       if ( OCEAN_WRAP_LON == 'True' ):
         print('MSG: Wrapping 3D Longitudes');
         all_ds['Longitude'] = all_ds.Longitude + 360
       ds = all_ds.where(~depths.mask);
+      # Grab full-domain initial fields for differencing below...
+      if ( SST0 is None ):
+        SST0 = ds.temperature[0,...].squeeze()
+        if ( len(SST0.dims) > 2 ):
+          SST0 = SST0[0,...].squeeze()
+      if ( OHC0 is None ):
+        OHC0 = ds.ocean_heat_content.squeeze()
       if ( OCEAN_DOMAIN == 'd03' ):
         #DEBUG:        print(f'DEBUG: ds.where( {lonmin}<={all_ds.Longitude.min().values} & {all_ds.Longitude.max().values}<={lonmax} & {latmin}<={all_ds.Latitude.min().values} & {all_ds.Latitude.max().values}<={latmax} )');
         ds = ds.where((lonmin<=all_ds.Longitude) & (all_ds.Longitude<=lonmax) & (latmin<=all_ds.Latitude) & (all_ds.Latitude<=latmax));
       lon = ds.Longitude.squeeze();
       lat = ds.Latitude.squeeze();
+      modelt = ds.MT.values[0]
       ucurr = ds.u_velocity.squeeze()
       vcurr = ds.v_velocity.squeeze()
       wcurr = ds.w_velocity.squeeze()
@@ -349,6 +429,7 @@ def main():
       #DEBUG:        MLD.plot(figsize=(11,9)); plt.savefig('3z.png');
       T = ds.temperature.squeeze()
       S = ds.salinity.squeeze()
+      SST = T[0,...].squeeze();
       SSS = S[0,...].squeeze();
       OHC = ds.ocean_heat_content.squeeze()
       #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
@@ -356,6 +437,12 @@ def main():
       i20 = ds['depth of 20C isotherm'].squeeze()
       ds.close()
       print('MSG: Done with T, S, MLD, OHC, Iso')
+      
+      #DEBUG:      print('SST',np.nanmin(SST.values),np.nanmax(SST.values),SST.shape)
+      #DEBUG:      print('SST0',np.nanmin(SST0.values),np.nanmax(SST0.values),SST0.shape)
+      dSST = (SST - SST0) / (np.double(FHR)/24) #[K/d]
+      #DEBUG:      print('dSST',np.nanmin(dSST.values),np.nanmax(dSST.values),dSST.shape)
+      dOHC = (OHC - OHC0) / (np.double(FHR)/24) #[K/d]
       
       dZ = ds.Z.diff(dim='Z');
       MLu = ucurr.where(ds.Z < MLD).mean(axis=0)
@@ -375,6 +462,8 @@ def main():
           print('MSG: Wrapping 2D Longitudes');
           all_ods['Longitude'] = all_ods.Longitude + 360
         ods = all_ods.where(~depths.mask);
+        if ( SSH0 is None ):
+          SSH0 = ods.sea_surface_height.squeeze()
         if ( OCEAN_DOMAIN == 'd03' ):
           #DEBUG:          print(f'DEBUG: ods.where( {lonmin}<={all_ods.Longitude.min().values} & {all_ods.Longitude.max().values}<={lonmax} & {latmin}<={all_ods.Latitude.min().values} & {all_ods.Latitude.max().values}<={latmax} )');
           ods = ods.where((lonmin<=all_ods.Longitude) & (all_ods.Longitude<=lonmax) \
@@ -382,8 +471,9 @@ def main():
         SHF = ods.surface_heat_flux.squeeze()
         #DEBUG:        print('SHF',SHF.min().values,SHF.max().values)
         SSH = ods.sea_surface_height.squeeze()
-        if ( SSH0 is None ):
-          SSH0 = SSH
+        # This approach does not work well for d03 - we "lose" the domain pretty quickly
+        # if ( SSH0 is None ):
+        #   SSH0 = SSH
         dSSH = (SSH - SSH0) / (np.double(FHR)/24) #[cm/d]
         #DEBUG:          print('SSH',SSH.max().values)
         Mon = ods.montgomery_potential_surf.squeeze()
@@ -398,6 +488,8 @@ def main():
         ods.close()
         print(f'MSG: Done with surface vars (e.g., redo of MLu,MLv) {datetime.now()}')
     
+    ################################################################################
+    ########## HANDLE Modular Ocean Model v6 POST OUTPUT
     elif ( OCEAN_SOURCE == 'MOM6' ):
       all_ds = all_ds.interp( {'xq':all_ds.xh, 'yq':all_ds.yh} )
       if ( OCEAN_WRAP_LON == 'True' ):
@@ -406,6 +498,13 @@ def main():
         all_ds['geolon'] = all_ds.geolon + 360
       #ds = all_ds.where(~depths.mask);
       ds = all_ds;
+      if ( SST0 is None ):
+        SST0 = ds.temp[0,...].squeeze()
+      if ( OHC0 is None ):
+        #OHC0 = ds.ocean_heat_content.squeeze()
+        print(f'WARNING:: Initial full-domain OHC - and dOHC - is not available (yet) for MOM6!');
+      if ( SSH0 is None ):
+        SSH0 = ds.SSH.squeeze()*1e2 #[m]=>[cm]
       if ( OCEAN_DOMAIN == 'd03' ):
         #DEBUG:        print(f'DEBUG: ds.where( {lonmin}<={all_ds.geolon.min().values} & {all_ds.geolon.max().values}<={lonmax} & {latmin}<={all_ds.geolat.min().values} & {all_ds.geolat.max().values}<={latmax} )');
         #ds = ds.where((lonmin<=all_ds.geolon) & (all_ds.geolon<=lonmax) & (latmin<=all_ds.geolat) & (all_ds.geolat<=latmax));
@@ -425,16 +524,22 @@ def main():
       #DEBUG:        MLD.plot(figsize=(11,9)); plt.savefig('3z.png');
       T = ds.temp.squeeze()
       S = ds.so.squeeze()
+      SST = T[0,...].squeeze();
       SSS = S[0,...].squeeze();
       #i26 = ds['depth of 26C isotherm'].squeeze().to_masked_array()
       i26 = ds.z_l.where(T>=26).max(axis=0)
       i20 = ds.z_l.where(T>=20).max(axis=0)
-      cp = 4178;                  # Specific heat capacity of seawater [J kg^-1 K^-1]
-      rho = 1026;                 # Mean water density [kg m^-3]
+      #cp = 4178;                  # Specific heat capacity of seawater [J kg^-1 K^-1]
+      #rho = 1026;                 # Mean water density [kg m^-3]
+      # Modified to match sorc/hafs_hycom_utils.fd/post/hafs_ab2data/archv2data3z.f
+      cp = 3990;                  # Specific heat capacity of seawater [J kg^-1 K^-1]
+      rho = 1025;                 # Mean water density [kg m^-3]
       kJcm2_per_Jm2 = 1e-7;       # Unit conversion kJ/cm^2 == 10^7 J/m^2
       delT = T - 26;
       delT = xr.where(delT > 0, delT, 0);
-      dZ = ds.z_l.broadcast_like(delT).diff(0)
+      #dZ = ds.z_l.broadcast_like(delT).diff(0)
+      dz = ds.z_l; dz.values[1:] = ds.z_l[1:] - ds.z_l[0:-1].values
+      dZ = dz.broadcast_like(delT)
       delTdz = delT * dZ;
       OHC = cp*rho*delTdz.sum(axis=0) * kJcm2_per_Jm2;
       print('MSG: Done with T, S, MLD, Iso, OHC')
@@ -448,9 +553,11 @@ def main():
       #Get 2-d Data
       SHF = -(ds.LwLatSens.squeeze() + ds.SW.squeeze());
       #DEBUG:      print('SHF',SHF.min().values,SHF.max().values)
+      dSST = (ds.temp.squeeze() - SST0) / (np.double(FHR)/24) #[cm/d]
       SSH = ds.SSH.squeeze()*1e2 #[m]=>[cm]
-      if ( SSH0 is None ):
-        SSH0 = SSH
+      # This approach does not work well for d03 - we "lose" the domain pretty quickly
+      # if ( SSH0 is None ):
+      #   SSH0 = SSH
       dSSH = (SSH - SSH0) / (np.double(FHR)/24) #[cm/d]
       #DEBUG:      print('SSH',SSH.max().values)
       ds.close()
@@ -485,6 +592,14 @@ def main():
     do_mls = namelist_structure_vars[13,1]
     do_ssh_tendency = namelist_structure_vars[14,1]
     do_ships_output = namelist_structure_vars[15,1]
+    try:
+      do_sst_tendency = namelist_structure_vars[16,1]
+      do_ohc_tendency = namelist_structure_vars[17,1]
+      do_obs_profiles = namelist_structure_vars[18,1]
+    except:
+      do_sst_tendency = 'Y'
+      do_ohc_tendency = 'Y'
+      do_obs_profiles = 'N'
     
     #Load the colormaps needed
     color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -515,16 +630,22 @@ def main():
       
       iso_26_levs = np.arange(0,160+1e-6,5.0);		iso_26_ticks = np.arange(0,160+1e-6,20.0)
       iso_20_levs = np.arange(0,300+1e-6,10.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
-      OHC_levs = np.arange(0,150+1e-6,5.0);		OHC_ticks = np.arange(0,150+1e-6,20.0);
+      #OHC_levs = np.arange(0,150+1e-6,5.0);		OHC_ticks = np.arange(0,150+1e-6,20.0);
+      #dOHC_levs = np.arange(-150,150+1e-6,20.0);	dOHC_ticks = np.arange(-150,150+1e-6,50.0);
+      # Modified for CYGNSS figures...
+      OHC_levs = np.arange(60,120+1e-6,5.0);		OHC_ticks = np.arange(60,120+1e-6,20.0);
+      dOHC_levs = np.arange(-40,40+1e-6,2.0);   	dOHC_ticks = np.arange(-40,40+1e-6,5.0);
       sfc_conv_levs = np.arange(-20,20+1e-8,0.5);	sfc_conv_ticks = np.arange(-20,20+1e-8,2)
       sfc_vort_levs = np.arange(-20,20+1e-8,0.5);	sfc_vort_ticks = np.arange(-20,20+1e-8,2)
       ml_conv_levs = np.arange(-20,20+1e-8,0.5);	ml_conv_ticks = np.arange(-20,20+1e-8,2)
       ml_vort_levs = np.arange(-20,20+1e-8,0.5);	ml_vort_ticks = np.arange(-20,20+1e-8,2)
+      dSST_levs = np.arange(-3,3+1e-6,0.2);		dSST_ticks = np.arange(-3,3+1e-6,0.5)
       SSH_levs = np.arange(-100,100+1e-6,5.0);		SSH_ticks = np.arange(-100,100+1e-6,20.0)
       dSSH_levs = np.arange(-20,20+1e-6,1.0);		dSSH_ticks = np.arange(-20,20+1e-6,5.0)
       SHF_levs = np.arange(-1600,1600+1e-6,50.0);	SHF_ticks = np.arange(-1600,1600+1e-6,200.0)
       DPI_levs = np.arange(0,30+1e-6,1.0);		DPI_ticks = np.arange(0,30+1e-6,2.0)
       MLD_levs = np.arange(0,160+1e-6,5.0);		MLD_ticks = np.arange(0,160+1e-6,10.0)
+      SST_levs = np.arange(26,30+1e-6,0.2);		SST_ticks = np.arange(26,30+1e-6,0.5)
       SSS_levs = np.arange(32,38+1e-6,0.2);		SSS_ticks = np.arange(32,38+1e-6,0.5)
       MLT_levs = np.arange(26,30+1e-6,0.2);		MLT_ticks = np.arange(26,30+1e-6,0.5)
       MLS_levs = np.arange(32,38+1e-6,0.2);		MLS_ticks = np.arange(32,38+1e-6,0.5)
@@ -548,6 +669,7 @@ def main():
       iso_20_levs = np.arange(0,300+1e-6,10.0);		iso_20_ticks = np.arange(0,300+1e-6,20.0)
       #OHC_levs = np.arange(0,150+1e-6,5.0);		OHC_ticks = np.arange(0,150+1e-6,20.0);
       OHC_levs = np.arange(0,200+1e-6,5.0);		OHC_ticks = np.arange(0,200+1e-6,20.0);
+      dOHC_levs = np.arange(-40,40+1e-6,2.0);   	dOHC_ticks = np.arange(-40,40+1e-6,5.0);
       #sfc_conv_levs = np.arange(-2e-3,2e-3+1e-8,1e-4);	sfc_conv_ticks = np.arange(-2e-3,2e-3+1e-8,5e-4)
       sfc_conv_levs = np.arange(-2e-2,2e-2+1e-8,5e-4);	sfc_conv_ticks = np.arange(-2e-2,2e-2+1e-8,2e-3)
       #sfc_vort_levs = np.arange(-5e-3,5e-3+1e-8,2e-4);	sfc_vort_ticks = np.arange(-5e-3,5e-3+1e-8,10e-4)
@@ -556,6 +678,7 @@ def main():
       ml_conv_levs = np.arange(-2e-2,2e-2+1e-8,1e-3);	ml_conv_ticks = np.arange(-2e-2,2e-2+1e-8,5e-3)
       #ml_vort_levs = np.arange(-5e-3,5e-3+1e-8,2e-4);	ml_vort_ticks = np.arange(-5e-3,5e-3+1e-8,10e-4)
       ml_vort_levs = np.arange(-4e-2,4e-2+1e-8,2e-3);	ml_vort_ticks = np.arange(-4e-2,4e-2+1e-8,5e-3)
+      dSST_levs = np.arange(-3,3+1e-6,0.2);		dSST_ticks = np.arange(-3,3+1e-6,0.5)
       SSH_levs = np.arange(-100,100+1e-6,5.0);		SSH_ticks = np.arange(-100,100+1e-6,20.0)
       #dSSH_levs = np.arange(-10,10+1e-6,0.5);		dSSH_ticks = np.arange(-10,10+1e-6,2.0)
       #dSSH_levs = np.arange(-20,20+1e-6,1.0);		dSSH_ticks = np.arange(-20,20+1e-6,5.0)
@@ -684,10 +807,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 26 $^oC$ Isotherm (m, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Depth of 26 $^oC$ Isotherm (m, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 26 $^oC$ Isotherm (m, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Depth of 26 $^oC$ Isotherm (m, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           #DEBUG:          print(f'DEBUG: set_xlim( {lonmin},{lonmax} ), set_ylim( {latmin},{latmax} )');
@@ -709,10 +832,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 20 $^oC$ Isotherm (m, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Depth of 20 $^oC$ Isotherm (m, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Depth of 20 $^oC$ Isotherm (m, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Depth of 20 $^oC$ Isotherm (m, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -725,7 +848,7 @@ def main():
     if do_ohc == 'Y':
       fig1 = plt.figure(figsize=figsize)
       ax1 = fig1.add_subplot(1, 1, 1)
-      co1 = ax1.contourf(lon,lat, OHC, levels=OHC_levs, extend='both')
+      co1 = ax1.contourf(lon,lat, OHC, levels=OHC_levs, cmap='Reds',extend='both')
       debug_dump_range(FHR,'OHC',OHC)
       cbar1 = plt.colorbar(co1, ticks=OHC_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
@@ -733,14 +856,38 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Ocean Heat Content ($kJ\ cm^{-2}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Ocean Heat Content ($kJ\ cm^{-2}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Ocean Heat Content ($kJ\ cm^{-2}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Ocean Heat Content ($kJ\ cm^{-2}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
       figfname = ODIR+'/'+LONGSID.lower()+'.ohc.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if ( DO_CONVERTGIF ):
+        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plt.close(fig1)
+    # FIGURE: Ocean heat content TENDENCY [J/cm^2/d]
+    if do_ohc_tendency == 'Y' and dOHC is not None:
+      fig1 = plt.figure(figsize=figsize)
+      ax1 = fig1.add_subplot(1, 1, 1)
+      co1 = ax1.contourf(lon,lat, dOHC, levels=dOHC_levs, cmap='Reds',extend='both')
+      debug_dump_range(FHR,'dOHC',dOHC)
+      cbar1 = plt.colorbar(co1, ticks=dOHC_ticks)
+      cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
+      add_center_label(ax1,centerlon,centerlat,minpressure);
+      if ( OCEAN_DOMAIN == 'd03' ):
+          Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Oc. Ht. Content Tendency ($kJ\ cm^{-2} d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      else:
+          #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Oc. Ht. Content Tendency ($kJ\ cm^{-2} d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      if ( OCEAN_DOMAIN == 'd03' ):
+          ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
+      figfname = ODIR+'/'+LONGSID.lower()+'.dohc.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -757,10 +904,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Surface Convergence ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Surface Convergence ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Surface Convergence ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -781,10 +928,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Surface Vorticity ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Surface Vorticity ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Surface Vorticity ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -805,9 +952,9 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-layer Convergence ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Convergence ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-layer Convergence ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -828,14 +975,38 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-layer Vorticity ($d^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-layer Vorticity ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-layer Vorticity ($d^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
       figfname = ODIR+'/'+LONGSID.lower()+'.ml_vort.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
+      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if ( DO_CONVERTGIF ):
+        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plt.close(fig1)
+    # FIGURE: Sea-surface temperature TENDENCY [cm/d]
+    if do_sst_tendency == 'Y' and dSST is not None:
+      fig1 = plt.figure(figsize=figsize)
+      ax1 = fig1.add_subplot(1, 1, 1)
+      co1 = ax1.contourf(lon,lat, dSST, levels=dSST_levs, cmap='seismic',extend='both')
+      debug_dump_range(FHR,'dSST',dSST)
+      cbar1 = plt.colorbar(co1, ticks=dSST_ticks)
+      cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      ax1.contour(lon,lat,depths,levels=[150],colors='lightblue',linestyles='--',linewidths=3); # Plot the 150 m isobath
+      add_center_label(ax1,centerlon,centerlat,minpressure);
+      if ( OCEAN_DOMAIN == 'd03' ):
+          Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Sfc. Temp. Tendency ($K/d$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      else:
+          #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Sfc. Temp. Tendency ($K/d$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      if ( OCEAN_DOMAIN == 'd03' ):
+          ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
+      figfname = ODIR+'/'+LONGSID.lower()+'.dsst.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
@@ -852,10 +1023,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Height ($cm$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Surface Height ($cm$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Height ($cm$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Surface Height ($cm$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -876,10 +1047,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Sfc. Ht. Tendency ($cm/d$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Sfc. Ht. Tendency ($cm/d$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Sfc. Ht. Tendency ($cm/d$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Sfc. Ht. Tendency ($cm/d$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -900,10 +1071,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Surface Heat Flux ($W m^{-2}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Surface Heat Flux ($W m^{-2}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Surface Heat Flux ($W m^{-2}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Surface Heat Flux ($W m^{-2}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -924,10 +1095,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Dynamic Potential Intensity ($m\ s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Dynamic Potential Intensity ($m\ s^{-1}$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Dynamic Potential Intensity ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Dynamic Potential Intensity ($m\ s^{-1}$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -950,10 +1121,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Depth ($m$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-Layer Depth ($m$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Depth ($m$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-Layer Depth ($m$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -975,10 +1146,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sea-Surface Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -1000,10 +1171,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Temperature ($^oC$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-Layer Temperature ($^oC$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Temperature ($^oC$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-Layer Temperature ($^oC$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -1025,10 +1196,10 @@ def main():
       add_center_label(ax1,centerlon,centerlat,minpressure);
       if ( OCEAN_DOMAIN == 'd03' ):
           Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=0.5);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading), U$_{MLD}$ ($cm\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       else:
           #Axes.streamplot(ax1,xi,yi,MLu,MLv,color='gray',density=5.0);
-          ax1.set_title(EXPT.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+          ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Mixed-Layer Salinity ($psu$, Shading)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       if ( OCEAN_DOMAIN == 'd03' ):
           ax1.set_xlim([lonmin,lonmax]); ax1.set_ylim([latmin,latmax]);
@@ -1038,7 +1209,27 @@ def main():
           os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
       plt.close(fig1)
     
-    # Write the input file to a log to mark that it has ben processed
+    if ( do_obs_profiles == 'Y' and OCEAN_DOMAIN == 'd03' ):
+      if ( 'AXBTs' not in locals() ):
+        try:
+          AXBTs = load_axbt_data(IDATE[0:8]);
+        except:
+          print(f'WARNING: Unable to load AXBTs for {IDATE[0:8]}. Skipping do_obs_profiles.')
+          pass;
+      if ( 'AXBTs' in locals() ):
+        if ( FHR == 0 ):
+          mint = modelt - np.timedelta64(2,'D')
+          maxt = modelt + np.timedelta64(DFHR,'h')
+        else:
+          mint = modelt - np.timedelta64(DFHR,'h')
+          maxt = modelt + np.timedelta64(DFHR,'h')
+        samples = AXBTs.where( (lonmin<=AXBTs.lon) & (AXBTs.lon<=lonmax) & \
+                               (latmin<=AXBTs.lat) & (AXBTs.lat<=latmax) & \
+                               (mint<=AXBTs.t) & (AXBTs.t<=maxt))
+        if ( np.any(~np.isnan(samples.lon.values)) ):
+          pass;
+
+  # Write the input file to a log to mark that it has ben processed
     update_plottedfile(PLOTTED_FILE, FILE)
     print(f'MSG: Done with Plots {datetime.now()}')
   

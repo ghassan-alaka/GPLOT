@@ -395,11 +395,16 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the current date is more recent than the date for the final lead time (DATE_CUT)
         # do NOT force production.
-        if [ "${DATE_CUT}" -ge "${DATE_NOW}" ] && [ "${CASE_STATUS}" == "complete" ]; then
-            echo "MSG: The cutoff date (${DATE_CUT}) is more recent than the current date (${DATE_NOW}). Forcing delayed production."
-            FORCE="Delay"
+        if [ "${ODIR_TYPE}" == "0" ]; then
+            if [ "${DATE_CUT}" -ge "${DATE_NOW}" ] && [ "${CASE_STATUS}" == "complete" ]; then
+                echo "MSG: The cutoff date (${DATE_CUT}) is more recent than the current date (${DATE_NOW}). Forcing delayed production."
+                FORCE="Delay"
+            else
+                echo "MSG: The current date (${DATE_NOW}) is more recent than the cutoff date (${DATE_CUT}). Not forcing production yet."
+                FORCE="False"
+            fi
         else
-            echo "MSG: The current date (${DATE_NOW}) is more recent than the cutoff date (${DATE_CUT}). Not forcing production yet."
+            echo "MSG: Not forcing production within model workflow (ODIR_TYPE=1). FYI, cutoff date=${DATE_CUT}, current date=${DATE_NOW}"
             FORCE="False"
         fi
 

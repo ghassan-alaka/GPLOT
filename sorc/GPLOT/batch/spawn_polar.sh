@@ -168,6 +168,9 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # Define a maximum number of cycles to be processed
 #MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
 MAX_CYCLES=100
+# Lew.Gramer@noaa.gov 2024-01-17
+MAX_CYCLES=300
+# LJG
 
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
@@ -228,7 +231,10 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+#MAX_JOBS=25
+# Lew.Gramer@noaa.gov 2024-01-17
+MAX_JOBS=300
+#LJG
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then

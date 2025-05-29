@@ -43,11 +43,31 @@ import math
 import cmath
 import subprocess
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import cartopy.io.shapereader as shpreader
 
+
+try:
+  # Jet and Hera
+  county_reader = shpreader.Reader('/home/Andrew.Hazelton/.local/share/cartopy/shapefiles/natural_earth/cultural/countyl010g.shp')
+  #states_reader = shpreader.Reader('/home/Andrew.Hazelton/.local/share/cartopy/shapefiles/natural_earth/cultural/ne_10m_admin_1_states_provinces_lakes.shp')
+  states_reader = shpreader.Reader('/home/Andrew.Hazelton/.local/share/cartopy/shapefiles/natural_earth/cultural/ne_50m_admin_1_states_provinces_lines.shp');
+except:
+  # Orion and Hercules
+  county_reader = shpreader.Reader('/home/ahazelto/.local/share/cartopy/shapefiles/natural_earth/cultural/countyl010g.shp')
+  states_reader = shpreader.Reader('/home/ahazelto/.local/share/cartopy/shapefiles/natural_earth/cultural/ne_10m_admin_1_states_provinces_lakes.shp')
+  #states_reader = shpreader.Reader('/home/ahazelto/.local/share/cartopy/shapefiles/natural_earth/cultural/50m_admin_1_states_provinces_lines.shp')
+counties = list(county_reader.geometries())
+COUNTIES = cfeature.ShapelyFeature(counties, ccrs.PlateCarree())
+states = list(states_reader.geometries())
+STATES = cfeature.ShapelyFeature(states, ccrs.PlateCarree())
 
 def debug_dump_range(FHR,varnm,var):
   print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var)},{np.nanpercentile(var,25)},{np.nanmedian(var)},{np.nanpercentile(var,75)},{np.nanmax(var)}');
   pass;
+
+def add_center_label(ax1,centerlon,centerlat,minpressure):
+  ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='black',fontsize=28,fontweight='extra bold');
+  ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='red',fontsize=28);
 
 ##############################
 def main():
@@ -110,8 +130,8 @@ def main():
   
   
   # Read the master namelist
-  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
+  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   BASEDIR = ODIR
   try:
@@ -152,6 +172,15 @@ def main():
   resolution = float(RESOLUTION)
   rmax = float(RMAX)
   zsize_pressure = int(LEVS)
+  
+  # Read the plot title
+  TBLDIR = GPLOT_DIR+'/tbl'
+  print(f'EXPT --> {EXPT}');
+  try:
+    EXPT_TITLE = subprocess.run(['grep',f'^  *{EXPT} *,',f'{TBLDIR}/ExptInfo.dat'], stdout=subprocess.PIPE).stdout.decode('utf-8').split(",")[1].strip()
+  except:
+    EXPT_TITLE = EXPT
+  print(f'EXPT_TITLE --> {EXPT_TITLE}');
   
   # Get the ATCF file.
   ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
@@ -376,6 +405,7 @@ def main():
     mixr2m = q2m/(1-q2m)
     temp_v_2m = tmp2m*(1+0.61*mixr2m)
     rho2m = mslp/(287*temp_v_2m)
+    ustar = ga.exp('fricvsfc')
     print(f'MSG: Done with surface vars (e.g., u10,v10) {datetime.now()}')
     
     #Get u850, v850, u200, v200 for Shear Calculation
@@ -474,6 +504,10 @@ def main():
     do_theta_e_850 = namelist_structure_vars[4,1]
     do_delta_t = namelist_structure_vars[5,1]
     do_delta_q = namelist_structure_vars[6,1]
+    try:
+      do_gusts = namelist_structure_vars[7,1]
+    except:
+      do_gusts='Y';
     
     #Load the colormaps needed
     color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -487,6 +521,14 @@ def main():
     levs_th = np.linspace(350,380,31,endpoint=True)
     norm_th = colors.BoundaryNorm(levs_th,256)
     
+    color_data_wind = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
+    colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
+    levs_wind = np.linspace(0,140,71)
+    norm_wind = colors.BoundaryNorm(levs_wind,256)
+
+    levs_gf = np.linspace(1,2,21)
+    norm_gf = colors.BoundaryNorm(levs_gf,256)
+
     #turb_flux_levs = np.linspace(-50,1350,15,endpoint=True)
     turb_flux_levs = np.arange(-400,1400+1e-6,50.0);  turb_flux_ticks = np.arange(-400,1400+1e-6,100.0)
     total_flux_levs = np.arange(-500,2000+1e-6,50.0);  total_flux_ticks = np.arange(-500,2000+1e-6,100.0);
@@ -499,21 +541,55 @@ def main():
     
     DELTA_T = sst - temp[...,0].squeeze();
     # DPT=SST at sfc
-    sfcq = mpcalc.specific_humidity_from_dewpoint((sst+273.15)*metpy.units.units.K,\
-                                                  mslp.squeeze()*metpy.units.units.hPa)
+    sfcq = mpcalc.specific_humidity_from_dewpoint(mslp.squeeze()*metpy.units.units.hPa,\
+                                                  (sst+273.15)*metpy.units.units.K)
     DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
-    DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\
+    DPT = mpcalc.dewpoint_from_specific_humidity(levs*metpy.units.units.hPa,\
                                                  temp*metpy.units.units.K,\
-                                                 levs*metpy.units.units.hPa)
+                                                 q*metpy.units.units("kg/kg"))
     THETA_E = mpcalc.equivalent_potential_temperature(levs*metpy.units.units.hPa,\
-                                                      temp*metpy.units.units.K,DPT);
+                                                      temp*metpy.units.units.K,\
+                                                      DPT);
     
     if ( np.all(np.isnan(THETA_E)) ):
       print(f'WARNING: THETA_E ALL NaNs in {CTL_FILE}: Skipping this forecast hour')
       ga('close 1')
       io.update_plottedfile(PLOTTED_FILE, FILE)
       continue
-      
+
+    
+    #Calculate Wind Gusts
+    wind10=np.squeeze(np.hypot(u10,v10))
+    ws=np.hypot(uwind,vwind)
+    ws850=np.squeeze(ws[:,:,6])
+    ws950=np.squeeze(ws[:,:,2])
+    wsd=ws850-ws950;
+    wsd[wsd < 0] = 0
+
+    #Calculate Default Gust Factor 
+    gust1_old=7.71*ustar
+
+    ws1_old=wind10
+    wstt1_old=ws1_old+gust1_old
+    gf1_old=wstt1_old/ws1_old
+
+    gust2_old=0.6*wsd;
+
+    wstt2_old=(wstt1_old+gust2_old)
+    gf2_old=wstt2_old/ws1_old
+
+    #Now Calculate a New Gust Factor 
+    gust1_new=3*ustar
+
+    ws1_new=wind10
+    wstt1_new=ws1_new+gust1_new
+    gf1_new=wstt1_new/ws1_new
+
+    gust2_new=0.3*wsd;
+
+    wstt2_new=(wstt1_new+gust2_new)
+    gf2_new=wstt2_new/ws1_new
+
     
     # Streamplots require equally spaced x and y
     xi = np.linspace(lon.min(),lon.max(),lon.shape[0]);
@@ -535,8 +611,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=turb_flux_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.turb_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -553,8 +630,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=total_flux_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.total_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -573,8 +651,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=theta_e_550_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_550,vwind_550,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_550.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -593,8 +672,9 @@ def main():
       #cbar1 = plt.colorbar(co1, ticks=np.linspace(350,380,7,endpoint=True))
       cbar1 = plt.colorbar(co1, ticks=theta_e_700_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_700,vwind_700,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_700.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -617,8 +697,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=theta_e_850_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_850.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -634,8 +715,9 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_t_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_t.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -652,14 +734,110 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if ( DO_CONVERTGIF ):
         os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
       plt.close(fig1)
+
+
+    # FIGURE: Wind Gusts
+    if do_gusts == 'Y':
+        #Make 6x6 plot of Wind Gusts
+        lonplotmin = centerlon-3
+        lonplotmax = centerlon+3
+        latplotmin = centerlat-3
+        latplotmax = centerlat+3
+        lonplot = np.arange(int(round(lonplotmin,0))-1,int(round(lonplotmax,0))+1,1)
+        latplot = np.arange(int(round(latplotmin,0))-1,int(round(latplotmax,0))+1,1)
+
+        fig1 = plt.figure(figsize=(15.5,15.5))
+        ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+        ax1.set_extent([int(lonplotmin),int(lonplotmax),int(latplotmin),int(latplotmax)], crs=ccrs.PlateCarree())
+        plt.contourf(lon, lat, wstt2_new*1.94, levs_wind, cmap=colormap_wind, norm=norm_wind, extend='both', transform=ccrs.PlateCarree())
+        ax1.set_title(EXPT_TITLE.strip()+'\n'+ 'Gusts (kt)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+        ax1.add_feature(cfeature.COASTLINE.with_scale('50m'), zorder=10)
+        ax1.add_feature(STATES, zorder=10)
+        ax1.add_feature(COUNTIES, facecolor='none', edgecolor='gray')
+        #coast = cfeature.GSHHSFeature(scale='f')
+        #ax1.add_feature(coast)
+        gl = ax1.gridlines(crs=ccrs.PlateCarree(), linewidth=2, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+        gl.x_inline = False
+        gl.y_inline = False
+        gl.rotate_labels = True
+        gl.xlabels_top = False
+        gl.xlabels_bottom = True
+        gl.ylabels_left = True
+        gl.ylabels_right = False
+        gl.xlines = True
+        gl.ylines = True
+        gl.xlocator = mticker.FixedLocator(lonplot-360)
+        gl.ylocator = mticker.FixedLocator(latplot)
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        gl.xlabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        gl.ylabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        divider = make_axes_locatable(ax1)
+        cax = divider.append_axes("right", size="5%", pad=1.0, axes_class=plt.Axes)
+        cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140],cax=cax)
+        cbar.ax.tick_params(labelsize=24)
+        figfname = ODIR+'/'+LONGSID.lower()+'.gusts_6degreebox.'+forecastinit+'.airsea.f'+format(FHR,'03d')
+        fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+        if ( DO_CONVERTGIF ):
+            os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+        plt.close(fig1)
+
+        #Make 6x6 plot of 10-m Wind With GF Overlaid
+        lonplotmin = centerlon-3
+        lonplotmax = centerlon+3
+        latplotmin = centerlat-3
+        latplotmax = centerlat+3
+        lonplot = np.arange(int(round(lonplotmin,0))-1,int(round(lonplotmax,0))+1,1)
+        latplot = np.arange(int(round(latplotmin,0))-1,int(round(latplotmax,0))+1,1)
+        fig1 = plt.figure(figsize=(15.5,15.5))
+        ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+        ax1.set_extent([int(lonplotmin),int(lonplotmax),int(latplotmin),int(latplotmax)], crs=ccrs.PlateCarree())
+        plt.contourf(lon, lat, gf2_new, levs_gf, cmap='Reds', norm=norm_gf, extend='both', transform=ccrs.PlateCarree())
+        cbar = plt.colorbar(ticks=[1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0],shrink=0.8)
+        cbar.ax.tick_params(labelsize=24)
+        # CS=plt.contour(lon, lat, ws1_new*1.94, [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150], colors='xkcd:black',linewidths=4,linestyles='solid',zorder=11)
+        # plt.clabel(CS, inline=True, fmt='%3i', fontsize=16)
+        # Lew.Gramer@noaa.gov 2024-07-19 change suggested by Andrew.Hazelton@noaa.gov based on comment from Lev Looney
+        #plt.barbs(lon2d[::10,::10],lat2d[::10,::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94)
+        plt.barbs(lon[::10],lat[::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94)
+        ax1.set_title(EXPT_TITLE.strip()+'\n'+ '10-m Wind (kt) and Gust Factor'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+        ax1.add_feature(cfeature.COASTLINE.with_scale('50m'), zorder=10)
+        ax1.add_feature(STATES, zorder=10)
+        ax1.add_feature(COUNTIES, facecolor='none', edgecolor='gray')
+        #coast = cfeature.GSHHSFeature(scale='f')
+        #ax1.add_feature(coast)
+        gl = ax1.gridlines(crs=ccrs.PlateCarree(), linewidth=2, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+        gl.x_inline = False
+        gl.y_inline = False
+        gl.rotate_labels = True
+        gl.xlabels_top = False
+        gl.xlabels_bottom = True
+        gl.ylabels_left = True
+        gl.ylabels_right = False
+        gl.xlines = True
+        gl.ylines = True
+        gl.xlocator = mticker.FixedLocator(lonplot-360)
+        gl.ylocator = mticker.FixedLocator(latplot)
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        gl.xlabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        gl.ylabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        figfname = ODIR+'/'+LONGSID.lower()+'.wind10m_and_gf_6degreebox.'+forecastinit+'.airsea.f'+format(FHR,'03d')
+        fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+        if ( DO_CONVERTGIF ):
+            os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+        plt.close(fig1)
 
 
     # Close the GrADs control file
