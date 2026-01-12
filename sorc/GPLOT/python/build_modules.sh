@@ -11,6 +11,8 @@ if [ "${HN1}" == "f" ]; then
     MACHINE="jet"
 elif [ "${HN1}" == "h" ]; then
     MACHINE="hera"
+elif [ "${HN1}" == "u" ]; then
+    MACHINE="ursa"
 elif [ "${HN1}" == "O" ]; then
     MACHINE="orion"
 else

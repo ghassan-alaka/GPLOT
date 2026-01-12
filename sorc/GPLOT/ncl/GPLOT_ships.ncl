@@ -994,32 +994,38 @@ do fff = 0,nFiles-1
 			else if(any((/"SHRS","SHTS"/).eq.FNAME(ppp)))then	levCode = "05000850d"
 			end if  end if
 			
-			; 3) Get U & V data (uncombined)
+			; 3) Get U data & convert to cartesian (KM) coordinates
 			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 			U(0,:,:)= getVar2d(f,DSOURCE,(/"U",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			U@_FillValue = -999.
-			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-			V@_FillValue = -999.
-				
-			; 4) Convert both U & V to cartesian (X,Y) coordinates
-			U1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
-			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
-			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),U@_FillValue)
-			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
+			U1      := new((/1,dimsizes(X),dimsizes(X)/),"float",U@_FillValue)
 
+print("TEST 1")
+printVarSummary(U)
+printVarSummary(U1)
+printVarSummary(X)
+printVarSummary(Y)
+			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),U@_FillValue)
+print("TEST 2")
+			; 4) Get V data & convert to cartesian (KM) coordinates (reuse U-array)
+			;U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"V",levCode/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			U@_FillValue = -999.
+			V1      := new((/1,dimsizes(X),dimsizes(X)/),"float",U@_FillValue)
+			SPH2CART::sph2cart(U,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),X,dimsizes(X),tcLons(fff),tcLats(fff),U@_FillValue)
+	
 			; 5) Average U & V in a 200-800km annulus (see SHIPS)
-			U1	= where(     sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).ge.200.\
-					.and.sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.800.,\
+			U1	= where(     sqrt(conform(U1,X,2)^2.+conform(U1,X,1)^2.).ge.200.\
+					.and.sqrt(conform(U1,X,2)^2.+conform(U1,X,1)^2.).le.800.,\
 					U1,U1@_FillValue)
 
 			if(all(ismissing(U1)))then	U1 := U@_FillValue
 			else				U1 := avg(U1)
 			end if
-			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.200.\
-					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.800.,\
+			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,X,1)^2.).ge.200.\
+					.and.sqrt(conform(V1,X,2)^2.+conform(V1,X,1)^2.).le.800.,\
 					V1,V1@_FillValue)
-			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			if(all(ismissing(V1)))then	V1 := U@_FillValue
 			else				V1 := avg(V1)
 			end if
 
@@ -1068,51 +1074,42 @@ do fff = 0,nFiles-1
 		else if(FNAME(ppp).eq."SHDC")then
 			; 1) Set up the cartesian coordinates
 			X	:= tofloat(ispan(-500,500,10))
-			Y	:= tofloat(ispan(-500,500,10))
+			;Y	:= tofloat(ispan(-500,500,10))
 				
-			; 2) Get U & V data (uncombined)
-			U	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-			U@_FillValue = -999.
-			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
-			V(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
-			V@_FillValue = -999.
-
 			; 3) Get 850 hPa TC center
 			DAT_FILE2 = str_sub_str(DAT_FILE,FNAME(ppp),"TCCEN")
 			if(.not.fileexists(DAT_FILE2))then   continue   end if
-print(DAT_FILE2)
 			NL	:= dimsizes(asciiread(DAT_FILE2,-1,"string"))
 			data	:= asciiread(DAT_FILE2,(/NL,5/),"float")
 			LAT850	:= data(ind(toint(data(:,0)).eq.FHR(fff) .and. toint(data(:,1)).eq.850),2)
 			LON850	:= data(ind(toint(data(:,0)).eq.FHR(fff) .and. toint(data(:,1)).eq.850),3)
-print(ind(toint(data(:,0)).eq.FHR(fff) .and. toint(data(:,1)).eq.850))
 				
 			; 4) Convert both U & V to cartesian (X,Y) coordinates
+			U       := new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"U","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			U@_FillValue = -999.
 			U1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
-			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
-			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),LON850,LAT850,U@_FillValue)
-			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),LON850,LAT850,V@_FillValue)
+			SPH2CART::sph2cart(U,U1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),X,dimsizes(X),LON850,LAT850,U@_FillValue)
+
+			U(0,:,:)= getVar2d(f,DSOURCE,(/"V","02000850d"/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			U@_FillValue = -999.
+			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",U@_FillValue)
+			SPH2CART::sph2cart(U,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),X,dimsizes(X),LON850,LAT850,V@_FillValue)
 
 			; 5) Average U & V in a 500km annulus (see SHIPS)
-			U1	= where(sqrt(conform(U1,X,2)^2.+conform(U1,Y,1)^2.).le.500.,U1,U1@_FillValue)
-print(max(U)+"  "+min(U))
-print(max(U1)+"  "+min(U1))
+			U1	= where(sqrt(conform(U1,X,2)^2.+conform(U1,X,1)^2.).le.500.,U1,U1@_FillValue)
 			if(all(ismissing(U1)))then	U1 := U@_FillValue
 			else				U1 := avg(U1)
 			end if
-print(U1)
-			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.500.,V1,V1@_FillValue)
-			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			V1	= where(sqrt(conform(V1,X,2)^2.+conform(V1,X,1)^2.).le.500.,V1,V1@_FillValue)
+			if(all(ismissing(V1)))then	V1 := U@_FillValue
 			else				V1 := avg(V1)
 			end if
-print(V1)
 
 			; 6) FOR WIND SHEAR DIRECTION
 			V2	:= C@r2d*atan2(U1,V1)
 			V2@units = "degrees"
 			V2@long_name = "VWS Direction"
-print(V2)
 			if(.not.ismissing(V2))then
 				if(V2.lt.0)then   V2 = 360.+V2   end if
 			end if
@@ -1678,7 +1675,105 @@ print(V2)
 			
 			; 9) Update the title
 			TITLE = TITLE+" ["+V1@units+"]"	
+
+		;;;;;;;;;;;;;;;;;;
+		; CAPE (0-200km) ;
+		;;;;;;;;;;;;;;;;;;
+		; Non-SHIPS parameter created by George Trey Alvey
+		else if(any((/"CAPE"/).eq.FNAME(ppp)))then
+
+			; 0) Set up dimensions
+			nDims	:= dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,"CAPE","")))
+			dNames	:= getfilevardims(f,findVarName(DSOURCE,"CAPE",""))
+			nDims@dNames = dNames
+
+			; 1) Set up the cartesian coordinates
+			X	:= tofloat(ispan(-200,200,10))
+			Y	:= tofloat(ispan(-200,200,10))
+				
+			; 3) Get CAPE data
+			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"CAPE",""/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			V@_FillValue = -999.
+                        V@long_name = "Convective Available Potential Energy"
+                        V@units = "J/kg"
+				
+			; 4) Convert both CAPE to cartesian (X,Y) coordinates
+			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
+			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
+
+			; 5) Average CAPE in a 0-200km annulus (see SHIPS)
+			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.0.\
+					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.200.,\
+					V1,V1@_FillValue)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
+			copy_VarAtts(V,V1)
+
+			; 7) Write data to a .DAT file.
+			data	:= new((/1,2/),"float")
+			data(0,:)= (/tofloat(FHR(fff)), V1/)
 			
+			; 8) Write data to table (if applicable)	
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
+						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
+			
+			; 9) Update the title
+			TITLE = "CAPE ["+V1@units+"]"			
+			
+		;;;;;;;;;;;;;;;;;;;;;;
+		; Helicity (0-200km) ;
+		;;;;;;;;;;;;;;;;;;;;;;
+		; Non-SHIPS parameter created by George Trey Alvey
+		else if(any((/"HLCY"/).eq.FNAME(ppp)))then
+
+			; 0) Set up dimensions
+			nDims	:= dimsizes(getfilevardimsizes(f,findVarName(DSOURCE,"HLCY","")))
+			dNames	:= getfilevardims(f,findVarName(DSOURCE,"HLCY",""))
+			nDims@dNames = dNames
+
+			; 1) Set up the cartesian coordinates
+			X	:= tofloat(ispan(-200,200,10))
+			Y	:= tofloat(ispan(-200,200,10))
+				
+			; 3) Get Helicity data
+			V	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
+			V(0,:,:)= getVar2d(f,DSOURCE,(/"HLCY",""/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
+			V@_FillValue = -999.
+                        V@long_name = "t"
+                        V@units = "J/kg"
+				
+			; 4) Convert both Helicity to cartesian (X,Y) coordinates
+			V1	:= new((/1,dimsizes(Y),dimsizes(X)/),"float",V@_FillValue)
+			SPH2CART::sph2cart(V,V1,lon,dimsizes(lon),lat,dimsizes(lat),toint(1),X,dimsizes(X),Y,dimsizes(Y),tcLons(fff),tcLats(fff),V@_FillValue)
+
+			; 5) Average HLCY in a 0-200km annulus (see SHIPS)
+			V1	= where(     sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).ge.0.\
+					.and.sqrt(conform(V1,X,2)^2.+conform(V1,Y,1)^2.).le.200.,\
+					V1,V1@_FillValue)
+			if(all(ismissing(V1)))then	V1 := V@_FillValue
+			else				V1 := avg(V1)
+			end if
+			copy_VarAtts(V,V1)
+
+			; 7) Write data to a .DAT file.
+			data	:= new((/1,2/),"float")
+			data(0,:)= (/tofloat(FHR(fff)), V1/)
+			
+			; 8) Write data to table (if applicable)	
+			if(W.ne."NO")then	print("MSG: Printing values for: "+FNAME(ppp))
+						write_table(DAT_FILE,W,[/toint(data(:,0)), data(:,1)/], "%0.3i  %8.2f")
+						system("awk '{a[$1]++}!(a[$1]-1)' "+DAT_FILE+" | sort -u > "+DAT_FILE+".TMP")
+						system("mv "+DAT_FILE+".TMP "+DAT_FILE)
+			end if
+			
+			; 9) Update the title
+			TITLE = "Storm-Relative Helicity ["+V1@units+"]"			
+	
 		
 		;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		; Tropical Cyclone Centers ;
@@ -2176,7 +2271,6 @@ print(V2)
 				LEVC := default_fillvalue("float")
 			end if
 			if(all(ismissing(LEVC)))then   LEVC := LEV/mf   end if
-			
 
 			; 4A) Get U & V data (uncombined)
 			;U1	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
@@ -2185,20 +2279,26 @@ print(V2)
 			;V1	:= new((/1,dimsizes(lat),dimsizes(lon)/),"float")
 			V1 := getVar3d(f,DSOURCE,(/"V",sprinti("%0.4i",toint(min(LEVC)))+sprinti("%0.4i",toint(max(LEVC)))/),nDims,BOCO2,mf,(/flipFlag,False/),lonF)
 			V1@_FillValue = -999.
-			
 				
 			; 4B) Convert both U & V to cartesian (X,Y) coordinates
 			U2	:= new((/dimsizes(LEVC),dimsizes(Y),dimsizes(X)/),"float",U1@_FillValue)
 			V2	:= new((/dimsizes(LEVC),dimsizes(Y),dimsizes(X)/),"float",V1@_FillValue)
 			if(all(ismissing(CTR)))then	SPH2CART::sph2cart(U1,U2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   conform(LEVC,tcLons(fff),-1),conform(LEVC,tcLats(fff),-1),U1@_FillValue)
-							SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;		conform(LEVC,tcLons(fff),-1),conform(LEVC,tcLats(fff),-1),V1@_FillValue)
+							U1=V1  ; Fix to reuse the U1 array (perhaps to preserve memory)
+							SPH2CART::sph2cart(U1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   conform(LEVC,tcLons(fff),-1),conform(LEVC,tcLats(fff),-1),V1@_FillValue)
 			else				SPH2CART::sph2cart(U1,U2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   CTR(:,1),CTR(:,0),U1@_FillValue)
-							SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;SPH2CART::sph2cart(V1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
+							;                   CTR(:,1),CTR(:,0),U1@_FillValue)
+							U1=V1  ; Fix to reuse the U1 array (perhaps to preserve memory)
+							SPH2CART::sph2cart(U1,V2,lon,dimsizes(lon),lat,dimsizes(lat),dimsizes(LEVC),X,dimsizes(X),Y,dimsizes(Y),\
 									   CTR(:,1),CTR(:,0),V1@_FillValue)
 			end if
+
 
 			; 4C) Average U & V in a 200-800km annulus (see SHIPS)
 			U2	:= where(     sqrt(conform(U2,X,2)^2.+conform(U2,Y,1)^2.).ge.200.\
@@ -2246,7 +2346,7 @@ print(V2)
 				system("sort -u -nk1,1 -nk2,2 "+DAT_FILE+" > "+DAT_FILE+".TMP")
 				system("mv "+DAT_FILE+".TMP "+DAT_FILE)
 			end if
-				
+
 			if(PLOT_ON(ppp) .and. .not.SKIP_PLOT)then
 				print("MSG: Producing graphic for: "+FNAME(ppp))
 				OFILE	= ODIR+str_lower(LONGSID)+"."+FNAME(ppp)+"."+IDATE+"."+DOMAIN+".f"+sprinti("%0.3i",FHR(fff))
@@ -2565,7 +2665,7 @@ print(V2)
 				
 		end if  end if  end if  end if  end if
 		end if  end if  end if  end if  end if
-		end if  end if  end if
+		end if  end if  end if  end if  end if
 			
 			
 			
@@ -2627,12 +2727,13 @@ print(V2)
 			else if(any((/"RHLO","RHMD","RHHI"/).eq.FNAME(ppp)))then
 				IntMjrGrd := ispan(0,100,20)
 			else
-				if(any((/"VMAX","IKE34","IKE50","IKE64","SHRD","SHRS"/).eq.FNAME(ppp)))then	minInt = 0.
-														maxInt = ceil(max(Vp)+0.10*max(Vp))
-				else if(any((/"PENV","MSLP"/).eq.FNAME(ppp)))then				minInt = floor(min(Vp))
-														maxInt = ceil(max(Vp))
-				else										minInt = floor(min(Vp)-0.10*abs(min(Vp)))
-														maxInt = ceil(max(Vp)+0.10*abs(max(Vp)))
+				if(any((/"VMAX","IKE34","IKE50","IKE64",\
+					 "SHRD","SHRS","CAPE"/)           .eq.FNAME(ppp)))then		minInt = 0.
+													maxInt = ceil(max(Vp)+0.10*max(Vp))
+				else if(any((/"PENV","MSLP"/).eq.FNAME(ppp)))then			minInt = floor(min(Vp))
+													maxInt = ceil(max(Vp))
+				else									minInt = floor(min(Vp)-0.10*abs(min(Vp)))
+													maxInt = ceil(max(Vp)+0.10*abs(max(Vp)))
 				end if  end if
 				rngInt	:= abs(maxInt-minInt)
 				if(maxInt.eq.minInt)then

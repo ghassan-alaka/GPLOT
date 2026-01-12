@@ -1,0 +1,193 @@
+; GPLOT POST-PROCESSING SYSTEM
+; Namelist for Graphical Production
+
+;================================================================
+; User Input Section
+; Change these settings to fit your personal needs.
+;================================================================
+
+
+;================================================================
+; SECTION 1: Basic Variables
+;================================================================
+
+; 1A. EXPERIMENT NAME.
+EXPT = HERC_2024
+
+; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
+DO_MAPS = True
+DO_STATS = True
+DO_SHIPS = True
+DO_POLAR = True
+DO_AIRSEA = True
+DO_OCEAN_MAPS = True
+DO_OCEAN_OBS = True
+
+; 1C. DATA SOURCE
+DSOURCE = HAFS
+
+; 1D. IS THIS MULTISTORM DATA?
+;IS_MSTORM; = False
+IS_MSTORM = True
+
+; 1E. ENSEMBLE MEMBER NUMBER
+;ENSMEM; = 0
+EID = 00-30
+
+; 1E. SYSTEM ENVIRONMENT
+SYS_ENV = ORION
+
+; 1F. FORECAST CYCLE
+IDATE = 2024100600
+
+; 1G. STORM ID
+SID = 14l
+
+; 1H. INPUT PATH
+IDIR = /work2/noaa/aoml-hafs1/lgramer/ocean/data/ensemble/2024100600
+ITAG = .hfsa.parent.atm
+EXT = .grb2
+
+; 1I. OUTPUT PATH
+ODIR = /work/noaa/aoml-hafs1/lgramer/GPOUT
+ODIR_TYPE = 0
+
+; 1J. ATCF PATH
+ATCF1_DIR = /work2/noaa/aoml-hafs1/lgramer/ocean/data/ensemble/2024100600
+ATCF1_TAG = hfsa.trak.atcfunix.all
+ATCF2_DIR = /work/noaa/aoml-hafs1/galaka/adeck/NHC
+ATCF2_TAG = trak.hafs.atcfunix
+
+; 1K. ADECK & BDECK PATHS
+ADECK_DIR = /work/noaa/aoml-hafs1/galaka/adeck
+BDECK_DIR = /work/noaa/aoml-hafs1/galaka/bdeck
+
+; 1L. FORECAST HOUR INFORMATION
+INIT_HR = 0
+FNL_HR = 126
+FMT_HR = 3
+
+; 1M. TIME STEP FOR GRAPHICAL OUTPUT
+DT = 6
+
+; 1N. MASK TOPOGRAPHY
+DO_TOPOMASK = False
+
+; 1O. REMOVE WHITE SPACE
+DO_RMWHITE = True
+
+; 1P. TOGGLE TITLE
+DO_SRCLBL = True
+
+; 1S. FORCE
+FORCE = False
+
+; 1T. BATCH SUBMISSION MODE
+;BATCH_MODE; = Foreground
+;BATCH_MODE; = Background
+BATCH_MODE = SBatch
+
+; 1U. CONVERT FROM PNG TO GIF
+;DO_CONVERTGIF; = False
+DO_CONVERTGIF = True
+
+; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
+CPU_ACCT = aoml-hafs1
+
+
+
+;================================================================
+; SECTION 2: GPLOT_Maps variables
+;================================================================
+
+; 2A. MAP GRAPHICS DOMAIN NAME
+DOMAIN = hwrf d03
+;DOMAIN; = d01
+
+; 2B. MAP GRAPHICS TIER
+TIER = Tier1 Tier2
+
+; 2C. MAP ATCF REQUIREMENT
+ATCF_REQD = False
+
+; 2D. MAXIMUM NUMBER OF FILES TO PROCESS
+NMAX_MAPS = 8
+
+
+
+;================================================================
+; SECTION 3: GPLOT_Stats variables
+;================================================================
+
+; 3A. MODEL NAMES
+; THIS IS BEING USED IN POLAR ;
+MORIG = HFSA
+MCODE = HFXM
+MCODEI = HXMI
+MCODE12 = HXM2
+
+; 3B. FORECAST GUIDANCE MODELS
+TRKM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR
+TRKIM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR CMC
+INTM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON DSHP LGEM CTCX
+PRSM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON CTCX
+TRKMI = HXMI HXBI HXAI HFBI HFAI AVNI HWFI HMNI EGRI CTCI TVCN OFCL
+INTMI = HXMI HXBI HXAI HFBI HFAI AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKMT = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON CTCX EGRR OFCL
+INTMT = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON DSHP CTCX OFCL
+
+; 3C. VERIFICATION MODELS
+ETM = HXMI HXBI HXAI HFBI HFAI GFSI HWFI HMNI TVCN OFCL
+EIM = HXMI HXBI HXAI HFBI HFAI HWFI HMNI DSHP LGEM IVCN OFCL
+LTM = HFXM HFXB HFXA HFSB HFSA GFSO HWRF HMON
+LIM = HFXM HFXB HFXA HFSB HFSA HWRF HMON
+
+; 3D. VERIFICATION TIMES
+LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
+
+; 3E. NUMBER OF TREND FORECASTS
+NTREND = 6
+
+; 3F. INTERPOLATION
+DO_INTERP = True
+
+
+;================================================================
+; SECTION 4: GPLOT_Ships variables
+;================================================================
+
+;================================================================
+; SECTION 5: GPLOT_Polar variables
+;================================================================
+
+PYTHONFILE = polar_cylindrical_structure.py
+RESOLUTION = 4.0
+RMAX = 600
+LEVS = 45
+
+;================================================================
+; SECTION 6: GPLOT_Airsea variables
+;================================================================
+AIRSEA_PYTHONFILE = plot_airsea_pbl.py
+
+;================================================================
+; SECTION 7: GPLOT_Ocean_Maps variables
+;================================================================
+; Script to produce ocean map graphics
+OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
+; Ocean data input directory
+OCEAN_DIR = /work2/noaa/aoml-hafs1/lgramer/ocean/data/ensemble/2024100600
+; Base coupled model config
+OCEAN_DSOURCE = HAFS
+; Ocean model (codes)
+;OCEAN_SOURCE; = HYCOM
+OCEAN_SOURCE = MOM6
+; Ocean graphical regions to plot (LJG: 2025-04-30)
+OCEAN_DOMAIN = domain d03
+; LJG 2024-09-02
+;OCEAN_DOMAIN; = d03
+; Ocean model configuration (e.g., for domain bounds and bathymetry)
+OCEAN_CFG = NHC
+FIX_DIR = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20250205-fix/fix/fix_mom6/
+; Does ocean model longitude need to be wrapped (-180-180 => 0-360)?
+OCEAN_WRAP_LON = True

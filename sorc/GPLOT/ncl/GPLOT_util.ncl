@@ -1062,15 +1062,18 @@ begin
 	; GLOBAL ENSEMBLE FORECAST SYSTEM VARIABLE TABLE
 	else if(any((/"GEFS"/).eq.DSOURCE))then
 		DATA := asciiread(GPLOT_DIR+"/tbl/Vtable.GEFS",-1,"string")
-
+        
 	; EUROPEAN CENTRE FOR MEDIUM-RANGE WEATHER FORECASTS VARIABLE TABLE
 	else if(any((/"ECMWF"/).eq.DSOURCE))then
 		DATA := asciiread(GPLOT_DIR+"/tbl/Vtable.ECMWF",-1,"string")
-
+        
         ; HURRICANES IN A MULTI-SCALE OCEAN-COUPLED NON-HYDROSTATIC MODEL (HMON) VARIABLE TABLE
         else if(any((/"HMON"/).eq.DSOURCE))then
                 DATA := asciiread(GPLOT_DIR+"/tbl/Vtable.HMON",-1,"string")
 	
+        else
+                DATA := asciiread(GPLOT_DIR+"/tbl/Vtable."+DSOURCE,-1,"string")
+        
 	end if  end if  end if  end if
 	end if  end if  end if
 

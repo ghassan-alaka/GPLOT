@@ -20,5 +20,8 @@ HAFSv1a       f        3
 HAFSv1a_HYCOM f        3
 HAFSv1b       f        3
 HAFSv1b_HYCOM f        3
+HFSB_MULTISTORM f        3
+HFSB_MULTISTORM_HYCOM f        3
+HFSB_MULTISTORM_MOM6 f        3
 ECMWF         f        3
 HMON          f        3

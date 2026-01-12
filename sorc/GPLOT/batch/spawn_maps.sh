@@ -1,15 +1,15 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:19:30
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
@@ -113,11 +113,11 @@ if [ -z "${MACHINE}" ]; then
 fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
-        CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -129,13 +129,15 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     fi
 fi
 
@@ -729,6 +731,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                         IFHRS=()
                         while [ -z "${IFILES[*]}" ]; do
                             IDIR_FULL="$(echo "${IDIR}/${IDIR_OPTS[$F]}" | sed s#//*#/#g)"
+                            #DEBUG:                            echo "SEARCHING ${IDIR_FULL}"
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
                                 ((F=F+1))
@@ -748,6 +751,9 @@ if [ "${DO_MAPS}" = "True" ]; then
                                     FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
     
+                                #DEBUG:                                echo "FILE_SEARCH=${FILE_SEARCH}"
+                                #DEBUG:                                echo "FILE_SEARCH2=${FILE_SEARCH2}"
+                                #DEBUG:                                echo "FILE_SEARCH3=${FILE_SEARCH3}"
                                 # Search for a matching file. If found, append the file and forecast hour to their respective arrays
                                 FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
                                 if [ "${#FILE_LS[@]}" -eq "1" ]; then

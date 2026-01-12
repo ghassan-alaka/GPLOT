@@ -1,20 +1,21 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/test_GPLOT/logs/GPLOT.Ocean_Maps.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/test_GPLOT/logs/GPLOT.Ocean_Maps.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
 
 #set -x
+set +x
 
 echo "MSG: spawn_ocean_maps.sh started at `date`"
 echo "MSG: Submitting jobs for GPLOT module 'OCEAN_MAPS'."
@@ -109,6 +110,7 @@ BATCH_DFLTS="${NMLIST_DIR}batch.defaults.${MACHINE,,}"
 
 # Print information
 echo "MSG: Found this data source in the namelist       --> ${DSOURCE}"
+echo "MSG: Found this OCEAN Dsource in the namelist       --> ${OCEAN_DSOURCE}"
 echo "MSG: Found this OCEAN data source in the namelist --> ${OCEAN_SOURCE}"
 echo "MSG: Found this experiment in the namelist        --> ${EXPT}"
 if [ -z "${IDATE}" ]; then
@@ -143,11 +145,11 @@ if [ -z "${MACHINE}" ]; then
 fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
-        CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -159,13 +161,15 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,u1-compute"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="tjet,ujet,u1-compute"
     fi
 fi
 
@@ -303,12 +307,12 @@ fi
 #    This script is responsible for creating 2D plan view graphics #
 #    for large-scale and storm-centered domains.                   #
 ####################################################################
-if [ "${DO_OCEAN_MAPS}" = "True" ]; then
+if [ "${DO_OCEAN_MAPS}" == "True" ]; then
+    echo "DEBUG: DO_OCEAN_MAPS=True"
     OCEAN_MAPS_PYTHONFILE="${OCEAN_MAPS_PYTHONFILE:-plot_ocean_maps.py}"
     BATCHFILE="batch_ocean_maps.sh"
     #DOMAIN="ocean"
     TIER=( "Tier1" )
-    SC="True"
     ATCF_REQD="True"
 
     # Define the batch submission counter.
@@ -317,15 +321,17 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
     ###########################
     # LOOP OVER GRAPHIC TIERS #
     ###########################
+    echo "DEBUG: Preparing to loop over TIER=${TIER[*]}"
     for TR in ${TIER[@]}; do
         echo ""
-
+        echo "DEBUG: TR ${TR}."
 
         ##################################
         # LOOP OVER ALL AVAILABLE CYCLES #
         ##################################
         for CYCLE in ${CYCLES[@]}; do
             echo ""
+            echo "DEBUG: CYCLE ${CYCLE}."
     
             # Only retain the numbers for the cycle
             # Parse the prefix (e.g., gfs.) if it exists.
@@ -368,7 +374,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                 done
             fi
     
-            # 3) Try to get STORMS from the HWRF file path.
+            # 3) Try to get STORMS from the Working Dir file path.
             # This is hard-coded and might not work.
             if [ -z "${STORMS[*]}" ]; then
                 if [ ! -z "$(ls -d ${OCEAN_DIR}/${CYCLE}/[0-9][0-9][A-Z]/ 2>/dev/null)" ]; then
@@ -394,7 +400,7 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
 
             # Set the storm counter. This is important because large-scale
             # output files may be duplicated for different storms. For example,
-            # HWRF-B/GFS files for the outer domain are identical for all storms.
+            # HAFS-M/HWRF-B/GFS files outer domain files are identical for all storms.
             NSTORM=0
     
             # Set a flag to determine whether or not files were found.
@@ -431,20 +437,31 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                 #ATCF_FHRS=("${NEW_ATCF_FHRS[@]}")
     
     
-                # Set the STORMTAG for file names
-                STORMTAG=".${STORM^^}"
-    
-    
                 #########################
                 # LOOP OVER MAP DOMAINS #
                 #########################
                 for DMN in ${OCEAN_DOMAIN[@]}; do
                     echo ""
-    
+                    if [ "${DMN}" == "hwrf" ] || [ "${DMN}" == "d03" ] || \
+                       [ "${DMN}" == "d02" ] || [ "${DMN}" == "tkfull" ] || [ "${DMN}" == "alld03" ] || \
+                       [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ] || [ "${DMN}" == "tcparent" ]; then
+                        SC="True"
+                        # Set the STORMTAG for file names
+                        STORMTAG=".${STORM^^}"
+                    else
+                        SC="False"
+                        STORMTAG=""
+                    fi
+                    #DEBUG:                    echo "DEBUG:: DOMAIN=${DMN}: SC=${SC}, STORMTAG=${STORMTAG}"
+                    if [ "${IS_MSTORM}" == "True" ] && [ ! -z "${SID}" ] && [ "${SID}" != "00L" ] && [ "${DMN}" == "domain" ]; then
+                        echo "WARNING: IS_MSTORM=True and DMN=domain, but SID=${SID}. Skipping to next."
+                        continue
+                    fi
+                    
                     # Get nest information from GPLOT table
                     NEST=`awk -v DMN=${DMN} '($1 == DMN) { print $2 }' ${TBL_DIR}/DomainInfo.dat`
                     if [ -z "${NEST}" ]; then
-                        echo "WARNING: Ocean Domain (${DMN}) not found in ${TBL_DIR}DomainInfo.dat."
+                        echo "WARNING: Ocean Domain (${DMN}) not found in ${TBL_DIR}/DomainInfo.dat."
                         echo "WARNING: Assuming NEST=1."
                         NEST=1
                     fi
@@ -712,7 +729,8 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                         while [ -z "${IFILES[*]}" ]; do
                             OCEAN_DIR_FULL="$(echo "${OCEAN_DIR}/${OCEAN_DIR_OPTS[$F]}" | sed s#//*#/#g)"
                             
-                            #DEBUG:                            echo "DEBUG:: OCEAN_DIR_FULL: ${OCEAN_DIR_FULL}"
+                            #DEBUG:
+                            echo "DEBUG:: OCEAN_DIR_FULL: ${OCEAN_DIR_FULL}"
                             
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${OCEAN_DIR_FULL} ]; then
@@ -732,9 +750,12 @@ if [ "${DO_OCEAN_MAPS}" = "True" ]; then
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
                                     FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
-                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH=${FILE_SEARCH}"
-                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH2=${FILE_SEARCH2}"
-                                #DEBUG:                                echo "DEBUG:: FILE_SEARCH3=${FILE_SEARCH3}"
+                                #DEBUG:
+                                echo "DEBUG:: FILE_SEARCH=${FILE_SEARCH}"
+                                #DEBUG:
+                                echo "DEBUG:: FILE_SEARCH2=${FILE_SEARCH2}"
+                                #DEBUG:
+                                echo "DEBUG:: FILE_SEARCH3=${FILE_SEARCH3}"
     
                                 # Search for a matching file. If found, append the file and forecast hour to their respective arrays
                                 FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )

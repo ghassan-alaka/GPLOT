@@ -478,7 +478,9 @@ begin
 	tmp		:= str_squeeze(str_get_field(DATA(vals),8,","))
 	EWtag		= where(isStrSubset2(tmp,"W"),"W","E")
 	BLOCK(1,:)	= where(EWtag.eq."W",-1.*tofloat(str_sub_str(tmp,"W",""))/10.,1.*tofloat(str_sub_str(tmp,"E",""))/10.)
-	if(BLOCK(1,0).ge.0)then		PIV_LON = BLOCK(1,0) - 180.
+	;if(BLOCK(1,0).ge.0)then		PIV_LON = BLOCK(1,0) - 180.
+        ; Lew.Gramer@noaa.gov - one-line fix
+        if(max(BLOCK(1,:)).ge.0)then	PIV_LON = max(BLOCK(1,:)) - 180.
 					BLOCK(1,:) = where(BLOCK(1,:).le.PIV_LON, BLOCK(1,:)+360., BLOCK(1,:))
 	else				PIV_LON = BLOCK(1,0) + 180.
 					BLOCK(1,:) = where(BLOCK(1,:).ge.PIV_LON, BLOCK(1,:)-360., BLOCK(1,:))
