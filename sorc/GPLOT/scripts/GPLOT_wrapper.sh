@@ -98,7 +98,7 @@ for NML in "${NML_LIST[@]}"; do
 
 
     # Determine the components of GPLOT that should be submitted.
-    # These options currently include:  Maps, Ships, Stats, Polar, Airsea, Ocean_Maps
+    # These options currently include:  Maps, Ships, Stats, Polar, Airsea, Ocean_Maps, Ocean_Obs
     GPMODLIST=()
     DO_MAPS="`sed -n -e 's/^DO_MAPS =\s//p' ${NML} | sed 's/^\t*//'`"
     if [ "${DO_MAPS}" = "True" ]; then
@@ -124,6 +124,10 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_OCEAN_MAPS}" = "True" ]; then
         GPMODLIST+=("ocean_maps")
     fi
+    DO_OCEAN_OBS="`sed -n -e 's/^DO_OCEAN_OBS =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_OCEAN_OBS}" = "True" ]; then
+        GPMODLIST+=("ocean_obs")
+    fi
     echo "MSG: Working on these GPLOT modules --> ${GPMODLIST[*]}"
 
     # Get the experiment name
@@ -148,6 +152,7 @@ for NML in "${NML_LIST[@]}"; do
     if [ -z "${MACHINE}" ]; then
         MACHINE="`sed -n -e 's/^SYS_ENV =\s//p' ${NML} | sed 's/^\t*//'`"
     fi
+    echo "MACHINE" ${MACHINE}
 
     # Define extra variables for batch submissions ($BATCH_MODE="SBATCH")
     if [ "${BATCH_MODE^^}" == "SBATCH" ]; then

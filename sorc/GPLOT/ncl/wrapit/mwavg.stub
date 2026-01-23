@@ -1,0 +1,6 @@
+C NCLFORTSTART
+	subroutine mwavg(INPUT,OUTPUT,LEV,MAXLEV,NI,NJ,NK)
+	implicit none
+	integer NI,NJ,NK
+	real INPUT(NI,NJ,NK),OUTPUT(NI,NJ),LEV(NK),MAXLEV
+C NCLEND

@@ -31,16 +31,38 @@ limit core 0
 # Load modules
 module purge
 if ( "${A}" == "0" ) then
-    module load intel/2022.1.2
+    module load gnu/13.2.0
+    module load intel/2023.2.0
     module use -a /contrib/anaconda/modulefiles
     module load anaconda/latest
-    module use -a /contrib/met/modulefiles
-    module load met/10.1.0
-    module load ncl/6.6.2
+    #Lew.Gramer@noaa.gov 2025-05-14: per instructions from george.mccabe@noaa.gov
+    # #module use -a /contrib/met/modulefiles
+    # # Lew.Gramer@noaa.gov 2025-04-16: Commented out load of 10.1.0
+    # #module load met/10.1.0
+    module load netcdf/4.7.0
+    module load wgrib2/3.1.2_ncep
+    module use /contrib/METplus/modulefiles
+    module load metplus/3.1
+    module load met/11.0.2
+    #LJG
+    module load pyncl/6.6.2
+    module load imagemagick/7.1.1-11
 else if ( "${A}" == "1" ) then
-    module load gnu/9.2.0
-    module load wgrib2/3.1.1_ncep
-    module load grads/2.2.1
+    # CentOS
+    #module load gnu/9.2.0
+    #module load wgrib2/3.1.1_ncep
+    #module load grads/2.2.1
+    # ROCKY8
+    module load gnu/13.2.0
+    module load intel/2023.2.0
+    module load netcdf/4.7.0
+    module load wgrib2/3.1.2_ncep
+    module load grads/2.2.3
+    module load imagemagick/7.1.1-11
+
+    #Load Python
+    module use /scratch4/AOML/aoml-hafs1/role.aoml-hafs1/software_hera/modulefiles
+    module load python_GPLOT_env
 endif
 
 # NCL
@@ -50,7 +72,7 @@ endif
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then
-    setenv PYDIR "/scratch2/AOML/aoml-hafs1/Ghassan.Alaka/anaconda3"
+    setenv PYDIR "/scratch4/AOML/aoml-hafs1/role.aoml-hafs1/software_hera/miniconda3/"
     # Python 3 Anaconda
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
@@ -60,6 +82,6 @@ if ( "${A}" == "1" ) then
         setenv PATH "${PYDIR}/bin:$PATH"
     endif
     # <<< conda initialize <<<
-    conda activate GPLOT
+    conda activate GPLOT_env
 endif
 

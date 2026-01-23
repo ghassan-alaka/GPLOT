@@ -1,0 +1,9 @@
+C NCLFORTSTART
+	subroutine sph2cart(V_SPH,V_CART,LON,ISZ,LAT,JSZ,KSZ,X,XSZ,Y,YSZ,ICEN,JCEN,FVAL)
+	implicit none
+	integer ISZ, JSZ, KSZ, XSZ, YSZ
+	real	ICEN(KSZ), JCEN(KSZ)
+	real    V_SPH(ISZ,JSZ,KSZ), FVAL
+	real	X(XSZ), Y(YSZ), LON(ISZ), LAT(JSZ)
+	real    V_CART(XSZ,YSZ,KSZ)
+C NCLEND

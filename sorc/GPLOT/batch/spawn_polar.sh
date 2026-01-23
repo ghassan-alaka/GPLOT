@@ -1,15 +1,15 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
@@ -115,11 +115,11 @@ if [ -z "${MACHINE}" ]; then
 fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
-        CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -131,13 +131,15 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     fi
 fi
 
@@ -168,6 +170,9 @@ echo "MSG: Will produce graphics for these forecast lead times --> ${FHRS[*]}"
 # Define a maximum number of cycles to be processed
 #MAX_CYCLES=`sed -n -e 's/^MAX_CYCLES =\s//p' ${NMLIST} | sed 's/^\t*//'`
 MAX_CYCLES=100
+# Lew.Gramer@noaa.gov 2024-01-17
+MAX_CYCLES=300
+# LJG
 
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
@@ -228,7 +233,10 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+#MAX_JOBS=25
+# Lew.Gramer@noaa.gov 2024-01-17
+MAX_JOBS=300
+#LJG
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then

@@ -21,6 +21,7 @@ DO_SHIPS = True
 DO_POLAR = True
 DO_AIRSEA = True
 DO_OCEAN_MAPS = True
+DO_OCEAN_OBS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -81,7 +82,8 @@ DO_RMWHITE = True
 DO_SRCLBL = True
 
 ; 1S. FORCE
-FORCE = False
+;FORCE; = False
+FORCE = True
 
 ; 1T. BATCH SUBMISSION MODE
 ;BATCH_MODE; = Foreground
@@ -110,6 +112,7 @@ ATCF_REQD = False
 ; 2D. MAXIMUM NUMBER OF FILES TO PROCESS
 NMAX_MAPS = 8
 
+MAX_CYCLES = 120
 
 
 ;================================================================
@@ -180,6 +183,7 @@ OCEAN_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsa
 OCEAN_SOURCE = HYCOM
 ; Ocean graphical regions to plot
 OCEAN_DOMAIN = domain d03
+OCEAN_OBS_DOMAIN = d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
 FIX_DIR = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20221219-fix/fix/fix_hycom/

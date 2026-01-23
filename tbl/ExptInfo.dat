@@ -42,7 +42,24 @@
                         hafsv0p3s_final_retros,   Hurricane Analysis and Forecast System V0.3S (RETROS)
                             HAFSV0.3Basin_2022,   Hurricane Analysis and Forecast System V0.3Basin
                              HAFS_v1b_baseline,   HAFS V1.0B Baseline 
-                               hafsv1_fnl_hfsa,   HAFS V1.0A Operational
-                               hafsv1_fnl_hfsb,   HAFS V1.0B Operational
-                                 HFSA_Forecast,   Oper HAFS-A V1.0
-                                 HFSB_Forecast,   Oper HAFS-B V1.0
+                               hafsv1_fnl_hfsa,   HAFS V1.0A Retrospective
+                               hafsv1_fnl_hfsb,   HAFS V1.0B Retrospective
+                                 HFSA_Forecast,   Oper HAFS-A V2.1
+                                 HFSB_Forecast,   Oper HAFS-B V2.1
+                                   rh2023_hfsa,   Oper HAFS-A V1.0
+                                   rh2023_hfsb,   Oper HAFS-B V1.0
+                              hafsv1p1a_2023rt,   Experimental HAFS Version 1.1A
+                              hafsv1p1b_2023rt,   Experimental HAFS Version 1.1B
+                      HAFSV2.0.1B_2024_RT_TEST,   Experimental HAFS V2.0.1B
+                           HAFSV2.0.1B_2024_RT,   Experimental HAFS V2.0.1B
+                      HAFSV2.0.1M_2024_RT_TEST,   Experimental HAFS V2.0.1Multistorm
+                           HAFSV2.0.1M_2024_RT,   Experimental HAFS V2.0.1Multistorm
+                               HFSB_Multistorm,   Experimental HAFS V2.1Multistorm
+                        HAFSV2.1M_2025_RT_TEST,   Experimental HAFS V2.1Multistorm
+                            hafsv2p1p1a_2025rt,   Experimental HAFSV2.1.1A
+                                  HAFS_v2p1p1b,   Experimental HAFSV2.1.1B
+                            HAFS_v2p1p1b_retro,   Experimental HAFSV2.1.1B
+                             HAFSV2.1M_2025_RT,   Experimental HAFS V2.1Multistorm
+                                hafsv2.1.1c_rt,   Experimental HAFS V2.1.1C
+                                 AIFS_Forecast,   Experimental AIFS
+                                 GDMO_Forecast,   Experimental Google Deepmind

@@ -18,3 +18,6 @@ HAFSV0.3_HYCOM hafs.hycom.3z          hafs.hycom.3z              hafs.hycom.3z
 HAFS_MOM6     hfs[a-z].mom6           hfs[a-z].mom6              hfs[a-z].mom6
 ECMWF         ecmwf.oper-fc           ecmwf.oper-fc              ecmwf.oper-fc
 HMON          hmonprs.d1.0p20         hmonprs.d2.0p06            hmonprs.d3.0p02
+HFSB_MULTISTORM          hfs[a-z]_multistorm.parent.atm     hfs[a-z]_multistorm.storm[2-9].atm         hfs[a-z]_multistorm.storm[2-9].atm
+HFSB_MULTISTORM_HYCOM    hfs[a-z]_multistorm.hycom.3z       hfs[a-z]_multistorm.hycom.3z          hfs[a-z]_multistorm.hycom.3z
+HFSB_MULTISTORM_MOM6     hfsb_multistorm.mom6           hfsb_multistorm.mom6              hfsb_multistorm.mom6

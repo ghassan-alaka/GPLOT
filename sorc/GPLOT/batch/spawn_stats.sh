@@ -1,22 +1,22 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
 
 #set -x
 
-echo "MSG: spawn_polar.sh started at `date`"
+echo "MSG: spawn_stats.sh started at `date`"
 echo "MSG: Submitting jobs for GPLOT Module 'STATS'."
 
 # Determine the GPLOT source code directory
@@ -115,11 +115,11 @@ if [ -z "${MACHINE}" ]; then
 fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
-        CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -131,13 +131,15 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     fi
 fi
 
@@ -395,11 +397,16 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the current date is more recent than the date for the final lead time (DATE_CUT)
         # do NOT force production.
-        if [ "${DATE_CUT}" -ge "${DATE_NOW}" ] && [ "${CASE_STATUS}" == "complete" ]; then
-            echo "MSG: The cutoff date (${DATE_CUT}) is more recent than the current date (${DATE_NOW}). Forcing delayed production."
-            FORCE="Delay"
+        if [ "${ODIR_TYPE}" == "0" ]; then
+            if [ "${DATE_CUT}" -ge "${DATE_NOW}" ] && [ "${CASE_STATUS}" == "complete" ]; then
+                echo "MSG: The cutoff date (${DATE_CUT}) is more recent than the current date (${DATE_NOW}). Forcing delayed production."
+                FORCE="Delay"
+            else
+                echo "MSG: The current date (${DATE_NOW}) is more recent than the cutoff date (${DATE_CUT}). Not forcing production yet."
+                FORCE="False"
+            fi
         else
-            echo "MSG: The current date (${DATE_NOW}) is more recent than the cutoff date (${DATE_CUT}). Not forcing production yet."
+            echo "MSG: Not forcing production within model workflow (ODIR_TYPE=1). FYI, cutoff date=${DATE_CUT}, current date=${DATE_NOW}"
             FORCE="False"
         fi
 

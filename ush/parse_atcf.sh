@@ -35,7 +35,10 @@ cd ${ODIR}
 # Checks
 if [ ! -d "$ADECKDIR" ]; then
     echo "ERROR: ADECKDIR is not a directory. Please fix this."
-    exit 1
+    #exit 1
+    # Lew.Gramer@noaa.gov 2024-07-31
+    exit 0
+    # LJG
 fi
 if [ ! -d "$BDECKDIR" ]; then
     echo "ERROR: BDECKDIR is not a directory. Please fix this."
