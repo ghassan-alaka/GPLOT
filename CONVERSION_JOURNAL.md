@@ -2,7 +2,7 @@
 
 **Project:** Convert all NCL scripts in `sorc/GPLOT/ncl/` to Python equivalents in `sorc/GPLOT/python/`
 **Started:** 2026-02-25
-**Last Updated:** 2026-02-25 (session 4)
+**Last Updated:** 2026-02-25 (session 5)
 
 ---
 
@@ -18,7 +18,7 @@
 | `GPLOT_util.ncl` | 3673 | `python/modules/gplot_util.py` | ✅ Done | 2306 lines; 40 public functions; syntax verified |
 | `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ⏳ Pending | Top-level script (no named functions) |
 | `GPLOT_stats.ncl` | 5383 | `python/GPLOT_stats.py` | ⏳ Pending | Top-level script (no named functions) |
-| `GPLOT_maps.ncl` | 3269 | `python/GPLOT_maps.py` | ⏳ Pending | Top-level script (no named functions) |
+| `GPLOT_maps.ncl` | 3269 | `python/GPLOT_maps.py` | ✅ Done | 1512 lines; top-level driver; syntax verified |
 | Shell/batch scripts | — | — | ⏳ Pending | Update callers to invoke Python instead of NCL |
 
 ---
@@ -209,6 +209,7 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 | 2026-02-25 | Created journal; converted `GPLOT_util_legacy.ncl` → `gplot_util_legacy.py` (314 lines, 1 function); read and fully catalogued all 40 functions in `GPLOT_util.ncl`; writing of `gplot_util.py` interrupted |
 | 2026-02-25 (session 3) | Completed `gplot_util.py` (2306 lines, 40 public functions); syntax verified via `ast.parse()`; committed |
 | 2026-02-25 (session 4) | Converted `GPLOT_func.ncl` → `gplot_func.py` (1272 lines, 21 public functions); converted `GPLOT_main.ncl` → `gplot_main.py` (479 lines, 2 public functions); both syntax verified; committed |
+| 2026-02-25 (session 5) | Converted `GPLOT_maps.ncl` → `GPLOT_maps.py` (1512 lines); full driver with all 7 overlay types (wind vectors, 2× streamlines, 2× contour lines, MSLP H/L markers, storm labels, titles); syntax verified; committed |
 
 ---
 
@@ -216,8 +217,8 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 
 1. ~~**Finish `GPLOT_util.ncl`**~~ ✅ Done
 2. ~~**Convert `GPLOT_func.ncl`**~~ ✅ Done
-3. **Convert `GPLOT_main.ncl`** → write `python/modules/gplot_main.py`  ← **Resume here**
-4. **Convert `GPLOT_maps.ncl`** → write `python/GPLOT_maps.py`
-5. **Convert `GPLOT_ships.ncl`** → write `python/GPLOT_ships.py`
+3. ~~**Convert `GPLOT_main.ncl`**~~ ✅ Done
+4. ~~**Convert `GPLOT_maps.ncl`**~~ ✅ Done
+5. **Convert `GPLOT_ships.ncl`** → write `python/GPLOT_ships.py`  ← **Resume here**
 6. **Convert `GPLOT_stats.ncl`** → write `python/GPLOT_stats.py`
 7. **Update shell/batch scripts** to call Python instead of NCL
