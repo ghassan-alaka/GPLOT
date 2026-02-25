@@ -2,7 +2,7 @@
 
 **Project:** Convert all NCL scripts in `sorc/GPLOT/ncl/` to Python equivalents in `sorc/GPLOT/python/`
 **Started:** 2026-02-25
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-25 (session 3)
 
 ---
 
@@ -12,10 +12,10 @@
 |---|---|---|---|---|
 | `ECMWF_combine.ncl` | 192 | `python/ECMWF_combine.py` | ✅ Done | |
 | `colormaps/calculate.ncl` | — | `python/colormaps/calculate.py` | ✅ Done | |
-| `GPLOT_util_legacy.ncl` | 314 | `python/modules/gplot_util_legacy.py` | 🔄 In Progress | Session ended before output written |
-| `GPLOT_main.ncl` | 842 | `python/modules/gplot_main.py` | 🔄 In Progress | Session ended before output written |
+| `GPLOT_util_legacy.ncl` | 314 | `python/modules/gplot_util_legacy.py` | ✅ Done | |
+| `GPLOT_main.ncl` | 842 | `python/modules/gplot_main.py` | ⏳ Pending | Depends on gplot_func.py |
 | `GPLOT_func.ncl` | 2227 | `python/modules/gplot_func.py` | ⏳ Pending | |
-| `GPLOT_util.ncl` | 3673 | `python/modules/gplot_util.py` | ⏳ Pending | |
+| `GPLOT_util.ncl` | 3673 | `python/modules/gplot_util.py` | ✅ Done | 2306 lines; 40 public functions; syntax verified |
 | `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ⏳ Pending | Top-level script (no named functions) |
 | `GPLOT_stats.ncl` | 5383 | `python/GPLOT_stats.py` | ⏳ Pending | Top-level script (no named functions) |
 | `GPLOT_maps.ncl` | 3269 | `python/GPLOT_maps.py` | ⏳ Pending | Top-level script (no named functions) |
@@ -120,32 +120,56 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 
 ---
 
-### GPLOT_util.ncl (3673 lines) — ⏳ Pending
+### GPLOT_util.ncl (3673 lines) — ✅ Done
 
 **Purpose:** Core utility library; lowest-level, no NCL deps.
 
-**Functions (26+ total):**
+**All 40 functions (fully catalogued):**
 - `load_constants` — physical constants dict
-- `allMasters` — list of model names by type
-- `arrow` — draw arrow on plot
-- `basinCodes` — map basin name↔code
+- `allMasters` — basin master lists
+- `arrow` — draw arrow with arrowhead on a plot
+- `basinCodes` — map basin name↔code (long_name / XX / X)
 - `calcTheta` — potential temperature
-- `changeTimeFmt` — reformat time strings
-- `chkCmdInputs` — validate command-line args
+- `changeTimeFmt` — reformat time strings between 9 supported formats
+- `chkCmdInputs` — validate command-line args, set defaults
 - `circle_ll` — draw lat/lon circle on map
-- `defineCMAP_fill` / `defineCMAP_name` — colormap selection by variable
+- `defineCMAP_fill` — load & optionally slice colormap array
+- `defineCMAP_name` — colormap name selection by variable/level
 - `defineLevels` — contour levels by variable/level
-- `filter121` — 1-2-1 smoother (replaces Fortran filter121.so)
-- `findVarName` — variable name mapper (canonical version; legacy version in util_legacy)
-- `GenPlotRes` — generate plot resource block
-- `getAutoDir` — auto-detect input directory
-- `getDmnBds` / `getDmnInfo` — domain bounds/info lookup
-- `getExptInfo` — parse experiment metadata
-- `getIDIR` / `getFileTag` — build input directory/filename paths
-- (+ more, file is 3673 lines)
+- `filter121` — 1-2-1 smoother (numpy equivalent of Fortran filter121.so)
+- `findVarName` — reads `tbl/Vtable.*` files to resolve model-specific var names
+- `GenPlotRes` — generate matplotlib kwargs dict by plot type (0-9) and overlay flag
+- `getAutoDir` — hard-coded JET/NOAA paths; largely legacy
+- `getDmnBds` — domain lat/lon bounding boxes (27 named domains)
+- `getDmnInfo` — domain metadata: bdstype, maxH, maxL, llbox
+- `getExptInfo` — reads `tbl/ExptInfo.dat` for experiment title info
+- `getIDIR` — walk directory tree to build input path
+- `getFileTag` / `getFileTag1` / `getFileTag2` / `getFileTag3` — build file glob patterns
+- `getInvestSID` — reads `tbl/SIDs_Old_New.dat` to look up TC invest SID
+- `getLatLonLbl` / `getLatLonLbl2` — build axis tick label arrays for lat/lon
+- `getModelInfo` — reads `tbl/ModelInfo.dat` for model color/marker/title
+- `getModelInfo2` — hardcoded model info table (color, marker, title, interp_code)
+- `getPlotTitle` — hardcoded plot title strings by short_name key (~40 entries)
+- `getStmThin` — reads `tbl/StreamlineThin.dat` for streamline thinning
+- `hbfilter` — Kurihara vortex removal filter (numpy port of hbfilter Fortran)
+- `isStrSubset2` — vectorized string-contains check
+- `level_convert` — convert levels between Pa/hPa and str/float/int types
+- `printMaxMin` — print max and min of array
+- `remove_duplicates` — sort and deduplicate numeric array
+- `StatPlotRes` — stat/track plot matplotlib kwargs (18 type codes)
+- `stringOut` — format array as comma-separated string
+- `testPlot_2d_map` / `testPlot_map` / `testPlot_contour` — debug plot helpers
 
 **Python target:** `python/modules/gplot_util.py`
-**Note:** Very large; may be worth splitting into sub-modules (e.g., `gplot_util_plot.py`, `gplot_util_io.py`) after initial port.
+**Key NCL→Python mappings:**
+- NCL resource objects → Python dicts
+- `gsn_add_polyline` → `ax.plot`
+- `gsn_csm_contour_map` → `ax.contourf` + Cartopy
+- `wgt_runave_n_Wrap` → `scipy.ndimage.uniform_filter1d` or manual numpy
+- `asciiread` / `str_get_field` → `open().readlines()` + `str.split()`
+- `systemfunc` → `os.environ.get` or `subprocess`
+- `fspan` → `numpy.linspace`
+**Status:** ✅ Complete. `python/modules/gplot_util.py` written (2306 lines). Syntax verified.
 
 ---
 
@@ -182,17 +206,17 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 | Date | Work Done |
 |---|---|
 | pre-2026-02-25 | Cloned `support/HAFS_python` branch; converted `ECMWF_combine.ncl` and `calculate.ncl`; began `GPLOT_util_legacy.ncl` and `GPLOT_main.ncl` (session ended before writing output) |
-| 2026-02-25 | Created this journal; confirmed status of all files; ready to resume |
+| 2026-02-25 | Created journal; converted `GPLOT_util_legacy.ncl` → `gplot_util_legacy.py` (314 lines, 1 function); read and fully catalogued all 40 functions in `GPLOT_util.ncl`; writing of `gplot_util.py` interrupted |
+| 2026-02-25 (session 3) | Completed `gplot_util.py` (2306 lines, 40 public functions); syntax verified via `ast.parse()`; committed |
 
 ---
 
 ## Next Steps (in order)
 
-1. **Resume `GPLOT_util_legacy.ncl`** → write `python/modules/gplot_util_legacy.py`
-2. **Convert `GPLOT_util.ncl`** → write `python/modules/gplot_util.py` (dependency for all others)
-3. **Convert `GPLOT_func.ncl`** → write `python/modules/gplot_func.py`
-4. **Resume `GPLOT_main.ncl`** → write `python/modules/gplot_main.py`
-5. **Convert `GPLOT_maps.ncl`** → write `python/GPLOT_maps.py`
-6. **Convert `GPLOT_ships.ncl`** → write `python/GPLOT_ships.py`
-7. **Convert `GPLOT_stats.ncl`** → write `python/GPLOT_stats.py`
-8. **Update shell/batch scripts** to call Python instead of NCL
+1. ~~**Finish `GPLOT_util.ncl`**~~ ✅ Done
+2. **Convert `GPLOT_func.ncl`** → write `python/modules/gplot_func.py`  ← **Resume here**
+3. **Convert `GPLOT_main.ncl`** → write `python/modules/gplot_main.py`
+4. **Convert `GPLOT_maps.ncl`** → write `python/GPLOT_maps.py`
+5. **Convert `GPLOT_ships.ncl`** → write `python/GPLOT_ships.py`
+6. **Convert `GPLOT_stats.ncl`** → write `python/GPLOT_stats.py`
+7. **Update shell/batch scripts** to call Python instead of NCL
