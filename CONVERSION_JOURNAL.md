@@ -2,7 +2,7 @@
 
 **Project:** Convert all NCL scripts in `sorc/GPLOT/ncl/` to Python equivalents in `sorc/GPLOT/python/`
 **Started:** 2026-02-25
-**Last Updated:** 2026-02-25 (session 3)
+**Last Updated:** 2026-02-25 (session 4)
 
 ---
 
@@ -13,7 +13,7 @@
 | `ECMWF_combine.ncl` | 192 | `python/ECMWF_combine.py` | ✅ Done | |
 | `colormaps/calculate.ncl` | — | `python/colormaps/calculate.py` | ✅ Done | |
 | `GPLOT_util_legacy.ncl` | 314 | `python/modules/gplot_util_legacy.py` | ✅ Done | |
-| `GPLOT_main.ncl` | 842 | `python/modules/gplot_main.py` | ⏳ Pending | Depends on gplot_func.py |
+| `GPLOT_main.ncl` | 842 | `python/modules/gplot_main.py` | ✅ Done | 479 lines; 2 public functions; syntax verified |
 | `GPLOT_func.ncl` | 2227 | `python/modules/gplot_func.py` | ✅ Done | 1272 lines; 21 public functions; syntax verified |
 | `GPLOT_util.ncl` | 3673 | `python/modules/gplot_util.py` | ✅ Done | 2306 lines; 40 public functions; syntax verified |
 | `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ⏳ Pending | Top-level script (no named functions) |
@@ -208,7 +208,7 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 | pre-2026-02-25 | Cloned `support/HAFS_python` branch; converted `ECMWF_combine.ncl` and `calculate.ncl`; began `GPLOT_util_legacy.ncl` and `GPLOT_main.ncl` (session ended before writing output) |
 | 2026-02-25 | Created journal; converted `GPLOT_util_legacy.ncl` → `gplot_util_legacy.py` (314 lines, 1 function); read and fully catalogued all 40 functions in `GPLOT_util.ncl`; writing of `gplot_util.py` interrupted |
 | 2026-02-25 (session 3) | Completed `gplot_util.py` (2306 lines, 40 public functions); syntax verified via `ast.parse()`; committed |
-| 2026-02-25 (session 4) | Converted `GPLOT_func.ncl` → `gplot_func.py` (1272 lines, 21 public functions); syntax verified; committed |
+| 2026-02-25 (session 4) | Converted `GPLOT_func.ncl` → `gplot_func.py` (1272 lines, 21 public functions); converted `GPLOT_main.ncl` → `gplot_main.py` (479 lines, 2 public functions); both syntax verified; committed |
 
 ---
 
