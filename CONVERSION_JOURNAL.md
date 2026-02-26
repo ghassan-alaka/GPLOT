@@ -2,7 +2,7 @@
 
 **Project:** Convert all NCL scripts in `sorc/GPLOT/ncl/` to Python equivalents in `sorc/GPLOT/python/`
 **Started:** 2026-02-25
-**Last Updated:** 2026-02-25 (session 5)
+**Last Updated:** 2026-02-26 (session 6)
 
 ---
 
@@ -16,7 +16,7 @@
 | `GPLOT_main.ncl` | 842 | `python/modules/gplot_main.py` | ✅ Done | 479 lines; 2 public functions; syntax verified |
 | `GPLOT_func.ncl` | 2227 | `python/modules/gplot_func.py` | ✅ Done | 1272 lines; 21 public functions; syntax verified |
 | `GPLOT_util.ncl` | 3673 | `python/modules/gplot_util.py` | ✅ Done | 2306 lines; 40 public functions; syntax verified |
-| `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ⏳ Pending | Top-level script (no named functions) |
+| `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ✅ Done | 1616 lines; 27 functions; syntax verified |
 | `GPLOT_stats.ncl` | 5383 | `python/GPLOT_stats.py` | ⏳ Pending | Top-level script (no named functions) |
 | `GPLOT_maps.ncl` | 3269 | `python/GPLOT_maps.py` | ✅ Done | 1512 lines; top-level driver; syntax verified |
 | Shell/batch scripts | — | — | ⏳ Pending | Update callers to invoke Python instead of NCL |
@@ -183,12 +183,21 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 
 ---
 
-### GPLOT_ships.ncl (3072 lines) — ⏳ Pending
+### GPLOT_ships.ncl (3072 lines) — ✅ Done
 
 **Purpose:** Top-level script; extracts SHIPS/LSDIAG diagnostic variables and writes `.DAT` files + graphics.
 **Loads:** GPLOT_util + GPLOT_func + GPLOT_main
-**External:** `sph2cart.so`
-**Python target:** `python/GPLOT_ships.py`
+**External:** `sph2cart.so` → replaced with `sph2cart()` using `scipy.interpolate.RegularGridInterpolator`
+**Python target:** `python/GPLOT_ships.py` (1616 lines, 27 functions)
+
+**Key design decisions:**
+- `SPH2CART` Fortran external → `sph2cart()` using haversine-based flat-Earth projection + bilinear interpolation
+- Annular averages: `annular_avg()` / `annular_avg_uv()` operating on Cartesian grids (120×120 km, 20 km spacing)
+- Divergence: `compute_divergence()` using finite-difference (replaces `uv2dv_cfd`)
+- Relative vorticity: `compute_relative_vorticity()` finite-difference
+- IKE: `compute_ike()` with cosine(lat)-weighted grid cell areas
+- Graphics: `plot_tccen()` (Cartopy map), `plot_tchodo()` (polar hodograph), `plot_trend()` (time-series overlay)
+- Variables computed: SHRD, SHTD, SHRS, SHTS, SHDC, SDDC, MSLP, PENV, VMAX, IKE34/50/64, U200, U20C, V20C, RHLO, RHMD, RHHI, R000, Z850, D200, DIVC, T000, CAPE, HLCY, TCCEN, TCHODO
 
 ---
 
@@ -210,6 +219,7 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 | 2026-02-25 (session 3) | Completed `gplot_util.py` (2306 lines, 40 public functions); syntax verified via `ast.parse()`; committed |
 | 2026-02-25 (session 4) | Converted `GPLOT_func.ncl` → `gplot_func.py` (1272 lines, 21 public functions); converted `GPLOT_main.ncl` → `gplot_main.py` (479 lines, 2 public functions); both syntax verified; committed |
 | 2026-02-25 (session 5) | Converted `GPLOT_maps.ncl` → `GPLOT_maps.py` (1512 lines); full driver with all 7 overlay types (wind vectors, 2× streamlines, 2× contour lines, MSLP H/L markers, storm labels, titles); syntax verified; committed |
+| 2026-02-26 (session 6) | Converted `GPLOT_ships.ncl` → `GPLOT_ships.py` (1616 lines, 27 functions); replaced SPH2CART Fortran external with haversine-based sph2cart() using scipy; all 26 SHIPS diagnostic variables + TCCEN/TCHODO graphics + trend plots; syntax verified; committed |
 
 ---
 
@@ -219,6 +229,6 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 2. ~~**Convert `GPLOT_func.ncl`**~~ ✅ Done
 3. ~~**Convert `GPLOT_main.ncl`**~~ ✅ Done
 4. ~~**Convert `GPLOT_maps.ncl`**~~ ✅ Done
-5. **Convert `GPLOT_ships.ncl`** → write `python/GPLOT_ships.py`  ← **Resume here**
-6. **Convert `GPLOT_stats.ncl`** → write `python/GPLOT_stats.py`
+5. ~~**Convert `GPLOT_ships.ncl`**~~ ✅ Done
+6. **Convert `GPLOT_stats.ncl`** → write `python/GPLOT_stats.py`  ← **Resume here**
 7. **Update shell/batch scripts** to call Python instead of NCL
