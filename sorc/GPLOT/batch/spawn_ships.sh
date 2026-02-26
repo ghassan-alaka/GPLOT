@@ -29,6 +29,7 @@ echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
 NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -269,6 +270,7 @@ fi
 #############################################################
 if [ "${DO_SHIPS}" = "True" ]; then
     NCLFILE="GPLOT_ships.ncl"
+    PYFILE="GPLOT_ships.py"
     BATCHFILE="batch_ships.sh"
     DOMAIN="ships"
     TIER="Tier1"
@@ -998,7 +1000,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                             # Submit the child batch job.
                             echo "MSG: Submitting GPLOT child batch job. BATCH_MODE = ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST}"
                             FULL_CMD="${FULL_CMD} ${ENSID} ${CYCLE} ${STORM} ${FORCE} ${DMN} ${TR}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."

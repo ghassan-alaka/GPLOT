@@ -2,7 +2,7 @@
 
 **Project:** Convert all NCL scripts in `sorc/GPLOT/ncl/` to Python equivalents in `sorc/GPLOT/python/`
 **Started:** 2026-02-25
-**Last Updated:** 2026-02-26 (session 7)
+**Last Updated:** 2026-02-26 (session 8)
 
 ---
 
@@ -19,7 +19,7 @@
 | `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ✅ Done | 1616 lines; 27 functions; syntax verified |
 | `GPLOT_stats.ncl` | 5383 | `python/GPLOT_stats.py` | ✅ Done | 1624 lines; 32 functions; syntax verified |
 | `GPLOT_maps.ncl` | 3269 | `python/GPLOT_maps.py` | ✅ Done | 1512 lines; top-level driver; syntax verified |
-| Shell/batch scripts | — | — | ⏳ Pending | Update callers to invoke Python instead of NCL |
+| Shell/batch scripts | — | — | ✅ Done | `batch_*.sh` export env vars + `python3`; `spawn_*.sh` use `PY_DIR`/`PYFILE` |
 
 ---
 
@@ -231,6 +231,7 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 | 2026-02-25 (session 5) | Converted `GPLOT_maps.ncl` → `GPLOT_maps.py` (1512 lines); full driver with all 7 overlay types (wind vectors, 2× streamlines, 2× contour lines, MSLP H/L markers, storm labels, titles); syntax verified; committed |
 | 2026-02-26 (session 6) | Converted `GPLOT_ships.ncl` → `GPLOT_ships.py` (1616 lines, 27 functions); replaced SPH2CART Fortran external with haversine-based sph2cart() using scipy; all 26 SHIPS diagnostic variables + TCCEN/TCHODO graphics + trend plots; syntax verified; committed |
 | 2026-02-26 (session 7) | Converted `GPLOT_stats.ncl` → `GPLOT_stats.py` (1624 lines, 32 functions); six-step structure preserved; Cartopy track maps, matplotlib intensity/pressure XY plots, trend/lifetime graphics, MET-TC verification wrapper; syntax verified; committed |
+| 2026-02-26 (session 8) | Updated `batch_maps.sh`, `batch_ships.sh`, `batch_stats.sh`: replaced NCL_ARGS array + `ncl` call with `export KEY=value` statements + `python3`; updated `spawn_maps.sh`, `spawn_ships.sh`, `spawn_stats.sh`: added `PY_DIR`, `PYFILE`, pointed `FULL_CMD` to Python scripts; committed |
 
 ---
 
@@ -242,4 +243,6 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 4. ~~**Convert `GPLOT_maps.ncl`**~~ ✅ Done
 5. ~~**Convert `GPLOT_ships.ncl`**~~ ✅ Done
 6. ~~**Convert `GPLOT_stats.ncl`**~~ ✅ Done
-7. **Update shell/batch scripts** to call Python instead of NCL  ← **Next step**
+7. ~~**Update shell/batch scripts** to call Python instead of NCL~~ ✅ Done
+
+**All tasks complete. NCL → Python conversion is finished.**

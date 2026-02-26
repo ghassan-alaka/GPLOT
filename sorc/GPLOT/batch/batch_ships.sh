@@ -17,7 +17,7 @@ set -x
 
 # 1. Get command line arguments
 MACHINE="${1:-${MACHINE}}"
-NCLFILE="${2}"
+PYFILE="${2}"
 LOGFILE="${3}"
 NMLIST="${4:-namelist.master.default}"
 ENSID="${5:-XX}"
@@ -35,35 +35,27 @@ fi
 # Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
 
-# 2. Build list in input arguments for NCL
-NCL_ARGS=()
-if [ ! -z "${IDATE}" ]; then
-    NCL_ARGS+=('IDATE="'"${IDATE}"'"')
-fi
-if [ ! -z "${SID}" ]; then
-    NCL_ARGS+=('SID="'"${SID}"'"')
-fi
-if [ ! -z "${DOMAIN}" ]; then
-    NCL_ARGS+=('DOMAIN="'"${DOMAIN}"'"')
-fi
-if [ ! -z "${TIER}" ]; then
-    NCL_ARGS+=('TIER="'"${TIER}"'"')
-fi
+# 2. Export arguments as environment variables for Python
+export IDATE="${IDATE}"
+export SID="${SID}"
+export DOMAIN="${DOMAIN}"
+export TIER="${TIER}"
 if [ "${ENSID}" == "XX" ]; then
-    NCL_ARGS+=('ENSID=""')
-elif [ ! -z "${ENSID}" ]; then
-    NCL_ARGS+=('ENSID="'"${ENSID}"'"')
+    export ENSID=""
+else
+    export ENSID="${ENSID}"
 fi
-if [ ! -z "${FORCE}" ]; then
-    NCL_ARGS+=('FORCE="'"${FORCE}"'"')
-fi
-if [ ! -z "${NMLIST}" ]; then
-    NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
+export FORCE="${FORCE}"
+export MASTER_NML_IN="${NMLIST}"
+
+if [ ! -f "${PYFILE}" ]; then
+    echo "ERROR: The run script does not exist --> ${PYFILE}"
+    exit 2
 fi
 
-# 2. Submit the NCL job
-echo "${NCL_ARGS[*]}"
-ncl "${NCL_ARGS[@]}" ${NCLFILE} > ${LOGFILE}
+# 3. Submit the Python job
+echo "PYFILE=${PYFILE}"
+python3 "${PYFILE}" > "${LOGFILE}"
 
 wait
 
