@@ -2,7 +2,7 @@
 
 **Project:** Convert all NCL scripts in `sorc/GPLOT/ncl/` to Python equivalents in `sorc/GPLOT/python/`
 **Started:** 2026-02-25
-**Last Updated:** 2026-02-26 (session 6)
+**Last Updated:** 2026-02-26 (session 7)
 
 ---
 
@@ -17,7 +17,7 @@
 | `GPLOT_func.ncl` | 2227 | `python/modules/gplot_func.py` | ✅ Done | 1272 lines; 21 public functions; syntax verified |
 | `GPLOT_util.ncl` | 3673 | `python/modules/gplot_util.py` | ✅ Done | 2306 lines; 40 public functions; syntax verified |
 | `GPLOT_ships.ncl` | 3072 | `python/GPLOT_ships.py` | ✅ Done | 1616 lines; 27 functions; syntax verified |
-| `GPLOT_stats.ncl` | 5383 | `python/GPLOT_stats.py` | ⏳ Pending | Top-level script (no named functions) |
+| `GPLOT_stats.ncl` | 5383 | `python/GPLOT_stats.py` | ✅ Done | 1624 lines; 32 functions; syntax verified |
 | `GPLOT_maps.ncl` | 3269 | `python/GPLOT_maps.py` | ✅ Done | 1512 lines; top-level driver; syntax verified |
 | Shell/batch scripts | — | — | ⏳ Pending | Update callers to invoke Python instead of NCL |
 
@@ -201,12 +201,22 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 
 ---
 
-### GPLOT_stats.ncl (5383 lines) — ⏳ Pending
+### GPLOT_stats.ncl (5383 lines) — ✅ Done
 
 **Purpose:** Top-level script; creates track/intensity forecast and verification graphics.
 **Loads:** GPLOT_util + GPLOT_func + GPLOT_main
-**Python target:** `python/GPLOT_stats.py`
-**Note:** Largest file. May be worth splitting into sub-scripts by product type after initial port.
+**Python target:** `python/GPLOT_stats.py` (1624 lines, 32 functions)
+
+**Key design decisions:**
+- Six-step structure preserved: ATCF locate → merge/read → guidance → trends → verification → status
+- ATCF merging via Python sort+dedup (`_merge_atcf_files`) replaces shell `sort -s -t, -k3,3 ... -u`
+- BDECK/ADECK parsing via `_read_atcf()` / `_read_bdeck()` (pure Python)
+- Guidance graphics: `_make_track_map()` (Cartopy) + `_make_xy_plot()` (matplotlib)
+- Intensity-coded track: `_intensity_color()` maps vmax→tcwinds1 colour
+- Auto extent: `_auto_extent()` with 2:1 lon:lat aspect correction
+- Trend graphics: last nTrend cycles, `_trend_cycle_colors()`, plus lifetime tracks
+- MET-TC verification: `_run_verification()` shells out to tc_pairs / tc_stat; `_read_tcstat_summary()` parses output
+- Products: TrackGuidance, TrackIntensityGuidance, IntensityGuidance, PressureGuidance, TrackTrend, AllTracks, IntensityTrend, AllIntensity, PressureTrend, Verification.TK_ERR, Verification.WIND
 
 ---
 
@@ -220,6 +230,7 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 | 2026-02-25 (session 4) | Converted `GPLOT_func.ncl` → `gplot_func.py` (1272 lines, 21 public functions); converted `GPLOT_main.ncl` → `gplot_main.py` (479 lines, 2 public functions); both syntax verified; committed |
 | 2026-02-25 (session 5) | Converted `GPLOT_maps.ncl` → `GPLOT_maps.py` (1512 lines); full driver with all 7 overlay types (wind vectors, 2× streamlines, 2× contour lines, MSLP H/L markers, storm labels, titles); syntax verified; committed |
 | 2026-02-26 (session 6) | Converted `GPLOT_ships.ncl` → `GPLOT_ships.py` (1616 lines, 27 functions); replaced SPH2CART Fortran external with haversine-based sph2cart() using scipy; all 26 SHIPS diagnostic variables + TCCEN/TCHODO graphics + trend plots; syntax verified; committed |
+| 2026-02-26 (session 7) | Converted `GPLOT_stats.ncl` → `GPLOT_stats.py` (1624 lines, 32 functions); six-step structure preserved; Cartopy track maps, matplotlib intensity/pressure XY plots, trend/lifetime graphics, MET-TC verification wrapper; syntax verified; committed |
 
 ---
 
@@ -230,5 +241,5 @@ NCL scripts load each other; the Python modules must be converted bottom-up:
 3. ~~**Convert `GPLOT_main.ncl`**~~ ✅ Done
 4. ~~**Convert `GPLOT_maps.ncl`**~~ ✅ Done
 5. ~~**Convert `GPLOT_ships.ncl`**~~ ✅ Done
-6. **Convert `GPLOT_stats.ncl`** → write `python/GPLOT_stats.py`  ← **Resume here**
-7. **Update shell/batch scripts** to call Python instead of NCL
+6. ~~**Convert `GPLOT_stats.ncl`**~~ ✅ Done
+7. **Update shell/batch scripts** to call Python instead of NCL  ← **Next step**
