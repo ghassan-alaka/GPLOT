@@ -27,7 +27,6 @@ fi
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
 PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
@@ -248,7 +247,6 @@ fi
 #    & intensity guidance/verification.            #
 ####################################################
 if [ "${DO_STATS}" = "True" ]; then
-    NCLFILE="GPLOT_stats.ncl"
     PYFILE="GPLOT_stats.py"
     BATCHFILE="batch_stats.sh"
 

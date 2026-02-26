@@ -28,7 +28,6 @@ fi
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
 PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
@@ -269,7 +268,6 @@ fi
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
 if [ "${DO_SHIPS}" = "True" ]; then
-    NCLFILE="GPLOT_ships.ncl"
     PYFILE="GPLOT_ships.py"
     BATCHFILE="batch_ships.sh"
     DOMAIN="ships"

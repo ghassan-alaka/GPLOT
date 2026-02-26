@@ -28,7 +28,6 @@ fi
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
 PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
@@ -293,7 +292,6 @@ fi
 #    for large-scale and storm-centered domains.                   #
 ####################################################################
 if [ "${DO_MAPS}" = "True" ]; then
-    NCLFILE="GPLOT_maps.ncl"
     PYFILE="GPLOT_maps.py"
     BATCHFILE="batch_maps.sh"
 
