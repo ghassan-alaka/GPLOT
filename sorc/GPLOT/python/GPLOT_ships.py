@@ -98,13 +98,18 @@ def _open_file(path):
     if path.endswith(".grb2"):
         tmp = tempfile.NamedTemporaryFile(suffix=".nc", delete=False)
         tmp.close()
-        subprocess.run(
-            ["wgrib2", path, "-netcdf", tmp.name],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-        )
-        return nc4.Dataset(tmp.name, "r"), tmp.name
+        try:
+            subprocess.run(
+                ["wgrib2", path, "-netcdf", tmp.name],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
+            return nc4.Dataset(tmp.name, "r"), tmp.name
+        except Exception:
+            if os.path.exists(tmp.name):
+                os.remove(tmp.name)
+            raise
     return nc4.Dataset(path, "r"), None
 
 
