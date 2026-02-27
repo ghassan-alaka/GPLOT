@@ -28,6 +28,7 @@ import logging
 import datetime
 import argparse
 import subprocess
+import tempfile
 import numpy as np
 
 try:
@@ -81,6 +82,40 @@ RAD2DEG = 180.0 / math.pi
 FILL    = 1.0e20
 
 LOG = logging.getLogger("GPLOT_ships")
+
+
+# =======================================================================
+# GRIB2 helper wrappers
+# =======================================================================
+
+def _open_file(path):
+    """Open a NetCDF4 Dataset, converting .grb2 via wgrib2 if needed.
+
+    Returns (ds, tmp_path) where tmp_path is the path of the temporary
+    NetCDF file created from a GRIB2 input (None for native NetCDF).
+    The caller must pass both values to _close_file() when done.
+    """
+    if path.endswith(".grb2"):
+        tmp = tempfile.NamedTemporaryFile(suffix=".nc", delete=False)
+        tmp.close()
+        subprocess.run(
+            ["wgrib2", path, "-netcdf", tmp.name],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        return nc4.Dataset(tmp.name, "r"), tmp.name
+    return nc4.Dataset(path, "r"), None
+
+
+def _close_file(ds, tmp_path):
+    """Close a Dataset opened by _open_file() and remove any temp file."""
+    try:
+        ds.close()
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
 
 # =======================================================================
 # PART II – SPH2CART REPLACEMENT (haversine-based Cartesian resampling)
@@ -1020,7 +1055,7 @@ def main():
         # Open dataset
         try:
             if HAS_NC4:
-                ds = nc4.Dataset(ifile, "r")
+                ds, _tmp_nc = _open_file(ifile)
             else:
                 LOG.error("netCDF4 not available; cannot open %s", ifile)
                 continue
@@ -1059,7 +1094,7 @@ def main():
 
         if lat is None or lon is None:
             LOG.warning("Cannot find lat/lon in %s; skipping", ifile)
-            ds.close()
+            _close_file(ds, _tmp_nc)
             continue
 
         # Determine forecast hours from filename or time variable
@@ -1535,7 +1570,7 @@ def main():
             # end variable loop
         # end FHR loop
 
-        ds.close()
+        _close_file(ds, _tmp_nc)
     # end file loop
 
     # -------------------------------------------------------------------

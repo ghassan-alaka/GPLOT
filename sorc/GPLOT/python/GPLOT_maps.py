@@ -26,6 +26,7 @@ import glob
 import math
 import datetime
 import subprocess
+import tempfile
 import time
 from types import SimpleNamespace
 
@@ -77,6 +78,31 @@ _MS2KTS = 1.94384449
 # ══════════════════════════════════════════════════════════════════════════════
 # Helper utilities
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _open_dataset(path, **kwargs):
+    """Open a dataset, converting .grb2 to NetCDF via wgrib2 if needed.
+
+    For GRIB2 files, runs ``wgrib2 -netcdf`` to produce a temporary NetCDF,
+    loads it eagerly into memory, deletes the temp file, and returns the
+    in-memory Dataset.  All other files are opened normally with xarray.
+    """
+    if path.endswith(".grb2"):
+        tmp = tempfile.NamedTemporaryFile(suffix=".nc", delete=False)
+        tmp.close()
+        try:
+            subprocess.run(
+                ["wgrib2", path, "-netcdf", tmp.name],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
+            ds = xr.open_dataset(tmp.name, **kwargs).load()
+        finally:
+            if os.path.exists(tmp.name):
+                os.remove(tmp.name)
+        return ds
+    return xr.open_dataset(path, **kwargs)
+
 
 def _find_ds_with_var(datasets, dsource, var, lev):
     """Return (ds, vname) for the first dataset containing the named variable."""
@@ -677,7 +703,7 @@ def main():  # noqa: C901
 
         # ii. Open the primary input file
         try:
-            f1 = xr.open_dataset(iFiles[fff])
+            f1 = _open_dataset(iFiles[fff])
         except Exception as e:
             print(f"WARNING: Cannot open {iFiles[fff]}: {e}")
             continue
@@ -689,7 +715,7 @@ def main():  # noqa: C901
             alt = iFiles[fff].replace(itag_list[0], tag) if itag_list else ""
             if alt and os.path.exists(alt):
                 try:
-                    open_files[ttt_i] = xr.open_dataset(alt)
+                    open_files[ttt_i] = _open_dataset(alt)
                 except Exception:
                     pass
         datasets = [ds for ds in open_files if ds is not None]
@@ -967,7 +993,7 @@ def main():  # noqa: C901
                         continue
                     if FHR4 > 0:
                         try:
-                            f_prev = xr.open_dataset(ifile_b)
+                            f_prev = _open_dataset(ifile_b)
                             g_base2_lev = ""
                             if DSOURCE == "GFS":
                                 g_base2_lev = f"{FHR4}h" if FHR4 >= 9 else ""
