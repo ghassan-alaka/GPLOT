@@ -271,7 +271,7 @@ fi
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
 if [ "${DO_POLAR}" = "True" ]; then
-    PYTHONFILE="${PYTHONFILE:-make_rz_plots.py}"
+    PYTHONFILE="${PYTHONFILE:-polar_cylindrical_structure.py}"
     BATCHFILE="batch_polar.sh"
     DOMAIN="polar"
     TIER="Tier1"

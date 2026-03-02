@@ -638,7 +638,7 @@ def main():
         NML = {}
 
     def _nml(key, default=""):
-        return os.environ.get(key) or NML.get(key, default)
+        return os.environ.get(key) or getattr(NML, key, default)
 
     DOMAIN         = _nml("DOMAIN",      "guidance")
     TIER           = _nml("TIER",        TIER)

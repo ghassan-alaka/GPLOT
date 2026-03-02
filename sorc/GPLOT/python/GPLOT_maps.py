@@ -401,7 +401,7 @@ def main():  # noqa: C901
 
     # ── Part I: Physical constants ─────────────────────────────────────────
     consts = gu.load_constants()
-    ms2kts = consts.get("ms2kts", _MS2KTS)
+    ms2kts = getattr(consts, "ms2kts", _MS2KTS)
 
     # ── Part II: Environment variables ────────────────────────────────────
     GPLOT_DIR = os.environ.get("GPLOT_DIR", "")
