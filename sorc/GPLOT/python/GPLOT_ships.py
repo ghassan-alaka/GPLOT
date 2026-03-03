@@ -863,22 +863,55 @@ def main():
     # -------------------------------------------------------------------
     # PART II – ENVIRONMENT VARIABLES
     # -------------------------------------------------------------------
-    GPLOT_DIR   = os.environ.get("GPLOT_DIR", "")
-    IDATE       = os.environ.get("IDATE", "")
-    SID         = os.environ.get("SID", "")
-    DSOURCE     = os.environ.get("DSOURCE", "")
-    EXPT        = os.environ.get("EXPT", "")
-    TIER        = os.environ.get("TIER", "1")
+    GPLOT_DIR     = os.environ.get("GPLOT_DIR", "")
+    MASTER_NML_IN = os.environ.get("MASTER_NML_IN", "")
+
+    if not GPLOT_DIR:
+        sys.exit("ERROR: Environment variable GPLOT_DIR is not set.")
+
+    # -------------------------------------------------------------------
+    # PART III – MASTER NAMELIST
+    # Read this early so namelist values can fill in for missing env vars,
+    # matching the NCL behavior.
+    # -------------------------------------------------------------------
+    NML = None
+    if MASTER_NML_IN:
+        for candidate in [MASTER_NML_IN,
+                          os.path.join(GPLOT_DIR, "parm", MASTER_NML_IN)]:
+            if os.path.isfile(candidate):
+                try:
+                    NML = gm.read_master_namelist(candidate)
+                except Exception as ex:
+                    LOG.warning("Could not read master namelist (%s): %s",
+                                candidate, ex)
+                break
+    if NML is None:
+        default_nml = os.path.join(GPLOT_DIR, "parm", "namelist.input.default")
+        if os.path.isfile(default_nml):
+            try:
+                NML = gm.read_master_namelist(default_nml)
+            except Exception as ex:
+                LOG.warning("Could not read master namelist (%s): %s",
+                            default_nml, ex)
+
+    def _nml(key, default=None):
+        """Return env-var value, falling back to namelist attribute."""
+        return os.environ.get(key, getattr(NML, key, default) if NML else default)
+
+    IDATE       = _nml("IDATE", "")
+    SID         = _nml("SID", "")
+    DSOURCE     = _nml("DSOURCE", "")
+    EXPT        = _nml("EXPT", "")
+    TIER        = _nml("TIER", "1")
     ODIR        = os.environ.get("ODIR", "")
-    IDIR        = os.environ.get("IDIR", "")
+    IDIR        = _nml("IDIR", "")
     DO_CONVERTGIF = os.environ.get("DO_CONVERTGIF", "NO").upper() == "YES"
     DO_RMWHITE    = os.environ.get("DO_RMWHITE",    "YES").upper() == "YES"
-    MASTER_NML_IN = os.environ.get("MASTER_NML_IN", "")
 
     for required, name in [(GPLOT_DIR, "GPLOT_DIR"), (IDATE, "IDATE"),
                            (SID, "SID"), (DSOURCE, "DSOURCE")]:
         if not required:
-            sys.exit(f"ERROR: Environment variable {name} is not set.")
+            sys.exit(f"ERROR: {name} is not set (check env var or master namelist).")
 
     LOG.info("GPLOT_DIR  = %s", GPLOT_DIR)
     LOG.info("IDATE      = %s", IDATE)
@@ -889,27 +922,13 @@ def main():
     LOG.info("ODIR       = %s", ODIR)
     LOG.info("IDIR       = %s", IDIR)
 
-    # -------------------------------------------------------------------
-    # PART III – MASTER NAMELIST
-    # -------------------------------------------------------------------
-    if MASTER_NML_IN and os.path.isfile(MASTER_NML_IN):
-        nml_path = MASTER_NML_IN
-    else:
-        nml_path = os.path.join(GPLOT_DIR, "parm", "namelist.input.default")
-
-    try:
-        NML = gm.read_master_namelist(nml_path)
-    except Exception as ex:
-        LOG.warning("Could not read master namelist (%s): %s", nml_path, ex)
-        NML = {}
-
-    MODEL      = NML.get("MODEL",      DSOURCE)
-    LONGSID    = NML.get("LONGSID",    SID.lower())
-    SID_TAG    = NML.get("SID_TAG",    SID)
-    BOCO_STR   = NML.get("BOCO",       "")
-    SC_DOMAIN  = NML.get("SC_DOMAIN",  "YES").upper() == "YES"
-    ADECK_DIR  = NML.get("ADECK_DIR",  "")
-    ADECK_FILE = NML.get("ADECK_FILE", "")
+    MODEL      = _nml("MODEL",      DSOURCE)
+    LONGSID    = _nml("LONGSID",    SID.lower())
+    SID_TAG    = _nml("SID_TAG",    SID)
+    BOCO_STR   = _nml("BOCO",       "")
+    SC_DOMAIN  = _nml("SC_DOMAIN",  "YES").upper() == "YES"
+    ADECK_DIR  = _nml("ADECK_DIR",  "")
+    ADECK_FILE = _nml("ADECK_FILE", "")
 
     # Parse domain bounds
     boco = [0.0, 50.0, -100.0, -20.0]

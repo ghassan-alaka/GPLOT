@@ -311,22 +311,32 @@ def _find_var_nml(gplot_dir, expt, domain, tier, var_nml_env=None):
 
 def _read_gfx_namelist(var_nml_path):
     """
-    Parse a tab-separated graphics namelist into lists of tuples.
+    Parse a whitespace-separated graphics namelist into lists of tuples.
     Returns: G_BASE, G_OV1, G_OV2, G_OV25, G_OV3, G_OV4, G_OV5, FNAME, What2Plot
     Each G_* is a list of (var, lev) tuples; FNAME is a list of strings.
     """
     with open(var_nml_path) as fh:
-        lines = fh.readlines()
+        raw_lines = fh.readlines()
 
-    headers = [h.strip() for h in lines[0].split("\t")]
+    # Keep only non-blank lines (namelist files often have trailing blanks)
+    lines = [l for l in raw_lines if l.strip()]
+
+    # Split on any whitespace (spaces or tabs), matching NCL str_split behavior
+    headers = lines[0].split()
 
     def _col(colname):
         try:
             idx = headers.index(colname)
         except ValueError:
             return [""] * (len(lines) - 1)
-        return [lines[i].split("\t")[idx].strip() if i < len(lines) else ""
-                for i in range(1, len(lines))]
+        out = []
+        for i in range(1, len(lines)):
+            fields = lines[i].split()
+            if idx < len(fields):
+                out.append(fields[idx].strip())
+            else:
+                out.append("")
+        return out
 
     def _clean(lst):
         return ["" if v in ("N/A", "NA", "") else v for v in lst]
