@@ -113,6 +113,16 @@ def _find_ds_with_var(datasets, dsource, var, lev):
     return None, vname
 
 
+def _sanitize_streamplot_data(*arrays):
+    """Replace NaN/inf values with 0 so matplotlib streamplot does not hang.
+
+    matplotlib.streamplot enters an infinite loop when the velocity field
+    contains NaN or inf values.  NCL's gsn_csm_streamline handled missing
+    values natively, but the Python translation must sanitize explicitly.
+    """
+    return tuple(np.nan_to_num(a, nan=0.0, posinf=0.0, neginf=0.0) for a in arrays)
+
+
 def _lev_ns_from_ds(ds, dname):
     """Read a vertical coordinate and return a SimpleNamespace for gplot_func readers."""
     arr = ds[dname].values.astype(float)
@@ -1194,9 +1204,11 @@ def main():  # noqa: C901
                                     skw["color"] = "black"
                                 if DOMAIN in NSTDMN:
                                     skw["color"] = "black"
+                                u2, v2 = _sanitize_streamplot_data(
+                                    UOv2_ns.data[::zs, ::zs],
+                                    VOv2_ns.data[::zs, ::zs])
                                 ax.streamplot(lon_arr[::zs], lat_arr[::zs],
-                                              UOv2_ns.data[::zs, ::zs],
-                                              VOv2_ns.data[::zs, ::zs], **skw)
+                                              u2, v2, **skw)
                         except Exception as e:
                             print(f"WARNING: OV2 streamline failed: {e}")
 
@@ -1226,9 +1238,11 @@ def main():  # noqa: C901
                                     skw25["color"] = "black"
                                 if DOMAIN in NSTDMN:
                                     skw25.update({"color": "lightgrey", "linewidth": 2.0})
+                                u25, v25 = _sanitize_streamplot_data(
+                                    UOv25_ns.data[::zs, ::zs],
+                                    VOv25_ns.data[::zs, ::zs])
                                 ax.streamplot(lon_arr[::zs], lat_arr[::zs],
-                                              UOv25_ns.data[::zs, ::zs],
-                                              VOv25_ns.data[::zs, ::zs], **skw25)
+                                              u25, v25, **skw25)
                         except Exception as e:
                             print(f"WARNING: OV25 streamline failed: {e}")
 
