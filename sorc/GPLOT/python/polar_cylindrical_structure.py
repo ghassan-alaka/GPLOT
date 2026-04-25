@@ -964,6 +964,11 @@ def _compute_tilt(pressure, vort, pressure_p_mean, vort_p_mean,
   center_y_pressure   = np.ones(zsize) * np.nan
   center_lon_pressure = np.ones(zsize) * np.nan
   center_lat_pressure = np.ones(zsize) * np.nan
+  # Per-level lon/lat for the Fischer (2023) circulation center.
+  # Filled directly from recenter_tc returns below; remain NaN aloft if
+  # the cascade never runs (e.g. vortex_depth_vort < 5 km).
+  center_lon_vort     = np.ones(zsize) * np.nan
+  center_lat_vort     = np.ones(zsize) * np.nan
 
   # Default tilt metrics (filled below if vortex_depth_vort deep enough)
   tiltmag_deep_pressure = np.nan
@@ -1016,6 +1021,10 @@ def _compute_tilt(pressure, vort, pressure_p_mean, vort_p_mean,
       xx = int(np.argmin(np.abs(lon - tc_lon)))
       center_indices_vort[k, 0] = yy
       center_indices_vort[k, 1] = xx
+      # Save the actual (unsnapped) Fischer center lon/lat for downstream
+      # analysis — finer than the index-snapped value at line above.
+      center_lon_vort[k] = float(tc_lon)
+      center_lat_vort[k] = float(tc_lat)
       guess_lon, guess_lat = float(tc_lon), float(tc_lat)
     _rec_finish = time.perf_counter()
     print(f'MSG: recenter_tc vortex center cascade ({nz_pc} levels): {_rec_finish-_rec_start:.2f} s')
@@ -1091,6 +1100,7 @@ def _compute_tilt(pressure, vort, pressure_p_mean, vort_p_mean,
     'center_x_vort': center_x_vort, 'center_y_vort': center_y_vort,
     'center_x_pressure': center_x_pressure, 'center_y_pressure': center_y_pressure,
     'center_lon_pressure': center_lon_pressure, 'center_lat_pressure': center_lat_pressure,
+    'center_lon_vort': center_lon_vort, 'center_lat_vort': center_lat_vort,
     'tiltmag_deep_pressure': tiltmag_deep_pressure, 'tiltdir_deep_pressure': tiltdir_deep_pressure,
     'tiltmag_deep_vort': tiltmag_deep_vort, 'tiltdir_deep_vort': tiltdir_deep_vort,
     'tiltmag_mid_pressure': tiltmag_mid_pressure, 'tiltdir_mid_pressure': tiltdir_mid_pressure,
@@ -1382,7 +1392,9 @@ def _write_netcdf(ODIR, LONGSID, forecastinit, FHR,
                   vortex_depth_vt_dynamic, vortex_depth_vt_static,
                   slope_rmw_1, slope_rmw_2, alpha, rossby,
                   temp_anomaly_max, height_temp_anomaly_max,
-                  temp_p_anomaly, anomaly_extent, temp_p_anomaly_max):
+                  temp_p_anomaly, anomaly_extent, temp_p_anomaly_max,
+                  center_lon_pressure=None, center_lat_pressure=None,
+                  center_lon_vort=None, center_lat_vort=None):
   """Write the optional azimuthal-mean NetCDF output file (F-1.13).
 
   Session F decomposition: pure I/O extraction. No numerical changes.
@@ -1460,6 +1472,24 @@ def _write_netcdf(ODIR, LONGSID, forecastinit, FHR,
   anomaly_max_write = ds.createVariable('warm_core_max','f4',('zdim'))
   anomaly_max_write.units = 'degC'
 
+  # Per-level storm-center cascade (post-Session-F enrichment).
+  # Pressure centers come from the inline masked-argmin (legacy path A,
+  # bit-exact w/ centroid.so sign=-1). Vort centers come from the Fischer
+  # (2023) recenter_tc weighted-circulation finder. NaN at levels where
+  # the cascade did not converge or vortex_depth_vort < 5/10 km.
+  center_lon_pressure_write = ds.createVariable('center_lon_pressure','f4',('zdim',))
+  center_lon_pressure_write.units = 'degrees_east'
+  center_lon_pressure_write.long_name = 'longitude of pressure-min center per level'
+  center_lat_pressure_write = ds.createVariable('center_lat_pressure','f4',('zdim',))
+  center_lat_pressure_write.units = 'degrees_north'
+  center_lat_pressure_write.long_name = 'latitude of pressure-min center per level'
+  center_lon_vort_write = ds.createVariable('center_lon_vort','f4',('zdim',))
+  center_lon_vort_write.units = 'degrees_east'
+  center_lon_vort_write.long_name = 'longitude of weighted-circulation center per level (Fischer 2023)'
+  center_lat_vort_write = ds.createVariable('center_lat_vort','f4',('zdim',))
+  center_lat_vort_write.units = 'degrees_north'
+  center_lat_vort_write.long_name = 'latitude of weighted-circulation center per level (Fischer 2023)'
+
   radius_write[:] = r
   height_write[:] = heightlevs
   vt_write[:] = vt_p
@@ -1492,6 +1522,23 @@ def _write_netcdf(ODIR, LONGSID, forecastinit, FHR,
   anomaly_write[temp_p_anomaly.shape[0]:,:] = np.nan
   anomaly_extent_write[:] = anomaly_extent
   anomaly_max_write[:] = temp_p_anomaly_max
+
+  # Per-level center cascade — fall back to NaN-filled (zsize,) array if a
+  # caller from older code paths passed None (defensive; current main()
+  # always provides them from _compute_tilt's return dict).
+  zsize_nc = np.shape(heightlevs)[0]
+  if center_lon_pressure is None:
+    center_lon_pressure = np.full(zsize_nc, np.nan)
+  if center_lat_pressure is None:
+    center_lat_pressure = np.full(zsize_nc, np.nan)
+  if center_lon_vort is None:
+    center_lon_vort = np.full(zsize_nc, np.nan)
+  if center_lat_vort is None:
+    center_lat_vort = np.full(zsize_nc, np.nan)
+  center_lon_pressure_write[:] = center_lon_pressure
+  center_lat_pressure_write[:] = center_lat_pressure
+  center_lon_vort_write[:]     = center_lon_vort
+  center_lat_vort_write[:]     = center_lat_vort
 
   ds.close()
 
@@ -2699,6 +2746,10 @@ def main():
           slope_rmw_1, slope_rmw_2, alpha, rossby,
           temp_anomaly_max, height_temp_anomaly_max,
           temp_p_anomaly, anomaly_extent, temp_p_anomaly_max,
+          center_lon_pressure=tilt['center_lon_pressure'],
+          center_lat_pressure=tilt['center_lat_pressure'],
+          center_lon_vort=tilt['center_lon_vort'],
+          center_lat_vort=tilt['center_lat_vort'],
         )
 
       #############################################################################################################################################
