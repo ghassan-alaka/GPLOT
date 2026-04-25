@@ -38,75 +38,27 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 4. Check/Build custom Python modules
-if [ ! -f ${GPLOT_DIR}/sorc/GPLOT/python/modules/build.done ]; then
-    cd ${GPLOT_DIR}/sorc/GPLOT/python
-    python -c "import modules.centroid"
-    if [ "$?" == "1" ]; then
-        cd ${GPLOT_DIR}/sorc/GPLOT/python/modules
-        python -m numpy.f2py -c ${GPLOT_DIR}/sorc/GPLOT/fortran/centroid.f90 -m centroid
-        if [ "$?" == "0" ]; then
-            echo "done" > ${GPLOT_DIR}/sorc/GPLOT/python/modules/build.done
-        fi
-    fi
-fi
+# 4. (Session E) The legacy centroid.so Fortran f2py build block was removed.
+#    polar_cylindrical_structure.py now uses the pure-Python Fischer (2023)
+#    recenter_tc finder plus a numpy masked-argmin fallback for pressure
+#    centers, so no compiled extension needs to be (re)built here.
 
-# 5. Build list in input arguments for Python
+# 5. Build list of input arguments for Python (argparse-style --flags)
 PYTHON_ARGS=()
-if [ ! -z "$IDATE" ]; then
-    PYTHON_ARGS+=("${IDATE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$SID" ]; then
-    PYTHON_ARGS+=("${SID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$DOMAIN" ]; then
-    PYTHON_ARGS+=("${DOMAIN}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$TIER" ]; then
-    PYTHON_ARGS+=("${TIER}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$ENSID" ]; then
-    PYTHON_ARGS+=("${ENSID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$FORCE" ]; then
-    PYTHON_ARGS+=("${FORCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RESOLUTION" ]; then
-    PYTHON_ARGS+=("${RESOLUTION}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RMAX" ]; then
-    PYTHON_ARGS+=("${RMAX}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$LEVS" ]; then
-    PYTHON_ARGS+=("${LEVS}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$NMLIST" ]; then
-    PYTHON_ARGS+=("${NMLIST}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
+PYTHON_ARGS+=("--idate"      "${IDATE:-MISSING}")
+PYTHON_ARGS+=("--sid"        "${SID:-MISSING}")
+PYTHON_ARGS+=("--domain"     "${DOMAIN:-MISSING}")
+PYTHON_ARGS+=("--tier"       "${TIER:-MISSING}")
+PYTHON_ARGS+=("--ensid"      "${ENSID:-MISSING}")
+PYTHON_ARGS+=("--force"      "${FORCE:-MISSING}")
+PYTHON_ARGS+=("--resolution" "${RESOLUTION:-MISSING}")
+PYTHON_ARGS+=("--rmax"       "${RMAX:-MISSING}")
+PYTHON_ARGS+=("--levs"       "${LEVS:-MISSING}")
+PYTHON_ARGS+=("--master-nml" "${NMLIST:-MISSING}")
 
 # 6. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
+python ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE}
 
 wait
 
