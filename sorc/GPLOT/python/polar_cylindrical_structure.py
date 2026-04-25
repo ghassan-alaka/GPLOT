@@ -32,9 +32,7 @@ import modules.skewTmodelTCpolar as skewTmodelTCpolar
 import modules.shearandrhplot as shearandrhplot
 import modules.plotting as plotting
 # F-4: modules.interp + modules.multiprocess merged into gplot_utils.polar_interp.
-# Legacy aliases preserved below so call sites don't have to change.
-from gplot_utils import polar_interp as mproc  # noqa: N813 (legacy alias)
-from gplot_utils import polar_interp as interp  # noqa: N813 (legacy alias)
+from gplot_utils import polar_interp
 import modules.tdr_tc_centering_with_example as tdrcenter
 # Session E: replaces the legacy centroid.cpython-*.so Fortran extension. The
 # Fischer (2023) / 2025 optimized weighted-circulation center finder lives in
@@ -324,7 +322,7 @@ def _interp_to_height(uwind, vwind, wwind, dbz, hgt, temp, q, rh, rho, levs,
   zsize = np.shape(heightlevs)[0]  # Change zsize here
 
   varInList = [uwindT, vwindT, wwindT, dbzT, tempT, qT, rhT, pressureT]
-  HeightData = mproc.multiprocess_height_vars(
+  HeightData = polar_interp.multiprocess_height_vars(
       hgt=hgtT, varList=varInList, levels=heightlevs)
   uwind_h, vwind_h, wwind_h = HeightData[0, :, :, :], HeightData[1, :, :, :], HeightData[2, :, :, :]
   dbz_h,   temp_h,  q_h     = HeightData[3, :, :, :], HeightData[4, :, :, :], HeightData[5, :, :, :]
@@ -343,7 +341,7 @@ def _interp_to_height(uwind, vwind, wwind, dbz, hgt, temp, q, rh, rho, levs,
   heightlevs_pbl = np.linspace(0, 3000, 31)
   zsize_pbl = np.shape(heightlevs_pbl)[0]
   varList_pbl = [uwindT, vwindT, rhoT, pressureT]
-  HeightData = mproc.multiprocess_height_vars(
+  HeightData = polar_interp.multiprocess_height_vars(
       hgt=hgtT, varList=varList_pbl, levels=heightlevs_pbl)
   uwind_pbl, vwind_pbl = HeightData[0, :, :, :], HeightData[1, :, :, :]
   rho_pbl,   pressure_pbl = HeightData[2, :, :, :], HeightData[3, :, :, :]
@@ -416,7 +414,7 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
              np.transpose(q,       (2, 0, 1)),
              np.transpose(rh,      (2, 0, 1)),
              np.transpose(pressure,(2, 0, 1))]
-  PolarData = mproc.multiprocess_polar_vars(
+  PolarData = polar_interp.multiprocess_polar_vars(
       x_sr, y_sr, XI, YI, varList=varList, levels=heightlevs)
   u_p, v_p, w_p       = PolarData[0, :, :, :], PolarData[1, :, :, :], PolarData[2, :, :, :]
   dbz_p, temp_p, q_p  = PolarData[3, :, :, :], PolarData[4, :, :, :], PolarData[5, :, :, :]
