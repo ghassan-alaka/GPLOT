@@ -2181,11 +2181,15 @@ def main():
         dt = (float(FHR)-float(FHR_tm1))*3600
         dx = (centerlon-centerlon_tm1)*111.1e3*np.cos(centerlat*3.14159/180)
         dy = (centerlat-centerlat_tm1)*111.1e3
+      umotion = dx/dt
+      vmotion = dy/dt
     else:
-      dt, dx, dy = np.nan, np.nan, np.nan
-
-    umotion = dx/dt
-    vmotion = dy/dt
+      # At FHR=0 there is no prior ATCF row, so storm motion is undefined.
+      # Use zero motion (storm-relative == ground-relative) so downstream
+      # consumers (recenter_tc, vorticity-tendency advection terms) get
+      # finite winds instead of NaN-poisoned slabs.
+      umotion = 0.0
+      vmotion = 0.0
     #print('MSG: fhr = ',FHR)
     #print('MSG: dt = ',dt)
     print(f'MSG: umotion,vmotion = {umotion:.2f},{vmotion:.2f}')
@@ -2889,13 +2893,18 @@ def main():
     levs_vort_budget = np.linspace(-40,40,41,endpoint=True)
     norm_vort_budget = colors.BoundaryNorm(levs_vort_budget,256)
 
+    # Plot display radius (km). Data still extend to the namelist `rmax`
+    # (typically 600 km), but most plots zoom to this inner ring for legibility.
+    # Radial-height plots use ticks every 25 km; wavenumber plots use every 50 km.
+    rmax_plot = 200.0
+
     # FIGURE 1: Azimuthal Mean Radial Wind
     if do_ur_mean == 'Y':
       fig1 = plt.figure(figsize=(20.5, 10.5))
       ax1 = fig1.add_subplot(1, 1, 1)
       co1 = ax1.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_mean,1)), levs_ur, \
             cmap=colormap_ur, norm=norm_ur, extend='both')
-      ax1 = plotting.axes_radhgt(ax1, xmax=rmax)
+      ax1 = plotting.axes_radhgt(ax1, xmax=rmax_plot, nx=9)
       cbar1 = plt.colorbar(co1, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar1.ax.tick_params(labelsize=24)
       ax1.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2917,7 +2926,7 @@ def main():
       ax2 = fig2.add_subplot(1, 1, 1)
       co2 = ax2.contourf(r, heightlevs/1000, np.flipud(np.rot90(vt_p_mean, 1)), levs_vt, \
              cmap=colormap_vt, norm=norm_vt, extend='max')
-      ax2 = plotting.axes_radhgt(ax2, xmax=rmax)
+      ax2 = plotting.axes_radhgt(ax2, xmax=rmax_plot, nx=9)
       cbar2 = plt.colorbar(co2, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
       cbar2.ax.tick_params(labelsize=24)
       ax2.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2939,7 +2948,7 @@ def main():
       ax3 = fig3.add_subplot(1, 1, 1)
       co3 = ax3.contourf(r, heightlevs/1000, np.flipud(np.rot90(w_p_mean, 1)), levs_w, \
              cmap=colormap_w, norm=norm_w, extend='both')
-      ax3 = plotting.axes_radhgt(ax3, xmax=rmax)
+      ax3 = plotting.axes_radhgt(ax3, xmax=rmax_plot, nx=9)
       cbar3 = plt.colorbar(co3, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
       cbar3.ax.tick_params(labelsize=24)
       ax3.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2961,7 +2970,7 @@ def main():
       ax4 = fig4.add_subplot(1, 1, 1)
       co4 = ax4.contourf(r, heightlevs/1000, np.flipud(np.rot90(dbz_p_mean, 1)), levs_dbz, \
              cmap=colormap_dbz, norm=norm_dbz, extend='max')
-      ax4 = plotting.axes_radhgt(ax4, xmax=rmax)
+      ax4 = plotting.axes_radhgt(ax4, xmax=rmax_plot, nx=9)
       cbar4 = plt.colorbar(co4, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
       cbar4.ax.tick_params(labelsize=24)
       ax4.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2983,7 +2992,7 @@ def main():
       ax5 = fig5.add_subplot(1, 1, 1)
       co5 = ax5.contourf(r, heightlevs/1000, np.flipud(np.rot90(rh_p_mean, 1)), levs_rh, \
              cmap=colormap_rh, norm=norm_rh, extend='max')
-      ax5 = plotting.axes_radhgt(ax5, xmax=rmax)
+      ax5 = plotting.axes_radhgt(ax5, xmax=rmax_plot, nx=9)
       cbar5 = plt.colorbar(co5, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
       cbar5.ax.tick_params(labelsize=24)
       ax5.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -3007,11 +3016,11 @@ def main():
              cmap=colormap_dbz, norm=norm_dbz, extend='max')
       ax6.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_upshear_mean, 1)), levs_dbz, \
              cmap=colormap_dbz, norm=norm_dbz, extend='max')
-      ax6 = plotting.axes_radhgt(ax6, xmax=rmax, xmin=-rmax)
+      ax6 = plotting.axes_radhgt(ax6, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar6 = plt.colorbar(co6, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
       cbar6.ax.tick_params(labelsize=24)
-      ax6.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax6.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax6.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax6.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax6.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear Reflectivity ($dBZ$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3032,11 +3041,11 @@ def main():
       co7 = ax7.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_downshear_mean, 1)), levs_ur, \
              cmap=colormap_ur, norm=norm_ur, extend='both')
       ax7.contourf(-r,heightlevs/1000,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
-      ax7 = plotting.axes_radhgt(ax7, xmax=rmax, xmin=-rmax)
+      ax7 = plotting.axes_radhgt(ax7, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar7 = plt.colorbar(co7, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar7.ax.tick_params(labelsize=24)
-      ax7.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax7.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax7.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax7.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax7.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear Radial Wind ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3058,11 +3067,11 @@ def main():
              cmap=colormap_w, norm=norm_w, extend='both')
       ax8.contourf(-r, heightlevs/1000, np.flipud(np.rot90(w_p_upshear_mean, 1)), levs_w, \
              cmap=colormap_w, norm=norm_w, extend='both')
-      ax8 = plotting.axes_radhgt(ax8, xmax=rmax, xmin=-rmax)
+      ax8 = plotting.axes_radhgt(ax8, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar8 = plt.colorbar(co8, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
       cbar8.ax.tick_params(labelsize=24)
-      ax8.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax8.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax8.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax8.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax8.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear W ($m\ s^{-1}$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3084,11 +3093,11 @@ def main():
              cmap=colormap_rh, norm=norm_rh, extend='both')
       ax9.contourf(-r, heightlevs/1000, np.flipud(np.rot90(rh_p_upshear_mean, 1)), levs_rh, \
              cmap=colormap_rh, norm=norm_rh, extend='both')
-      ax9 = plotting.axes_radhgt(ax9, xmax=rmax, xmin=-rmax)
+      ax9 = plotting.axes_radhgt(ax9, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar9 = plt.colorbar(co9, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
       cbar9.ax.tick_params(labelsize=24)
-      ax9.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax9.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax9.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax9.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Downshear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax9.set_title(f'{EXPT_TITLE.strip()}\n' + \
               r'Along-Shear RH ($\%$, Shading)' + \
               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3110,11 +3119,11 @@ def main():
              cmap=colormap_dbz, norm=norm_dbz, extend='both')
       ax10.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_leftshear_mean, 1)), levs_dbz, \
              cmap=colormap_dbz, norm=norm_dbz, extend='both')
-      ax10 = plotting.axes_radhgt(ax10, xmax=rmax, xmin=-rmax)
+      ax10 = plotting.axes_radhgt(ax10, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar10 = plt.colorbar(co10, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
       cbar10.ax.tick_params(labelsize=24)
-      ax10.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax10.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax10.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax10.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax10.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear Reflectivity ($dBZ$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3136,11 +3145,11 @@ def main():
              cmap=colormap_ur, norm=norm_ur, extend='both')
       ax11.contourf(-r, heightlevs/1000, np.flipud(np.rot90(ur_p_leftshear_mean, 1)), levs_ur, \
              cmap=colormap_ur, norm=norm_ur, extend='both')
-      ax11 = plotting.axes_radhgt(ax11, xmax=rmax, xmin=-rmax)
+      ax11 = plotting.axes_radhgt(ax11, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar11 = plt.colorbar(co11, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar11.ax.tick_params(labelsize=24)
-      ax11.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax11.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax11.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax11.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax11.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear Radial Wind ($m\ s^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3162,11 +3171,11 @@ def main():
              cmap=colormap_w, norm=norm_w, extend='both')
       ax12.contourf(-r, heightlevs/1000, np.flipud(np.rot90(w_p_leftshear_mean, 1)), levs_w, \
              cmap=colormap_w, norm=norm_w, extend='both')
-      ax12 = plotting.axes_radhgt(ax12, xmax=rmax, xmin=-rmax)
+      ax12 = plotting.axes_radhgt(ax12, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar12 = plt.colorbar(co12, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
       cbar12.ax.tick_params(labelsize=24)
-      ax12.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax12.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax12.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax12.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax12.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear W ($m\ s^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3188,11 +3197,11 @@ def main():
              cmap=colormap_rh, norm=norm_rh, extend='both')
       ax13.contourf(-r, heightlevs/1000, np.flipud(np.rot90(rh_p_leftshear_mean, 1)), levs_rh, \
              cmap=colormap_rh, norm=norm_rh, extend='both')
-      ax13 = plotting.axes_radhgt(ax13, xmax=rmax, xmin=-rmax)
+      ax13 = plotting.axes_radhgt(ax13, xmax=rmax_plot, xmin=-rmax_plot, nx=9)
       cbar13 = plt.colorbar(co13, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
       cbar13.ax.tick_params(labelsize=24)
-      ax13.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
-      ax13.text(rmax-0.05*(2*rmax), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
+      ax13.text(-rmax_plot+0.05*(2*rmax_plot), 18-(0.05*18), 'Left of shear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
+      ax13.text(rmax_plot-0.05*(2*rmax_plot), 18-(0.05*18), 'Right of shear', fontsize=22, horizontalalignment='right', style='italic', weight='bold')
       ax13.set_title(f'{EXPT_TITLE.strip()}\n' + \
                r'Across-Shear RH ($\%$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
@@ -3215,52 +3224,52 @@ def main():
       ax14a = fig14.add_subplot(2, 2, 1)
       co14a = ax14a.contourf(XI, YI, dbz5_p[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
-      ax14a = plotting.axes_wavenumber(ax14a, rmax/2, -rmax/2)
+      ax14a = plotting.axes_wavenumber(ax14a, rmax_plot, -rmax_plot, nx=9)
       cbar14a = plt.colorbar(co14a, ticks=ticks14)
       cbar14a.ax.tick_params(labelsize=18)
       ax14a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax14a.set_title(f'{EXPT_TITLE.strip()}\n' + \
           r'WV#0,1,2 5-km Reflectivity ($dBZ$, Shading)' + \
           f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
           fontsize=20, weight='bold', loc='left')
-      ax14a.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
+      ax14a.text(0,rmax_plot-25,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel B
       ax14b = fig14.add_subplot(2, 2, 2)
       co14b = ax14b.contourf(XI, YI, dbz5_p_w0[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
-      ax14b = plotting.axes_wavenumber(ax14b, rmax/2, -rmax/2)
+      ax14b = plotting.axes_wavenumber(ax14b, rmax_plot, -rmax_plot, nx=9)
       cbar14b = plt.colorbar(co14b, ticks=ticks14)
       cbar14b.ax.tick_params(labelsize=18)
       ax14b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax14b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa' + \
           f'\nShear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\circ$', \
           fontsize=20, color='brown', loc='right')
-      ax14b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
+      ax14b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel C
       ax14c = fig14.add_subplot(2, 2, 3)
       co14c = ax14c.contourf(XI, YI, dbz5_p_w1[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
-      ax14c = plotting.axes_wavenumber(ax14c, rmax/2, -rmax/2)
+      ax14c = plotting.axes_wavenumber(ax14c, rmax_plot, -rmax_plot, nx=9)
       cbar14c = plt.colorbar(co14c, ticks=ticks14)
       cbar14c.ax.tick_params(labelsize=18)
       ax14c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax14c.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax14c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel D
       ax14d = fig14.add_subplot(2, 2, 4)
       co14d = ax14d.contourf(XI, YI, dbz5_p_w2[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
-      ax14d = plotting.axes_wavenumber(ax14d, rmax/2, -rmax/2)
+      ax14d = plotting.axes_wavenumber(ax14d, rmax_plot, -rmax_plot, nx=9)
       cbar14d = plt.colorbar(co14d, ticks=ticks14)
       cbar14d.ax.tick_params(labelsize=18)
       ax14d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax14d.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax14d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.dbz5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
@@ -3281,52 +3290,52 @@ def main():
       ax15a = fig15.add_subplot(2, 2, 1)
       co15a = ax15a.contourf(XI, YI, rh5_p[:,:], levs_rh, \
             cmap=colormap_rh, norm=norm_rh, extend='max')
-      ax15a = plotting.axes_wavenumber(ax15a, rmax/2, -rmax/2)
+      ax15a = plotting.axes_wavenumber(ax15a, rmax_plot, -rmax_plot, nx=9)
       cbar15a = plt.colorbar(co15a, ticks=ticks15)
       cbar15a.ax.tick_params(labelsize=18)
       ax15a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax15a.set_title(f'{EXPT_TITLE.strip()}\n' + \
           r'WV#0,1,2 5-km RH ($\%$, Shading)' + \
           f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
           fontsize=20, weight='bold', loc='left')
-      ax15a.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
+      ax15a.text(0,rmax_plot-25,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel B
       ax15b = fig15.add_subplot(2, 2, 2)
       co15b = ax15b.contourf(XI, YI, rh5_p_w0[:,:], levs_rh, \
             cmap=colormap_rh, norm=norm_rh, extend='max')
-      ax15b = plotting.axes_wavenumber(ax15b, rmax/2, -rmax/2)
+      ax15b = plotting.axes_wavenumber(ax15b, rmax_plot, -rmax_plot, nx=9)
       cbar15b = plt.colorbar(co15b, ticks=ticks15)
       cbar15b.ax.tick_params(labelsize=18)
       ax15b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax15b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa' + \
           f'\nShear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\circ$', \
           fontsize=20, color='brown', loc='right')
-      ax15b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
+      ax15b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel C
       ax15c = fig15.add_subplot(2, 2, 3)
       co15c = ax15c.contourf(XI, YI, rh5_p_w1[:,:], levs_rh, \
             cmap=colormap_rh, norm=norm_rh, extend='max')
-      ax15c = plotting.axes_wavenumber(ax15c, rmax/2, -rmax/2)
+      ax15c = plotting.axes_wavenumber(ax15c, rmax_plot, -rmax_plot, nx=9)
       cbar15c = plt.colorbar(co15c, ticks=ticks15)
       cbar15c.ax.tick_params(labelsize=18)
       ax15c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax15c.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax15c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel D
       ax15d = fig15.add_subplot(2, 2, 4)
       co15d = ax15d.contourf(XI, YI, rh5_p_w2[:,:], levs_rh, \
             cmap=colormap_rh, norm=norm_rh, extend='max')
-      ax15d = plotting.axes_wavenumber(ax15d, rmax/2, -rmax/2)
+      ax15d = plotting.axes_wavenumber(ax15d, rmax_plot, -rmax_plot, nx=9)
       cbar15d = plt.colorbar(co15d, ticks=ticks15)
       cbar15d.ax.tick_params(labelsize=18)
       ax15d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax15d.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax15d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.rh5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
@@ -3346,52 +3355,52 @@ def main():
       ax16a = fig16.add_subplot(2, 2, 1)
       co16a = ax16a.contourf(XI, YI, vt10_p[:,:], levs_vt, \
             cmap=colormap_vt, norm=norm_vt, extend='max')
-      ax16a = plotting.axes_wavenumber(ax16a, rmax/2, -rmax/2)
+      ax16a = plotting.axes_wavenumber(ax16a, rmax_plot, -rmax_plot, nx=9)
       cbar16a = plt.colorbar(co16a, ticks=ticks16)
       cbar16a.ax.tick_params(labelsize=18)
       ax16a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax16a.set_title(f'{EXPT_TITLE.strip()}\n' +\
           r'WV#0,1,2 10-m Tangential Wind ($m\ s^{-1}$, Shading)' + \
           f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
           fontsize=20, weight='bold', loc='left')
-      ax16a.text(0,rmax/2-50,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
+      ax16a.text(0,rmax_plot-25,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel B
       ax16b = fig16.add_subplot(2, 2, 2)
       co16b = ax16b.contourf(XI, YI, vt10_p_w0[:,:], levs_vt, \
             cmap=colormap_vt, norm=norm_vt, extend='max')
-      ax16b = plotting.axes_wavenumber(ax16b, rmax/2, -rmax/2)
+      ax16b = plotting.axes_wavenumber(ax16b, rmax_plot, -rmax_plot, nx=9)
       cbar16b = plt.colorbar(co16b, ticks=ticks16)
       cbar16b.ax.tick_params(labelsize=18)
       ax16b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax16b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n' + \
           f'Shear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\circ$', \
           fontsize=20, color='brown', loc='right')
-      ax16b.text(0,rmax/2-50,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
+      ax16b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel C
       ax16c = fig16.add_subplot(2, 2, 3)
       co16c = ax16c.contourf(XI, YI, vt10_p_w1[:,:], levs_vt, \
             cmap=colormap_vt, norm=norm_vt, extend='max')
-      ax16c = plotting.axes_wavenumber(ax16c, rmax/2, -rmax/2)
+      ax16c = plotting.axes_wavenumber(ax16c, rmax_plot, -rmax_plot, nx=9)
       cbar16c = plt.colorbar(co16c, ticks=ticks16)
       cbar16c.ax.tick_params(labelsize=18)
       ax16c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax16c.text(0,rmax/2-50,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax16c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel D
       ax16d = fig16.add_subplot(2, 2, 4)
       co16d = ax16d.contourf(XI, YI, vt10_p_w2[:,:], levs_vt, \
             cmap=colormap_vt, norm=norm_vt, extend='max')
-      ax16d = plotting.axes_wavenumber(ax16d, rmax/2, -rmax/2)
+      ax16d = plotting.axes_wavenumber(ax16d, rmax_plot, -rmax_plot, nx=9)
       cbar16d = plt.colorbar(co16d, ticks=ticks16)
       cbar16d.ax.tick_params(labelsize=18)
       ax16d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
-          linewidth = 3, head_width=rmax/20, head_length=rmax/10, fc='k', ec='k')
-      ax16d.text(0,rmax/2-50,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax16d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.vt10_wavenumber.{forecastinit}.polar.f{FHR:03}'
@@ -3410,7 +3419,7 @@ def main():
       ax17 = fig17.add_subplot(1, 1, 1)
       co17 = ax17.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vt_tendency_mean_radial_flux*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-      ax17 = plotting.axes_radhgt(ax17, xmax=rmax, formatters=True)
+      ax17 = plotting.axes_radhgt(ax17, xmax=rmax_plot, nx=9, formatters=True)
       cbar17 = plt.colorbar(co17, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar17.ax.tick_params(labelsize=24)
       sc17 = ax17.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3431,7 +3440,7 @@ def main():
       ax18 = fig18.add_subplot(1, 1, 1)
       co18 = ax18.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vt_tendency_mean_vertical_advection*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-      ax18 = plotting.axes_radhgt(ax18, xmax=rmax, formatters=True)
+      ax18 = plotting.axes_radhgt(ax18, xmax=rmax_plot, nx=9, formatters=True)
       cbar18 = plt.colorbar(co18, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar18.ax.tick_params(labelsize=24)
       sc18 = ax18.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3452,7 +3461,7 @@ def main():
       ax19 = fig19.add_subplot(1, 1, 1)
       co19 = ax19.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vt_tendency_eddy_flux*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-      ax19 = plotting.axes_radhgt(ax19, xmax=rmax, formatters=True)
+      ax19 = plotting.axes_radhgt(ax19, xmax=rmax_plot, nx=9, formatters=True)
       cbar19 = plt.colorbar(co19, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar19.ax.tick_params(labelsize=24)
       sc19 = ax19.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3473,7 +3482,7 @@ def main():
       ax20 = fig20.add_subplot(1, 1, 1)
       co20 = ax20.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vt_tendency_vertical_eddy_advection*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-      ax20 = plotting.axes_radhgt(ax20, xmax=rmax, formatters=True)
+      ax20 = plotting.axes_radhgt(ax20, xmax=rmax_plot, nx=9, formatters=True)
       cbar20 = plt.colorbar(co20, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar20.ax.tick_params(labelsize=24)
       sc20 = ax20.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3494,7 +3503,7 @@ def main():
       ax21 = fig21.add_subplot(1, 1, 1)
       co21 = ax21.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vt_tendency_sum*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-      ax21 = plotting.axes_radhgt(ax21, xmax=rmax, formatters=True)
+      ax21 = plotting.axes_radhgt(ax21, xmax=rmax_plot, nx=9, formatters=True)
       cbar21 = plt.colorbar(co21, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar21.ax.tick_params(labelsize=24)
       sc21 = ax21.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3518,7 +3527,7 @@ def main():
       ax22 = fig22.add_subplot(1, 1, 1)
       co22 = ax22.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vort_tendency_horizontal_advection*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-      ax22 = plotting.axes_radhgt(ax22, xmax=rmax, formatters=True)
+      ax22 = plotting.axes_radhgt(ax22, xmax=rmax_plot, nx=9, formatters=True)
       cbar22 = plt.colorbar(co22, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar22.ax.tick_params(labelsize=24)
       sc22 = ax22.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3539,7 +3548,7 @@ def main():
       ax23 = fig23.add_subplot(1, 1, 1)
       co23 = ax23.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vort_tendency_vertical_advection*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-      ax23 = plotting.axes_radhgt(ax23, xmax=rmax, formatters=True)
+      ax23 = plotting.axes_radhgt(ax23, xmax=rmax_plot, nx=9, formatters=True)
       cbar23 = plt.colorbar(co23, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar23.ax.tick_params(labelsize=24)
       sc23 = ax23.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3560,7 +3569,7 @@ def main():
       ax24 = fig24.add_subplot(1, 1, 1)
       co24 = ax24.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vort_tendency_stretching_convergence*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-      ax24 = plotting.axes_radhgt(ax24, xmax=rmax, formatters=True)
+      ax24 = plotting.axes_radhgt(ax24, xmax=rmax_plot, nx=9, formatters=True)
       cbar24 = plt.colorbar(co24, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar24.ax.tick_params(labelsize=24)
       sc24 = ax24.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3581,7 +3590,7 @@ def main():
       ax25 = fig25.add_subplot(1, 1, 1)
       co25 = ax25.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vort_tendency_tilting*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-      ax25 = plotting.axes_radhgt(ax25, xmax=rmax, formatters=True)
+      ax25 = plotting.axes_radhgt(ax25, xmax=rmax_plot, nx=9, formatters=True)
       cbar25 = plt.colorbar(co25, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar25.ax.tick_params(labelsize=24)
       sc25 = ax25.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3602,7 +3611,7 @@ def main():
       ax26 = fig26.add_subplot(1, 1, 1)
       co26 = ax26.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vort_tendency_sum*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
-      ax26 = plotting.axes_radhgt(ax26, xmax=rmax, formatters=True)
+      ax26 = plotting.axes_radhgt(ax26, xmax=rmax_plot, nx=9, formatters=True)
       cbar26 = plt.colorbar(co26, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar26.ax.tick_params(labelsize=24)
       sc26 = ax26.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
@@ -3624,7 +3633,7 @@ def main():
       ax27 = fig27.add_subplot(1, 1, 1)
       co27 = ax27.contourf(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), levs_ur, \
                cmap=colormap_ur, norm=norm_ur, extend='both')
-      ax27 = plotting.axes_radhgt(ax27, xmax=rmax, ymax=3000, ny=7, yunit='m', formatters=True)
+      ax27 = plotting.axes_radhgt(ax27, xmax=rmax_plot, nx=9, ymax=3000, ny=7, yunit='m', formatters=True)
       cbar27 = plt.colorbar(co27, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar27.ax.tick_params(labelsize=24)
       co27b = ax27.contour(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), \

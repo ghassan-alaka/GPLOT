@@ -10,13 +10,14 @@ import numpy as np
 import os
 
 ##############################
-def axes_wavenumber(ax, xmax, xmin):
+def axes_wavenumber(ax, xmax, xmin, nx=7):
 	"""Set up common axes attributes for wavenumber graphics.
 	@param ax:   the axes object
 	@param xmax: max value of both x/y axes
 	@param xmin: min value of both x/y axes
+	@kwarg nx:   number of ticks along each axis (default 7)
 	"""
-	ticks = np.linspace(xmin,xmax,7)
+	ticks = np.linspace(xmin,xmax,nx)
 
 	ax.set_xlim(xmin,xmax)
 	ax.set_xticks(ticks)
