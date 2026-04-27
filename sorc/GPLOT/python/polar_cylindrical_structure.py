@@ -17,6 +17,25 @@ import matplotlib           # The plotting routines
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt        # Command for the plotting
 import matplotlib.colors as colors      # Command to do some colorbar stuff
+
+# matplotlib >= 3.10 hardens Artist.remove() to raise NotImplementedError
+# when self.figure is None. That trips Colorbar._do_extends() in figures
+# where two contourf collections with extend='both' share one colorbar
+# (e.g. our along-/across-shear hovmoller pairs at +r and -r): the
+# extend-cap patch from the first contourf is already detached when the
+# colorbar redraws on the second contourf's `changed` callback, and
+# remove() blows up. The semantically-correct response in that case is a
+# no-op (the artist is already removed), so install a tolerant wrapper.
+import matplotlib.artist as _mpl_artist
+_GPLOT_ORIG_ARTIST_REMOVE = _mpl_artist.Artist.remove
+def _gplot_tolerant_artist_remove(self):
+  try:
+    _GPLOT_ORIG_ARTIST_REMOVE(self)
+  except NotImplementedError:
+    # Already removed (figure attr is None); silent no-op preserves
+    # the matplotlib < 3.10 behaviour the figure code was written for.
+    pass
+_mpl_artist.Artist.remove = _gplot_tolerant_artist_remove
 #from matplotlib.ticker import ScalarFormatter    # Used to change the log-y-axis ticks
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy            # Used for interpolation to polar coordinates
@@ -40,7 +59,8 @@ import modules.tdr_tc_centering_with_example as tdrcenter
 # location with optional numba JIT acceleration.
 from modules.tc_center_finding_speed_up import recenter_tc as fischer_recenter_tc
 import concurrent.futures
-from scipy.interpolate import interp2d
+# scipy.interpolate.interp2d was removed in SciPy 1.14. The few legacy call
+# sites here are replaced inline with RegularGridInterpolator.
 import netCDF4
 from netCDF4 import Dataset
 
@@ -120,11 +140,6 @@ def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
       ``lat``, ``lon`` (1D), ``lon_full``/``lat_full`` (2D meshgrid),
       ``lev1d`` (hPa, 1D), ``z`` (alias of ``lev1d`` as float64),
       ``levs`` (hPa, broadcast to 3D), ``ny``, ``nx``, ``nz_eff``
-    Flags:
-      ``do_research_mode_override``: ``False`` if ``do_dbz`` was False
-      (signalling the caller to disable research-mode outputs), else
-      ``None`` (no override).
-
   Returns ``None`` if ``grib_reader.open_grib2()`` fails — caller should
   ``continue`` to skip this FHR. Raises ``RuntimeError`` if a required
   variable is missing from the file (matches legacy behaviour).
@@ -177,13 +192,15 @@ def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
   hgt = hgt_dam * 10.0  # dam -> m
   temp, _, _, _ = _fetch3d('T')
 
-  do_research_mode_override = None
   if do_dbz:
     dbz, _, _, _ = _fetch3d('REFL')
     print('MSG: Done reading: dbz, hgt, temp')
   else:
+    # 3D reflectivity not available in the file (e.g. some HAFS analysis
+    # times only carry 2D refc). Fill with NaN so dbz-derived metrics
+    # (Steiner classifier, dbz-wavenumber, symmetry) gracefully degrade
+    # to NaN in the CSV instead of aborting the entire metric pass.
     dbz = np.ones_like(hgt) * np.nan
-    do_research_mode_override = False
     print('MSG: Done reading: hgt, temp')
     print('WARNING: Skipped reading dbz because DO_DBZ=False')
 
@@ -276,7 +293,6 @@ def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
       'lat': lat, 'lon': lon, 'lon_full': lon_full, 'lat_full': lat_full,
       'lev1d': lev1d, 'z': z, 'levs': levs,
       'ny': ny, 'nx': nx, 'nz_eff': nz_eff,
-      'do_research_mode_override': do_research_mode_override,
   }
 
 
@@ -1115,7 +1131,6 @@ def _compute_vort_tendency(uwind, vwind, vt_p, ur_p, w_p,
                            centerlat, XI, YI, zsize):
   """Compute vorticity + vt-budget tendency terms (mean radial flux, mean
   vertical advection, eddy flux, vertical eddy advection) on the polar grid.
-  Called only when DO_RESEARCH_MODE is on.
   """
   import metpy.calc as mpcalc
   from metpy.units import units
@@ -1174,7 +1189,9 @@ def _compute_vort_tendency(uwind, vwind, vt_p, ur_p, w_p,
   term3_vt_tendency_eddy_flux[0, :] = np.nan
 
   # Term 4: Vertical advection of eddy tangential momentum
-  d_vt_p_perturbation_dz = metpy.calc.first_derivative(vt_p_perturbation, axis=2, delta=500)
+  # np.array(...) strips metpy/pint units so downstream numpy ops
+  # (nanmean, flipud, rot90) accept the array.
+  d_vt_p_perturbation_dz = np.array(metpy.calc.first_derivative(vt_p_perturbation, axis=2, delta=500))
   vertical_eddy_advection_p = w_p_perturbation * d_vt_p_perturbation_dz
   with warnings.catch_warnings():
     warnings.filterwarnings(action='ignore', message='Mean of empty slice')
@@ -1605,19 +1622,15 @@ def main():
   figext  = '.png'
   figext2 = '.gif' if DO_CONVERTGIF else '.png'
 
-  DO_RESEARCH_MODE = nml.get('DO_RESEARCH_MODE', True)
-  if isinstance(DO_RESEARCH_MODE, str):
-    DO_RESEARCH_MODE = (DO_RESEARCH_MODE.strip() == 'True')
-  else:
-    DO_RESEARCH_MODE = bool(DO_RESEARCH_MODE)
-
+  # The legacy DO_RESEARCH_MODE namelist switch was removed: the polar
+  # module now always computes the full structure-statistics CSV +
+  # NetCDF + tendency / symmetry / wavenumber metrics. DBZ-derived
+  # entries gracefully NaN out when 3D reflectivity is unavailable.
   DO_DBZ = nml.get('DO_DBZ', True)
   if isinstance(DO_DBZ, str):
     DO_DBZ = (DO_DBZ.strip() == 'True')
   else:
     DO_DBZ = bool(DO_DBZ)
-
-  print(f'MSG: Research Mode? {str(DO_RESEARCH_MODE)}')
 
   # Legacy grads/ temp directory is no longer needed since the xarray+cfgrib
   # pipeline doesn't spawn g2ctl.pl / gribmap sidecars, but keep creating it
@@ -1830,10 +1843,26 @@ def main():
     ny          = raw['ny']
     nx          = raw['nx']
     nz_eff      = raw['nz_eff']
-    if raw['do_research_mode_override'] is not None:
-      DO_RESEARCH_MODE = raw['do_research_mode_override']
 
     #Get storm-centered data
+    # cfgrib may return lon in [-180,180] while ATCF centerlon is in [0,360]
+    # (or vice-versa). Normalize the data lon to match centerlon's convention
+    # before computing the storm-relative offset, otherwise lon_sr is off
+    # by 360 deg and x_sr ends up tens of thousands of km from the storm.
+    lon_data = np.asarray(lon, dtype=float)
+    if centerlon > 180.0 and lon_data.min() < 0.0:
+      lon_data = np.where(lon_data < 0.0, lon_data + 360.0, lon_data)
+    elif centerlon < 0.0 and lon_data.max() > 180.0:
+      lon_data = np.where(lon_data > 180.0, lon_data - 360.0, lon_data)
+    lon = lon_data
+    if 'lon_full' in raw and raw['lon_full'] is not None:
+      lf = np.asarray(raw['lon_full'], dtype=float)
+      if centerlon > 180.0 and lf.min() < 0.0:
+        lf = np.where(lf < 0.0, lf + 360.0, lf)
+      elif centerlon < 0.0 and lf.max() > 180.0:
+        lf = np.where(lf > 180.0, lf - 360.0, lf)
+      lon_full = lf
+
     lon_sr, lat_sr = lon-centerlon, lat-centerlat
     x_sr = lon_sr*111.1e3*np.cos(centerlat*3.14159/180)
     y_sr = lat_sr*111.1e3
@@ -2099,662 +2128,686 @@ def main():
       [[k, 'Y' if polar_flags.get(k, False) else 'N'] for k in _polar_flag_order],
       dtype='str')
 
-    if DO_RESEARCH_MODE:
-      # F-1.8: vorticity + vt-budget tendency terms
-      vt_tend = _compute_vort_tendency(uwind, vwind, vt_p, ur_p, w_p,
-                                       vt_p_mean, ur_p_mean, w_p_mean,
-                                       lat, lon, heightlevs, x_sr, y_sr,
-                                       centerlat, XI, YI, zsize)
-      vort                                     = vt_tend['vort']
-      vort_p                                   = vt_tend['vort_p']
-      absvort_p                                = vt_tend['absvort_p']
-      vort_p_mean                              = vt_tend['vort_p_mean']
-      absvort_p_mean                           = vt_tend['absvort_p_mean']
-      vt_p_perturbation                        = vt_tend['vt_p_perturbation']
-      ur_p_perturbation                        = vt_tend['ur_p_perturbation']
-      w_p_perturbation                         = vt_tend['w_p_perturbation']
-      vort_p_perturbation                      = vt_tend['vort_p_perturbation']
-      f                                        = vt_tend['f']
-      d_vt_p_mean_dz                           = vt_tend['d_vt_p_mean_dz']
-      eddy_vort_flux_p                         = vt_tend['eddy_vort_flux_p']
-      eddy_vort_flux_p_mean                    = vt_tend['eddy_vort_flux_p_mean']
-      d_vt_p_perturbation_dz                   = vt_tend['d_vt_p_perturbation_dz']
-      vertical_eddy_advection_p                = vt_tend['vertical_eddy_advection_p']
-      vertical_eddy_advection_p_mean           = vt_tend['vertical_eddy_advection_p_mean']
-      term1_vt_tendency_mean_radial_flux       = vt_tend['term1_vt_tendency_mean_radial_flux']
-      term2_vt_tendency_mean_vertical_advection = vt_tend['term2_vt_tendency_mean_vertical_advection']
-      term3_vt_tendency_eddy_flux              = vt_tend['term3_vt_tendency_eddy_flux']
-      term4_vt_tendency_vertical_eddy_advection = vt_tend['term4_vt_tendency_vertical_eddy_advection']
-      terms_vt_tendency_sum                    = vt_tend['terms_vt_tendency_sum']
+    # F-1.8: vorticity + vt-budget tendency terms
+    vt_tend = _compute_vort_tendency(uwind, vwind, vt_p, ur_p, w_p,
+                                     vt_p_mean, ur_p_mean, w_p_mean,
+                                     lat, lon, heightlevs, x_sr, y_sr,
+                                     centerlat, XI, YI, zsize)
+    vort                                     = vt_tend['vort']
+    vort_p                                   = vt_tend['vort_p']
+    absvort_p                                = vt_tend['absvort_p']
+    vort_p_mean                              = vt_tend['vort_p_mean']
+    absvort_p_mean                           = vt_tend['absvort_p_mean']
+    vt_p_perturbation                        = vt_tend['vt_p_perturbation']
+    ur_p_perturbation                        = vt_tend['ur_p_perturbation']
+    w_p_perturbation                         = vt_tend['w_p_perturbation']
+    vort_p_perturbation                      = vt_tend['vort_p_perturbation']
+    f                                        = vt_tend['f']
+    d_vt_p_mean_dz                           = vt_tend['d_vt_p_mean_dz']
+    eddy_vort_flux_p                         = vt_tend['eddy_vort_flux_p']
+    eddy_vort_flux_p_mean                    = vt_tend['eddy_vort_flux_p_mean']
+    d_vt_p_perturbation_dz                   = vt_tend['d_vt_p_perturbation_dz']
+    vertical_eddy_advection_p                = vt_tend['vertical_eddy_advection_p']
+    vertical_eddy_advection_p_mean           = vt_tend['vertical_eddy_advection_p_mean']
+    term1_vt_tendency_mean_radial_flux       = vt_tend['term1_vt_tendency_mean_radial_flux']
+    term2_vt_tendency_mean_vertical_advection = vt_tend['term2_vt_tendency_mean_vertical_advection']
+    term3_vt_tendency_eddy_flux              = vt_tend['term3_vt_tendency_eddy_flux']
+    term4_vt_tendency_vertical_eddy_advection = vt_tend['term4_vt_tendency_vertical_eddy_advection']
+    terms_vt_tendency_sum                    = vt_tend['terms_vt_tendency_sum']
 
-      ##################################################################################################################
+    ##################################################################################################################
 
 
-      ##################################################################################################################
-      ###Block of code to calculate vorticity budget terms
-      #First Calculate Storm Motion
-      centerlon_t0 = centerlon
-      centerlat_t0 = centerlat
-      if ( FHR > 0):
+    ##################################################################################################################
+    ###Block of code to calculate vorticity budget terms
+    #First Calculate Storm Motion
+    centerlon_t0 = centerlon
+    centerlat_t0 = centerlat
+    if ( FHR > 0):
 
-        # Previous-FHR entry from the atcf DataFrame. Legacy code stepped one
-        # row back from the current row; preserve that semantics.
-        FHRIND2 = FHRIND[0] - 1
-        if FHRIND2 < 0 or FHRIND2 not in atcf_df.index:
-          dt, dx, dy = np.nan, np.nan, np.nan
-        else:
-          prev_row = atcf_df.loc[FHRIND2]
-          FHR_tm1       = int(prev_row['fhr'])
-          centerlat_tm1 = float(prev_row['lat'])
-          centerlon_tm1 = float(prev_row['lon'])
-          if centerlon_tm1 < 0.0:
-            centerlon_tm1 = 360.0 + centerlon_tm1
-
-          dt = (float(FHR)-float(FHR_tm1))*3600
-          dx = (centerlon-centerlon_tm1)*111.1e3*np.cos(centerlat*3.14159/180)
-          dy = (centerlat-centerlat_tm1)*111.1e3
-      else:
+      # Previous-FHR entry from the atcf DataFrame. Legacy code stepped one
+      # row back from the current row; preserve that semantics.
+      FHRIND2 = FHRIND[0] - 1
+      if FHRIND2 < 0 or FHRIND2 not in atcf_df.index:
         dt, dx, dy = np.nan, np.nan, np.nan
+      else:
+        prev_row = atcf_df.loc[FHRIND2]
+        FHR_tm1       = int(prev_row['fhr'])
+        centerlat_tm1 = float(prev_row['lat'])
+        centerlon_tm1 = float(prev_row['lon'])
+        if centerlon_tm1 < 0.0:
+          centerlon_tm1 = 360.0 + centerlon_tm1
 
-      umotion = dx/dt
-      vmotion = dy/dt
-      #print('MSG: fhr = ',FHR)
-      #print('MSG: dt = ',dt)
-      print(f'MSG: umotion,vmotion = {umotion:.2f},{vmotion:.2f}')
+        dt = (float(FHR)-float(FHR_tm1))*3600
+        dx = (centerlon-centerlon_tm1)*111.1e3*np.cos(centerlat*3.14159/180)
+        dy = (centerlat-centerlat_tm1)*111.1e3
+    else:
+      dt, dx, dy = np.nan, np.nan, np.nan
 
-      uwind_sr = uwind-umotion
-      vwind_sr = vwind-vmotion
+    umotion = dx/dt
+    vmotion = dy/dt
+    #print('MSG: fhr = ',FHR)
+    #print('MSG: dt = ',dt)
+    print(f'MSG: umotion,vmotion = {umotion:.2f},{vmotion:.2f}')
 
-      #Calculate Terms
-      absvort = vort+f
+    uwind_sr = uwind-umotion
+    vwind_sr = vwind-vmotion
 
-      #Term1 (Horizontal Advection)
-      d_eta_dx = np.array(metpy.calc.first_derivative(absvort,axis=1,delta=xgrad*1e3))
-      d_eta_dy = np.array(metpy.calc.first_derivative(absvort,axis=0,delta=ygrad*1e3))
-      horizontal_advection = -(uwind_sr*d_eta_dx + vwind_sr*d_eta_dy)
+    # Grid spacings used by the inline vorticity-tendency block below.
+    # (Same definition as the one inside _compute_vort_tendency; kept local
+    # here because the function does not return them.)
+    with warnings.catch_warnings():
+      warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+      xgrad = np.nanmean(np.gradient(x_sr))
+      ygrad = np.nanmean(np.gradient(y_sr))
 
-      #Term2 (Vertical advection)
-      d_vort_dz = np.array(metpy.calc.first_derivative(vort,axis=2,delta=500))
-      vertical_advection = -wwind*d_vort_dz
+    #Calculate Terms
+    absvort = vort+f
 
-      #Term3 (Stretching/Convergence Term)
-      d_u_sr_dx = np.array(metpy.calc.first_derivative(uwind_sr,axis=1,delta=xgrad*1e3))
-      d_v_sr_dy = np.array(metpy.calc.first_derivative(vwind_sr,axis=0,delta=ygrad*1e3))
-      stretching_convergence = -(absvort*d_u_sr_dx + absvort*d_v_sr_dy)
+    #Term1 (Horizontal Advection)
+    d_eta_dx = np.array(metpy.calc.first_derivative(absvort,axis=1,delta=xgrad*1e3))
+    d_eta_dy = np.array(metpy.calc.first_derivative(absvort,axis=0,delta=ygrad*1e3))
+    horizontal_advection = -(uwind_sr*d_eta_dx + vwind_sr*d_eta_dy)
 
-      #Term4 (Tilting of Horizontal Vorticity into the Vertical)
-      d_w_dx = np.array(metpy.calc.first_derivative(wwind,axis=1,delta=xgrad*1e3))
-      d_w_dy = np.array(metpy.calc.first_derivative(wwind,axis=0,delta=ygrad*1e3))
-      d_u_sr_dz = np.array(metpy.calc.first_derivative(uwind_sr,axis=2,delta=500))
-      d_v_sr_dz = np.array(metpy.calc.first_derivative(vwind_sr,axis=2,delta=500))
-      tilting = -(d_w_dx*d_v_sr_dz - d_w_dy*d_u_sr_dz)
+    #Term2 (Vertical advection)
+    d_vort_dz = np.array(metpy.calc.first_derivative(vort,axis=2,delta=500))
+    vertical_advection = -wwind*d_vort_dz
 
-      horizontal_advection_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-      vertical_advection_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-      stretching_convergence_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
-      tilting_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+    #Term3 (Stretching/Convergence Term)
+    d_u_sr_dx = np.array(metpy.calc.first_derivative(uwind_sr,axis=1,delta=xgrad*1e3))
+    d_v_sr_dy = np.array(metpy.calc.first_derivative(vwind_sr,axis=0,delta=ygrad*1e3))
+    stretching_convergence = -(absvort*d_u_sr_dx + absvort*d_v_sr_dy)
 
-      for k in range(zsize):
-        f_horizontal_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), horizontal_advection[:,:,k])
-        f_vertical_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vertical_advection[:,:,k])
-        f_stretching_convergence = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), stretching_convergence[:,:,k])
-        f_tilting = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), tilting[:,:,k])
+    #Term4 (Tilting of Horizontal Vorticity into the Vertical)
+    d_w_dx = np.array(metpy.calc.first_derivative(wwind,axis=1,delta=xgrad*1e3))
+    d_w_dy = np.array(metpy.calc.first_derivative(wwind,axis=0,delta=ygrad*1e3))
+    d_u_sr_dz = np.array(metpy.calc.first_derivative(uwind_sr,axis=2,delta=500))
+    d_v_sr_dz = np.array(metpy.calc.first_derivative(vwind_sr,axis=2,delta=500))
+    tilting = -(d_w_dx*d_v_sr_dz - d_w_dy*d_u_sr_dz)
 
-        horizontal_advection_p[:,:,k] = f_horizontal_advection((YI,XI),method='linear')
-        vertical_advection_p[:,:,k] = f_vertical_advection((YI,XI),method='linear')
-        stretching_convergence_p[:,:,k] = f_stretching_convergence((YI,XI),method='linear')
-        tilting_p[:,:,k] = f_tilting((YI,XI),method='linear')
+    horizontal_advection_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+    vertical_advection_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+    stretching_convergence_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+    tilting_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
+
+    for k in range(zsize):
+      f_horizontal_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), horizontal_advection[:,:,k])
+      f_vertical_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vertical_advection[:,:,k])
+      f_stretching_convergence = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), stretching_convergence[:,:,k])
+      f_tilting = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), tilting[:,:,k])
+
+      horizontal_advection_p[:,:,k] = f_horizontal_advection((YI,XI),method='linear')
+      vertical_advection_p[:,:,k] = f_vertical_advection((YI,XI),method='linear')
+      stretching_convergence_p[:,:,k] = f_stretching_convergence((YI,XI),method='linear')
+      tilting_p[:,:,k] = f_tilting((YI,XI),method='linear')
+
+    with warnings.catch_warnings():
+      warnings.filterwarnings(action='ignore', message='Mean of empty slice')
+      term1_vort_tendency_horizontal_advection = np.nanmean(horizontal_advection_p,0)
+      term2_vort_tendency_vertical_advection = np.nanmean(vertical_advection_p,0)
+      term3_vort_tendency_stretching_convergence = np.nanmean(stretching_convergence_p,0)
+      term4_vort_tendency_tilting = np.nanmean(tilting_p,0)
+
+    term1_vort_tendency_horizontal_advection[:,0] = np.nan
+    term1_vort_tendency_horizontal_advection[0,:] = np.nan
+    term2_vort_tendency_vertical_advection[:,0] = np.nan
+    term2_vort_tendency_vertical_advection[0,:] = np.nan
+    term3_vort_tendency_stretching_convergence[:,0] = np.nan
+    term3_vort_tendency_stretching_convergence[0,:] = np.nan
+    term4_vort_tendency_tilting[:,0] = np.nan
+    term4_vort_tendency_tilting[0,:] = np.nan
+
+    terms_vort_tendency_sum = term1_vort_tendency_horizontal_advection+term2_vort_tendency_vertical_advection+term3_vort_tendency_stretching_convergence+term4_vort_tendency_tilting
+
+    ##################################################################################################################
+
+
+    # F-1.9: Steiner et al. (1995) precipitation partitioning + polar interp
+    precip = _partition_precip(dbz, heightlevs, xgrad, ygrad, rmw_2km,
+                               XI, YI, XInorm, YInorm, x_sr, y_sr, sheardir_index)
+    hlevs        = precip['hlevs']
+    sref         = precip['sref']
+    ptype        = precip['ptype']
+    ptype_p      = precip['ptype_p']
+    ptype_p_norm = precip['ptype_p_norm']
+    ptype_p_rot  = precip['ptype_p_rot']
+
+    #End of Block to Calculate Precipitation Partitioning
+    ############################################################################################################################################
+
+    ############################################################################################################################################
+    #Calculate some important structure metrics and write them and others to a text file
+    vmax = float(maxwind)
+    vt_max = np.nanmax(vt_p_mean)*1.94
+
+    rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vt_dynamic = vortex_depth_vt_static = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
+    #if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
+
+    dlats = (lat_full * (math.pi)/180.) - (centerlat* (math.pi)/180.)
+    dlons = (lon_full * (math.pi)/180.) - (centerlon* (math.pi)/180.)
+    aa = ((np.sin(dlats/2))**2 + np.cos((centerlat*(math.pi)/180)) * np.cos((lat_full * (math.pi)/180)) * (np.sin(dlons/2))**2)
+    cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+    rad_distance_sfc = cc * 6371.      
+    
+    #Calculate Vortex Depth based on Vt
+    vt_rmw_ratio = vt_rmw_mean/vt_rmw_mean[4]
+    threshold_ratio_vt_dynamic = 0.4
+    if ( np.nanmin(vt_rmw_ratio) < 0.4):
+      vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
+      index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
+    else:
+      vortex_depth_vt_dynamic = np.nan
+
+    if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
+      vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
+      index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+    else:
+      vortex_depth_vt_static = np.nan
+
+    if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
+      vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
+      index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+      ivd = index_vortex_depth_vt_temp+1
+    else:
+      ivd=11
+
+    ivd = np.nanmax((ivd,11))
+    print('IVD = ', ivd)
+
+    #Calculate vortex depth based on vort
+    vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
+    threshold_ratio_vort = 0.5
+    if (np.min(vort_ratio) < 0.5):
+      try:
+        vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
+        index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
+      except:
+        vortex_depth_vort = np.nan
+    else:
+      vortex_depth_vort = np.nan
+
+    # F-1.10: Storm center cascade (pressure + vort) + 2-5 / 2-10 km tilt
+    tilt = _compute_tilt(pressure, vort, pressure_p_mean, vort_p_mean,
+                         rmw_mean, x_sr, y_sr, r,
+                         uwind, vwind, lon, lat, lon_full, lat_full,
+                         centerlon, centerlat, ivd, zsize, vortex_depth_vort)
+    pressure_centroid       = tilt['pressure_centroid']
+    vort_centroid           = tilt['vort_centroid']
+    center_indices_pressure = tilt['center_indices_pressure']
+    center_indices_vort     = tilt['center_indices_vort']
+    threshold_pressure      = tilt['threshold_pressure']
+    threshold_vort          = tilt['threshold_vort']
+    center_x_vort           = tilt['center_x_vort']
+    center_y_vort           = tilt['center_y_vort']
+    center_x_pressure       = tilt['center_x_pressure']
+    center_y_pressure       = tilt['center_y_pressure']
+    center_lon_pressure     = tilt['center_lon_pressure']
+    center_lat_pressure     = tilt['center_lat_pressure']
+    tiltmag_deep_pressure   = tilt['tiltmag_deep_pressure']
+    tiltdir_deep_pressure   = tilt['tiltdir_deep_pressure']
+    tiltmag_deep_vort       = tilt['tiltmag_deep_vort']
+    tiltdir_deep_vort       = tilt['tiltdir_deep_vort']
+    tiltmag_mid_pressure    = tilt['tiltmag_mid_pressure']
+    tiltdir_mid_pressure    = tilt['tiltdir_mid_pressure']
+    tiltmag_mid_vort        = tilt['tiltmag_mid_vort']
+    tiltdir_mid_vort        = tilt['tiltdir_mid_vort']
+
+    #First, percentage of area in the inner and outer core with each precip type
+    ptype_p_norm_inner = ptype_p_norm[:,15:26]
+    ptype_p_norm_outer = ptype_p_norm[:,26:41]
+
+    innersize = np.shape(ptype_p_norm_inner)[0]*np.shape(ptype_p_norm_inner)[1]
+    if innersize > 0:
+      weakpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 1.])[0]/innersize
+      stratiformpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 2.])[0]/innersize
+      shallowpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 3.])[0]/innersize
+      moderatepercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 4.])[0]/innersize
+      deeppercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 5.])[0]/innersize
+    else:
+      weakpercent_inner = np.nan
+      stratiformpercent_inner = np.nan
+      shallowpercent_inner = np.nan
+      moderatepercent_inner = np.nan
+      deeppercent_inner = np.nan
+
+    outersize = np.shape(ptype_p_norm_outer)[0]*np.shape(ptype_p_norm_outer)[1]
+    if outersize > 0:
+      weakpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 1.])[0]/outersize
+      stratiformpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 2.])[0]/outersize
+      shallowpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 3.])[0]/outersize
+      moderatepercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 4.])[0]/outersize
+      deeppercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 5.])[0]/outersize
+    else:
+      weakpercent_outer = np.nan
+      stratiformpercent_outer = np.nan
+      shallowpercent_outer = np.nan
+      moderatepercent_outer = np.nan
+      deeppercent_outer = np.nan
+
+    #edit12/23 - Add ptype calc. and text output within 100 km of 2 km center and 5 km center, shear-relative quadrants, RH, mass flux at each height level, and vorticity at each height level---------------------------------------------------------------
+    #Create array of center lat/long that is same dimensions as lat_full and lon_full grids
+    ih = lat_full.shape[0]
+    jh = lat_full.shape[1]
+    centerx_full_2km = np.full((ih,jh),0.0)
+    centery_full_2km = np.full((ih,jh),0.0)
+    centerx_full_5km = np.full((ih,jh),0.0)
+    centery_full_5km = np.full((ih,jh),0.0)
+    centerx_full_2km[:,:] = center_lon_pressure[4]
+    centery_full_2km[:,:] = center_lat_pressure[4]
+    centerx_full_5km[:,:] = center_lon_pressure[10]
+    centery_full_5km[:,:] = center_lat_pressure[10]
+    #Create rad_distance grids w/ distance [km] from 2km and 5km centers in each array
+    dlats = (centery_full_2km * (math.pi)/180.) - (lat_full* (math.pi)/180.)
+    dlons = (centerx_full_2km * (math.pi)/180.) - (lon_full* (math.pi)/180.)
+    aa = ((np.sin(dlats/2))**2 + np.cos((lat_full*(math.pi)/180)) * np.cos((centery_full_2km * (math.pi)/180)) * (np.sin(dlons/2))**2)
+    cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+    rad_distance_2km = cc * 6371.
+
+    dlats = (centery_full_5km * (math.pi)/180.) - (lat_full* (math.pi)/180.)
+    dlons = (centerx_full_5km * (math.pi)/180.) - (lon_full* (math.pi)/180.)
+    aa = ((np.sin(dlats/2))**2 + np.cos((lat_full*(math.pi)/180)) * np.cos((centery_full_5km * (math.pi)/180)) * (np.sin(dlons/2))**2)
+    cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
+    rad_distance_5km = cc * 6371.
+
+    wherearea_2km = np.where(rad_distance_2km < 100.)
+    wherearea_5km = np.where(rad_distance_5km < 100.)
+    wherearea_2km_50 = np.where(rad_distance_2km < 50.)
+    wherearea_5km_50 = np.where(rad_distance_5km < 50.)
+    #precip. partition within 100km of 2km and 5km centers
+    partition_center = []
+    loopp_part = -1
+    for loopp in range(0,10):
+        loopp_part = loopp_part + 1
+        if loopp < 5:
+            annulusarea = np.size(wherearea_2km[0][:])
+            wherepart = np.where((rad_distance_2km < 100) & (ptype < loopp_part+1.5) & (ptype > loopp_part+.5))
+        if loopp == 5:
+            loopp_part = 0
+        if loopp >= 5:
+            annulusarea = np.size(wherearea_5km[0][:])
+            wherepart = np.where((rad_distance_5km < 100) & (ptype < loopp_part+1.5) & (ptype > loopp_part+.5))
+        if np.size(wherepart) > 0:
+            partition_center.append(np.size(wherepart[0][:]) / annulusarea)
+        else:
+            partition_center.append(0)
+
+    #Add shear-relative ptype % w.r.t. sfc center -------------------------------------Loop through each ptype by quadrant w/i 0-100km and 0-200km - DSL, USL, USR, DSR
+    shearquadindex = [0,18,36,54,72]
+    loopp_part = -1
+    for loopp in range(0,5):
+        loopp_part = loopp_part + 1
+        for loopquad in range(0,4):
+            wherepart = np.where((ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50] < loopp_part+1.5) & (ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50] > loopp_part+.5))
+            if np.size(wherepart) > 0:
+                partition_center.append(np.size(wherepart[0][:]) / np.size(ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50]))
+            else:
+                partition_center.append(0)
+            #w/i 0-200km
+            wherepart = np.where((ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100] < loopp_part+1.5) & (ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100] > loopp_part+.5))
+            if np.size(wherepart) > 0:
+                partition_center.append(np.size(wherepart[0][:]) / np.size(ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100]))
+            else:
+                partition_center.append(0)
+    partition_center = np.array(partition_center)
+
+    #Add RH annulus - 0-200 km 2 km center, 0-200 km 5 km center, 0-200km shear-relative quadrants --------------------------------------------------------------------------------------
+    rh_center = []
+    whererh_2km = np.where(rad_distance_2km < 200.)
+    whererh_5km = np.where(rad_distance_5km < 200.)
+    rh700500 = np.array(np.nanmean(rh[:,:,12:20],axis=2)) #verify 3rd dimension indices for 700-500hPa-------------------------
+    rh_center.append(np.nanmean(rh700500[whererh_2km]))
+    rh_center.append(np.nanmean(rh700500[whererh_5km]))
+    rh_p_dsl = np.nanmean(rh_p_rot[:19,:100,12:20])
+    rh_p_usl = np.nanmean(rh_p_rot[18:37,:100,12:20])
+    rh_p_usr = np.nanmean(rh_p_rot[36:55,:100,12:20])
+    rh_p_dsr = np.nanmean(rh_p_rot[54:73,:100,12:20])
+
+    #text output
+    structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_ptype_rh.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+    f = open(structurefile_new,'w')
+    f.write("%4s, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.1f, %4.1f, %4.1f, %4.1f, %4.1f, %4.1f" % (FHR,partition_center[0],partition_center[1],partition_center[2],partition_center[3],partition_center[4],partition_center[5],partition_center[6],partition_center[7],partition_center[8],partition_center[9],partition_center[10],partition_center[11],partition_center[12],partition_center[13],partition_center[14],partition_center[15],partition_center[16],partition_center[17],partition_center[18],partition_center[19],partition_center[20],partition_center[21],partition_center[22],partition_center[23],partition_center[24],partition_center[25],partition_center[26],partition_center[27],partition_center[28],partition_center[29],partition_center[30],partition_center[31],partition_center[32],partition_center[33],partition_center[34],partition_center[35],partition_center[36],partition_center[37],partition_center[38],partition_center[39],partition_center[40],partition_center[41],partition_center[42],partition_center[43],partition_center[44],partition_center[45],partition_center[46],partition_center[47],partition_center[48],partition_center[49],rh_center[0],rh_center[1],rh_p_dsl,rh_p_usl,rh_p_usr,rh_p_dsr))
+    f.close()
+
+    #Add mass flux and vorticity averaged within 50 km for each vertical level w.r.t. 2km and 5km centers for text output-------------------------------------------
+    massflux5km = []
+    vorticity5km = []
+    massflux2km = []
+    vorticity2km = []
+    for looph in range(0,np.size(wwind_store[0,0,:])):
+        wwindh = wwind_store[:,:,looph]
+        rhoh = rho[:,:,looph]
+        massflux2km.append(np.nanmean(wwindh[wherearea_2km_50] * rhoh[wherearea_2km_50]))
+        massflux5km.append(np.nanmean(wwindh[wherearea_5km_50] * rhoh[wherearea_5km_50]))
+        if looph < 37:
+           vorth = vort[:,:,looph]
+           vorticity2km.append(np.nanmean(vorth[wherearea_2km_50]))
+           vorticity5km.append(np.nanmean(vorth[wherearea_5km_50]))
+
+    structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_massflux.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+    f = open(structurefile_new,'w')
+    f.write("%4s, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f,  %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f," % (FHR,levs[0,0,0],massflux2km[0],massflux5km[0],levs[0,0,1],massflux2km[1],massflux5km[1],levs[0,0,2], massflux2km[2],massflux5km[2],levs[0,0,3], massflux2km[3],massflux5km[3],levs[0,0,4], massflux2km[4],massflux5km[4],levs[0,0,5], massflux2km[5],massflux5km[5],levs[0,0,6], massflux2km[6],massflux5km[6],levs[0,0,7], massflux2km[7],massflux5km[7],levs[0,0,8], massflux2km[8],massflux5km[8],levs[0,0,9], massflux2km[9],massflux5km[9],levs[0,0,10], massflux2km[10],massflux5km[10],levs[0,0,11], massflux2km[11],massflux5km[11],levs[0,0,12], massflux2km[12],massflux5km[12],levs[0,0,13], massflux2km[13],massflux5km[13],levs[0,0,14], massflux2km[14],massflux5km[14],levs[0,0,15], massflux2km[15],massflux5km[15],levs[0,0,16], massflux2km[16],massflux5km[16],levs[0,0,17], massflux2km[17],massflux5km[17],levs[0,0,18], massflux2km[18],massflux5km[18],levs[0,0,19], massflux2km[19],massflux5km[19],levs[0,0,20], massflux2km[20],massflux5km[20],levs[0,0,21], massflux2km[21],massflux5km[21],levs[0,0,22], massflux2km[22],massflux5km[22],levs[0,0,23], massflux2km[23],massflux5km[24],levs[0,0,24], massflux2km[24],massflux5km[24],levs[0,0,25], massflux2km[25],massflux5km[25],levs[0,0,26], massflux2km[26],massflux5km[26],levs[0,0,27], massflux2km[27],massflux5km[27],levs[0,0,28], massflux2km[28],massflux5km[28],levs[0,0,29], massflux2km[29],massflux5km[29],levs[0,0,30], massflux2km[30],massflux5km[30],levs[0,0,31], massflux2km[31],massflux5km[31],levs[0,0,32], massflux2km[32],massflux5km[32],levs[0,0,33], massflux2km[33],massflux5km[33]))
+    f.close()
+
+    structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_vorticity.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+    f = open(structurefile_new,'w')
+    f.write("%4s, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f," % (FHR,heightlevs[0],vorticity2km[0],vorticity5km[0],heightlevs[1],vorticity2km[1],vorticity5km[1],heightlevs[2], vorticity2km[2],vorticity5km[2],heightlevs[3], vorticity2km[3],vorticity5km[3],heightlevs[4], vorticity2km[4],vorticity5km[4],heightlevs[5], vorticity2km[5],vorticity5km[5],heightlevs[6], vorticity2km[6],vorticity5km[6],heightlevs[7], vorticity2km[7],vorticity5km[7],heightlevs[8], vorticity2km[8],vorticity5km[8],heightlevs[9], vorticity2km[9],vorticity5km[9],heightlevs[10], vorticity2km[10],vorticity5km[10],heightlevs[11], vorticity2km[11],vorticity5km[11],heightlevs[12], vorticity2km[12],vorticity5km[12],heightlevs[13], vorticity2km[13],vorticity5km[13],heightlevs[14], vorticity2km[14],vorticity5km[14],heightlevs[15], vorticity2km[15],vorticity5km[15],heightlevs[16], vorticity2km[16],vorticity5km[16],heightlevs[17], vorticity2km[17],vorticity5km[17],heightlevs[18], vorticity2km[18],vorticity5km[18],heightlevs[19], vorticity2km[19],vorticity5km[19],heightlevs[20], vorticity2km[20],vorticity5km[20],heightlevs[21], vorticity2km[21],vorticity5km[21],heightlevs[22], vorticity2km[22],vorticity5km[22],heightlevs[23], vorticity2km[23],vorticity5km[24],heightlevs[24], vorticity2km[24],vorticity5km[24],heightlevs[25], vorticity2km[25],vorticity5km[25],heightlevs[26], vorticity2km[26],vorticity5km[26],heightlevs[27], vorticity2km[27],vorticity5km[27],heightlevs[28], vorticity2km[28],vorticity5km[28],heightlevs[29], vorticity2km[29],vorticity5km[29],heightlevs[30], vorticity2km[30],vorticity5km[30],heightlevs[31], vorticity2km[31],vorticity5km[31],heightlevs[32], vorticity2km[32],vorticity5km[32],heightlevs[33], vorticity2km[33],vorticity5km[33]))
+    f.close()
+    #edit12/23end--------------------------------------------------------------------------------
+
+    #Next, calculate closure of the eyewall for stratiform, shallow, moderate, and deep convection
+    ptype_p_norm_inner_max = np.max(ptype_p_norm_inner,1)
+    closure_stratiform = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 2.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+    closure_shallow = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 3.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+    closure_moderate = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 4.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+    closure_deep = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 5.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+
+    #RMW Slope
+    slope_rmw_1 = np.linalg.lstsq((heightlevs[4:21]/1000-heightlevs[4]/1000).reshape(-1,1), (rmw_mean[4:21]-rmw_mean[4]), rcond=None)[0][0]
+    slope_rmw_2 = (rmw_mean[20]-rmw_mean[4])/8
+
+    #Alpha Parameter
+    if (rmw_2km < 100. and (3*rmw_2km) < rmax):
+      alpha = np.log(vt_p_mean_norm[20,4]/vt_p_mean_norm[60,4])/np.log(3)
+    else:
+      alpha = np.nan
+
+    #Rossby Number
+    rmw_mean_10m = rmw_mean[0]
+    rmw_mean_index_10m = int(rmw_mean_index[0])
+    vt10_p_mean = np.nanmean(vt10_p,0)
+    coriolis = 2*7.292e-5*np.sin(centerlat*3.14159/180)
+    rossby = vt10_p_mean[rmw_mean_index_10m]/(rmw_mean_10m*1000*coriolis)
+
+    # F-1.11: Warm core anomaly magnitude / height / radial extent
+    warm = _compute_warm_core(temp_p_mean, r, heightlevs)
+    r15km_index             = warm['r15km_index']
+    r200km_index            = warm['r200km_index']
+    r300km_index            = warm['r300km_index']
+    temp_p_mean_core_mean   = warm['temp_p_mean_core_mean']
+    temp_p_mean_outer_mean  = warm['temp_p_mean_outer_mean']
+    temp_p_anomaly          = warm['temp_p_anomaly']
+    anomaly_extent          = warm['anomaly_extent']
+    temp_p_anomaly_max      = warm['temp_p_anomaly_max']
+    temp_anomaly            = warm['temp_anomaly']
+    temp_anomaly_max        = warm['temp_anomaly_max']
+    height_temp_anomaly_max = warm['height_temp_anomaly_max']
+
+    #Calculate symmetry of precipitation
+    dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
+    dbz5_p_w1_ring = dbz5_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
+    dbz5_p_whigher_ring = dbz5_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
+    amp_dbz5_p_w0_ring = np.nanmean(np.nanmax(dbz5_p_w0_ring,0))
+    amp_dbz5_p_w1_ring = np.nanmean(np.nanmax(dbz5_p_w1_ring,0)-np.mean(dbz5_p_w1_ring,0))
+    amp_dbz5_p_whigher_ring = np.nanmean(np.nanmax(dbz5_p_whigher_ring,0)-np.mean(dbz5_p_whigher_ring,0))
+    symmetry_w1_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring)
+    symmetry_all_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring+amp_dbz5_p_whigher_ring)
+    if symmetry_w1_dbz5_p < 0: symmetry_w1_dbz5_p = 0
+    if symmetry_all_dbz5_p < 0: symmetry_all_dbz5_p = 0
+
+    vt10_p_w0_ring = vt10_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
+    vt10_p_w1_ring = vt10_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
+    vt10_p_whigher_ring = vt10_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
+    amp_vt10_p_w0_ring = np.nanmean(np.nanmax(vt10_p_w0_ring,0))
+    amp_vt10_p_w1_ring = np.nanmean(np.nanmax(vt10_p_w1_ring,0)-np.mean(vt10_p_w1_ring,0))
+    amp_vt10_p_whigher_ring = np.nanmean(np.nanmax(vt10_p_whigher_ring,0)-np.mean(vt10_p_whigher_ring,0))
+    symmetry_w1_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring)
+    symmetry_all_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring+amp_vt10_p_whigher_ring)
+    if symmetry_w1_vt10_p < 0: symmetry_w1_vt10_p = 0
+    if symmetry_all_vt10_p < 0: symmetry_all_vt10_p = 0
+
+    #Calculate Local Shear
+    if ( np.min(threshold_vort) > 0):
+      rmaxlocal = 102
+      rlocal = np.linspace(0,rmaxlocal,(int(rmaxlocal//resolution)+1))
+      Rlocal, THETAlocal = np.meshgrid(rlocal, theta)
+      XIlocal = Rlocal * np.cos(THETAlocal)
+      YIlocal = Rlocal * np.sin(THETAlocal)
+      u2km = uwind[:,:,4]
+      v2km = vwind[:,:,4]
+      u5km = uwind[:,:,10]
+      v5km = vwind[:,:,10]
+      u8km = uwind[:,:,16]
+      v8km = vwind[:,:,16]
+      u10km = uwind[:,:,4]
+      v10km = vwind[:,:,20]
+
+      u2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      v2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      u5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      v5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      u8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      v8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      u10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+      v10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
+
+      # Local-shear interpolators: query domain is ±102 km from the per-level
+      # vortex center; if the per-level center is offset enough that the
+      # query falls outside the source slab, return NaN rather than raising.
+      _rgi_kw = dict(bounds_error=False, fill_value=np.nan)
+
+      if (center_x_vort[4] < 200 and center_y_vort[4] < 200):
+        f_u2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), u2km[:,:], **_rgi_kw)
+        u2km_p_local[:,:] = f_u2km((YIlocal,XIlocal),method='linear')
+        f_v2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), v2km[:,:], **_rgi_kw)
+        v2km_p_local[:,:] = f_v2km((YIlocal,XIlocal),method='linear')
+
+      if (vortex_depth_vort >= 5 and center_x_vort[10] < 200 and center_y_vort[10] < 200):
+        f_u5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), u5km[:,:], **_rgi_kw)
+        u5km_p_local[:,:] = f_u5km((YIlocal,XIlocal),method='linear')
+        f_v5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), v5km[:,:], **_rgi_kw)
+        v5km_p_local[:,:] = f_v5km((YIlocal,XIlocal),method='linear')
+
+      if (vortex_depth_vort >= 8 and center_x_vort[16] < 200 and center_y_vort[16] < 200):
+        f_u8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), u8km[:,:], **_rgi_kw)
+        u8km_p_local[:,:] = f_u8km((YIlocal,XIlocal),method='linear')
+        f_v8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), v8km[:,:], **_rgi_kw)
+        v8km_p_local[:,:] = f_v8km((YIlocal,XIlocal),method='linear')
+
+      if (vortex_depth_vort >= 10 and center_x_vort[20] < 200 and center_y_vort[20] < 200):
+        f_u10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), u10km[:,:], **_rgi_kw)
+        u10km_p_local[:,:] = f_u10km((YIlocal,XIlocal),method='linear')
+        f_v10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), v10km[:,:], **_rgi_kw)
+        v10km_p_local[:,:] = f_v10km((YIlocal,XIlocal),method='linear')
+
+      rlocal50 = np.argmin(np.abs(rlocal-50))
 
       with warnings.catch_warnings():
         warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-        term1_vort_tendency_horizontal_advection = np.nanmean(horizontal_advection_p,0)
-        term2_vort_tendency_vertical_advection = np.nanmean(vertical_advection_p,0)
-        term3_vort_tendency_stretching_convergence = np.nanmean(stretching_convergence_p,0)
-        term4_vort_tendency_tilting = np.nanmean(tilting_p,0)
+        u2km_p_local_ring50km_mean = np.nanmean(u2km_p_local[:,rlocal50+1])
+        v2km_p_local_ring50km_mean = np.nanmean(v2km_p_local[:,rlocal50+1])
+        u5km_p_local_ring50km_mean = np.nanmean(u5km_p_local[:,rlocal50+1])
+        v5km_p_local_ring50km_mean = np.nanmean(v5km_p_local[:,rlocal50+1])
+        u8km_p_local_ring50km_mean = np.nanmean(u8km_p_local[:,rlocal50+1])
+        v8km_p_local_ring50km_mean = np.nanmean(v8km_p_local[:,rlocal50+1])
+        u10km_p_local_ring50km_mean = np.nanmean(u10km_p_local[:,rlocal50+1])
+        v10km_p_local_ring50km_mean = np.nanmean(v10km_p_local[:,rlocal50+1])
 
-      term1_vort_tendency_horizontal_advection[:,0] = np.nan
-      term1_vort_tendency_horizontal_advection[0,:] = np.nan
-      term2_vort_tendency_vertical_advection[:,0] = np.nan
-      term2_vort_tendency_vertical_advection[0,:] = np.nan
-      term3_vort_tendency_stretching_convergence[:,0] = np.nan
-      term3_vort_tendency_stretching_convergence[0,:] = np.nan
-      term4_vort_tendency_tilting[:,0] = np.nan
-      term4_vort_tendency_tilting[0,:] = np.nan
+      ushear_2km_5km_local_ring50km = u5km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
+      vshear_2km_5km_local_ring50km = v5km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
+      ushear_2km_8km_local_ring50km = u8km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
+      vshear_2km_8km_local_ring50km = v8km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
+      ushear_2km_10km_local_ring50km = u10km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
+      vshear_2km_10km_local_ring50km = v10km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
 
-      terms_vort_tendency_sum = term1_vort_tendency_horizontal_advection+term2_vort_tendency_vertical_advection+term3_vort_tendency_stretching_convergence+term4_vort_tendency_tilting
-
-      ##################################################################################################################
-
-
-      # F-1.9: Steiner et al. (1995) precipitation partitioning + polar interp
-      precip = _partition_precip(dbz, heightlevs, xgrad, ygrad, rmw_2km,
-                                 XI, YI, XInorm, YInorm, x_sr, y_sr, sheardir_index)
-      hlevs        = precip['hlevs']
-      sref         = precip['sref']
-      ptype        = precip['ptype']
-      ptype_p      = precip['ptype_p']
-      ptype_p_norm = precip['ptype_p_norm']
-      ptype_p_rot  = precip['ptype_p_rot']
-
-      #End of Block to Calculate Precipitation Partitioning
-      ############################################################################################################################################
-
-      ############################################################################################################################################
-      #Calculate some important structure metrics and write them and others to a text file
-      vmax = float(maxwind)
-      vt_max = np.nanmax(vt_p_mean)*1.94
-
-      rossby = temp_anomaly_max = height_temp_anomaly_max = slope_rmw_1 = slope_rmw_2 = alpha = vortex_depth_vt_dynamic = vortex_depth_vt_static = tiltmag_mid_pressure = tiltdir_mid_pressure = tiltmag_mid_vort = tiltdir_mid_vort = tiltmag_deep_pressure = tiltdir_deep_pressure = tiltmag_deep_vort = tiltdir_deep_vort = weakpercent_inner = stratiformpercent_inner = shallowpercent_inner = moderatepercent_inner = deeppercent_inner = weakpercent_outer = stratiformpercent_outer = shallowpercent_outer = moderatepercent_outer = deeppercent_outer = closure_stratiform = closure_shallow = closure_moderate = closure_deep = symmetry_w1_dbz5_p = symmetry_all_dbz5_p = symmetry_w1_vt10_p = symmetry_all_vt10_p = shearmag_2km_5km_local = sheardir_2km_5km_local = shearmag_2km_8km_local = sheardir_2km_8km_local = shearmag_2km_10km_local = sheardir_2km_10km_local = np.nan
-      #if ( rmw_2km < 200 and vmax > 25 and vt_max > 30):
-
-      dlats = (lat_full * (math.pi)/180.) - (centerlat* (math.pi)/180.)
-      dlons = (lon_full * (math.pi)/180.) - (centerlon* (math.pi)/180.)
-      aa = ((np.sin(dlats/2))**2 + np.cos((centerlat*(math.pi)/180)) * np.cos((lat_full * (math.pi)/180)) * (np.sin(dlons/2))**2)
-      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
-      rad_distance_sfc = cc * 6371.      
-      
-      #Calculate Vortex Depth based on Vt
-      vt_rmw_ratio = vt_rmw_mean/vt_rmw_mean[4]
-      threshold_ratio_vt_dynamic = 0.4
-      if ( np.nanmin(vt_rmw_ratio) < 0.4):
-        vortex_depth_vt_dynamic = np.nanmax(heightlevs[vt_rmw_ratio > threshold_ratio_vt_dynamic])/1000
-        index_vortex_depth_vt_dynamic = np.argmin(abs(heightlevs/1000-vortex_depth_vt_dynamic))
+      shearmag_2km_5km_local = np.hypot(ushear_2km_5km_local_ring50km,vshear_2km_5km_local_ring50km)
+      sheardir_2km_5km_local = np.arctan2(vshear_2km_5km_local_ring50km,ushear_2km_5km_local_ring50km)*180.0/np.pi
+      if sheardir_2km_5km_local <=90:
+        sheardir_2km_5km_local = 90-sheardir_2km_5km_local
       else:
-        vortex_depth_vt_dynamic = np.nan
+        sheardir_2km_5km_local = 360-(sheardir_2km_5km_local-90)
 
-      if ( np.nanmin(vt_rmw_mean) < 24 and np.nanmax(vt_rmw_mean) >=24):
-        vortex_depth_vt_static = np.nanmax(heightlevs[vt_rmw_mean > 24.0])/1000
-        index_vortex_depth_vt_static = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+      shearmag_2km_8km_local = np.hypot(ushear_2km_8km_local_ring50km,vshear_2km_8km_local_ring50km)
+      sheardir_2km_8km_local = np.arctan2(vshear_2km_8km_local_ring50km,ushear_2km_8km_local_ring50km)*180.0/np.pi
+      if sheardir_2km_8km_local <=90:
+        sheardir_2km_8km_local = 90-sheardir_2km_8km_local
       else:
-        vortex_depth_vt_static = np.nan
+        sheardir_2km_8km_local = 360-(sheardir_2km_8km_local-90)
 
-      if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
-        vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
-        index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
-        ivd = index_vortex_depth_vt_temp+1
+      shearmag_2km_10km_local = np.hypot(ushear_2km_10km_local_ring50km,vshear_2km_10km_local_ring50km)
+      sheardir_2km_10km_local = np.arctan2(vshear_2km_10km_local_ring50km,ushear_2km_10km_local_ring50km)*180.0/np.pi
+      if sheardir_2km_10km_local <=90:
+        sheardir_2km_10km_local = 90-sheardir_2km_10km_local
       else:
-        ivd=11
+        sheardir_2km_10km_local = 360-(sheardir_2km_10km_local-90)
+    
+    # Lew.Gramer@noaa.gov 2024-01-18,2024-01-23
+    sst_100km_annular_avg = np.nanmean(sst[np.where(rad_distance_sfc < 100)])
+    sst_100km_annular_std = np.nanstd(sst[np.where(rad_distance_sfc < 100)])
+    efx_100km_annular_avg = np.nanmean(lhtflx[np.where(rad_distance_sfc < 100)]+shtflx[np.where(rad_distance_sfc < 100)])
+    efx_100km_annular_std = np.nanstd(lhtflx[np.where(rad_distance_sfc < 100)]+shtflx[np.where(rad_distance_sfc < 100)])
+    pblz_upp_100km_annular_avg = np.nanmean(pblz_upp[np.where(rad_distance_sfc < 100)])
+    pblz_upp_100km_annular_std = np.nanstd(pblz_upp[np.where(rad_distance_sfc < 100)])
+    
+    structurefile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+    f = open(structurefile,'w')
+    f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %5.2f, %4.0f, %5.1f, %4.0f, %5.1f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vt_dynamic,vortex_depth_vt_static,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local,sst_100km_annular_avg,sst_100km_annular_std,efx_100km_annular_avg,efx_100km_annular_std,pblz_upp_100km_annular_avg,pblz_upp_100km_annular_std))
+    f.close()
+    # LJG
 
-      ivd = np.nanmax((ivd,11))
-      print('IVD = ', ivd)
+    #############################################################################################################
+    ###Start of Block of code to do center calculations at each height based on Michael Fischer's methodology
+    do_tdr_recentering = namelist_structure_vars[23,1]
+    if do_tdr_recentering == 'Y':
+      print('MADE IT INSIDE THE RECENTERING LOOP')
 
-      #Calculate vortex depth based on vort
-      vort_ratio = np.nanmax(vort_p_mean,0)/np.nanmax(vort_p_mean[:,4])
-      threshold_ratio_vort = 0.5
-      if (np.min(vort_ratio) < 0.5):
-        try:
-          vortex_depth_vort = np.min(heightlevs[np.argwhere(vort_ratio[5::] < threshold_ratio_vort)+5])/1000
-          index_vortex_depth_vort = np.argmin(abs(heightlevs/1000-vortex_depth_vort))
-        except:
-          vortex_depth_vort = np.nan
-      else:
-        vortex_depth_vort = np.nan
+      LON,LAT=np.meshgrid(lon,lat)
 
-      # F-1.10: Storm center cascade (pressure + vort) + 2-5 / 2-10 km tilt
-      tilt = _compute_tilt(pressure, vort, pressure_p_mean, vort_p_mean,
-                           rmw_mean, x_sr, y_sr, r,
-                           uwind, vwind, lon, lat, lon_full, lat_full,
-                           centerlon, centerlat, ivd, zsize, vortex_depth_vort)
-      pressure_centroid       = tilt['pressure_centroid']
-      vort_centroid           = tilt['vort_centroid']
-      center_indices_pressure = tilt['center_indices_pressure']
-      center_indices_vort     = tilt['center_indices_vort']
-      threshold_pressure      = tilt['threshold_pressure']
-      threshold_vort          = tilt['threshold_vort']
-      center_x_vort           = tilt['center_x_vort']
-      center_y_vort           = tilt['center_y_vort']
-      center_x_pressure       = tilt['center_x_pressure']
-      center_y_pressure       = tilt['center_y_pressure']
-      center_lon_pressure     = tilt['center_lon_pressure']
-      center_lat_pressure     = tilt['center_lat_pressure']
-      tiltmag_deep_pressure   = tilt['tiltmag_deep_pressure']
-      tiltdir_deep_pressure   = tilt['tiltdir_deep_pressure']
-      tiltmag_deep_vort       = tilt['tiltmag_deep_vort']
-      tiltdir_deep_vort       = tilt['tiltdir_deep_vort']
-      tiltmag_mid_pressure    = tilt['tiltmag_mid_pressure']
-      tiltdir_mid_pressure    = tilt['tiltdir_mid_pressure']
-      tiltmag_mid_vort        = tilt['tiltmag_mid_vort']
-      tiltdir_mid_vort        = tilt['tiltdir_mid_vort']
+      allstacks=[]
+      indices=[]
+      # Center finder runs from 1 km up to the diagnosed vortex top.
+      # Plot thinning at line ~2751 keeps every-other entry → markers at
+      # 1, 2, 3, ... km on the vort_tilt_aircraft figure.
+      index1km = np.argmin(np.abs(heightlevs-1000))
+      list_of_levels=np.arange(index1km,ivd+1,1)
 
-      #First, percentage of area in the inner and outer core with each precip type
-      ptype_p_norm_inner = ptype_p_norm[:,15:26]
-      ptype_p_norm_outer = ptype_p_norm[:,26:41]
+      xmin = np.argmin(np.abs(x_sr+200))
+      xmax = np.argmin(np.abs(x_sr-200))
+      ymin = np.argmin(np.abs(y_sr+200))
+      ymax = np.argmin(np.abs(y_sr-200))
 
-      innersize = np.shape(ptype_p_norm_inner)[0]*np.shape(ptype_p_norm_inner)[1]
-      if innersize > 0:
-        weakpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 1.])[0]/innersize
-        stratiformpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 2.])[0]/innersize
-        shallowpercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 3.])[0]/innersize
-        moderatepercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 4.])[0]/innersize
-        deeppercent_inner = np.shape(ptype_p_norm_inner[ptype_p_norm_inner == 5.])[0]/innersize
-      else:
-        weakpercent_inner = np.nan
-        stratiformpercent_inner = np.nan
-        shallowpercent_inner = np.nan
-        moderatepercent_inner = np.nan
-        deeppercent_inner = np.nan
+      ### MP section (see: https://www.youtube.com/watch?v=fKl2JW_qrso)
+      #with concurrent.futures.ProcessPoolExecutor() as executor:
+      with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+        results = [executor.submit(MP_centers_function, uwind[ymin:ymax,xmin:xmax,level]-umotion,vwind[ymin:ymax,xmin:xmax,level]-vmotion,LON[ymin:ymax,xmin:xmax],LAT[ymin:ymax,xmin:xmax],center_lon_pressure[level],center_lat_pressure[level], level) for level in list_of_levels]
+        for job in concurrent.futures.as_completed(results):
+          print(np.shape(job.result))
+          (vals,ix) = job.result()
+          allstacks.append(vals) #put all these arrays into a big list
+          indices.append(ix)
 
-      outersize = np.shape(ptype_p_norm_outer)[0]*np.shape(ptype_p_norm_outer)[1]
-      if outersize > 0:
-        weakpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 1.])[0]/outersize
-        stratiformpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 2.])[0]/outersize
-        shallowpercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 3.])[0]/outersize
-        moderatepercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 4.])[0]/outersize
-        deeppercent_outer = np.shape(ptype_p_norm_outer[ptype_p_norm_outer == 5.])[0]/outersize
-      else:
-        weakpercent_outer = np.nan
-        stratiformpercent_outer = np.nan
-        shallowpercent_outer = np.nan
-        moderatepercent_outer = np.nan
-        deeppercent_outer = np.nan
+      indices_sorted = np.argsort(np.array(indices))
+      allstacks_array = np.array(allstacks)
+      allstacks_sorted = allstacks_array[indices_sorted,:]
+      newcenter_lat = allstacks_sorted[:,1]
+      newcenter_lon = allstacks_sorted[:,0]
+      newcenter_vtmax = allstacks_sorted[:,2]
+      newcenter_vmax = allstacks_sorted[:,3]
+      newcenter_coverage = allstacks_sorted[:,4]
 
-      #edit12/23 - Add ptype calc. and text output within 100 km of 2 km center and 5 km center, shear-relative quadrants, RH, mass flux at each height level, and vorticity at each height level---------------------------------------------------------------
-      #Create array of center lat/long that is same dimensions as lat_full and lon_full grids
-      ih = lat_full.shape[0]
-      jh = lat_full.shape[1]
-      centerx_full_2km = np.full((ih,jh),0.0)
-      centery_full_2km = np.full((ih,jh),0.0)
-      centerx_full_5km = np.full((ih,jh),0.0)
-      centery_full_5km = np.full((ih,jh),0.0)
-      centerx_full_2km[:,:] = center_lon_pressure[4]
-      centery_full_2km[:,:] = center_lat_pressure[4]
-      centerx_full_5km[:,:] = center_lon_pressure[10]
-      centery_full_5km[:,:] = center_lat_pressure[10]
-      #Create rad_distance grids w/ distance [km] from 2km and 5km centers in each array
-      dlats = (centery_full_2km * (math.pi)/180.) - (lat_full* (math.pi)/180.)
-      dlons = (centerx_full_2km * (math.pi)/180.) - (lon_full* (math.pi)/180.)
-      aa = ((np.sin(dlats/2))**2 + np.cos((lat_full*(math.pi)/180)) * np.cos((centery_full_2km * (math.pi)/180)) * (np.sin(dlons/2))**2)
-      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
-      rad_distance_2km = cc * 6371.
+      tiltmag_mid_tdr = tiltdir_mid_tdr = tiltmag_deep_tdr = tiltdir_deep_tdr = np.nan
+      index2km = np.argmin(np.abs(heightlevs[list_of_levels]-2000))
+      if ivd >= 11:
+        index5km = np.argmin(np.abs(heightlevs[list_of_levels]-5000))
+        tiltx_mid = (newcenter_lon[index5km]-newcenter_lon[index2km])*111.1*np.cos(centerlat*3.14159/180)
+        tilty_mid = (newcenter_lat[index5km]-newcenter_lat[index2km])*111.1
+        tiltmag_mid_tdr = np.hypot(tiltx_mid,tilty_mid)
+        tiltdir_mid_tdr = np.arctan2(tilty_mid,tiltx_mid)
 
-      dlats = (centery_full_5km * (math.pi)/180.) - (lat_full* (math.pi)/180.)
-      dlons = (centerx_full_5km * (math.pi)/180.) - (lon_full* (math.pi)/180.)
-      aa = ((np.sin(dlats/2))**2 + np.cos((lat_full*(math.pi)/180)) * np.cos((centery_full_5km * (math.pi)/180)) * (np.sin(dlons/2))**2)
-      cc = 2 * np.arctan2(np.sqrt(aa),np.sqrt(1-aa))
-      rad_distance_5km = cc * 6371.
+      if ivd >= 21:
+        index10km = np.argmin(np.abs(heightlevs[list_of_levels]-10000))
+        tiltx_deep = (newcenter_lon[index10km]-newcenter_lon[index2km])*111.1*np.cos(centerlat*3.14159/180)
+        tilty_deep = (newcenter_lat[index10km]-newcenter_lat[index2km])*111.1
+        tiltmag_deep_tdr = np.hypot(tiltx_deep,tilty_deep)
+        tiltdir_deep_tdr = np.arctan2(tilty_deep,tiltx_deep)
 
-      wherearea_2km = np.where(rad_distance_2km < 100.)
-      wherearea_5km = np.where(rad_distance_5km < 100.)
-      wherearea_2km_50 = np.where(rad_distance_2km < 50.)
-      wherearea_5km_50 = np.where(rad_distance_5km < 50.)
-      #precip. partition within 100km of 2km and 5km centers
-      partition_center = []
-      loopp_part = -1
-      for loopp in range(0,10):
-          loopp_part = loopp_part + 1
-          if loopp < 5:
-              annulusarea = np.size(wherearea_2km[0][:])
-              wherepart = np.where((rad_distance_2km < 100) & (ptype < loopp_part+1.5) & (ptype > loopp_part+.5))
-          if loopp == 5:
-              loopp_part = 0
-          if loopp >= 5:
-              annulusarea = np.size(wherearea_5km[0][:])
-              wherepart = np.where((rad_distance_5km < 100) & (ptype < loopp_part+1.5) & (ptype > loopp_part+.5))
-          if np.size(wherepart) > 0:
-              partition_center.append(np.size(wherepart[0][:]) / annulusarea)
-          else:
-              partition_center.append(0)
+      #Generate Some Variables for Later Plotting
+      ms2kt = 1.94384
+      deg2rad = pi/180.
 
-      #Add shear-relative ptype % w.r.t. sfc center -------------------------------------Loop through each ptype by quadrant w/i 0-100km and 0-200km - DSL, USL, USR, DSR
-      shearquadindex = [0,18,36,54,72]
-      loopp_part = -1
-      for loopp in range(0,5):
-          loopp_part = loopp_part + 1
-          for loopquad in range(0,4):
-              wherepart = np.where((ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50] < loopp_part+1.5) & (ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50] > loopp_part+.5))
-              if np.size(wherepart) > 0:
-                  partition_center.append(np.size(wherepart[0][:]) / np.size(ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:50]))
-              else:
-                  partition_center.append(0)
-              #w/i 0-200km
-              wherepart = np.where((ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100] < loopp_part+1.5) & (ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100] > loopp_part+.5))
-              if np.size(wherepart) > 0:
-                  partition_center.append(np.size(wherepart[0][:]) / np.size(ptype_p_rot[shearquadindex[loopquad]:shearquadindex[loopquad+1]+1,:100]))
-              else:
-                  partition_center.append(0)
-      partition_center = np.array(partition_center)
+      res = 2
+      xmin = np.argmin(np.abs(x_sr+200))
+      xmax = np.argmin(np.abs(x_sr-200))
+      ymin = np.argmin(np.abs(y_sr+200))
+      ymax = np.argmin(np.abs(y_sr-200))
+      x_sr_200km = x_sr[xmin:xmax]
+      y_sr_200km = y_sr[ymin:ymax]
+      lon_sr_200km = lon[xmin:xmax]
+      lat_sr_200km = lat[ymin:ymax]
+      x_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
+      y_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
 
-      #Add RH annulus - 0-200 km 2 km center, 0-200 km 5 km center, 0-200km shear-relative quadrants --------------------------------------------------------------------------------------
-      rh_center = []
-      whererh_2km = np.where(rad_distance_2km < 200.)
-      whererh_5km = np.where(rad_distance_5km < 200.)
-      rh700500 = np.array(np.nanmean(rh[:,:,12:20],axis=2)) #verify 3rd dimension indices for 700-500hPa-------------------------
-      rh_center.append(np.nanmean(rh700500[whererh_2km]))
-      rh_center.append(np.nanmean(rh700500[whererh_5km]))
-      rh_p_dsl = np.nanmean(rh_p_rot[:19,:100,12:20])
-      rh_p_usl = np.nanmean(rh_p_rot[18:37,:100,12:20])
-      rh_p_usr = np.nanmean(rh_p_rot[36:55,:100,12:20])
-      rh_p_dsr = np.nanmean(rh_p_rot[54:73,:100,12:20])
+      newcenter_xindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
+      newcenter_yindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
+      newcenter_flag = np.zeros(np.shape(newcenter_lon))
+      for k in range(np.shape(list_of_levels)[0]):
+         newcenter_xindex_orig = np.argmin(np.abs(newcenter_lon[k]-lon_sr_200km)).astype(int)
+         newcenter_yindex_orig = np.argmin(np.abs(newcenter_lat[k]-lat_sr_200km)).astype(int)
+         if ((newcenter_coverage[k] < 0.2) | (newcenter_vtmax[k] < 8.0)):
+          newcenter_flag[k] = 1
+         newcenter_xindex[k] = np.argmin(np.abs(x_sr_200km_interp-x_sr_200km[newcenter_xindex_orig])).astype(int)
+         newcenter_yindex[k] = np.argmin(np.abs(y_sr_200km_interp-y_sr_200km[newcenter_yindex_orig])).astype(int)
 
-      #text output
-      structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_ptype_rh.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
-      f = open(structurefile_new,'w')
-      f.write("%4s, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f,%4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.3f, %4.1f, %4.1f, %4.1f, %4.1f, %4.1f, %4.1f" % (FHR,partition_center[0],partition_center[1],partition_center[2],partition_center[3],partition_center[4],partition_center[5],partition_center[6],partition_center[7],partition_center[8],partition_center[9],partition_center[10],partition_center[11],partition_center[12],partition_center[13],partition_center[14],partition_center[15],partition_center[16],partition_center[17],partition_center[18],partition_center[19],partition_center[20],partition_center[21],partition_center[22],partition_center[23],partition_center[24],partition_center[25],partition_center[26],partition_center[27],partition_center[28],partition_center[29],partition_center[30],partition_center[31],partition_center[32],partition_center[33],partition_center[34],partition_center[35],partition_center[36],partition_center[37],partition_center[38],partition_center[39],partition_center[40],partition_center[41],partition_center[42],partition_center[43],partition_center[44],partition_center[45],partition_center[46],partition_center[47],partition_center[48],partition_center[49],rh_center[0],rh_center[1],rh_p_dsl,rh_p_usl,rh_p_usr,rh_p_dsr))
-      f.close()
+      kmin_tilt = np.min(list_of_levels)
+      kmax_tilt = np.max(list_of_levels)
 
-      #Add mass flux and vorticity averaged within 50 km for each vertical level w.r.t. 2km and 5km centers for text output-------------------------------------------
-      massflux5km = []
-      vorticity5km = []
-      massflux2km = []
-      vorticity2km = []
-      for looph in range(0,np.size(wwind_store[0,0,:])):
-          wwindh = wwind_store[:,:,looph]
-          rhoh = rho[:,:,looph]
-          massflux2km.append(np.nanmean(wwindh[wherearea_2km_50] * rhoh[wherearea_2km_50]))
-          massflux5km.append(np.nanmean(wwindh[wherearea_5km_50] * rhoh[wherearea_5km_50]))
-          if looph < 37:
-             vorth = vort[:,:,looph]
-             vorticity2km.append(np.nanmean(vorth[wherearea_2km_50]))
-             vorticity5km.append(np.nanmean(vorth[wherearea_5km_50]))
+      #Set the Flag to 1 at 0.5km intervals for plotting purposes
+      newcenter_flag[1:kmax_tilt-kmin_tilt+1:2] = 1
 
-      structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_massflux.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
-      f = open(structurefile_new,'w')
-      f.write("%4s, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f,  %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f, %4s, % 7.6f, % 7.6f," % (FHR,levs[0,0,0],massflux2km[0],massflux5km[0],levs[0,0,1],massflux2km[1],massflux5km[1],levs[0,0,2], massflux2km[2],massflux5km[2],levs[0,0,3], massflux2km[3],massflux5km[3],levs[0,0,4], massflux2km[4],massflux5km[4],levs[0,0,5], massflux2km[5],massflux5km[5],levs[0,0,6], massflux2km[6],massflux5km[6],levs[0,0,7], massflux2km[7],massflux5km[7],levs[0,0,8], massflux2km[8],massflux5km[8],levs[0,0,9], massflux2km[9],massflux5km[9],levs[0,0,10], massflux2km[10],massflux5km[10],levs[0,0,11], massflux2km[11],massflux5km[11],levs[0,0,12], massflux2km[12],massflux5km[12],levs[0,0,13], massflux2km[13],massflux5km[13],levs[0,0,14], massflux2km[14],massflux5km[14],levs[0,0,15], massflux2km[15],massflux5km[15],levs[0,0,16], massflux2km[16],massflux5km[16],levs[0,0,17], massflux2km[17],massflux5km[17],levs[0,0,18], massflux2km[18],massflux5km[18],levs[0,0,19], massflux2km[19],massflux5km[19],levs[0,0,20], massflux2km[20],massflux5km[20],levs[0,0,21], massflux2km[21],massflux5km[21],levs[0,0,22], massflux2km[22],massflux5km[22],levs[0,0,23], massflux2km[23],massflux5km[24],levs[0,0,24], massflux2km[24],massflux5km[24],levs[0,0,25], massflux2km[25],massflux5km[25],levs[0,0,26], massflux2km[26],massflux5km[26],levs[0,0,27], massflux2km[27],massflux5km[27],levs[0,0,28], massflux2km[28],massflux5km[28],levs[0,0,29], massflux2km[29],massflux5km[29],levs[0,0,30], massflux2km[30],massflux5km[30],levs[0,0,31], massflux2km[31],massflux5km[31],levs[0,0,32], massflux2km[32],massflux5km[32],levs[0,0,33], massflux2km[33],massflux5km[33]))
-      f.close()
+      SHIPS_ShearMagNum = shearmag*ms2kt
+      SHIPS_ShearDirMetNum = sheardir_met
 
-      structurefile_new = ODIR+'/'+LONGSID.lower()+'.structure_statistics_vorticity.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
-      f = open(structurefile_new,'w')
-      f.write("%4s, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f, %4s, % 8.7f, % 8.7f," % (FHR,heightlevs[0],vorticity2km[0],vorticity5km[0],heightlevs[1],vorticity2km[1],vorticity5km[1],heightlevs[2], vorticity2km[2],vorticity5km[2],heightlevs[3], vorticity2km[3],vorticity5km[3],heightlevs[4], vorticity2km[4],vorticity5km[4],heightlevs[5], vorticity2km[5],vorticity5km[5],heightlevs[6], vorticity2km[6],vorticity5km[6],heightlevs[7], vorticity2km[7],vorticity5km[7],heightlevs[8], vorticity2km[8],vorticity5km[8],heightlevs[9], vorticity2km[9],vorticity5km[9],heightlevs[10], vorticity2km[10],vorticity5km[10],heightlevs[11], vorticity2km[11],vorticity5km[11],heightlevs[12], vorticity2km[12],vorticity5km[12],heightlevs[13], vorticity2km[13],vorticity5km[13],heightlevs[14], vorticity2km[14],vorticity5km[14],heightlevs[15], vorticity2km[15],vorticity5km[15],heightlevs[16], vorticity2km[16],vorticity5km[16],heightlevs[17], vorticity2km[17],vorticity5km[17],heightlevs[18], vorticity2km[18],vorticity5km[18],heightlevs[19], vorticity2km[19],vorticity5km[19],heightlevs[20], vorticity2km[20],vorticity5km[20],heightlevs[21], vorticity2km[21],vorticity5km[21],heightlevs[22], vorticity2km[22],vorticity5km[22],heightlevs[23], vorticity2km[23],vorticity5km[24],heightlevs[24], vorticity2km[24],vorticity5km[24],heightlevs[25], vorticity2km[25],vorticity5km[25],heightlevs[26], vorticity2km[26],vorticity5km[26],heightlevs[27], vorticity2km[27],vorticity5km[27],heightlevs[28], vorticity2km[28],vorticity5km[28],heightlevs[29], vorticity2km[29],vorticity5km[29],heightlevs[30], vorticity2km[30],vorticity5km[30],heightlevs[31], vorticity2km[31],vorticity5km[31],heightlevs[32], vorticity2km[32],vorticity5km[32],heightlevs[33], vorticity2km[33],vorticity5km[33]))
-      f.close()
-      #edit12/23end--------------------------------------------------------------------------------
+      #Re-grid
+      uwind_sr_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+      vwind_sr_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+      wwind_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+      vort_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
+      # Legacy interp2d(x, y, z)(x_new, y_new) → output[i,j] is z at
+      # (y_new[i], x_new[j]). Build the meshgrid once and feed
+      # RegularGridInterpolator with axis order (y, x).
+      _Y_q200, _X_q200 = np.meshgrid(y_sr_200km_interp, x_sr_200km_interp, indexing='ij')
+      _rgi200_kw = dict(bounds_error=False, fill_value=np.nan)
+      for k in range(zsize):
+        f_u = interpolate.RegularGridInterpolator((y_sr_200km, x_sr_200km), uwind[ymin:ymax,xmin:xmax,k]-umotion, **_rgi200_kw)
+        f_v = interpolate.RegularGridInterpolator((y_sr_200km, x_sr_200km), vwind[ymin:ymax,xmin:xmax,k]-vmotion, **_rgi200_kw)
+        f_w = interpolate.RegularGridInterpolator((y_sr_200km, x_sr_200km), wwind[ymin:ymax,xmin:xmax,k], **_rgi200_kw)
+        f_z = interpolate.RegularGridInterpolator((y_sr_200km, x_sr_200km), vort[ymin:ymax,xmin:xmax,k], **_rgi200_kw)
+        uwind_sr_200km_interp[:,:,k] = f_u((_Y_q200, _X_q200), method='linear')
+        vwind_sr_200km_interp[:,:,k] = f_v((_Y_q200, _X_q200), method='linear')
+        wwind_200km_interp[:,:,k]    = f_w((_Y_q200, _X_q200), method='linear')
+        vort_200km_interp[:,:,k]     = f_z((_Y_q200, _X_q200), method='linear')
 
-      #Next, calculate closure of the eyewall for stratiform, shallow, moderate, and deep convection
-      ptype_p_norm_inner_max = np.max(ptype_p_norm_inner,1)
-      closure_stratiform = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 2.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-      closure_shallow = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 3.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-      closure_moderate = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 4.])[0]/np.shape(ptype_p_norm_inner_max)[0]
-      closure_deep = np.shape(ptype_p_norm_inner_max[ptype_p_norm_inner_max >= 5.])[0]/np.shape(ptype_p_norm_inner_max)[0]
+      #Now Write Out the Centers to a Text File
+      centersfile = ODIR+'/'+LONGSID.lower()+'.centers_by_height.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
+      centersarray = (newcenter_lon,newcenter_lat,heightlevs[list_of_levels])
+      np.savetxt(centersfile,np.column_stack(centersarray),fmt = "%.2f",delimiter=',')
+      ###End of Block of code to do center calculations at each height based on Michael Fischer's methodology
+    #############################################################################################################
 
-      #RMW Slope
-      slope_rmw_1 = np.linalg.lstsq((heightlevs[4:21]/1000-heightlevs[4]/1000).reshape(-1,1), (rmw_mean[4:21]-rmw_mean[4]), rcond=None)[0][0]
-      slope_rmw_2 = (rmw_mean[20]-rmw_mean[4])/8
+    #############################################################################################################################################
+    # THIS BLOCK OF CODE WRITES AN OPTIONAL NETCDF FILE (BASED ON A NAMELIST PARAMETER) WITH AZIMUTHAL MEAN VARIABLES
+    #############################################################################################################################################
+    do_write_netcdf = namelist_structure_vars[22,1]
+    if do_write_netcdf == 'Y':
+      _write_netcdf(
+        ODIR, LONGSID, forecastinit, FHR,
+        r, theta, heightlevs, heightlevs_pbl,
+        vt_p, ur_p, w_p, dbz_p, q_p, rh_p, temp_p, pressure_p,
+        vt_pbl_p, ur_pbl_p,
+        rmw_2km, maxwind, minpressure, centerlon, centerlat,
+        shearmag, sheardir,
+        vortex_depth_vt_dynamic, vortex_depth_vt_static,
+        slope_rmw_1, slope_rmw_2, alpha, rossby,
+        temp_anomaly_max, height_temp_anomaly_max,
+        temp_p_anomaly, anomaly_extent, temp_p_anomaly_max,
+        center_lon_pressure=tilt['center_lon_pressure'],
+        center_lat_pressure=tilt['center_lat_pressure'],
+        center_lon_vort=tilt['center_lon_vort'],
+        center_lat_vort=tilt['center_lat_vort'],
+      )
 
-      #Alpha Parameter
-      if (rmw_2km < 100. and (3*rmw_2km) < rmax):
-        alpha = np.log(vt_p_mean_norm[20,4]/vt_p_mean_norm[60,4])/np.log(3)
-      else:
-        alpha = np.nan
-
-      #Rossby Number
-      rmw_mean_10m = rmw_mean[0]
-      rmw_mean_index_10m = int(rmw_mean_index[0])
-      vt10_p_mean = np.nanmean(vt10_p,0)
-      coriolis = 2*7.292e-5*np.sin(centerlat*3.14159/180)
-      rossby = vt10_p_mean[rmw_mean_index_10m]/(rmw_mean_10m*1000*coriolis)
-
-      # F-1.11: Warm core anomaly magnitude / height / radial extent
-      warm = _compute_warm_core(temp_p_mean, r, heightlevs)
-      r15km_index             = warm['r15km_index']
-      r200km_index            = warm['r200km_index']
-      r300km_index            = warm['r300km_index']
-      temp_p_mean_core_mean   = warm['temp_p_mean_core_mean']
-      temp_p_mean_outer_mean  = warm['temp_p_mean_outer_mean']
-      temp_p_anomaly          = warm['temp_p_anomaly']
-      anomaly_extent          = warm['anomaly_extent']
-      temp_p_anomaly_max      = warm['temp_p_anomaly_max']
-      temp_anomaly            = warm['temp_anomaly']
-      temp_anomaly_max        = warm['temp_anomaly_max']
-      height_temp_anomaly_max = warm['height_temp_anomaly_max']
-
-      #Calculate symmetry of precipitation
-      dbz5_p_w0_ring = dbz5_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-      dbz5_p_w1_ring = dbz5_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-      dbz5_p_whigher_ring = dbz5_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[4])):np.argmin(np.abs(r-1.25*rmw_mean[4]))+1]
-      amp_dbz5_p_w0_ring = np.nanmean(np.nanmax(dbz5_p_w0_ring,0))
-      amp_dbz5_p_w1_ring = np.nanmean(np.nanmax(dbz5_p_w1_ring,0)-np.mean(dbz5_p_w1_ring,0))
-      amp_dbz5_p_whigher_ring = np.nanmean(np.nanmax(dbz5_p_whigher_ring,0)-np.mean(dbz5_p_whigher_ring,0))
-      symmetry_w1_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring)
-      symmetry_all_dbz5_p = amp_dbz5_p_w0_ring/(amp_dbz5_p_w0_ring+amp_dbz5_p_w1_ring+amp_dbz5_p_whigher_ring)
-      if symmetry_w1_dbz5_p < 0: symmetry_w1_dbz5_p = 0
-      if symmetry_all_dbz5_p < 0: symmetry_all_dbz5_p = 0
-
-      vt10_p_w0_ring = vt10_p_w0[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
-      vt10_p_w1_ring = vt10_p_w1[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
-      vt10_p_whigher_ring = vt10_p_whigher[:,np.argmin(np.abs(r-0.75*rmw_mean[0])):np.argmin(np.abs(r-1.25*rmw_mean[0]))+1]
-      amp_vt10_p_w0_ring = np.nanmean(np.nanmax(vt10_p_w0_ring,0))
-      amp_vt10_p_w1_ring = np.nanmean(np.nanmax(vt10_p_w1_ring,0)-np.mean(vt10_p_w1_ring,0))
-      amp_vt10_p_whigher_ring = np.nanmean(np.nanmax(vt10_p_whigher_ring,0)-np.mean(vt10_p_whigher_ring,0))
-      symmetry_w1_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring)
-      symmetry_all_vt10_p = amp_vt10_p_w0_ring/(amp_vt10_p_w0_ring+amp_vt10_p_w1_ring+amp_vt10_p_whigher_ring)
-      if symmetry_w1_vt10_p < 0: symmetry_w1_vt10_p = 0
-      if symmetry_all_vt10_p < 0: symmetry_all_vt10_p = 0
-
-      #Calculate Local Shear
-      if ( np.min(threshold_vort) > 0):
-        rmaxlocal = 102
-        rlocal = np.linspace(0,rmaxlocal,(int(rmaxlocal//resolution)+1))
-        Rlocal, THETAlocal = np.meshgrid(rlocal, theta)
-        XIlocal = Rlocal * np.cos(THETAlocal)
-        YIlocal = Rlocal * np.sin(THETAlocal)
-        u2km = uwind[:,:,4]
-        v2km = vwind[:,:,4]
-        u5km = uwind[:,:,10]
-        v5km = vwind[:,:,10]
-        u8km = uwind[:,:,16]
-        v8km = vwind[:,:,16]
-        u10km = uwind[:,:,4]
-        v10km = vwind[:,:,20]
-
-        u2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        v2km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        u5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        v5km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        u8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        v8km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        u10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-        v10km_p_local = np.ones((np.shape(XIlocal)[0],np.shape(XIlocal)[1]))*np.nan
-
-        if (center_x_vort[4] < 200 and center_y_vort[4] < 200):
-          f_u2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), u2km[:,:])
-          u2km_p_local[:,:] = f_u2km((YIlocal,XIlocal),method='linear')
-          f_v2km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[4], x_sr+center_x_vort[4]), v2km[:,:])
-          v2km_p_local[:,:] = f_v2km((YIlocal,XIlocal),method='linear')
-
-        if (vortex_depth_vort >= 5 and center_x_vort[10] < 200 and center_y_vort[10] < 200):
-          f_u5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), u5km[:,:])
-          u5km_p_local[:,:] = f_u5km((YIlocal,XIlocal),method='linear')
-          f_v5km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[10], x_sr+center_x_vort[10]), v5km[:,:])
-          v5km_p_local[:,:] = f_v5km((YIlocal,XIlocal),method='linear')
-
-        if (vortex_depth_vort >= 8 and center_x_vort[16] < 200 and center_y_vort[16] < 200):
-          f_u8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), u8km[:,:])
-          u8km_p_local[:,:] = f_u8km((YIlocal,XIlocal),method='linear')
-          f_v8km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[16], x_sr+center_x_vort[16]), v8km[:,:])
-          v8km_p_local[:,:] = f_v8km((YIlocal,XIlocal),method='linear')
-
-        if (vortex_depth_vort >= 10 and center_x_vort[20] < 200 and center_y_vort[20] < 200):
-          f_u10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), u10km[:,:])
-          u10km_p_local[:,:] = f_u10km((YIlocal,XIlocal),method='linear')
-          f_v10km = interpolate.RegularGridInterpolator((y_sr+center_y_vort[20], x_sr+center_x_vort[20]), v10km[:,:])
-          v10km_p_local[:,:] = f_v10km((YIlocal,XIlocal),method='linear')
-
-        rlocal50 = np.argmin(np.abs(rlocal-50))
-
-        with warnings.catch_warnings():
-          warnings.filterwarnings(action='ignore', message='Mean of empty slice')
-          u2km_p_local_ring50km_mean = np.nanmean(u2km_p_local[:,rlocal50+1])
-          v2km_p_local_ring50km_mean = np.nanmean(v2km_p_local[:,rlocal50+1])
-          u5km_p_local_ring50km_mean = np.nanmean(u5km_p_local[:,rlocal50+1])
-          v5km_p_local_ring50km_mean = np.nanmean(v5km_p_local[:,rlocal50+1])
-          u8km_p_local_ring50km_mean = np.nanmean(u8km_p_local[:,rlocal50+1])
-          v8km_p_local_ring50km_mean = np.nanmean(v8km_p_local[:,rlocal50+1])
-          u10km_p_local_ring50km_mean = np.nanmean(u10km_p_local[:,rlocal50+1])
-          v10km_p_local_ring50km_mean = np.nanmean(v10km_p_local[:,rlocal50+1])
-
-        ushear_2km_5km_local_ring50km = u5km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
-        vshear_2km_5km_local_ring50km = v5km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
-        ushear_2km_8km_local_ring50km = u8km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
-        vshear_2km_8km_local_ring50km = v8km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
-        ushear_2km_10km_local_ring50km = u10km_p_local_ring50km_mean-u2km_p_local_ring50km_mean
-        vshear_2km_10km_local_ring50km = v10km_p_local_ring50km_mean-v2km_p_local_ring50km_mean
-
-        shearmag_2km_5km_local = np.hypot(ushear_2km_5km_local_ring50km,vshear_2km_5km_local_ring50km)
-        sheardir_2km_5km_local = np.arctan2(vshear_2km_5km_local_ring50km,ushear_2km_5km_local_ring50km)*180.0/np.pi
-        if sheardir_2km_5km_local <=90:
-          sheardir_2km_5km_local = 90-sheardir_2km_5km_local
-        else:
-          sheardir_2km_5km_local = 360-(sheardir_2km_5km_local-90)
-
-        shearmag_2km_8km_local = np.hypot(ushear_2km_8km_local_ring50km,vshear_2km_8km_local_ring50km)
-        sheardir_2km_8km_local = np.arctan2(vshear_2km_8km_local_ring50km,ushear_2km_8km_local_ring50km)*180.0/np.pi
-        if sheardir_2km_8km_local <=90:
-          sheardir_2km_8km_local = 90-sheardir_2km_8km_local
-        else:
-          sheardir_2km_8km_local = 360-(sheardir_2km_8km_local-90)
-
-        shearmag_2km_10km_local = np.hypot(ushear_2km_10km_local_ring50km,vshear_2km_10km_local_ring50km)
-        sheardir_2km_10km_local = np.arctan2(vshear_2km_10km_local_ring50km,ushear_2km_10km_local_ring50km)*180.0/np.pi
-        if sheardir_2km_10km_local <=90:
-          sheardir_2km_10km_local = 90-sheardir_2km_10km_local
-        else:
-          sheardir_2km_10km_local = 360-(sheardir_2km_10km_local-90)
-      
-      # Lew.Gramer@noaa.gov 2024-01-18,2024-01-23
-      sst_100km_annular_avg = np.nanmean(sst[np.where(rad_distance_sfc < 100)])
-      sst_100km_annular_std = np.nanstd(sst[np.where(rad_distance_sfc < 100)])
-      efx_100km_annular_avg = np.nanmean(lhtflx[np.where(rad_distance_sfc < 100)]+shtflx[np.where(rad_distance_sfc < 100)])
-      efx_100km_annular_std = np.nanstd(lhtflx[np.where(rad_distance_sfc < 100)]+shtflx[np.where(rad_distance_sfc < 100)])
-      pblz_upp_100km_annular_avg = np.nanmean(pblz_upp[np.where(rad_distance_sfc < 100)])
-      pblz_upp_100km_annular_std = np.nanstd(pblz_upp[np.where(rad_distance_sfc < 100)])
-      
-      structurefile = ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
-      f = open(structurefile,'w')
-      f.write("%4s, %4.0f, %5.1f, %5.1f, %4.1f, %4.1f, %5.2f, %5.2f, %4.2f, %4.1f, %4.1f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %5.1f, %4.0f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %4.0f, %4.1f, %5.2f, %4.0f, %5.1f, %4.0f, %5.1f" % (FHR,vmax,rmw_2km,rossby,temp_anomaly_max,height_temp_anomaly_max,slope_rmw_1,slope_rmw_2,alpha,vortex_depth_vt_dynamic,vortex_depth_vt_static,tiltmag_mid_pressure,tiltdir_mid_pressure,tiltmag_mid_vort,tiltdir_mid_vort,tiltmag_deep_pressure,tiltdir_deep_pressure,tiltmag_deep_vort,tiltdir_deep_vort,weakpercent_inner,stratiformpercent_inner,shallowpercent_inner,moderatepercent_inner,deeppercent_inner,weakpercent_outer,stratiformpercent_outer,shallowpercent_outer,moderatepercent_outer,deeppercent_outer,closure_stratiform,closure_shallow,closure_moderate,closure_deep,symmetry_w1_dbz5_p,symmetry_all_dbz5_p,symmetry_w1_vt10_p,symmetry_all_vt10_p,shearmag_2km_5km_local,sheardir_2km_5km_local,shearmag_2km_8km_local,sheardir_2km_8km_local,shearmag_2km_10km_local,sheardir_2km_10km_local,sst_100km_annular_avg,sst_100km_annular_std,efx_100km_annular_avg,efx_100km_annular_std,pblz_upp_100km_annular_avg,pblz_upp_100km_annular_std))
-      f.close()
-      # LJG
-
-      #############################################################################################################
-      ###Start of Block of code to do center calculations at each height based on Michael Fischer's methodology
-      do_tdr_recentering = namelist_structure_vars[23,1]
-      if do_tdr_recentering == 'Y':
-        print('MADE IT INSIDE THE RECENTERING LOOP')
-
-        LON,LAT=np.meshgrid(lon,lat)
-
-        allstacks=[]
-        indices=[]
-        index2km = np.argmin(np.abs(heightlevs-2000))
-        list_of_levels=np.arange(index2km,ivd+1,1)
-
-        xmin = np.argmin(np.abs(x_sr+200))
-        xmax = np.argmin(np.abs(x_sr-200))
-        ymin = np.argmin(np.abs(y_sr+200))
-        ymax = np.argmin(np.abs(y_sr-200))
-
-        ### MP section (see: https://www.youtube.com/watch?v=fKl2JW_qrso)
-        #with concurrent.futures.ProcessPoolExecutor() as executor:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-          results = [executor.submit(MP_centers_function, uwind[ymin:ymax,xmin:xmax,level]-umotion,vwind[ymin:ymax,xmin:xmax,level]-vmotion,LON[ymin:ymax,xmin:xmax],LAT[ymin:ymax,xmin:xmax],center_lon_pressure[level],center_lat_pressure[level], level) for level in list_of_levels]
-          for job in concurrent.futures.as_completed(results):
-            print(np.shape(job.result))
-            (vals,ix) = job.result()
-            allstacks.append(vals) #put all these arrays into a big list
-            indices.append(ix)
-
-        indices_sorted = np.argsort(np.array(indices))
-        allstacks_array = np.array(allstacks)
-        allstacks_sorted = allstacks_array[indices_sorted,:]
-        newcenter_lat = allstacks_sorted[:,1]
-        newcenter_lon = allstacks_sorted[:,0]
-        newcenter_vtmax = allstacks_sorted[:,2]
-        newcenter_vmax = allstacks_sorted[:,3]
-        newcenter_coverage = allstacks_sorted[:,4]
-
-        tiltmag_mid_tdr = tiltdir_mid_tdr = tiltmag_deep_tdr = tiltdir_deep_tdr = np.nan
-        index2km = np.argmin(np.abs(heightlevs[list_of_levels]-2000))
-        if ivd >= 11:
-          index5km = np.argmin(np.abs(heightlevs[list_of_levels]-5000))
-          tiltx_mid = (newcenter_lon[index5km]-newcenter_lon[index2km])*111.1*np.cos(centerlat*3.14159/180)
-          tilty_mid = (newcenter_lat[index5km]-newcenter_lat[index2km])*111.1
-          tiltmag_mid_tdr = np.hypot(tiltx_mid,tilty_mid)
-          tiltdir_mid_tdr = np.arctan2(tilty_mid,tiltx_mid)
-
-        if ivd >= 21:
-          index10km = np.argmin(np.abs(heightlevs[list_of_levels]-10000))
-          tiltx_deep = (newcenter_lon[index10km]-newcenter_lon[index2km])*111.1*np.cos(centerlat*3.14159/180)
-          tilty_deep = (newcenter_lat[index10km]-newcenter_lat[index2km])*111.1
-          tiltmag_deep_tdr = np.hypot(tiltx_deep,tilty_deep)
-          tiltdir_deep_tdr = np.arctan2(tilty_deep,tiltx_deep)
-
-        #Generate Some Variables for Later Plotting
-        ms2kt = 1.94384
-        deg2rad = pi/180.
-
-        res = 2
-        xmin = np.argmin(np.abs(x_sr+200))
-        xmax = np.argmin(np.abs(x_sr-200))
-        ymin = np.argmin(np.abs(y_sr+200))
-        ymax = np.argmin(np.abs(y_sr-200))
-        x_sr_200km = x_sr[xmin:xmax]
-        y_sr_200km = y_sr[ymin:ymax]
-        lon_sr_200km = lon[xmin:xmax]
-        lat_sr_200km = lat[ymin:ymax]
-        x_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
-        y_sr_200km_interp = np.linspace(-200,200,int(400/res)+1)
-
-        newcenter_xindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
-        newcenter_yindex = (np.ones(np.shape(newcenter_lon))*np.nan).astype(int)
-        newcenter_flag = np.zeros(np.shape(newcenter_lon))
-        for k in range(np.shape(list_of_levels)[0]):
-           newcenter_xindex_orig = np.argmin(np.abs(newcenter_lon[k]-lon_sr_200km)).astype(int)
-           newcenter_yindex_orig = np.argmin(np.abs(newcenter_lat[k]-lat_sr_200km)).astype(int)
-           if ((newcenter_coverage[k] < 0.2) | (newcenter_vtmax[k] < 8.0)):
-            newcenter_flag[k] = 1
-           newcenter_xindex[k] = np.argmin(np.abs(x_sr_200km_interp-x_sr_200km[newcenter_xindex_orig])).astype(int)
-           newcenter_yindex[k] = np.argmin(np.abs(y_sr_200km_interp-y_sr_200km[newcenter_yindex_orig])).astype(int)
-
-        kmin_tilt = np.min(list_of_levels)
-        kmax_tilt = np.max(list_of_levels)
-
-        #Set the Flag to 1 at 0.5km intervals for plotting purposes
-        newcenter_flag[1:kmax_tilt-kmin_tilt+1:2] = 1
-
-        SHIPS_ShearMagNum = shearmag*ms2kt
-        SHIPS_ShearDirMetNum = sheardir_met
-
-        #Re-grid
-        uwind_sr_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
-        vwind_sr_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
-        wwind_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
-        vort_200km_interp = np.ones((np.shape(y_sr_200km_interp)[0],np.shape(x_sr_200km_interp)[0],zsize))*np.nan
-        for k in range(zsize):
-          uwind_sr_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, uwind[ymin:ymax,xmin:xmax,k]-umotion)(x_sr_200km_interp, y_sr_200km_interp)
-          vwind_sr_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, vwind[ymin:ymax,xmin:xmax,k]-vmotion)(x_sr_200km_interp, y_sr_200km_interp)
-          wwind_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, wwind[ymin:ymax,xmin:xmax,k])(x_sr_200km_interp, y_sr_200km_interp)
-          vort_200km_interp[:,:,k] = interp2d(x_sr_200km, y_sr_200km, vort[ymin:ymax,xmin:xmax,k])(x_sr_200km_interp, y_sr_200km_interp)
-
-        #Now Write Out the Centers to a Text File
-        centersfile = ODIR+'/'+LONGSID.lower()+'.centers_by_height.'+forecastinit+'.polar.f'+format(FHR,'03d')+'.txt'
-        centersarray = (newcenter_lon,newcenter_lat,heightlevs[list_of_levels])
-        np.savetxt(centersfile,np.column_stack(centersarray),fmt = "%.2f",delimiter=',')
-        ###End of Block of code to do center calculations at each height based on Michael Fischer's methodology
-      #############################################################################################################
-
-      #############################################################################################################################################
-      # THIS BLOCK OF CODE WRITES AN OPTIONAL NETCDF FILE (BASED ON A NAMELIST PARAMETER) WITH AZIMUTHAL MEAN VARIABLES
-      #############################################################################################################################################
-      do_write_netcdf = namelist_structure_vars[22,1]
-      if do_write_netcdf == 'Y':
-        _write_netcdf(
-          ODIR, LONGSID, forecastinit, FHR,
-          r, theta, heightlevs, heightlevs_pbl,
-          vt_p, ur_p, w_p, dbz_p, q_p, rh_p, temp_p, pressure_p,
-          vt_pbl_p, ur_pbl_p,
-          rmw_2km, maxwind, minpressure, centerlon, centerlat,
-          shearmag, sheardir,
-          vortex_depth_vt_dynamic, vortex_depth_vt_static,
-          slope_rmw_1, slope_rmw_2, alpha, rossby,
-          temp_anomaly_max, height_temp_anomaly_max,
-          temp_p_anomaly, anomaly_extent, temp_p_anomaly_max,
-          center_lon_pressure=tilt['center_lon_pressure'],
-          center_lat_pressure=tilt['center_lat_pressure'],
-          center_lon_vort=tilt['center_lon_vort'],
-          center_lat_vort=tilt['center_lat_vort'],
-        )
-
-      #############################################################################################################################################
-      # END OF BLOCK OF CODE TO WRITE A NETCDF FILE
-      #############################################################################################################################################
+    #############################################################################################################################################
+    # END OF BLOCK OF CODE TO WRITE A NETCDF FILE
+    #############################################################################################################################################
 
     #############################################################################################################################################
     # CREATE THE GRAPHICS HERE
@@ -2783,15 +2836,6 @@ def main():
     do_radar_plots = namelist_structure_vars[19,1]
     do_soundings = namelist_structure_vars[20,1]
     do_shear_and_rh_plots = namelist_structure_vars[21,1]
-
-    if not DO_RESEARCH_MODE: #Override Plots If Research Mode is Not Turned On
-      do_vt_tendency = 'N'
-      do_vort_tendency = 'N'
-      do_ur_pbl_p_mean = 'N'
-      do_radar_plots = 'N'
-      do_soundings = 'N'
-      do_shear_and_rh_plots = 'N'
-      do_tdr_recentering = 'N'
 
     if not DO_DBZ:
       do_dbz_mean = 'N'
@@ -3828,65 +3872,64 @@ def main():
     # Write the input file to a log to mark that it has ben processed
     plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
 
-  if ( DO_RESEARCH_MODE ):
-    print('MSG: DOING THE EXTRA STUFF')
-    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics.{forecastinit}.polar.all.txt'
-    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
-    print(f'MSG: pastecmd = {pastecmd}')
-    os.system(pastecmd)
-    pythonexec = sys.executable
-    runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
-              f' --datafile {combinedfile}'
-              f' --expt {EXPT.strip()}'
-              f' --odir {ODIR}'
-              f' --forecastinit {forecastinit}'
-              f' --longsid {LONGSID}')
-    print(f'MSG: runcmd = {runcmd}')
-    subprocess.call(runcmd,shell=True)
+  print('MSG: DOING THE EXTRA STUFF')
+  combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics.{forecastinit}.polar.all.txt'
+  pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+  print(f'MSG: pastecmd = {pastecmd}')
+  os.system(pastecmd)
+  pythonexec = sys.executable
+  runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
+            f' --datafile {combinedfile}'
+            f' --expt {EXPT.strip()}'
+            f' --odir {ODIR}'
+            f' --forecastinit {forecastinit}'
+            f' --longsid {LONGSID}')
+  print(f'MSG: runcmd = {runcmd}')
+  subprocess.call(runcmd,shell=True)
 
-    #edit12/23-------------------------------
-    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_ptype_rh.{forecastinit}.polar.all.txt'
-    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_ptype_rh.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
-    print(f'MSG: pastecmd = {pastecmd}')
-    os.system(pastecmd)
-#    pythonexec = sys.executable
-#    runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
-#              f' --datafile {combinedfile}'
-#              f' --expt {EXPT.strip()}'
-#              f' --odir {ODIR}'
-#              f' --forecastinit {forecastinit}'
-#              f' --longsid {LONGSID}')
-#    print(f'MSG: runcmd = {runcmd}')
-#    subprocess.call(runcmd,shell=True)
+  #edit12/23-------------------------------
+  combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_ptype_rh.{forecastinit}.polar.all.txt'
+  pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_ptype_rh.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+  print(f'MSG: pastecmd = {pastecmd}')
+  os.system(pastecmd)
+#  pythonexec = sys.executable
+#  runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
+#            f' --datafile {combinedfile}'
+#            f' --expt {EXPT.strip()}'
+#            f' --odir {ODIR}'
+#            f' --forecastinit {forecastinit}'
+#            f' --longsid {LONGSID}')
+#  print(f'MSG: runcmd = {runcmd}')
+#  subprocess.call(runcmd,shell=True)
 
-    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_massflux.{forecastinit}.polar.all.txt'
-    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_massflux.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
-    print(f'MSG: pastecmd = {pastecmd}')
-    os.system(pastecmd)
-#    pythonexec = sys.executable
-#    runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
-#              f' --datafile {combinedfile}'
-#              f' --expt {EXPT.strip()}'
-#              f' --odir {ODIR}'
-#              f' --forecastinit {forecastinit}'
-#              f' --longsid {LONGSID}')
-#    print(f'MSG: runcmd = {runcmd}')
-#    subprocess.call(runcmd,shell=True)
+  combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_massflux.{forecastinit}.polar.all.txt'
+  pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_massflux.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+  print(f'MSG: pastecmd = {pastecmd}')
+  os.system(pastecmd)
+#  pythonexec = sys.executable
+#  runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
+#            f' --datafile {combinedfile}'
+#            f' --expt {EXPT.strip()}'
+#            f' --odir {ODIR}'
+#            f' --forecastinit {forecastinit}'
+#            f' --longsid {LONGSID}')
+#  print(f'MSG: runcmd = {runcmd}')
+#  subprocess.call(runcmd,shell=True)
 
-    combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_vorticity.{forecastinit}.polar.all.txt'
-    pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_vorticity.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
-    print(f'MSG: pastecmd = {pastecmd}')
-    os.system(pastecmd)
-#    pythonexec = sys.executable
-#    runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
-#              f' --datafile {combinedfile}'
-#              f' --expt {EXPT.strip()}'
-#              f' --odir {ODIR}'
-#              f' --forecastinit {forecastinit}'
-#              f' --longsid {LONGSID}')
-#    print(f'MSG: runcmd = {runcmd}')
-#    subprocess.call(runcmd,shell=True)
-    #edit12/23end-------------------------------
+  combinedfile = f'{ODIR}/{LONGSID.lower()}.structure_statistics_vorticity.{forecastinit}.polar.all.txt'
+  pastecmd = 'paste -sd"\\n" '+ODIR+'/'+LONGSID.lower()+'.structure_statistics_vorticity.'+forecastinit+'.polar.f*.txt'+' > '+combinedfile
+  print(f'MSG: pastecmd = {pastecmd}')
+  os.system(pastecmd)
+#  pythonexec = sys.executable
+#  runcmd = (f'{pythonexec} {PYTHONDIR}/plot_structure_metrics.py'
+#            f' --datafile {combinedfile}'
+#            f' --expt {EXPT.strip()}'
+#            f' --odir {ODIR}'
+#            f' --forecastinit {forecastinit}'
+#            f' --longsid {LONGSID}')
+#  print(f'MSG: runcmd = {runcmd}')
+#  subprocess.call(runcmd,shell=True)
+  #edit12/23end-------------------------------
 
   print('MSG: COMPLETING')
   os.system(f'lockfile -r-1 -l 180 {ST_LOCK_FILE}')

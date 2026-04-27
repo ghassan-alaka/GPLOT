@@ -227,7 +227,13 @@ def recenter_tc(uwind, vwind, lons, lats, num_sectors, spad, num_iterations, olo
     # Initialize parameters for iteration
     yloc = np.nan  # Meridional index of TC center
     xloc = np.nan  # Zonal index of TC center
-    
+
+    # smooth_vort is only assigned in the olon-is-None branch below, but the
+    # function returns it unconditionally. Initialize to None so the return
+    # statement does not raise UnboundLocalError when a first-guess center
+    # is supplied (the typical caller path).
+    smooth_vort = None
+
     # Determine grid indices closest to first-guess TC center, if provided
     if olon is not None:
         try:

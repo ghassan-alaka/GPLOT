@@ -79,9 +79,12 @@ _CFGRIB_VAR_MAP = {
     'PRCP': ['tp'],
     'PRATE': ['prate'],
 
-    # Reflectivity
-    'REFL': ['refc', 'refl', 'refd'],
-    'REFD': ['refd', 'refl', 'refc'],
+    # Reflectivity. HAFS uses 'rare' (Radar Reflectivity, paramId 231066)
+    # for the 3D pressure-level field rather than the standard 'refd'.
+    # Put 'rare' before the 2D 'refc' so REFL resolves to a 3D dataset
+    # whenever HAFS data are present.
+    'REFL': ['rare', 'refd', 'refl', 'refc'],
+    'REFD': ['rare', 'refd', 'refl', 'refc'],
     'REFC': ['refc'],
 
     # TPW
@@ -126,6 +129,22 @@ _SAT_PARAM_MAP = {
     58: 'sbtagr13',   # ABI Band 13 (10.3 um, clean IR window)
 }
 
+# NCEP local-table parameters that the system eccodes definitions don't
+# decode (so cfgrib reports them as shortName='unknown' with paramId=0).
+# Each entry says: "if you re-open the file with this filter, you'll get a
+# single 'unknown' variable -- rename it to <canon_name>". Used as a
+# targeted fallback inside open_grib2() so downstream lookups via
+# _CFGRIB_VAR_MAP find the variable under its expected name.
+#
+# Format: tuple (discipline, parameterCategory, parameterNumber,
+#                typeOfLevel) -> canonical short name.
+_NCEP_LOCAL_PARAM_MAP = {
+    # discipline 0, category 3 (Mass), parameterNumber 196 = HPBL
+    # (Planetary Boundary Layer Height), reported on typeOfLevel='surface'
+    # with stepType='instant'.
+    (0, 3, 196, 'surface'): 'hpbl',
+}
+
 # Surface/near-ground variables that collide with pressure-level names.
 # Looked up first with a 2D-preferring search so that e.g. T at level='2'
 # resolves to the surface 't' rather than the 3D pressure-level 't'.
@@ -134,11 +153,13 @@ _CFGRIB_SURFACE_VARS = {
     ('V', '10'): ['v10'],
     ('T', '2'): ['t2m', 't'],
     ('DPT', '2'): ['d2m'],
-    # 2-m specific humidity lives on heightAboveGround=2 in HAFS GRIB2 but
-    # shares the short name 'q' with the 3D pressure-level moisture array;
-    # prefer the 2D copy when called with level='2'.
-    ('Q', '2'):   ['q', 'sh2'],
-    ('SPF', '2'): ['q', 'sh2'],
+    # 2-m specific humidity lives on heightAboveGround=2 in HAFS GRIB2
+    # under shortName='sh2' (NOT 'q' -- that name is reserved for the 3D
+    # pressure-level moisture array). List 'sh2' first so the lookup
+    # never falls back to the 3D 'q' dataset on files where 'sh2' is
+    # present.
+    ('Q', '2'):   ['sh2', 'q'],
+    ('SPF', '2'): ['sh2', 'q'],
     # 2-m RH -- HAFS writes it as 'r2' or plain 'r'.
     ('RH', '2'):  ['r2', 'r'],
 }
@@ -233,6 +254,36 @@ def open_grib2(filepath, filter_by_keys=None):
                 datasets.append(ds)
         except Exception:
             pass
+
+    # Targeted re-open for NCEP local-table parameters that show up as
+    # shortName='unknown' (paramId=0) because the local eccodes install
+    # has no entry for them. We re-open with an explicit
+    # (discipline, parameterCategory, parameterNumber, typeOfLevel)
+    # filter and rename the lone 'unknown' variable to its canonical
+    # short name so downstream _CFGRIB_VAR_MAP lookups find it.
+    for (disc, cat, pnum, lev), canon in _NCEP_LOCAL_PARAM_MAP.items():
+        try:
+            ds_extra = xr.open_dataset(
+                filepath, engine='cfgrib',
+                backend_kwargs={
+                    'filter_by_keys': {
+                        'discipline': disc,
+                        'parameterCategory': cat,
+                        'parameterNumber': pnum,
+                        'typeOfLevel': lev,
+                    },
+                    'errors': 'ignore',
+                },
+            )
+        except Exception as e:
+            logger.debug(
+                f"open_grib2: NCEP local-param "
+                f"({disc},{cat},{pnum},{lev}) skipped: {e}")
+            continue
+        if 'unknown' in ds_extra.data_vars:
+            ds_extra = ds_extra.rename({'unknown': canon})
+        if canon in ds_extra.data_vars:
+            datasets.append(ds_extra)
 
     if not datasets:
         raise ValueError(f"No readable GRIB2 messages in {filepath}")

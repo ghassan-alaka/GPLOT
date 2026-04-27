@@ -82,7 +82,7 @@ _BOOL_KEYS = {
     'DO_MARKERS', 'DO_FHRLABELS', 'ATCF_REQD', 'DO_TOPOMASK',
     'DO_MAPS', 'DO_STATS', 'DO_SHIPS', 'DO_POLAR',
     'DO_AIRSEA', 'DO_OCEAN_MAPS', 'DO_OCEAN_OBS',
-    'DO_RESEARCH_MODE', 'DO_DBZ', 'OCEAN_WRAP_LON',
+    'DO_DBZ', 'OCEAN_WRAP_LON',
 }
 
 # Keys that should be parsed as integers

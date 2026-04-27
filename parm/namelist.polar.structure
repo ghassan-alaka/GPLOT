@@ -14,11 +14,11 @@ do_rh_acrosshear,Y
 do_dbz5km_wavenumber,Y
 do_rh5km_wavenumber,Y
 do_vt10_wavenumber,Y
-do_vt_tendency,N
-do_vort_tendency,N
+do_vt_tendency,Y
+do_vort_tendency,Y
 do_ur_pbl_p_mean,Y
 do_radar_plots,Y
 do_soundings,Y
 do_shear_and_rh_plots,Y
 do_write_netcdf,Y
-do_tdr_recentering,N
+do_tdr_recentering,Y
