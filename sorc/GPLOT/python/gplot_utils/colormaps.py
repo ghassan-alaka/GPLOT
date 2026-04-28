@@ -6,8 +6,12 @@ GPLOT_util.ncl. Provides a registry mapping (variable, level) pairs to
 matplotlib colormaps and contour level arrays.
 
 Supports loading colormaps from:
-  - NCL .rgb format files (sorc/GPLOT/ncl/colormaps/)
-  - Python .txt format files (sorc/GPLOT/python/colormaps/)
+  - NCL .rgb format files (sorc/GPLOT/python/colormaps/) — kept for the
+    published banding conventions of the maps module's reflectivity, IR
+    BT, MSLP, wind, precip, and shear palettes. No NCL runtime dep; the
+    file format is just RGB triples.
+  - Python .txt format files (sorc/GPLOT/python/colormaps/) — normalized
+    0-1 RGB triples.
   - Built-in matplotlib colormaps
 """
 
@@ -444,16 +448,20 @@ def get_colormap(var, level='', gplot_dir=None):
         logger.debug(f"No colormap registered for ({var}, {level}), using viridis")
         return plt.cm.viridis
 
-    # Check if it's a file-based colormap
+    # Check if it's a file-based colormap. Both .rgb (legacy NCL HLU
+    # palette format, kept for the maps module's published banding
+    # conventions) and .txt (normalized 0-1 RGB triples) live in the
+    # same directory now: sorc/GPLOT/python/colormaps/.
+    cmap_dir = os.path.join(gplot_dir, 'sorc', 'GPLOT', 'python', 'colormaps')
     if cmap_name.endswith('.rgb'):
-        ncl_path = os.path.join(gplot_dir, 'sorc', 'GPLOT', 'ncl', 'colormaps', cmap_name)
-        if os.path.isfile(ncl_path):
-            return load_rgb_colormap(ncl_path, name=cmap_name.replace('.rgb', ''))
+        rgb_path = os.path.join(cmap_dir, cmap_name)
+        if os.path.isfile(rgb_path):
+            return load_rgb_colormap(rgb_path, name=cmap_name.replace('.rgb', ''))
 
     if cmap_name.endswith('.txt'):
-        py_path = os.path.join(gplot_dir, 'sorc', 'GPLOT', 'python', 'colormaps', cmap_name)
-        if os.path.isfile(py_path):
-            return load_txt_colormap(py_path, name=cmap_name.replace('.txt', ''))
+        txt_path = os.path.join(cmap_dir, cmap_name)
+        if os.path.isfile(txt_path):
+            return load_txt_colormap(txt_path, name=cmap_name.replace('.txt', ''))
 
     # Try matplotlib built-in
     try:

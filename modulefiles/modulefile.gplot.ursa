@@ -82,8 +82,11 @@ if [ "${A}" -eq 1 ]; then
     export PYTHONBUFFERED=1
 fi
 
-# NCAR Command Language (NCL)
+# NCARG_COLORMAPS — vestigial. The colormap palette files moved to
+# sorc/GPLOT/python/colormaps/ (the loader uses an explicit path, not
+# this env var). Kept for any downstream NCL-aware tooling that may
+# still consult it; safe to remove in a future modulefile audit.
 if [ "${A}" -eq 0 ]; then
-    export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+    export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/python/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
     echo "TEST NCARG_COLORMAPS" $NCARG_COLORMAPS
 fi
