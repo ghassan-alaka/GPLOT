@@ -8,12 +8,14 @@ only used by ``polar_cylindrical_structure.py``; ``modules/multiprocess.py``'s
 after the Session E grib_reader migration.
 
 Public API:
-    interp_to_isosurface
+    interp_to_isosurface          (legacy single-level, metpy-backed)
+    interp_to_isosurface_fast     (vectorized all-levels-at-once replacement)
     interp_to_polarcylindrical
     multiprocess_polar_interp
     multiprocess_polar_vars
-    multiprocess_height_interp
-    multiprocess_height_vars
+    multiprocess_height_interp    (legacy thread-per-level)
+    multiprocess_height_vars      (legacy thread-per-variable, calls above)
+    height_interp_vars_fast       (vectorized replacement for multiprocess_height_vars)
 """
 
 import concurrent.futures
@@ -41,6 +43,97 @@ def interp_to_isosurface(hgt, varPrs, lev, idx, ivar, verbose=False):
   if verbose:
     print(f'MSG: Interpolating to the {int(lev)}-m isosurface for var{ivar} - {datetime.datetime.now()}')
   return metpy.interpolate.interpolate_to_isosurface(hgt, varPrs, lev), lev, idx
+
+
+def interp_to_isosurface_fast(hgt, varPrs, levels):
+  """Vectorized pressure→height interpolation for *all* target levels at once.
+
+  Drop-in numerical replacement for repeated calls to
+  ``metpy.interpolate.interpolate_to_isosurface(hgt, varPrs, lev)`` over a
+  list of target heights. metpy invokes per-call wrapper code (input
+  validation, masking setup, ``np.atleast_1d`` etc.) on every invocation,
+  so 37 calls per variable × 12 variables = 444 calls/file becomes the
+  dominant cost in ``_interp_to_height``. This version does each variable
+  in a single pass: 37 fully-vectorized numpy ops instead of 37 metpy
+  calls.
+
+  Numerical contract (matches metpy with ``from_below=True``):
+    - For each (j, i) column, find the lowest pressure-level index k such
+      that ``hgt[k+1, j, i] > lev`` and ``hgt[k, j, i] <= lev``.
+    - Linearly interpolate ``varPrs`` between (k, k+1) using
+      ``w = (lev - hgt[k]) / (hgt[k+1] - hgt[k])``.
+    - Columns where ``lev`` falls outside the range of ``hgt[:, j, i]``
+      receive NaN (consistent with metpy's out-of-range behavior).
+
+  @param hgt:     3D height data on pressure levels, shape (nz_p, ny, nx).
+                  Expected monotonically increasing along axis 0.
+  @param varPrs:  3D field on the same pressure grid, shape (nz_p, ny, nx).
+  @param levels:  1D array of target height levels (m), shape (nz_h,).
+  @returns:       3D array on the height grid, shape (nz_h, ny, nx).
+  """
+  nz_p, ny, nx = hgt.shape
+  nz_h = len(levels)
+  out = np.empty((nz_h, ny, nx), dtype=np.float64)
+  # Per target level: one vectorized pass over the (nz_p, ny, nx) cube.
+  # Memory peak per iteration is ~4 × nz_p × ny × nx × 8 B (a few work
+  # arrays of the same shape as hgt) — for a 37 × 600 × 600 grid that's
+  # ~427 MB peak, which is fine on the typical HAFS host. We deliberately
+  # avoid the (nz_h, nz_p, ny*nx) 4-D broadcast that would balloon to
+  # multiple GB on bigger domains.
+  for li, lev in enumerate(levels):
+    mask = hgt > lev                                   # (nz_p, ny, nx) bool
+    upper = mask.argmax(axis=0)                        # (ny, nx)  first True k
+    lower = np.clip(upper - 1, 0, nz_p - 1)            # (ny, nx)
+    # Out-of-range: column has no True (target above column top) or all
+    # True (target below column bottom — i.e., below ground).
+    no_true  = ~mask.any(axis=0)
+    all_true = mask.all(axis=0)
+    bad      = no_true | all_true
+    # Gather bracketing values per column. ``np.take_along_axis`` needs a
+    # 3-D index of the same rank as the source.
+    upper3 = upper[None, :, :]
+    lower3 = lower[None, :, :]
+    h_lo = np.take_along_axis(hgt,    lower3, axis=0)[0]
+    h_hi = np.take_along_axis(hgt,    upper3, axis=0)[0]
+    v_lo = np.take_along_axis(varPrs, lower3, axis=0)[0]
+    v_hi = np.take_along_axis(varPrs, upper3, axis=0)[0]
+    denom = h_hi - h_lo
+    # Avoid divide-by-zero where bracket collapsed (will be masked anyway).
+    safe = np.where(denom != 0.0, denom, 1.0)
+    w = (lev - h_lo) / safe
+    layer = v_lo + w * (v_hi - v_lo)
+    layer[bad] = np.nan
+    out[li] = layer
+  return out
+
+
+def height_interp_vars_fast(hgt, varList, levels):
+  """Vectorized replacement for ``multiprocess_height_vars``.
+
+  Same input/output shapes; no thread pool. For each variable we make one
+  call to :func:`interp_to_isosurface_fast`, which interpolates onto the
+  full target-height column in a single vectorized pass. This eliminates
+  the 4×8 nested ``ThreadPoolExecutor`` layout (which was largely
+  GIL-bound on metpy's Python-level wrapper code) and the 420 per-leaf
+  metpy calls per file.
+
+  @param hgt:     3D height-on-pressure array, shape (nz_p, ny, nx).
+  @param varList: Iterable of 3D fields, each shape (nz_p, ny, nx).
+  @param levels:  1D array of target heights (m), shape (nz_h,).
+  @returns:       4D stack, shape (n_vars, ny, nx, nz_h), matching the
+                  layout produced by ``multiprocess_height_vars``.
+  """
+  if hgt is None:
+    raise ValueError('Height data must be defined.')
+  if varList is None:
+    raise ValueError('List of variables to be processed must be provided.')
+  if levels is None:
+    raise ValueError('List of height levels (m) must be provided.')
+  out_list = []
+  for var in varList:
+    cube = interp_to_isosurface_fast(hgt, var, levels)   # (nz_h, ny, nx)
+    out_list.append(np.transpose(cube, (1, 2, 0)))       # (ny, nx, nz_h)
+  return np.stack(out_list, axis=0)                      # (n_vars, ny, nx, nz_h)
 
 
 def interp_to_polarcylindrical(varIn, lev, x, y, xi, yi, idx, ivar, verbose=False):
@@ -104,7 +197,8 @@ def multiprocess_polar_vars(x, y, xi, yi, varList=None, levels=None):
 
 
 def multiprocess_height_interp(hgt=None, varPrs=None, levels=None, idx=0):
-  """Parallelize interpolation from pressure surfaces to height surfaces.
+  """[DEPRECATED — use ``height_interp_vars_fast``]
+  Parallelize interpolation from pressure surfaces to height surfaces.
   @kwarg hgt:    3D height data on pressure levels (lev, lat, lon)
   @kwarg varPrs: 3D input data on pressure levels (lev, lat, lon)
   @kwarg levels: 1D array/list of height levels in meters
@@ -131,7 +225,8 @@ def multiprocess_height_interp(hgt=None, varPrs=None, levels=None, idx=0):
 
 
 def multiprocess_height_vars(hgt=None, varList=None, varNames=None, levels=None):
-  """Parallelize height interpolation across multiple variables.
+  """[DEPRECATED — use ``height_interp_vars_fast``]
+  Parallelize height interpolation across multiple variables.
   @kwarg hgt:      3D height data on pressure levels (lev, lat, lon)
   @kwarg varList:  List of 3D data on pressure levels for each variable
   @kwarg varNames: List of variable names (unused; retained for API compat)

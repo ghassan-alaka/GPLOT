@@ -299,26 +299,54 @@ def recenter_tc(uwind, vwind, lons, lats, num_sectors, spad, num_iterations, olo
     
     # Initialize arrays for sector mean errors
     sector_mean_error = np.full((num_sectors, uwind.shape[0], uwind.shape[1]), np.nan, dtype='f8')
-    
+
     # Set assumed previous error difference to infinity
     prev_mean_dif = np.inf
-    
+
     # Initialize outputs
     vt_azi_max = np.nan
     data_cov = np.nan
     tc_rmw = np.nan
     tc_center_lon = np.nan
     tc_center_lat = np.nan
-    
-    # Pre-allocate arrays to avoid recreating them in the loop
-    angle_dif = np.full_like(uwind, np.nan, dtype='f8')
-    weighted_dif = np.full_like(uwind, np.nan, dtype='f8')
-    obs_angle = np.full_like(uwind, np.nan, dtype='f8')
-    
+
+    # ----- Crop-window precompute (bit-exact speedup vs. full-grid loop) -----
+    # Cells more than ~263 km from a candidate satisfy
+    #   exp(-d^2 / (2 * core_radius^2)) <= min_dist_weight,
+    # so the np.maximum(dist_weight_raw, min_dist_weight) floor below clamps
+    # them to *exactly* min_dist_weight. We compute distance / bearing /
+    # weighting only on a window that contains every cell whose contribution
+    # to dist_weight_raw exceeds the floor for any candidate in the spad-box,
+    # then analytically correct the np.nanmean(dist_weight_raw) denominator
+    # by adding (n_outside_finite * min_dist_weight) to the numerator and
+    # using the full-grid finite count as the denominator. This preserves
+    # the original arithmetic identity to machine precision; the only
+    # difference is which cells are summed first, which doesn't change the
+    # result for the nanmean (sum is over identical values).
+    crop_radius_km = core_radius * np.sqrt(-2.0 * np.log(min_dist_weight))
+
+    # Estimate grid spacing (km) from the lat/lon arrays near the first guess.
+    ny_grid, nx_grid = lats.shape
+    iy = min(max(int(pnyi), 1), ny_grid - 2)
+    ix = min(max(int(pnxi), 1), nx_grid - 2)
+    dlat_deg = abs(float(lats[iy + 1, ix]) - float(lats[iy - 1, ix])) / 2.0
+    dlon_deg = abs(float(lons[iy, ix + 1]) - float(lons[iy, ix - 1])) / 2.0
+    coslat = np.cos(np.radians(float(lats[iy, ix])))
+    dy_km = max(dlat_deg * 111.32, 1e-6)
+    dx_km = max(dlon_deg * 111.32 * coslat, 1e-6)
+
+    npy_half = int(np.ceil(crop_radius_km / dy_km)) + int(spad) + 2
+    npx_half = int(np.ceil(crop_radius_km / dx_km)) + int(spad) + 2
+
+    # Total finite ws cells over the full grid (denominator for the analytic
+    # nanmean correction). nanmean = sum_finite / count_finite, so we need
+    # the global finite count once.
+    total_finite_full = int(np.count_nonzero(np.isfinite(ws)))
+
     ### Begin TC center search ###
     for n in range(num_iterations):
         print('current iteration is:', n)
-        
+
         # If first iteration completed, copy center estimate from previous iteration
         if n >= 1:
             if prev_mean_dif < np.inf:
@@ -326,120 +354,137 @@ def recenter_tc(uwind, vwind, lons, lats, num_sectors, spad, num_iterations, olo
                 pnxi = int(xloc)
             else:
                 break
-            
-        # Establish range of grid points to search for TC center
-        range_y = np.arange(pnyi - spad, pnyi + spad+1, 1)
-        range_x = np.arange(pnxi - spad, pnxi + spad+1, 1)
-        
-        # Filter range_y and range_x to valid indices before looping
+
+        # Establish the per-iteration crop window (centered on current best
+        # guess; spad-box of candidates fits inside the inner part of the
+        # window with crop_radius_km of margin in each direction).
+        ymin = max(0, int(pnyi) - npy_half)
+        ymax = min(ny_grid, int(pnyi) + npy_half + 1)
+        xmin = max(0, int(pnxi) - npx_half)
+        xmax = min(nx_grid, int(pnxi) + npx_half + 1)
+        ws_crop = ws[ymin:ymax, xmin:xmax]
+        wa_crop = wind_angle[ymin:ymax, xmin:xmax]
+        lats_crop = lats[ymin:ymax, xmin:xmax]
+        lons_crop = lons[ymin:ymax, xmin:xmax]
+
+        # Counts for the analytic nanmean correction.
+        n_inside_finite = int(np.count_nonzero(np.isfinite(ws_crop)))
+        n_outside_finite = total_finite_full - n_inside_finite
+
+        # Hoist candidate-invariant work out of the inner loop.
+        # wind_weight does not depend on the candidate center; only ws does,
+        # and ws is fixed for the whole iteration.
+        wind_weight_crop = np.sqrt(ws_crop + 1)
+        data_mask_crop = np.isfinite(ws_crop)
+
+        # Establish range of candidate grid points
+        range_y = np.arange(pnyi - spad, pnyi + spad + 1, 1)
+        range_x = np.arange(pnxi - spad, pnxi + spad + 1, 1)
         range_y = range_y[(range_y >= 0) & (range_y < uwind.shape[0])]
         range_x = range_x[(range_x >= 0) & (range_x < uwind.shape[1])]
-        
+
         # Loop over grid points
         for ybi in range_y:
             for xbi in range_x:
                 # Skip if already computed in previous iteration
                 if n >= 1 and np.isfinite(np.nanmean(sector_mean_error[:, ybi, xbi])):
                     continue
-                    
+
                 # Get lat/lon of current center guess
                 center_lat = lats[ybi, xbi]
                 center_lon = lons[ybi, xbi]
-                
-                # Compute distances and angles using vectorized functions
-                curr_dist = distance_vectorized(center_lat, center_lon, lats, lons)
-                angle = bearing_vectorized(center_lat, center_lon, lats, lons)
-                
-                # Create mask for finite data points
-                data_mask = np.isfinite(ws)
-                
-                # Compute distance weighting more efficiently
-                dist_weight_raw = np.full_like(ws, np.nan)
-                dist_weight_raw[data_mask] = np.exp(-1.*(((curr_dist[data_mask] - 0.)**2)/(2.*((core_radius)**2))))
-                
-                # Apply minimum threshold
+
+                # Compute distances and angles on the crop only.
+                curr_dist = distance_vectorized(center_lat, center_lon, lats_crop, lons_crop)
+                angle = bearing_vectorized(center_lat, center_lon, lats_crop, lons_crop)
+
+                # Distance weighting (crop only)
+                dist_weight_raw = np.full_like(ws_crop, np.nan)
+                dist_weight_raw[data_mask_crop] = np.exp(
+                    -1. * (((curr_dist[data_mask_crop] - 0.) ** 2) / (2. * ((core_radius) ** 2)))
+                )
                 dist_weight_raw = np.maximum(dist_weight_raw, min_dist_weight)
-                
-                # Normalize distance weights
-                dist_weight = dist_weight_raw / np.nanmean(dist_weight_raw)
-                
-                # Compute wind weights
-                wind_weight = np.sqrt(ws + 1)
-                
+
+                # Analytic nanmean correction: cells outside the crop are all
+                # finite-ws (if they were finite at all) and clamped to
+                # exactly min_dist_weight, so they contribute
+                # n_outside_finite * min_dist_weight to the sum and
+                # n_outside_finite to the count, both of which we know.
+                sum_in = np.nansum(dist_weight_raw)
+                mean_full = (sum_in + n_outside_finite * min_dist_weight) / total_finite_full
+                dist_weight = dist_weight_raw / mean_full
+
                 # Total weighting
-                curr_weight = dist_weight * wind_weight
-                
+                curr_weight = dist_weight * wind_weight_crop
+
                 # Compute ideal vortex angle (tangential)
-                ideal_angle = angle + np.pi/2.
-                
-                # Correct for angles exceeding π
+                ideal_angle = angle + np.pi / 2.
                 ideal_angle[ideal_angle > np.pi] -= 2.0 * np.pi
-                
+
                 # Compute angle difference
-                curr_angle_dif = wind_angle - ideal_angle
-                
-                # Correct angle differences outside range efficiently
+                curr_angle_dif = wa_crop - ideal_angle
                 if HAS_NUMBA:
                     curr_angle_dif = correct_angle_differences_numba(curr_angle_dif)
                 else:
                     curr_angle_dif = correct_angle_differences(curr_angle_dif)
-                
+
                 # Compute weighted differences
                 curr_weighted_dif = curr_weight * curr_angle_dif
-                
+
                 # Mask points outside search radius
                 curr_weighted_dif[curr_dist > search_radius] = np.nan
-                
+
                 # Calculate data coverage metrics
                 coverage_mask = curr_dist <= coverage_radius
                 coverage_mask_inner = curr_dist <= coverage_radius_inner
-                
+
                 curr_nf = np.count_nonzero(np.isfinite(curr_weighted_dif[coverage_mask]))
                 curr_nf_inner = np.count_nonzero(np.isfinite(curr_weighted_dif[coverage_mask_inner]))
-                
+
                 curr_nt = np.count_nonzero(coverage_mask)
                 curr_nt_inner = np.count_nonzero(coverage_mask_inner)
-                
+
                 # Check data coverage
                 try:
-                    if float(curr_nf/curr_nt) < min_data_frac:
+                    if float(curr_nf / curr_nt) < min_data_frac:
                         continue
                 except ZeroDivisionError:
                     continue
-                
-                # Process by azimuthal sectors efficiently
-                for thi in range(len(angle_thresh) - 1):
-                    angle_lower = angle_thresh[thi]
-                    angle_upper = angle_thresh[thi+1]
-                    
-                    # Create sector mask
-                    sector_mask = (angle >= angle_lower) & (angle < angle_upper)
-                    sector_data = curr_weighted_dif[sector_mask]
-                    
-                    # Compute mean error for sector
-                    if len(sector_data) > 0:
-                        sector_mean_error[thi, ybi, xbi] = np.nanmean(np.abs(sector_data))
-                
+
+                # Vectorized azimuthal-sector mean error (replaces num_sectors-step
+                # Python loop). np.digitize bucketizes by the same bin edges as
+                # the original loop: bin i contains angles in
+                # [angle_thresh[i], angle_thresh[i+1]) for i in 0..num_sectors-1,
+                # so the assignment is bit-equivalent. Summation order over
+                # each bin matches the original C-flattening of the boolean mask.
+                abs_data = np.abs(curr_weighted_dif)
+                finite_mask = np.isfinite(abs_data)
+                sector_id = np.digitize(angle, angle_thresh) - 1
+                valid = finite_mask & (sector_id >= 0) & (sector_id < num_sectors)
+                if valid.any():
+                    sid_flat = sector_id[valid]
+                    data_flat = abs_data[valid]
+                    sums = np.bincount(sid_flat, weights=data_flat, minlength=num_sectors)
+                    counts = np.bincount(sid_flat, minlength=num_sectors)
+                    sec_means = np.full(num_sectors, np.nan, dtype='f8')
+                    nonzero = counts[:num_sectors] > 0
+                    sec_means[nonzero] = sums[:num_sectors][nonzero] / counts[:num_sectors][nonzero]
+                    sector_mean_error[:, ybi, xbi] = sec_means
+
                 # Compute mean error across all sectors
                 curr_mean_dif = np.nanmean(sector_mean_error[:, ybi, xbi])
-                
+
                 # Update if current location gives better center estimate
                 if curr_mean_dif < prev_mean_dif:
-                    # Update previous error
                     prev_mean_dif = curr_mean_dif
-                    
-                    # Store angle differences
-                    angle_dif[:] = curr_angle_dif
-                    weighted_dif[:] = curr_weighted_dif
-                    obs_angle[:] = wind_angle
-                    
+
                     # Store TC location estimate
                     tc_center_lon = center_lon
                     tc_center_lat = center_lat
-                    
+
                     # Store data coverage
-                    data_cov = min(curr_nf/curr_nt, curr_nf_inner/curr_nt_inner)
-                    
+                    data_cov = min(curr_nf / curr_nt, curr_nf_inner / curr_nt_inner)
+
                     # Store indices of estimated TC center
                     yloc = ybi
                     xloc = xbi
