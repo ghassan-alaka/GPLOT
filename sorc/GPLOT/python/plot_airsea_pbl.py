@@ -331,6 +331,20 @@ def main():
     uwind = uwind_kt * gplot_const.kts2ms
     vwind = vwind_kt * gplot_const.kts2ms
 
+    # Normalize centerlon to match the convention of the lon array returned
+    # by grib_reader. centerlon was wrapped to 0..360 above (for the
+    # rectangular bounds calculation), but HAFS GRIB2 lon arrays come back
+    # in -180..180 form. The mismatch silently corrupts ``lon_sr =
+    # lon - centerlon`` and pushes ``add_center_label`` text out by ~360°,
+    # which inflates the saved bbox to a 19:1 aspect ratio on every
+    # non-cartopy figure.
+    if float(lon.max()) <= 180.0 and centerlon > 180.0:
+      centerlon = centerlon - 360.0
+    elif float(lon.min()) >= 0.0 and centerlon < 0.0:
+      centerlon = centerlon + 360.0
+    print(f'MSG: centerlon normalized to lon convention: centerlon={centerlon:.4f}, '
+          f'lon range=[{float(lon.min()):.4f}, {float(lon.max()):.4f}]')
+
     omega,    _, _, _ = _fetch3d('OMEGA')    # Pa/s (no unit conversion)
     dbz,      _, _, _ = _fetch3d('REFL')
     # HGT is auto-converted m -> dam by grib_reader; restore meters
@@ -555,6 +569,12 @@ def main():
     xi = np.linspace(float(lon.min()),float(lon.max()),lon.shape[0]);
     yi = np.linspace(float(lat.min()),float(lat.max()),lat.shape[0]);
 
+    # Plot extent for the non-cartopy figures: clip to the data bounds so
+    # any stray artist (text, runaway streamplot trajectory, future
+    # annotation) cannot stretch the saved bbox.
+    plot_xlim = (float(lon.min()), float(lon.max()))
+    plot_ylim = (float(lat.min()), float(lat.max()))
+
     figsize = (24,24);
     fontsize = 24
     small_fontsize = 24
@@ -575,6 +595,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.turb_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Total net heat flux (turbulent+radiative) at the sea surface
@@ -591,6 +612,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.total_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Equivalent potential temperature from 550 to 700 hPa
@@ -609,6 +631,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,uwind_550,vwind_550,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_550.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Equivalent potential temperature from 700 to 850 hPa
@@ -627,6 +650,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,uwind_700,vwind_700,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_700.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Equivalent potential temperature below 850 hPa
@@ -649,6 +673,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_850.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Air-sea temperature contrast
@@ -664,6 +689,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_t.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Air-sea specific humidity contrast
@@ -680,6 +706,7 @@ def main():
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
       ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
       plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
@@ -696,7 +723,7 @@ def main():
 
         fig1 = plt.figure(figsize=(15.5,15.5))
         ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-        ax1.set_extent([int(lonplotmin),int(lonplotmax),int(latplotmin),int(latplotmax)], crs=ccrs.PlateCarree())
+        ax1.set_extent([lonplotmin,lonplotmax,latplotmin,latplotmax], crs=ccrs.PlateCarree())
         plt.contourf(lon, lat, wstt2_new*1.94, levs_wind, cmap=colormap_wind, norm=norm_wind, extend='both', transform=ccrs.PlateCarree())
         ax1.set_title(EXPT_TITLE.strip()+'\n'+ 'Gusts (kt)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
@@ -715,7 +742,7 @@ def main():
         gl.ylabels_right = False
         gl.xlines = True
         gl.ylines = True
-        gl.xlocator = mticker.FixedLocator(lonplot-360)
+        gl.xlocator = mticker.FixedLocator(lonplot)
         gl.ylocator = mticker.FixedLocator(latplot)
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
@@ -737,7 +764,7 @@ def main():
         latplot = np.arange(int(round(latplotmin,0))-1,int(round(latplotmax,0))+1,1)
         fig1 = plt.figure(figsize=(15.5,15.5))
         ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-        ax1.set_extent([int(lonplotmin),int(lonplotmax),int(latplotmin),int(latplotmax)], crs=ccrs.PlateCarree())
+        ax1.set_extent([lonplotmin,lonplotmax,latplotmin,latplotmax], crs=ccrs.PlateCarree())
         plt.contourf(lon, lat, gf2_new, levs_gf, cmap='Reds', norm=norm_gf, extend='both', transform=ccrs.PlateCarree())
         cbar = plt.colorbar(ticks=[1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0],shrink=0.8)
         cbar.ax.tick_params(labelsize=24)
@@ -763,7 +790,7 @@ def main():
         gl.ylabels_right = False
         gl.xlines = True
         gl.ylines = True
-        gl.xlocator = mticker.FixedLocator(lonplot-360)
+        gl.xlocator = mticker.FixedLocator(lonplot)
         gl.ylocator = mticker.FixedLocator(latplot)
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
