@@ -366,7 +366,7 @@ begin
         else				NML@ITAG = NML(val(0))
 					NML@ITAG := str_squeeze(str_split(NML@ITAG," = "))
 					if(dimsizes(NML@ITAG).eq.1)then	NML@ITAG = ""
-					else				NML@ITAG := ITAG(1)
+					else				NML@ITAG := NML@ITAG(1)
 									NML@ITAG := str_squeeze(str_split(NML@ITAG," "))
 					end if
         end if
