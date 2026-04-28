@@ -1,0 +1,8 @@
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / OS
+*.swp
+.DS_Store

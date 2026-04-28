@@ -3,16 +3,16 @@ TC vortex-removal filters for steering-flow diagnostics.
 
 The module exposes two smoothers:
 
-* ``kurihara_smooth`` -- algorithmic port of
-  ``sorc/GPLOT/fortran/hbfilter.f90`` (Kurihara et al. 1993, MWR).
+* ``kurihara_smooth`` -- algorithmic port of the legacy
+  ``hbfilter.f90`` Kurihara filter (Kurihara et al. 1993, MWR).
   Separable 11-stage chain filter applied NMAX times per axis.
   Interior-point math matches the Fortran exactly (same M table, same
   FK(n) = 0.5 / (1 - cos(2*pi/M(n))) coefficients, same edge-pinning
   stage-by-stage). Boundary treatment is cleaner than the Fortran,
   which skipped the last row/column in its zonal outer loop -- a
   quirk that never mattered in production because the ``external
-  HBFILTER`` declaration in ``ncl/GPLOT_maps.ncl`` was commented out
-  and the .so was never actually called. On sub-3-km grids the
+  HBFILTER`` declaration in the legacy NCL maps script was commented
+  out and the .so was never actually called. On sub-3-km grids the
   low-pass cutoff is too narrow to strip the full TC vortex even at
   NMAX>=100 (see notes below), which is why ``vortex_filter`` defaults
   to the Gaussian method.

@@ -37,11 +37,6 @@ import struct;
 import sys #To change the path 
 import xarray as xr
 
-#import modules.skewTmodelTCpolar as skewTmodelTCpolar
-#import modules.shearandrhplot as shearandrhplot
-#import modules.interp as interp
-#import modules.plotting as plotting
-#import modules.multiprocess as mproc
 import argparse
 import glob
 import math

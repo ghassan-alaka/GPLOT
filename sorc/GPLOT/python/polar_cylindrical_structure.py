@@ -396,8 +396,9 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
 
   Three passes:
     1. Full-column 3D fields onto the (theta, r, z) polar grid via
-       ``modules.multiprocess.multiprocess_polar_vars`` (scheduled to
-       migrate to ``gplot_utils/polar_interp.py`` in phase F-4).
+       ``gplot_utils.polar_interp.multiprocess_polar_vars`` (the legacy
+       per-level ThreadPoolExecutor path; F-4 consolidated it here from
+       ``modules/multiprocess.py``).
     2. PBL column onto the finer 31-level PBL height grid via per-level
        ``scipy.interpolate.RegularGridInterpolator`` calls.
     3. Single-level 2D fields (10m, 850/200 hPa) onto (theta, r) polar
@@ -1705,9 +1706,6 @@ def main():
   if (FHR_LIST.size == 1):
     FHR_LIST = np.append(FHR_LIST,"999")
     UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
-
-  # Define executables
-  X_G2CTL = f'{GPLOT_DIR}/sorc/GPLOT/grads/g2ctl.pl'
 
   for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
 

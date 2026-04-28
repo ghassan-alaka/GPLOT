@@ -2,10 +2,10 @@
 
 Session F-4 consolidation: merges the old ``modules/interp.py`` and
 ``modules/multiprocess.py`` into one cohesive utility. Both legacy files were
-only used by ``polar_cylindrical_structure.py``; ``modules/multiprocess.py``'s
-``multiprocess_prs_vars`` helper (which depended on the retired py3grads
-``io_extra.read_grads`` wrapper) is intentionally dropped here as dead code
-after the Session E grib_reader migration.
+only used by ``polar_cylindrical_structure.py``; the legacy
+``multiprocess_prs_vars`` helper, which depended on a retired py3grads
+read wrapper, was intentionally dropped here as dead code after the
+Session E grib_reader migration.
 
 Public API:
     interp_to_isosurface          (legacy single-level, metpy-backed)

@@ -32,12 +32,6 @@ from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis tic
 import argparse
 import re
 import sys #To change the path
-#import modules.skewTmodelTCpolar as skewTmodelTCpolar
-#import modules.shearandrhplot as shearandrhplot
-#import modules.centroid as centroid
-#import modules.interp as interp
-#import modules.plotting as plotting
-#import modules.multiprocess as mproc
 import glob
 import math
 import cmath
