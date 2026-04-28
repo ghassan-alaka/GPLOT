@@ -27,7 +27,7 @@ fi
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -247,7 +247,7 @@ fi
 #    & intensity guidance/verification.            #
 ####################################################
 if [ "${DO_STATS}" = "True" ]; then
-    NCLFILE="GPLOT_stats.ncl"
+    PYFILE="GPLOT_stats.py"
     BATCHFILE="batch_stats.sh"
 
     # Set the counter to limit submission to 50 jobs
@@ -541,7 +541,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
             # Call the batch job
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
-            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST}"
             FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE}"
             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                 echo "MSG: Executing this command [${FULL_CMD}]."

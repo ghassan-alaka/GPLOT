@@ -28,7 +28,7 @@ fi
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -292,7 +292,7 @@ fi
 #    for large-scale and storm-centered domains.                   #
 ####################################################################
 if [ "${DO_MAPS}" = "True" ]; then
-    NCLFILE="GPLOT_maps.ncl"
+    PYFILE="GPLOT_maps.py"
     BATCHFILE="batch_maps.sh"
 
     # Define the batch submission counter.
@@ -1075,7 +1075,7 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                             # Submit the child batch job.
                             echo "MSG: Submitting GPLOT child batch job. BATCH_MODE = ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST} ${DMN}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST} ${DMN}"
                             FULL_CMD="${FULL_CMD} ${TR} ${ENSID} ${MODEL} ${CYCLE} ${STORM} ${FORCE}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."

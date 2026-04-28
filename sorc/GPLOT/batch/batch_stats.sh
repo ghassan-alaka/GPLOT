@@ -17,7 +17,7 @@ set -x
 
 # 1. Get command line arguments
 MACHINE="${1:-${MACHINE}}"
-NCLFILE="${2}"
+PYFILE="${2}"
 LOGFILE="${3}"
 NMLIST="${4:-namelist.master.default}"
 IDATE="${5}"
@@ -32,24 +32,18 @@ fi
 # Source GPLOT_mods to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
 
-# 2. Build list in input arguments for NCL
-NCL_ARGS=()
-if [ ! -z "$IDATE" ]; then
-    NCL_ARGS+=('IDATE="'"${IDATE}"'"')
-fi
-if [ ! -z "$SID" ]; then
-    NCL_ARGS+=('SID="'"${SID}"'"')
-fi
-if [ ! -z "$FORCE" ]; then
-    NCL_ARGS+=('FORCE="'"${FORCE}"'"')
-fi
-if [ ! -z "$NMLIST" ]; then
-    NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
+# 2. Build list of input arguments for Python
+PY_ARGS=()
+PY_ARGS+=("--idate" "${IDATE}")
+PY_ARGS+=("--sid" "${SID}")
+PY_ARGS+=("--master-nml" "${NMLIST}")
+if [ "${FORCE}" == "True" ]; then
+    PY_ARGS+=("--force")
 fi
 
-# 2. Submit the NCL job
-echo "${NCL_ARGS[@]}"
-ncl "${NCL_ARGS[@]}" ${NCLFILE} > ${LOGFILE}
+# 2. Submit the Python job
+echo "python3 ${PYFILE} ${PY_ARGS[@]}"
+python3 ${PYFILE} "${PY_ARGS[@]}" > ${LOGFILE}
 
 wait
 

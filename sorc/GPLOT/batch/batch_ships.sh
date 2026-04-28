@@ -17,7 +17,7 @@ set -x
 
 # 1. Get command line arguments
 MACHINE="${1:-${MACHINE}}"
-NCLFILE="${2}"
+PYFILE="${2}"
 LOGFILE="${3}"
 NMLIST="${4:-namelist.master.default}"
 ENSID="${5:-XX}"
@@ -32,38 +32,26 @@ if [ -z "${GPLOT_DIR}" ]; then
     export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
-# Source the .profile to optimize the environment
+# Source GPLOT_mods to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
 
-# 2. Build list in input arguments for NCL
-NCL_ARGS=()
-if [ ! -z "${IDATE}" ]; then
-    NCL_ARGS+=('IDATE="'"${IDATE}"'"')
+# 2. Build list of input arguments for Python
+PY_ARGS=()
+PY_ARGS+=("--idate" "${IDATE}")
+PY_ARGS+=("--sid" "${SID}")
+PY_ARGS+=("--domain" "${DOMAIN}")
+PY_ARGS+=("--tier" "${TIER}")
+PY_ARGS+=("--master-nml" "${NMLIST}")
+if [ "${ENSID}" != "XX" ] && [ ! -z "${ENSID}" ]; then
+    PY_ARGS+=("--ensid" "${ENSID}")
 fi
-if [ ! -z "${SID}" ]; then
-    NCL_ARGS+=('SID="'"${SID}"'"')
-fi
-if [ ! -z "${DOMAIN}" ]; then
-    NCL_ARGS+=('DOMAIN="'"${DOMAIN}"'"')
-fi
-if [ ! -z "${TIER}" ]; then
-    NCL_ARGS+=('TIER="'"${TIER}"'"')
-fi
-if [ "${ENSID}" == "XX" ]; then
-    NCL_ARGS+=('ENSID=""')
-elif [ ! -z "${ENSID}" ]; then
-    NCL_ARGS+=('ENSID="'"${ENSID}"'"')
-fi
-if [ ! -z "${FORCE}" ]; then
-    NCL_ARGS+=('FORCE="'"${FORCE}"'"')
-fi
-if [ ! -z "${NMLIST}" ]; then
-    NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
+if [ "${FORCE}" == "True" ]; then
+    PY_ARGS+=("--force")
 fi
 
-# 2. Submit the NCL job
-echo "${NCL_ARGS[*]}"
-ncl "${NCL_ARGS[@]}" ${NCLFILE} > ${LOGFILE}
+# 2. Submit the Python job
+echo "python3 ${PYFILE} ${PY_ARGS[@]}"
+python3 ${PYFILE} "${PY_ARGS[@]}" > ${LOGFILE}
 
 wait
 
