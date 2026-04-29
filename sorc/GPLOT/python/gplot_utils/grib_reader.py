@@ -603,6 +603,19 @@ def get_var_2d(datasets, dsource, var, level='', bounds=None,
         if lev_val is not None:
             da = da.sel({coord_names['lev']: lev_val}, method='nearest')
 
+    # Composite reflectivity from a 3D field. The cfgrib mapping for
+    # REFL/REFD lists 'rare' first (HAFS 3D pressure-level reflectivity)
+    # so get_var_3d can find it; that priority means a get_var_2d call
+    # with empty level also resolves to 'rare', which is 3D. When that
+    # happens, reduce along the level axis via column-max -- the
+    # meteorological definition of composite reflectivity. The 2D 'refc'
+    # field, when available and selected by the resolver, has no level
+    # dim and falls through this branch unchanged.
+    if (coord_names['lev'] is not None and coord_names['lev'] in da.dims
+            and da.sizes[coord_names['lev']] > 1
+            and var in ('REFL', 'REFD')):
+        da = da.max(dim=coord_names['lev'], skipna=True)
+
     # Squeeze extra dimensions (time, step, etc.)
     for dim in list(da.dims):
         if dim not in (coord_names['lat'], coord_names['lon']):
