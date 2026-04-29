@@ -1389,8 +1389,13 @@ def main():
 
         logger.info(f"GRIB2 file: {grib_path}")
 
-        # Check if already plotted (unless forced)
-        plotted_log = os.path.join(odir_full, 'PlottedFiles.dat')
+        # Check if already plotted (unless forced). Match the legacy
+        # GPLOT polar/airsea naming convention so spawn_maps.sh and the
+        # downstream scripts can find this file:
+        # PlottedFiles.<DOMAIN>.<TIER>.<SID>.log
+        plotted_log = os.path.join(
+            odir_full,
+            f'PlottedFiles.{domain}.{tier}.{sid}.log')
         if not args.force and os.path.isfile(plotted_log):
             with open(plotted_log, 'r') as f:
                 plotted_content = f.read()
@@ -1449,7 +1454,12 @@ def main():
         # list id() also changes, but being explicit keeps memory bounded).
         _clear_vortex_cache()
 
-        # Loop over plot recipes
+        # Loop over plot recipes. Track successes per-FHR so we can
+        # gate the plotted-file marker on actually having produced
+        # something -- a failed FHR (every recipe raised) must not be
+        # marked plotted, otherwise the next run skips it and the
+        # forecast hour is silently lost from output.
+        n_recipe_plots = 0
         for recipe in recipes:
             try:
                 ofile = draw_map(
@@ -1459,12 +1469,19 @@ def main():
                 )
                 if ofile:
                     n_plots += 1
+                    n_recipe_plots += 1
             except Exception as e:
                 logger.error(f"FHR {fhr:03d} {recipe['FILE_NAME']}: {e}",
                              exc_info=True)
 
-        # Mark this GRIB2 file as plotted
-        update_plotted_file(plotted_log, os.path.basename(grib_path))
+        # Mark this GRIB2 file as plotted only if at least one recipe
+        # produced output. Allows the user to rerun the same case and
+        # have failed FHRs retried automatically without --force.
+        if n_recipe_plots > 0:
+            update_plotted_file(plotted_log, os.path.basename(grib_path))
+        else:
+            logger.warning(f"FHR {fhr:03d}: no plots produced; "
+                           f"not marking GRIB2 as plotted")
 
     logger.info(f"GPLOT Maps complete: {n_plots} plots generated")
 
