@@ -21,6 +21,103 @@ import cartopy.feature as cfeature
 logger = logging.getLogger(__name__)
 
 
+def configure_cartopy(cartopy_dir=None):
+    """Point cartopy at an offline shapefile cache.
+
+    On HPC compute nodes without outbound internet, cartopy will
+    repeatedly fail trying to download Natural Earth shapefiles
+    from naturalearthdata.com. Setting
+    ``cartopy.config['pre_existing_data_dir']`` to a populated cache
+    makes cartopy use the on-disk files instead -- cartopy checks this
+    key before any download attempt, so the override propagates to
+    every subsequent ``cfeature.<X>`` /
+    ``shapereader.natural_earth(...)`` call without further plumbing.
+
+    The path should be the parent of ``shapefiles/`` -- cartopy
+    resolves ``<cartopy_dir>/shapefiles/natural_earth/<physical|cultural>/<file>.shp``
+    on its own.
+
+    Args:
+        cartopy_dir: Path to a directory holding a pre-populated cartopy
+            shapefile cache (typically a sysadmin-managed location like
+            ``/home/role.aoml-hafs1/.local/share/cartopy``). If empty,
+            None, or non-existent, the function is a no-op and cartopy
+            keeps its default download-then-cache flow.
+    """
+    if not cartopy_dir:
+        return
+    if not os.path.isdir(cartopy_dir):
+        logger.warning(
+            f"CARTOPY_DIR {cartopy_dir!r} does not exist; cartopy may "
+            f"try to download shapefiles"
+        )
+        return
+    import cartopy
+    cartopy.config['pre_existing_data_dir'] = cartopy_dir
+    logger.info(f"Cartopy offline cache -> {cartopy_dir}")
+
+
+def load_county_state_shapes(cartopy_dir):
+    """Build COUNTIES and STATES ShapelyFeatures for plot_airsea_pbl.
+
+    Replaces the legacy module-scope hardwired-path loader in
+    ``plot_airsea_pbl.py`` (the one that picked between
+    ``/home/role.aoml-hafs1/.local/share/cartopy`` and
+    ``/home/ahazelto/.local/share/cartopy`` via try/except). Now driven
+    entirely by the ``CARTOPY_DIR`` namelist entry, so a single edit
+    in the master namelist controls the path on every host.
+
+    The returned (COUNTIES, STATES) tuple consists of:
+      - ``COUNTIES``: built from ``countyl010g.shp`` (US Census Bureau,
+        not Natural Earth -- has to be manually placed under the
+        cartopy cache at
+        ``<cartopy_dir>/shapefiles/natural_earth/cultural/``).
+      - ``STATES``: built from ``ne_50m_admin_1_states_provinces_lakes``
+        resolved via cartopy's standard ``natural_earth()`` lookup,
+        which respects the ``pre_existing_data_dir`` set by
+        :func:`configure_cartopy` earlier in main().
+
+    If ``cartopy_dir`` is empty / missing, or the county shapefile
+    isn't found, returns empty features with a warning so the script
+    can still produce maps without the county/state overlays
+    (typical for laptop dev runs).
+    """
+    import warnings
+    from cartopy import feature as cfeature, crs as ccrs
+    from cartopy.io import shapereader as shpreader
+    empty = cfeature.ShapelyFeature([], ccrs.PlateCarree())
+
+    # STATES -- Natural Earth, found via cartopy's standard lookup
+    # (which uses pre_existing_data_dir if configure_cartopy set it).
+    try:
+        states_path = shpreader.natural_earth(
+            category='cultural', resolution='50m',
+            name='admin_1_states_provinces_lakes')
+        states = list(shpreader.Reader(states_path).geometries())
+        STATES = cfeature.ShapelyFeature(states, ccrs.PlateCarree())
+    except Exception as exc:
+        warnings.warn(f'Could not load states shapefile ({exc}); '
+                      f'state overlays will be empty.')
+        STATES = empty
+
+    # COUNTIES -- non-Natural-Earth file, must build path manually
+    # from CARTOPY_DIR. If CARTOPY_DIR is unset (typical laptop),
+    # skip without erroring.
+    COUNTIES = empty
+    if cartopy_dir:
+        county_path = os.path.join(cartopy_dir, 'shapefiles',
+                                   'natural_earth', 'cultural',
+                                   'countyl010g.shp')
+        if os.path.isfile(county_path):
+            counties = list(shpreader.Reader(county_path).geometries())
+            COUNTIES = cfeature.ShapelyFeature(counties, ccrs.PlateCarree())
+        else:
+            warnings.warn(f'County shapefile not found at {county_path}; '
+                          f'county overlays will be empty.')
+
+    return COUNTIES, STATES
+
+
 def setup_map_axes(ax, bounds, projection=None, resolution='50m'):
     """
     Configure a cartopy axes with geographic features for map plots.

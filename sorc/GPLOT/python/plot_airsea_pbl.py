@@ -36,7 +36,6 @@ import glob
 import math
 import cmath
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import cartopy.io.shapereader as shpreader
 
 # GPLOT utility package (Sessions 1-7 infrastructure)
 from gplot_utils import namelist as nml_utils
@@ -45,30 +44,12 @@ from gplot_utils import plot_utils
 from gplot_utils import grib_reader
 from gplot_utils import constants as gplot_const
 
+# COUNTIES / STATES are now loaded inside main() via
+# plot_utils.load_county_state_shapes(nml.get('CARTOPY_DIR')) so a single
+# CARTOPY_DIR namelist entry drives the path on every host. The legacy
+# module-scope try/except (with hardwired ``/home/role.aoml-hafs1/.local/share/cartopy``
+# vs ``/home/ahazelto/.local/share/cartopy`` fallback) was removed.
 
-try:
-  try:
-    # Jet and Hera
-    county_reader = shpreader.Reader('/home/role.aoml-hafs1/.local/share/cartopy/shapefiles/natural_earth/cultural/countyl010g.shp')
-    #states_reader = shpreader.Reader('/home/role.aoml-hafs1/.local/share/cartopy/shapefiles/natural_earth/cultural/ne_10m_admin_1_states_provinces_lakes.shp')
-    states_reader = shpreader.Reader('/home/role.aoml-hafs1/.local/share/cartopy/shapefiles/natural_earth/cultural/ne_50m_admin_1_states_provinces_lakes.shp');
-  except Exception:
-    # Orion and Hercules
-    county_reader = shpreader.Reader('/home/ahazelto/.local/share/cartopy/shapefiles/natural_earth/cultural/countyl010g.shp')
-    states_reader = shpreader.Reader('/home/ahazelto/.local/share/cartopy/shapefiles/natural_earth/cultural/ne_10m_admin_1_states_provinces_lakes.shp')
-    #states_reader = shpreader.Reader('/home/ahazelto/.local/share/cartopy/shapefiles/natural_earth/cultural/50m_admin_1_states_provinces_lines.shp')
-  counties = list(county_reader.geometries())
-  COUNTIES = cfeature.ShapelyFeature(counties, ccrs.PlateCarree())
-  states = list(states_reader.geometries())
-  STATES = cfeature.ShapelyFeature(states, ccrs.PlateCarree())
-except Exception as _shp_exc:
-  # Dev machines (e.g. laptops) typically lack the HPC-only county/state
-  # shapefiles. Emit a warning rather than hard-failing at import time so the
-  # script can still be smoke-tested; cartopy coastline overlays still work.
-  warnings.warn(f'Could not load HPC county/state shapefiles ({_shp_exc}); '
-                f'county/state overlays will be empty.')
-  COUNTIES = cfeature.ShapelyFeature([], ccrs.PlateCarree())
-  STATES = cfeature.ShapelyFeature([], ccrs.PlateCarree())
 
 def debug_dump_range(FHR,varnm,var):
   print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var)},{np.nanpercentile(var,25)},{np.nanmedian(var)},{np.nanpercentile(var,75)},{np.nanmax(var)}');
@@ -130,6 +111,8 @@ def main():
 
   # Read the master namelist via nml_utils (replaces subprocess.grep calls)
   nml = nml_utils.read_master_namelist(MASTER_NML_IN)
+  plot_utils.configure_cartopy(nml.get('CARTOPY_DIR'))
+  COUNTIES, STATES = plot_utils.load_county_state_shapes(nml.get('CARTOPY_DIR'))
   DSOURCE = (nml.get('DSOURCE') or 'HAFS').strip()
   EXPT    = (nml.get('EXPT') or '').strip()
   ODIR    = (nml.get('ODIR') or '').strip()

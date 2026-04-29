@@ -48,7 +48,7 @@ from gplot_utils.domains import (get_domain_bounds, is_storm_centered,
 from gplot_utils.plot_utils import (setup_map_axes, create_figure, add_titles,
                                      add_disclaimer, add_storm_marker,
                                      save_figure, update_plotted_file,
-                                     get_plot_title)
+                                     get_plot_title, configure_cartopy)
 
 logger = logging.getLogger(__name__)
 
@@ -1280,6 +1280,7 @@ def main():
 
     # ---- 1. Read master namelist ----
     nml = read_master_namelist(args.master_nml)
+    configure_cartopy(nml.get('CARTOPY_DIR'))
     dsource = nml.get('DSOURCE', 'HAFS')
     expt = nml.get('EXPT', dsource)
     mcode = nml.get('MCODE', dsource[:4])

@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gplot_utils.namelist import read_master_namelist, read_stats_namelist
 from gplot_utils.atcf import read_atcf, read_bdeck, parse_storm_info
 from gplot_utils.plot_utils import (save_figure, add_disclaimer,
-                                    add_storm_marker)
+                                    add_storm_marker, configure_cartopy)
 
 logger = logging.getLogger('GPLOT_stats')
 
@@ -997,6 +997,7 @@ def main():
         if os.path.isfile(parm_path):
             nml_path = parm_path
     nml = read_master_namelist(nml_path)
+    configure_cartopy(nml.get('CARTOPY_DIR'))
 
     # Override with CLI args
     idate = args.idate or nml.get('IDATE', '')

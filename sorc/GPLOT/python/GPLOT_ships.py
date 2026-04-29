@@ -52,7 +52,7 @@ from gplot_utils.coord_transform import (sph2cart, sph2cart_3d,
                                           make_cartesian_grid,
                                           annular_mean, circular_mean,
                                           compute_wind_shear)
-from gplot_utils.plot_utils import save_figure
+from gplot_utils.plot_utils import save_figure, configure_cartopy
 from gplot_utils import constants as C
 
 logger = logging.getLogger('__main__')
@@ -899,6 +899,7 @@ def main():
 
     # ---- Read master namelist ----
     nml = read_master_namelist(args.master_nml)
+    configure_cartopy(nml.get('CARTOPY_DIR'))
     gplot_dir = nml.get('GPLOT_DIR', os.environ.get('GPLOT_DIR', ''))
     if not gplot_dir:
         gplot_dir = os.path.abspath(

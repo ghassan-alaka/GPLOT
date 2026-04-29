@@ -916,6 +916,7 @@ def main():
 
   # Read the master namelist (replaces subprocess grep calls)
   nml = nml_utils.read_master_namelist(MASTER_NML_IN)
+  plot_utils.configure_cartopy(nml.get('CARTOPY_DIR'))
   DSOURCE       = nml.get('DSOURCE', 'HAFS')
   OCEAN_DSOURCE = (nml.get('OCEAN_DSOURCE') or DSOURCE).strip()
   EXPT          = nml.get('EXPT', '').strip()
