@@ -33,28 +33,58 @@ def configure_cartopy(cartopy_dir=None):
     every subsequent ``cfeature.<X>`` /
     ``shapereader.natural_earth(...)`` call without further plumbing.
 
+    Resolution order:
+      1. Explicit ``cartopy_dir`` argument (typically from
+         ``nml.get('CARTOPY_DIR')``).
+      2. ``CARTOPY_DATA_DIR`` environment variable (lets a modulefile
+         set a host-wide fallback when the namelist hasn't been
+         updated).
+      3. No-op -- cartopy keeps its default download-then-cache flow
+         (works fine on dev hosts with internet access).
+
     The path should be the parent of ``shapefiles/`` -- cartopy
     resolves ``<cartopy_dir>/shapefiles/natural_earth/<physical|cultural>/<file>.shp``
     on its own.
 
+    Diagnostic prints (visible in the GPLOT job log) make it
+    obvious from a single grep whether the offline cache is wired up,
+    falling back to the env var, or unconfigured.
+
     Args:
         cartopy_dir: Path to a directory holding a pre-populated cartopy
             shapefile cache (typically a sysadmin-managed location like
-            ``/home/role.aoml-hafs1/.local/share/cartopy``). If empty,
-            None, or non-existent, the function is a no-op and cartopy
-            keeps its default download-then-cache flow.
+            ``/home/role.aoml-hafs1/.local/share/cartopy``). If empty
+            or None, the env var is consulted; if that's also empty,
+            the function is a no-op.
     """
-    if not cartopy_dir:
+    source = 'CARTOPY_DIR namelist entry'
+    chosen = cartopy_dir
+    if not chosen:
+        chosen = os.environ.get('CARTOPY_DATA_DIR', '')
+        source = 'CARTOPY_DATA_DIR env var'
+
+    if not chosen:
+        # Diagnostic so the HPC log shows exactly why the offline
+        # cache wasn't wired up. Use print() in addition to the
+        # logger so it lands in stdout regardless of logging config.
+        msg = ('MSG: configure_cartopy: no CARTOPY_DIR (namelist) and no '
+               'CARTOPY_DATA_DIR (env) -- cartopy will attempt downloads')
+        print(msg)
+        logger.info(msg)
         return
-    if not os.path.isdir(cartopy_dir):
-        logger.warning(
-            f"CARTOPY_DIR {cartopy_dir!r} does not exist; cartopy may "
-            f"try to download shapefiles"
-        )
+
+    if not os.path.isdir(chosen):
+        msg = (f'MSG: configure_cartopy: path {chosen!r} (from {source}) '
+               f'does not exist -- cartopy will attempt downloads')
+        print(msg)
+        logger.warning(msg)
         return
+
     import cartopy
-    cartopy.config['pre_existing_data_dir'] = cartopy_dir
-    logger.info(f"Cartopy offline cache -> {cartopy_dir}")
+    cartopy.config['pre_existing_data_dir'] = chosen
+    msg = f'MSG: configure_cartopy: pre_existing_data_dir = {chosen} (from {source})'
+    print(msg)
+    logger.info(msg)
 
 
 def load_county_state_shapes(cartopy_dir):
