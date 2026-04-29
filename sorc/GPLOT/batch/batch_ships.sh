@@ -33,7 +33,7 @@ if [ -z "${GPLOT_DIR}" ]; then
 fi
 
 # Source GPLOT_mods to optimize the environment
-source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
 # 2. Build list of input arguments for Python
 PY_ARGS=()
