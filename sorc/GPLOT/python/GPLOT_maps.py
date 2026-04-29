@@ -1302,13 +1302,15 @@ def main():
     dt = nml.get('DT', 3)
     gplot_dir = nml.get('GPLOT_DIR', os.environ.get('GPLOT_DIR', '.'))
 
-    # Output directory
+    # Output directory. Tier subdir dropped -- all tiers' figures
+    # live under <domain>/ together (tier still selects the right
+    # tier-specific namelist via resolve_namelist_path below).
     odir = args.odir or nml.get('ODIR', '.')
     odir_type = nml.get('ODIR_TYPE', 0)
     if odir_type == 1:
-        odir_full = os.path.join(odir, domain, tier)
+        odir_full = os.path.join(odir, domain)
     else:
-        odir_full = os.path.join(odir, expt, idate, domain, tier)
+        odir_full = os.path.join(odir, expt, idate, domain)
     os.makedirs(odir_full, exist_ok=True)
 
     # ATCF directories.  Prefer ATCF2_DIR (higher-res / merged output

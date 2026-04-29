@@ -943,10 +943,21 @@ def main():
         fhrfmt = '%03d'
 
     # ---- Build output directory ----
+    # Convention shared with polar/maps: ODIR_TYPE=1 means the caller
+    # supplied an experiment/cycle-specific ODIR (just append the
+    # module/domain); ODIR_TYPE=0 (default) means ODIR is the GPOUT
+    # root and we append <expt>/<idate>/<domain> ourselves. The legacy
+    # ships ODIR_TYPE=1 path inserted idate/sid.upper() into an
+    # already-specific ODIR (non-standard) and the ODIR_TYPE=0 branch
+    # was missing the experiment/date prefix entirely (which produced
+    # a spurious GPOUT/ships/Tier1/ directory). Tier subdir dropped --
+    # all tiers' figures live under <domain>/ together (tier still
+    # selects the right namelist via resolve_namelist_path).
     odir_type = int(nml.get('ODIR_TYPE', 0))
     if odir_type == 1:
-        odir = os.path.join(odir, idate, sid.upper())
-    odir_ships = os.path.join(odir, domain, tier)
+        odir_ships = os.path.join(odir, domain)
+    else:
+        odir_ships = os.path.join(odir, expt, idate, domain)
     os.makedirs(odir_ships, exist_ok=True)
 
     logger.info(f"GPLOT Ships starting: {sid} {idate}")
