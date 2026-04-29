@@ -588,8 +588,25 @@ def get_var_2d(datasets, dsource, var, level='', bounds=None,
             return direct
         return _derive_dpt_from_t_rh(datasets, level, bounds)
 
-    # Resolve variable name via cfgrib mapping
-    ds, grib_name = _resolve_cfgrib_var(datasets, var, level)
+    # Composite reflectivity preference. The shared cfgrib registry for
+    # REFL/REFD lists 'rare' (3D HAFS pressure-level reflectivity) first
+    # so get_var_3d can find it. For the 2D / no-level case, however,
+    # we want the model-native composite ('refc') whenever it exists --
+    # that's the canonical column-max the model itself wrote, computed
+    # at full vertical resolution rather than from the truncated
+    # pressure-level archive. Only fall through to deriving the
+    # composite from 'rare' if the file lacks 'refc'.
+    if var in ('REFL', 'REFD') and not level:
+        refc_ds = _find_dataset_with_var(datasets, 'refc')
+        if refc_ds is not None:
+            ds, grib_name = refc_ds, 'refc'
+        else:
+            ds, grib_name = _resolve_cfgrib_var(datasets, var, level)
+    else:
+        # Standard resolution path (specific level requested, or
+        # non-reflectivity variable).
+        ds, grib_name = _resolve_cfgrib_var(datasets, var, level)
+
     if ds is None:
         logger.warning(f"Variable '{var}' (level={level}) not found in GRIB2 data")
         return None
@@ -603,14 +620,12 @@ def get_var_2d(datasets, dsource, var, level='', bounds=None,
         if lev_val is not None:
             da = da.sel({coord_names['lev']: lev_val}, method='nearest')
 
-    # Composite reflectivity from a 3D field. The cfgrib mapping for
-    # REFL/REFD lists 'rare' first (HAFS 3D pressure-level reflectivity)
-    # so get_var_3d can find it; that priority means a get_var_2d call
-    # with empty level also resolves to 'rare', which is 3D. When that
-    # happens, reduce along the level axis via column-max -- the
-    # meteorological definition of composite reflectivity. The 2D 'refc'
-    # field, when available and selected by the resolver, has no level
-    # dim and falls through this branch unchanged.
+    # Fallback composite reflectivity: if 'refc' was unavailable above
+    # we ended up with the 3D 'rare' (or 'refd'/'refl'), and -- since
+    # the no-level case skipped the level-select step -- a level dim
+    # with size > 1 survives. Column-max along that dim recovers a
+    # composite reflectivity equivalent to what 'refc' would have been.
+    # The 2D 'refc' path falls through this branch unchanged (no lev dim).
     if (coord_names['lev'] is not None and coord_names['lev'] in da.dims
             and da.sizes[coord_names['lev']] > 1
             and var in ('REFL', 'REFD')):
