@@ -52,7 +52,8 @@ from gplot_utils.coord_transform import (sph2cart, sph2cart_3d,
                                           make_cartesian_grid,
                                           annular_mean, circular_mean,
                                           compute_wind_shear)
-from gplot_utils.plot_utils import save_figure, configure_cartopy
+from gplot_utils.plot_utils import (save_figure, configure_cartopy,
+                                    update_plotted_file)
 from gplot_utils import constants as C
 
 logger = logging.getLogger('__main__')
@@ -960,6 +961,17 @@ def main():
         odir_ships = os.path.join(odir, expt, idate, domain)
     os.makedirs(odir_ships, exist_ok=True)
 
+    # Plotted-file tracking (matches the polar/airsea/maps convention
+    # and the spawn_ships.sh expectation of
+    # ${ODIR_FULL}/PlottedFiles.${DMN}.${TR}${STORMTAG}.log). Per-FHR
+    # GRIB2 paths are appended on successful FHR processing; on
+    # subsequent runs (without --force) any FHR whose basename is
+    # already in this log is skipped. Coexists with the in-memory
+    # dat_store skip below -- either skip mechanism wins.
+    plotted_log = os.path.join(
+        odir_ships,
+        f'PlottedFiles.{domain}.{tier}.{sid}.log')
+
     logger.info(f"GPLOT Ships starting: {sid} {idate}")
     logger.info(f"  DSOURCE={dsource} EXPT={expt}")
     logger.info(f"  IDIR={idir}")
@@ -1049,8 +1061,21 @@ def main():
         tc_lat = atcf_row.iloc[0]['lat']
         tc_lon = atcf_row.iloc[0]['lon']
 
-        # Skip if already done and not forcing
+        # Skip if already done and not forcing.
+        # Two independent skip checks; either may fire:
+        #   (a) PlottedFiles.<dmn>.<tier>.<sid>.log lists this GRIB
+        #       basename (the polar/airsea/maps convention).
+        #   (b) Every active scalar diagnostic already has a value
+        #       for this FHR in the in-memory dat_store (the legacy
+        #       ships behavior, preserved for backward compatibility).
         if not args.force:
+            grib_basename = os.path.basename(grib_path)
+            if os.path.isfile(plotted_log):
+                with open(plotted_log, 'r') as f:
+                    if grib_basename in f.read():
+                        logger.debug(f"FHR {fhr:03d} already in "
+                                     f"PlottedFiles, skipping")
+                        continue
             all_done = True
             for diag in active_diags:
                 if diag in scalar_diags and fhr not in dat_store.get(diag, {}):
@@ -1255,6 +1280,12 @@ def main():
                     generated_plots.append(p)
 
         n_processed += 1
+
+        # FHR completed successfully (we got past every diagnostic
+        # without raising and at least one diag wrote into dat_store).
+        # Mark in PlottedFiles.<dmn>.<tier>.<sid>.log so subsequent
+        # runs without --force skip this GRIB cleanly.
+        update_plotted_file(plotted_log, os.path.basename(grib_path))
 
     # ---- Write all DAT files ----
     for diag in scalar_diags:
