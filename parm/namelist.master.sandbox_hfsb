@@ -16,12 +16,12 @@ EXPT = HAFS_B
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
 DO_MAPS = True
-DO_STATS = True
-DO_SHIPS = True
-DO_POLAR = True
-DO_AIRSEA = True
-DO_OCEAN_MAPS = True
-DO_OCEAN_OBS = True
+DO_STATS = False
+DO_SHIPS = False
+DO_POLAR = False
+DO_AIRSEA = False
+DO_OCEAN_MAPS = False
+DO_OCEAN_OBS = False
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -50,7 +50,7 @@ ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_static/GPOUT_Merge_Testing/HFSB_baseline_test
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HFSB_MAPS_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH Matt Note 4/5/2026 - testing HAFSB 2025 cycle and the filetag is reversed

@@ -15,9 +15,9 @@
 EXPT = HERC
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
-DO_MAPS = False
+DO_MAPS = True
 DO_STATS = False
-DO_SHIPS = True
+DO_SHIPS = False
 DO_POLAR = False
 DO_AIRSEA = False
 ; Ocean not available from HERC bit bucket for 2025...
@@ -45,12 +45,12 @@ SID =
 
 ; 1H. INPUT PATH
 IDIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble/
-ITAG = hfsa.parent.atm
+ITAG = .hfsa.parent.atm
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
 ;might have an issue here with ODIR_TYPE
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_SHIPS_only_test
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_MAPS_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH
