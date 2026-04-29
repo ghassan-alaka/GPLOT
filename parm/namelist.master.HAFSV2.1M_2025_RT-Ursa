@@ -187,3 +187,12 @@ OCEAN_SOURCE = MOM6
 OCEAN_DOMAIN = domain d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
+
+; CARTOPY OFFLINE DATA CACHE
+;     If running on a host without outbound internet (typical HPC),
+;     point cartopy at a pre-populated Natural Earth shapefile cache
+;     so cfeature.LAND / COASTLINE / etc. don't try to download. The
+;     path should be the parent of "shapefiles/" -- cartopy resolves
+;     <CARTOPY_DIR>/shapefiles/natural_earth/<...> on its own.
+;     Leave blank to preserve default behavior (network download).
+CARTOPY_DIR = /home/role.aoml-hafs1/.local/share/cartopy
