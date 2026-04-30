@@ -318,54 +318,123 @@ def compute_divergence(datasets, dsource, tc_lat, tc_lon, r_outer=1000,
     return val_scaled
 
 
+def _filter121_2d(arr, n_iter):
+    """
+    Apply a 1-2-1 smoothing filter (NCL FILTER121 equivalent) to a 2D
+    field. Each iteration smooths along axis 0, then axis 1, on the
+    interior; edges are left unchanged. NaNs are filled with the field
+    mean before filtering so they don't propagate.
+    """
+    out = np.asarray(arr, dtype=float).copy()
+    if not np.all(np.isfinite(out)):
+        fill = np.nanmean(out)
+        out = np.where(np.isfinite(out), out, fill)
+    for _ in range(int(n_iter)):
+        tmp = out.copy()
+        tmp[1:-1, :] = 0.25 * (out[:-2, :] + 2.0 * out[1:-1, :] + out[2:, :])
+        out[:, 1:-1] = 0.25 * (tmp[:, :-2] + 2.0 * tmp[:, 1:-1] + tmp[:, 2:])
+        out[0, :] = tmp[0, :]
+        out[-1, :] = tmp[-1, :]
+    return out
+
+
+def _centroid_min(field):
+    """
+    Value-weighted centroid of the lower-tail of a 2D field. Replicates
+    NCL findCenter type=1 with b=-1 (HGT min mode):
+    threshold A = min + 0.20 * (max - min); centroid is the
+    (A - field)-weighted mean of grid indices over points where
+    field <= A (so the deepest part of the trough dominates).
+
+    Returns (i_centroid, j_centroid) as float indices into field, or
+    (nan, nan) if the field has no usable values.
+    """
+    if not np.isfinite(field).any():
+        return np.nan, np.nan
+    fmin = float(np.nanmin(field))
+    fmax = float(np.nanmax(field))
+    if fmax == fmin:
+        return np.nan, np.nan
+    A = fmin + 0.20 * (fmax - fmin)
+    weights = np.maximum(A - field, 0.0)
+    weights = np.nan_to_num(weights, nan=0.0)
+    total = float(weights.sum())
+    if total <= 0 or not np.isfinite(total):
+        return np.nan, np.nan
+    i_idx, j_idx = np.indices(field.shape)
+    i_c = float((i_idx * weights).sum() / total)
+    j_c = float((j_idx * weights).sum() / total)
+    return i_c, j_c
+
+
+def _haversine_km(lat1, lon1, lat2, lon2):
+    """Great-circle distance in km between two points (degrees)."""
+    rlat1, rlat2 = np.radians(lat1), np.radians(lat2)
+    dlat = np.radians(lat2 - lat1)
+    dlon = np.radians(lon2 - lon1)
+    a = np.sin(dlat / 2) ** 2 + np.cos(rlat1) * np.cos(rlat2) * np.sin(dlon / 2) ** 2
+    return 2.0 * 6371.0 * np.arcsin(np.sqrt(a))
+
+
 def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon, lat, lon):
     """
-    Find the TC center at a given pressure level using geopotential
-    height minimum within ~5 degrees of the ATCF position.
+    Find the TC center at a given pressure level via the geopotential-
+    height centroid algorithm ported from NCL findCenter type=1:
+    1) crop to ~5 degrees around the ATCF position;
+    2) smooth with a 1-2-1 filter, 25 iterations;
+    3) value-weighted centroid of the lower 20% of the smoothed field.
 
-    Returns (center_lat, center_lon, use_flag).
-    use_flag: 1 = valid vortex center, 0 = not found.
+    Returns (center_lat, center_lon, hgt_value, found_flag).
+    hgt_value is min(smoothed) at the center for downstream "lowest
+    level" marker selection. found_flag is 1 if a center could be
+    computed (vortex-continuity check happens later in compute_tccen).
     """
     result = get_var_2d(datasets, dsource, 'HGT', str(level))
     if result is None:
-        return np.nan, np.nan, 0
+        return np.nan, np.nan, np.nan, 0
 
     data = result['data']
     rlat = result['lat']
     rlon = result['lon']
 
-    # Subset to ~5 degrees around TC
     tc_lon_data = _match_lon_convention(tc_lon, rlon)
     lat_mask = (rlat >= tc_lat - 5) & (rlat <= tc_lat + 5)
     lon_mask = (rlon >= tc_lon_data - 5) & (rlon <= tc_lon_data + 5)
 
     if not np.any(lat_mask) or not np.any(lon_mask):
-        return np.nan, np.nan, 0
+        return np.nan, np.nan, np.nan, 0
 
     sub = data[np.ix_(lat_mask, lon_mask)]
     sub_lat = rlat[lat_mask]
     sub_lon = rlon[lon_mask]
 
     if sub.size == 0 or np.all(np.isnan(sub)):
-        return np.nan, np.nan, 0
+        return np.nan, np.nan, np.nan, 0
 
-    # Find minimum (lowest geopotential height = vortex center)
-    idx = np.unravel_index(np.nanargmin(sub), sub.shape)
-    clat = float(sub_lat[idx[0]])
-    clon = float(sub_lon[idx[1]])
+    smoothed = _filter121_2d(sub, n_iter=25)
+    i_c, j_c = _centroid_min(smoothed)
+    if not (np.isfinite(i_c) and np.isfinite(j_c)):
+        return np.nan, np.nan, np.nan, 0
 
-    # Convert back to -180..180 if needed
+    clat = float(np.interp(i_c, np.arange(len(sub_lat)), sub_lat))
+    clon = float(np.interp(j_c, np.arange(len(sub_lon)), sub_lon))
     if clon > 180:
         clon -= 360
 
-    return clat, clon, 1
+    hgt_val = float(np.nanmin(smoothed))
+    return clat, clon, hgt_val, 1
 
 
 def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     """
-    Compute TC center at multiple pressure levels.
+    Compute TC centers at multiple pressure levels via the smoothed
+    HGT centroid, then apply NCL's vortex-continuity check: a level's
+    center is "in the vortex" iff it lies within 1 km per 1 hPa of the
+    level immediately below it (or, for k>=2, also valid against k-2).
+    Continuity propagates: a level fails if any of its anchor levels
+    below failed.
 
-    Returns dict: level -> (lat, lon, use_flag)
+    Returns dict: level -> (lat, lon, hgt_value, use_flag).
     """
     if levels is None:
         levels = [200, 250, 300, 350, 400, 450, 500, 550, 600, 650,
@@ -375,14 +444,49 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     lat = grid['lat']
     lon = grid['lon']
 
-    centers = {}
-    for lev in levels:
-        clat, clon, flag = find_center_at_level(
+    # Process surface->top so the continuity chain anchors at the
+    # near-surface vortex (matches NCL: levels are flipped if
+    # max(LEV) != LEV(0) before the use-flag pass).
+    levs_asc = sorted(levels, reverse=True)
+
+    raw = {}
+    for lev in levs_asc:
+        clat, clon, hgt, found = find_center_at_level(
             datasets, dsource, lev, tc_lat, tc_lon, lat, lon)
-        centers[lev] = (clat, clon, flag)
-        if flag:
+        raw[lev] = (clat, clon, hgt, found)
+        if found:
             logger.debug(f"  TCCEN L={lev}: ({clat:.2f}, {clon:.2f})")
 
+    use = {}
+    for k, lev in enumerate(levs_asc):
+        clat, clon, hgt, found = raw[lev]
+        if not found or not np.isfinite(clat):
+            use[lev] = False
+            continue
+        if k == 0:
+            use[lev] = True
+            continue
+        prev_lev = levs_asc[k - 1]
+        pclat, pclon, _phgt, pfound = raw[prev_lev]
+        if not pfound or not use.get(prev_lev, False):
+            use[lev] = False
+            continue
+        d1 = _haversine_km(clat, clon, pclat, pclon)
+        lim1 = d1 / max(abs(lev - prev_lev), 1e-6)  # km per hPa
+        ok = lim1 <= 1.0
+        if not ok and k >= 2:
+            prev2_lev = levs_asc[k - 2]
+            p2clat, p2clon, _p2hgt, p2found = raw[prev2_lev]
+            if p2found and use.get(prev2_lev, False):
+                d2 = _haversine_km(clat, clon, p2clat, p2clon)
+                lim2 = d2 / max(abs(lev - prev2_lev), 1e-6)
+                ok = lim2 <= 1.0
+        use[lev] = bool(ok)
+
+    centers = {}
+    for lev in levels:
+        clat, clon, hgt, _ = raw[lev]
+        centers[lev] = (clat, clon, hgt, 1 if use.get(lev, False) else 0)
     return centers
 
 
@@ -492,85 +596,203 @@ def plot_trend(dat_files, fname, odir, storm, idate, ylabel='',
     return out_base + '.png'
 
 
+def _draw_overlay_box(ax, corner, label, mag_kt, dir_deg, color):
+    """
+    Render a small information box anchored to one of the four axes
+    corners showing a labeled directional arrow with magnitude. Used
+    on TCCEN plots for the deep-shear, shallow-shear, and storm-motion
+    overlays. Box position is in axes coords so it stays put under any
+    map projection or zoom level.
+
+    corner : one of {'tl', 'tr', 'bl', 'br'}.
+    """
+    if mag_kt is None or not np.isfinite(mag_kt) or mag_kt <= 0:
+        return
+    if dir_deg is None or not np.isfinite(dir_deg):
+        return
+    pad = 0.015
+    w, h = 0.18, 0.13
+    if corner == 'tl':
+        x0, y0 = pad, 1.0 - pad - h
+    elif corner == 'tr':
+        x0, y0 = 1.0 - pad - w, 1.0 - pad - h
+    elif corner == 'bl':
+        x0, y0 = pad, pad
+    else:  # 'br'
+        x0, y0 = 1.0 - pad - w, pad
+
+    rect = mpatches.Rectangle(
+        (x0, y0), w, h, transform=ax.transAxes,
+        facecolor='white', edgecolor='black', linewidth=0.7,
+        alpha=0.92, zorder=20)
+    ax.add_patch(rect)
+    ax.text(x0 + w / 2, y0 + h - 0.012, label,
+            transform=ax.transAxes, ha='center', va='top',
+            fontsize=9, fontweight='bold', zorder=21)
+    cx, cy = x0 + w / 2, y0 + h / 2
+    arrow_len = 0.045
+    rad = np.radians(dir_deg)
+    dx = arrow_len * np.sin(rad)
+    dy = arrow_len * np.cos(rad)
+    ax.annotate(
+        '', xy=(cx + dx / 2, cy + dy / 2),
+        xytext=(cx - dx / 2, cy - dy / 2),
+        xycoords=ax.transAxes,
+        arrowprops=dict(arrowstyle='->', color=color, lw=2.0),
+        zorder=21)
+    ax.text(x0 + w / 2, y0 + 0.012, f'{mag_kt:.1f} kt',
+            transform=ax.transAxes, ha='center', va='bottom',
+            fontsize=9, zorder=21)
+
+
+def _draw_level_legend(fig, levels, cmap, norm,
+                       x=0.88, y_top=0.90, y_bot=0.12):
+    """
+    Draw the right-side "Level [hPa]" column: a vertical stack of
+    pressure-level labels colored by the same rainbow_r colormap used
+    for the per-level markers. Positioned in figure coordinates so it
+    sits in the right margin reserved by subplots_adjust.
+    """
+    fig.text(x, y_top + 0.04, 'Level [hPa]', fontsize=12,
+             fontweight='bold', ha='left', va='top')
+    levs_top_down = sorted(levels, reverse=False)
+    n = len(levs_top_down)
+    if n == 0:
+        return
+    ys = np.linspace(y_top, y_bot, n)
+    for lev, y in zip(levs_top_down, ys):
+        fig.text(x, y, str(lev), fontsize=9, color=cmap(norm(lev)),
+                 ha='left', va='center', fontweight='bold')
+
+
 def plot_tccen(centers, tc_lat, tc_lon, fhr, storm, idate, odir,
                shrd_mag=None, shrd_dir=None, shrs_mag=None, shrs_dir=None,
-               motion_spd=None, motion_dir=None, do_gif=False):
+               motion_spd=None, motion_dir=None, do_gif=False, zoom=False):
     """
     Plot TC center fixes at multiple levels on a map.
+
+    Two extents:
+    - Default: ±5 degrees around the ATCF position.
+    - zoom=True: tight box scaled to the spread of the per-level
+      center fixes (mirrors NCL TCCEN_zoom: half-width =
+      max(1.10 * lon_spread, 1.10 * lat_spread), 0.5 deg fallback).
+
+    Markers follow NCL's three-class convention: open circle = valid
+    vortex (continuity check passed), star = level with the deepest
+    HGT among valid centers, 'x' = found but failed continuity.
+    Three corner overlays show 850-200 hPa shear (top-right), 850-500
+    hPa shear (bottom-right), and storm motion (top-left). The right
+    margin carries a colored "Level [hPa]" legend.
     """
     if not HAS_CARTOPY:
         logger.warning("Cartopy not available; skipping TCCEN plot")
         return None
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(11, 10))
+    # Reserve the right ~14% of the figure for the level legend.
+    fig.subplots_adjust(left=0.08, right=0.84, top=0.92, bottom=0.08)
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
 
-    # Map extent: +/-5 degrees around TC
-    ax.set_extent([tc_lon - 5, tc_lon + 5, tc_lat - 5, tc_lat + 5],
-                  crs=ccrs.PlateCarree())
-    ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth=0.8)
-    ax.add_feature(cfeature.BORDERS.with_scale('50m'), linewidth=0.5)
-    ax.gridlines(draw_labels=True, linewidth=0.3, alpha=0.5)
-
-    # Color map for pressure levels
     all_levs = sorted(centers.keys(), reverse=True)
     if not all_levs:
         plt.close(fig)
         return None
 
+    # Determine map extent
+    if zoom:
+        lats = [centers[L][0] for L in all_levs if np.isfinite(centers[L][0])]
+        lons = [centers[L][1] for L in all_levs if np.isfinite(centers[L][1])]
+        if not lats:
+            plt.close(fig)
+            return None
+        lat_spread = max(lats) - min(lats)
+        lon_spread = max(lons) - min(lons)
+        edge = max(1.10 * lon_spread, 1.10 * lat_spread)
+        if edge == 0:
+            edge = 0.5
+        cx = float(np.mean(lons))
+        cy = float(np.mean(lats))
+        ax.set_extent([cx - edge, cx + edge, cy - edge, cy + edge],
+                      crs=ccrs.PlateCarree())
+    else:
+        ax.set_extent([tc_lon - 5, tc_lon + 5, tc_lat - 5, tc_lat + 5],
+                      crs=ccrs.PlateCarree())
+
+    ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth=0.8)
+    ax.add_feature(cfeature.BORDERS.with_scale('50m'), linewidth=0.5)
+    gl = ax.gridlines(draw_labels=True, linewidth=0.3, alpha=0.5)
+    gl.top_labels = False
+    gl.right_labels = False  # right margin reserved for level legend
+
     cmap = plt.cm.rainbow_r
     norm = plt.Normalize(vmin=min(all_levs), vmax=max(all_levs))
 
+    # Identify the "lowest HGT" level among valid vortex levels for the
+    # star marker (matches NCL's CTR@value == min(valid) test).
+    valid_vals = [(L, centers[L][2]) for L in all_levs
+                  if centers[L][3] == 1 and np.isfinite(centers[L][2])]
+    lowest_lev = (min(valid_vals, key=lambda t: t[1])[0]
+                  if valid_vals else None)
+
     for lev in all_levs:
-        clat, clon, flag = centers[lev]
+        clat, clon, _hgt, flag = centers[lev]
         if not np.isfinite(clat) or not np.isfinite(clon):
             continue
         color = cmap(norm(lev))
-        marker = 'o' if flag == 1 else 'x'
-        ax.plot(clon, clat, marker=marker, color=color, markersize=8,
-                transform=ccrs.PlateCarree(), zorder=5)
-        ax.text(clon + 0.1, clat + 0.1, str(lev), fontsize=6, color=color,
-                transform=ccrs.PlateCarree(), zorder=5)
+        if flag != 1:
+            ax.plot(clon, clat, marker='x', color=color, markersize=9,
+                    markeredgewidth=2.0, linestyle='',
+                    transform=ccrs.PlateCarree(), zorder=5)
+        elif lev == lowest_lev:
+            ax.plot(clon, clat, marker='*', color=color, markersize=14,
+                    markeredgecolor=color, markeredgewidth=1.2,
+                    linestyle='', transform=ccrs.PlateCarree(), zorder=6)
+        else:
+            ax.plot(clon, clat, marker='o', markerfacecolor='none',
+                    markeredgecolor=color, markeredgewidth=1.6,
+                    markersize=9, linestyle='',
+                    transform=ccrs.PlateCarree(), zorder=5)
 
     # Plot ATCF position
-    ax.plot(tc_lon, tc_lat, '*', color='black', markersize=15,
+    ax.plot(tc_lon, tc_lat, '+', color='black', markersize=12,
+            markeredgewidth=1.5,
             transform=ccrs.PlateCarree(), zorder=10)
 
-    # Shear arrows
-    arrow_scale = 0.03  # degrees per knot
-    if shrd_mag is not None and np.isfinite(shrd_mag) and shrd_mag > 0:
-        dx = shrd_mag * arrow_scale * np.sin(np.radians(shrd_dir))
-        dy = shrd_mag * arrow_scale * np.cos(np.radians(shrd_dir))
-        ax.annotate('', xy=(tc_lon + dx, tc_lat + dy), xytext=(tc_lon, tc_lat),
-                    arrowprops=dict(arrowstyle='->', color='blue', lw=2),
-                    transform=ccrs.PlateCarree())
-        ax.text(tc_lon + dx, tc_lat + dy,
-                f'SHR850-200: {shrd_mag:.0f}kt', fontsize=7, color='blue',
-                transform=ccrs.PlateCarree())
+    # Marker-class legend (matches NCL: Lowest / Vortex / Non-Vtx?)
+    legend_handles = [
+        plt.Line2D([0], [0], marker='*', color='gray', markerfacecolor='gray',
+                   markersize=12, linestyle='', label='Lowest'),
+        plt.Line2D([0], [0], marker='o', color='gray', markerfacecolor='none',
+                   markeredgewidth=1.6, markersize=9, linestyle='',
+                   label='Vortex'),
+        plt.Line2D([0], [0], marker='x', color='gray',
+                   markersize=9, markeredgewidth=2.0, linestyle='',
+                   label='Non-Vtx?'),
+    ]
+    ax.legend(handles=legend_handles, loc='lower left', fontsize=9,
+              framealpha=0.85)
 
-    if shrs_mag is not None and np.isfinite(shrs_mag) and shrs_mag > 0:
-        dx = shrs_mag * arrow_scale * np.sin(np.radians(shrs_dir))
-        dy = shrs_mag * arrow_scale * np.cos(np.radians(shrs_dir))
-        ax.annotate('', xy=(tc_lon + dx, tc_lat + dy), xytext=(tc_lon, tc_lat),
-                    arrowprops=dict(arrowstyle='->', color='green', lw=2),
-                    transform=ccrs.PlateCarree())
-
-    if motion_spd is not None and np.isfinite(motion_spd) and motion_spd > 0:
-        dx = motion_spd * arrow_scale * np.sin(np.radians(motion_dir))
-        dy = motion_spd * arrow_scale * np.cos(np.radians(motion_dir))
-        ax.annotate('', xy=(tc_lon + dx, tc_lat + dy), xytext=(tc_lon, tc_lat),
-                    arrowprops=dict(arrowstyle='->', color='firebrick', lw=2),
-                    transform=ccrs.PlateCarree())
+    # Corner overlays: motion (top-left), 850-200 SHR (top-right),
+    # 850-500 SHR (bottom-right). Bottom-left is the marker legend.
+    _draw_overlay_box(ax, 'tr', '850-200 SHR', shrd_mag, shrd_dir, 'blue')
+    _draw_overlay_box(ax, 'br', '850-500 SHR', shrs_mag, shrs_dir, 'green')
+    _draw_overlay_box(ax, 'tl', 'Motion', motion_spd, motion_dir, 'firebrick')
 
     # Title
     valid_dt = datetime.strptime(idate, '%Y%m%d%H') + timedelta(hours=fhr)
-    ax.set_title(f'TC Center Fixes - {storm}\n'
+    title_suffix = ' (zoom)' if zoom else ''
+    ax.set_title(f'Center Fixes [geopotential height centroid]'
+                 f'{title_suffix} - {storm}\n'
                  f'Init: {idate}  FHR: {fhr:03d}  '
                  f'Valid: {valid_dt.strftime("%Y%m%d%H")}',
                  fontsize=11)
 
+    # Right-side colored level legend
+    _draw_level_legend(fig, all_levs, cmap, norm)
+
+    fname = 'TCCEN_zoom' if zoom else 'TCCEN'
     out_base = os.path.join(odir,
-                            f"{storm.lower()}.TCCEN.{idate}.ships.f{fhr:03d}")
+                            f"{storm.lower()}.{fname}.{idate}.ships.f{fhr:03d}")
     save_figure(fig, out_base, do_gif=do_gif)
     plt.close(fig)
     return out_base + '.png'
@@ -1122,11 +1344,12 @@ def main():
         centers = None
         if 'TCCEN' in active_diags:
             centers = compute_tccen(datasets, dsource, tc_lat, tc_lon)
-            for lev, (clat, clon, flag) in centers.items():
+            for lev, (clat, clon, _hgt, flag) in centers.items():
                 if np.isfinite(clat):
                     tccen_store[(fhr, lev)] = [clat, clon, flag]
 
-            # Plot TCCEN for each forecast hour
+            # Plot TCCEN for each forecast hour (full + zoom; matches
+            # the legacy NCL behavior of producing both panels).
             if 'TCCEN' in plot_diags:
                 shrd_val = dat_store.get('SHRD', {}).get(fhr, np.nan)
                 shtd_val = dat_store.get('SHTD', {}).get(fhr, np.nan)
@@ -1136,6 +1359,12 @@ def main():
                                odir_ships, shrd_val, shtd_val, shrs_val,
                                shts_val, motion_spd, motion_dir,
                                do_gif)
+                if p:
+                    generated_plots.append(p)
+                p = plot_tccen(centers, tc_lat, tc_lon, fhr, sid, idate,
+                               odir_ships, shrd_val, shtd_val, shrs_val,
+                               shts_val, motion_spd, motion_dir,
+                               do_gif, zoom=True)
                 if p:
                     generated_plots.append(p)
 
