@@ -33,6 +33,10 @@ LONGSID      = args.longsid
 # ---------------------------------------------------------------------------
 
 data = np.genfromtxt(datafile, delimiter=',', dtype='str')
+# Promote the single-FHR case (1D after genfromtxt on a 1-row file) to a
+# (1, ncols) row so column slicing is uniform. No-op when the file
+# already has multiple rows.
+data = np.atleast_2d(data)
 
 FCHR = data[:, 0]
 VMAX = data[:, 1].astype('float')
