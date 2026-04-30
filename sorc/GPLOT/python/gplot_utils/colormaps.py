@@ -176,8 +176,8 @@ _CMAP_REGISTRY = {
     ('TPW', ''): 'BrBG',
 
     # Reflectivity
-    ('REFL', ''): 'REFD.rgb',
-    ('REFD', ''): 'REFD.rgb',
+    ('REFL', ''): 'colormap_radar.txt',
+    ('REFD', ''): 'colormap_radar.txt',
 
     # Shear (deep / mid / shallow-layer). Uses a refined 17-color
     # palette: white <5 kt, pale green 5-10, green 10-15, yellow 15-20,
@@ -355,9 +355,10 @@ _LEVEL_REGISTRY = {
     # TPW (mm)
     ('TPW', ''): np.arange(0, 82, 2),
 
-    # Reflectivity (dBZ)
-    ('REFL', ''): np.arange(-10, 80, 5),
-    ('REFD', ''): np.arange(-10, 80, 5),
+    # Reflectivity (dBZ). Matches polar_cylindrical_structure: 0-80 dBZ
+    # in 2-dBZ bins against the 256-color colormap_radar palette.
+    ('REFL', ''): np.linspace(0, 80, 41),
+    ('REFD', ''): np.linspace(0, 80, 41),
 
     # Shear (kt). Range focused on the hurricane-relevant band:
     # below 5 kt saturates to white, above 50 kt saturates to a single
