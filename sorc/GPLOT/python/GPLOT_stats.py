@@ -1080,9 +1080,20 @@ def main():
     do_lti_guide = stats_flags.get('LATE_TKINT_GUIDE', True)
     do_li_guide = stats_flags.get('LATE_INT_GUIDE', True)
     do_lp_guide = stats_flags.get('LATE_PRS_GUIDE', True)
+    # Early-cycle (IDATE+6h) variants matching the NCL TrackGuidance
+    # and IntensityGuidance .early panels.
+    do_et_guide = stats_flags.get('EARLY_TK_GUIDE', True)
+    do_ei_guide = stats_flags.get('EARLY_INT_GUIDE', True)
     do_lt_trend = stats_flags.get('LATE_TK_TREND', True)
     do_li_trend = stats_flags.get('LATE_INT_TREND', True)
     do_lp_trend = stats_flags.get('LATE_PRS_TREND', True)
+
+    # Next cycle (used by the early-variant guidance plots).
+    try:
+        idate_early = (datetime.strptime(idate, '%Y%m%d%H')
+                       + timedelta(hours=6)).strftime('%Y%m%d%H')
+    except ValueError:
+        idate_early = None
 
     # --------------------------------------------------------
     # Step 1: Find ATCF file and determine LONGSID
@@ -1178,10 +1189,18 @@ def main():
     # --------------------------------------------------------
     # Step 2: Read ATCF data
     # --------------------------------------------------------
-    adeck_df = read_atcf(atcf_file, wind_radii=0)
-    if len(adeck_df) == 0:
-        # Try with default wind_radii
-        adeck_df = read_atcf(atcf_file, wind_radii=34)
+    # Read every wind-radii row, then collapse the (cycle, model, fhr)
+    # multiplicity to a single row per record. ATCF stores operational
+    # dynamical-model forecasts as three rows per fhr (wr=34/50/64) and
+    # statistical models as a single wr=0 row; filtering by an exact
+    # threshold drops one camp or the other. lat/lon/vmax/mslp are
+    # identical across the three threshold rows, so keep='first' is
+    # safe for every downstream plotter.
+    adeck_df = read_atcf(atcf_file, wind_radii=None)
+    if len(adeck_df) > 0:
+        adeck_df = adeck_df.drop_duplicates(
+            subset=['cycle', 'model', 'fhr'], keep='first'
+        ).reset_index(drop=True)
 
     if len(adeck_df) == 0:
         logger.error("No valid ATCF data read")
@@ -1200,16 +1219,25 @@ def main():
             logger.info(f"Relabeled {n_renamed} rows: "
                         f"{morig} -> {mcode}")
 
-    # Also try to read NHC A-deck for additional models
+    # Also try to read NHC A-deck for additional models. _merge_atcf
+    # de-duplicates by (cycle, model, fhr) so the wr=34/50/64
+    # multiplicity collapses on the merge.
     if adeck_dir:
         nhc_adeck = os.path.join(adeck_dir, f'a{sid2}.dat')
-        if os.path.isfile(nhc_adeck):
-            nhc_df = read_atcf(nhc_adeck, wind_radii=0)
-            if len(nhc_df) == 0:
-                nhc_df = read_atcf(nhc_adeck, wind_radii=34)
+        if not os.path.isdir(adeck_dir):
+            logger.warning(f"ADECK_DIR does not exist on this host: "
+                           f"{adeck_dir}")
+        elif not os.path.isfile(nhc_adeck):
+            logger.warning(f"NHC A-deck not found: {nhc_adeck}")
+        else:
+            nhc_df = read_atcf(nhc_adeck, wind_radii=None)
             if len(nhc_df) > 0:
                 adeck_df = _merge_atcf(adeck_df, nhc_df)
                 logger.info(f"Merged NHC A-deck: {nhc_adeck}")
+    n_models = adeck_df['model'].nunique()
+    logger.info(f"ATCF after merge: {len(adeck_df)} rows, "
+                f"{n_models} distinct models: "
+                f"{sorted(adeck_df['model'].unique())}")
 
     # Read B-deck
     bdeck_df = None
@@ -1236,6 +1264,18 @@ def main():
             if result:
                 logger.info(f"  Created: {result}")
 
+        if do_et_guide and idate_early is not None:
+            trk_data_early = extract_model_data(adeck_df, trk_models,
+                                                idate_early, max_fhr, dt)
+            result = plot_track_guidance(
+                trk_data_early, bdeck_df, model_info, idate_early,
+                longsid, expt, odir, variant='early', do_gif=do_gif,
+                do_trim=do_trim, do_markers=do_markers,
+                do_fhr_labels=do_fhr_labels,
+                do_disclaimer=do_disclaimer)
+            if result:
+                logger.info(f"  Created: {result}")
+
         if do_lti_guide:
             trk_data = extract_model_data(adeck_df, trk_models, idate,
                                           max_fhr, dt)
@@ -1253,6 +1293,17 @@ def main():
                 int_data, bdeck_df, model_info, idate, longsid, expt,
                 odir, variant='late', max_fhr=max_fhr, do_gif=do_gif,
                 do_trim=do_trim, do_markers=do_markers,
+                do_disclaimer=do_disclaimer)
+            if result:
+                logger.info(f"  Created: {result}")
+
+        if do_ei_guide and idate_early is not None:
+            int_data_early = extract_model_data(adeck_df, int_models,
+                                                idate_early, max_fhr, dt)
+            result = plot_intensity_guidance(
+                int_data_early, bdeck_df, model_info, idate_early,
+                longsid, expt, odir, variant='early', max_fhr=max_fhr,
+                do_gif=do_gif, do_trim=do_trim, do_markers=do_markers,
                 do_disclaimer=do_disclaimer)
             if result:
                 logger.info(f"  Created: {result}")
