@@ -75,7 +75,9 @@ def main():
   TIER = sys.argv[4]
   if TIER == 'MISSING':        TIER = ''
   ENSID = sys.argv[5]
+  if ENSID == 'XX':            ENSID = ''
   if ENSID == 'MISSING':       ENSID = ''
+  if ENSID == '0':             ENSID = ''
   FORCE = sys.argv[6]
   if FORCE == 'MISSING':       FORCE = ''
   RESOLUTION = sys.argv[7]
@@ -98,7 +100,6 @@ def main():
     sys.exit()
   PYTHONDIR = f'{GPLOT_DIR}/sorc/GPLOT/python'
 
-
   # Read the master namelist
   DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
   EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
@@ -109,11 +110,20 @@ def main():
   except:
     ODIR_TYPE = 0
   if ODIR_TYPE == 1:
-    ODIR = ODIR+'/polar/'
-    BASEDIR = BASEDIR+'/'
+    if ENSID == '':
+      ODIR = ODIR+'/polar/'
+      BASEDIR = BASEDIR+'/'
+    else:
+      ODIR = ODIR+'/'+ENSID.strip()+'/polar/'
+      BASEDIR = BASEDIR+'/'+ENSID.strip()+'/'
   else:
-    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
-    BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
+    # MATT (via Lew.Gramer@noaa.gov) 2025-08-05 merged 5/1/2026
+    if ENSID == '':
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
+      BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
+    else:
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENSID.strip()+'/polar/'
+      BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENSID.strip()+'/'
 
   figext = '.png'
   try:
@@ -171,7 +181,13 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  if ENSID == '':
+    LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  elif SID != '':
+    LONGSID = SID
+  else:
+    print(f'ERROR: NO VALID STORM IDENTIFIER: Exiting...')
+    sys.exit(1)
   #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
   TCNAME = LONGSID[::-1]
   TCNAME = TCNAME[3:]
@@ -183,7 +199,21 @@ def main():
   BASINID = BASINID[0]
   ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
   ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
-
+  # Lew.Gramer@noaa.gov: For Ensembles, also filter on ATCF_DATA for SID in ATCF_DATA[:,1:2]
+  # Merged MD 5/1/2026
+  if ( ENSID != '' and SID != '' ):
+    if ( BASINID == 'L' ):
+      LONGBASINID = "AL"
+    elif ( BASINID == 'E' ):
+      LONGBASINID = "EP"
+    elif ( BASINID == 'C' ):
+      LONGBASINID = "CP"
+    elif ( BASINID == 'W' ):
+      LONGBASINID = "WP"
+    else:
+      print(f'ERROR: BASINID "{BASINID}" not recognized! Exiting...')
+      sys.exit(1)
+    ATCF_DATA = ATCF_DATA[(ATCF_DATA[:,0] == LONGBASINID) & (ATCF_DATA[:,1] == SNUM),:]
 
   # Get the list of unplotted files
   UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
@@ -2128,6 +2158,7 @@ def main():
       co1 = ax1.contourf(r, heightlevs/1000, np.flipud(np.rot90(ur_p_mean,1)), levs_ur, \
             cmap=colormap_ur, norm=norm_ur, extend='both')
       ax1 = plotting.axes_radhgt(ax1, xmax=rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar1 = plt.colorbar(co1, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar1.ax.tick_params(labelsize=24)
       ax1.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2150,6 +2181,7 @@ def main():
       co2 = ax2.contourf(r, heightlevs/1000, np.flipud(np.rot90(vt_p_mean, 1)), levs_vt, \
              cmap=colormap_vt, norm=norm_vt, extend='max')
       ax2 = plotting.axes_radhgt(ax2, xmax=rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar2 = plt.colorbar(co2, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80])
       cbar2.ax.tick_params(labelsize=24)
       ax2.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2172,6 +2204,7 @@ def main():
       co3 = ax3.contourf(r, heightlevs/1000, np.flipud(np.rot90(w_p_mean, 1)), levs_w, \
              cmap=colormap_w, norm=norm_w, extend='both')
       ax3 = plotting.axes_radhgt(ax3, xmax=rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar3 = plt.colorbar(co3, ticks=[-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
       cbar3.ax.tick_params(labelsize=24)
       ax3.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2194,6 +2227,7 @@ def main():
       co4 = ax4.contourf(r, heightlevs/1000, np.flipud(np.rot90(dbz_p_mean, 1)), levs_dbz, \
              cmap=colormap_dbz, norm=norm_dbz, extend='max')
       ax4 = plotting.axes_radhgt(ax4, xmax=rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar4 = plt.colorbar(co4, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
       cbar4.ax.tick_params(labelsize=24)
       ax4.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2216,6 +2250,7 @@ def main():
       co5 = ax5.contourf(r, heightlevs/1000, np.flipud(np.rot90(rh_p_mean, 1)), levs_rh, \
              cmap=colormap_rh, norm=norm_rh, extend='max')
       ax5 = plotting.axes_radhgt(ax5, xmax=rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar5 = plt.colorbar(co5, ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,100])
       cbar5.ax.tick_params(labelsize=24)
       ax5.set_title(f'{EXPT_TITLE.strip()}\n' + \
@@ -2240,6 +2275,7 @@ def main():
       ax6.contourf(-r, heightlevs/1000, np.flipud(np.rot90(dbz_p_upshear_mean, 1)), levs_dbz, \
              cmap=colormap_dbz, norm=norm_dbz, extend='max')
       ax6 = plotting.axes_radhgt(ax6, xmax=rmax, xmin=-rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar6 = plt.colorbar(co6, ticks=[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75])
       cbar6.ax.tick_params(labelsize=24)
       ax6.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')
@@ -2265,6 +2301,7 @@ def main():
              cmap=colormap_ur, norm=norm_ur, extend='both')
       ax7.contourf(-r,heightlevs/1000,np.flipud(np.rot90(ur_p_upshear_mean,1)),levs_ur,cmap=colormap_ur,norm=norm_ur,extend='both')
       ax7 = plotting.axes_radhgt(ax7, xmax=rmax, xmin=-rmax)
+      # Lew.Gramer@noaa.gov 2025-10-07: Matt D noticed missing colorbars in Orion HERC; true in HREX graphics on ursa also!
       cbar7 = plt.colorbar(co7, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
       cbar7.ax.tick_params(labelsize=24)
       ax7.text(-rmax+0.05*(2*rmax), 18-(0.05*18), 'Upshear', fontsize=22, horizontalalignment='left', style='italic', weight='bold')

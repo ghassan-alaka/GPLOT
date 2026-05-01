@@ -218,7 +218,8 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+###  MATT NOTE 7/24/2025 - getting rid of 00 flag for deterministic runs
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -233,9 +234,10 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-#MAX_JOBS=25
-# Lew.Gramer@noaa.gov 2024-01-17
-MAX_JOBS=300
+if [ "${IS_ENS}" == "False" ]; then
+    MAX_JOBS=300
+else
+    MAX_JOBS=525 #increased max jobs for ensemble, hopefully is enough but unknown
 #LJG
 
 # Get the 'sbatch' executable
@@ -328,9 +330,16 @@ if [ "${DO_POLAR}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                if [ "${IS_ENS}" == "False" ]; then 
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        # Find storms based on contents of ATCF file(s)...
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} |sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/'  | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -353,8 +362,10 @@ if [ "${DO_POLAR}" = "True" ]; then
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
             # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                STORMS+=("00L")
+            if [ "${IS_ENS}" == "False" ]; then 
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    STORMS+=("00L")
+                fi
             fi
 
             # We need a real storm to continue
@@ -376,10 +387,17 @@ if [ "${DO_POLAR}" = "True" ]; then
                     continue
                 fi
     
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-                if [ ! -z "${STORM_ATCF[*]}" ]; then
-                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+		        if [ "${IS_ENS}" == "False" ]; then 
+                    # Find the forecast hours from the ATCF for this particular storm
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                    if [ ! -z "${STORM_ATCF[*]}" ]; then
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
+                else
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                    if [ ! -z "${STORM_ATCF[*]}" ]; then
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
                 fi
     
                 #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -504,21 +522,38 @@ if [ "${DO_POLAR}" = "True" ]; then
                             ENSID="XX"
                             ENSIDTAG=""
                             MODEL="${MID}"
-                        else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                        else ### MATT CHANGE 7/26/2025 - don't index MID - should be one model tag only
+                            ### Matt change 2/18/2026 - treating ID=XX as a number is making bash read it as octal. Treat as string instead:
+                            ENSID=$(printf "%02s\n" "$ID")
+                            #ENSID=$(printf "%02d\n" ${ID})
+                            # LJG no "E" 
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
 
                         # Reset FORCE
                         FORCE="${FORCE_ORIG}"
 
-                        # Create full output path
+                        #### MATT CHANGE 7/27/2025 - search for ensemble member ATCF file:
+                        #### note - can put this above in ELSE part of ensemble check, was just working on this at other time
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "$ATCF" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
+
+                        # Create full output path - matt 5/1/2026 add ENSIDTAG even when odir==1
+                        #it will be removed when there is no ENSID
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
+                            ODIR_FULL="${ODIR}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+			                #### MATT CHANGE 7/26/2025 - switch order of ensid and cycle
+                            #ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -670,7 +705,11 @@ if [ "${DO_POLAR}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                if [ "${IS_ENS}" == "False" ]; then 
+                                    FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -1024,12 +1063,15 @@ if [ "${DO_POLAR}" = "True" ]; then
 
                         # Sleep to allow the current job to get started
                         sleep 10
+                        
+                        #### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+                        ((NID++))
 
                     done #end of ID loop
-                done #end of TR loop
-            done #end of DMN loop
-        done #end of STORM loop
-    done #end of CYCLE loop
+                done #end of DMN loop
+            done #end of STORM loop
+        done #end of CYCLE loop
+    done #end of TR loop
 fi #end of DO_POLAR
 
 wait
