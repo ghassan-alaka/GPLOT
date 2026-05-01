@@ -972,7 +972,7 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
 
     try:
         ax.streamplot(lon, lat, u, v,
-                      density=1.5, linewidth=0.5, color='gray',
+                      density=1.5, linewidth=0.5, color='black',
                       transform=ccrs.PlateCarree(), zorder=4)
     except Exception as e:
         logger.debug(f"Streamline overlay failed: {e}")

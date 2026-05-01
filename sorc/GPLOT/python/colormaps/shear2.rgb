@@ -9,25 +9,25 @@
 #   < 5 kt      white              (under, saturated)
 #   5-10 kt     pale green
 #   10-15 kt    green
-#   15-20 kt    yellow             (green -> yellow-green -> yellow)
-#   20-25 kt    orange             (orange / red range, 20-30 kt)
-#   25-30 kt    red
-#   30-35 kt    deep red           (transition to dark red)
-#   35-40 kt    deeper red
-#   40-45 kt    darker red
-#   45-50 kt    dark red
-#   > 50 kt     dark red           (over, same color - strong shear)
+#   15-20 kt    green-yellow
+#   20-25 kt    yellow
+#   25-30 kt    orange
+#   30-35 kt    red
+#   35-40 kt    deep red
+#   40-45 kt    deeper red
+#   45-50 kt    darker red
+#   > 50 kt     dark red           (over, saturated - strong shear)
 #
 ncolors=11
 #r   g   b
 255 255 255
 200 234 193
 117 197 119
+190 230  60
 255 255   0
 255 146   0
 255  52   0
 220  15  15
 190   5   5
 160   0   0
-139   0   0
 139   0   0
