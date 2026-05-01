@@ -234,7 +234,10 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+if [ "${IS_ENS}" == "False" ]; then
+    MAX_JOBS=25
+else
+    MAX_JOBS=525
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -536,7 +539,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             ENSIDTAG=".${ENSID}"
                             MODEL="${MID}"
                         fi
-			### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+			            ### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
                         #((NID++))
 
                         # Reset FORCE
@@ -1079,8 +1082,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
-			### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
-			((NID++))
+			            ### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+			            ((NID++))
 
                     done #end of ID loop
                 done #end of TR loop
