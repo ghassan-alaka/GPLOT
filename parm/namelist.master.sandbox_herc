@@ -15,8 +15,8 @@
 EXPT = HERC
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
-DO_MAPS = True
-DO_STATS = False
+DO_MAPS = False
+DO_STATS = True
 DO_SHIPS = False
 DO_POLAR = False
 DO_AIRSEA = False
@@ -50,7 +50,7 @@ EXT = .grb2
 
 ; 1I. OUTPUT PATH
 ;might have an issue here with ODIR_TYPE
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_MAPS_Only
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_STATS_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH

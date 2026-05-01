@@ -23,6 +23,7 @@ NMLIST="${4:-namelist.master.default}"
 IDATE="${5}"
 SID="${6:-00L}"
 FORCE="${7:-False}"
+EID="${8}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
@@ -45,6 +46,9 @@ if [ ! -z "$FORCE" ]; then
 fi
 if [ ! -z "$NMLIST" ]; then
     NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
+fi
+if [ ! -z "$EID" ]; then
+    NCL_ARGS+=('ENSID="'"${EID}"'"')
 fi
 
 # 2. Submit the NCL job

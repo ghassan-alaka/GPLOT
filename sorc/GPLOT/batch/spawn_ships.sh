@@ -391,7 +391,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                     fi
                 fi
     
-		if [ "${IS_ENS}" == "False" ]; then 
+		        if [ "${IS_ENS}" == "False" ]; then 
                     # Find the forecast hours from the ATCF for this particular storm
                     # only in deterministic - Matt Donahue 04/02/2026
                     STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
