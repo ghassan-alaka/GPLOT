@@ -63,9 +63,17 @@ logger = logging.getLogger('__main__')
 # DAT file I/O
 # ============================================================
 
-def _dat_path(odir, storm, fname, idate):
-    """Build path to a .DAT output file."""
-    return os.path.join(odir, f"{storm.lower()}.{fname}.{idate}.ships.dat")
+def _dat_path(odir, longsid, fname, idate):
+    """Build path to a .DAT output file.
+
+    ``longsid`` is the long storm identifier (e.g. ``melissa13l`` for
+    a named storm, or just the bare sid like ``13l`` for an unnamed
+    one). Files are namespaced by cycle (``idate``), so a storm
+    getting named mid-run only causes one cycle's worth of scalar
+    diagnostics to be recomputed -- existing per-cycle DATs under
+    the bare-sid name are simply orphaned and can be removed.
+    """
+    return os.path.join(odir, f"{longsid.lower()}.{fname}.{idate}.ships.dat")
 
 
 def _read_existing_dat(path, ncols=2):
@@ -1285,16 +1293,16 @@ def main():
 
     for diag in scalar_diags:
         if diag in active_diags:
-            path = _dat_path(odir_ships, sid, diag, idate)
+            path = _dat_path(odir_ships, longsid, diag, idate)
             dat_store[diag] = _read_existing_dat(path, ncols=2)
 
     tccen_store = {}
     tchodo_store = {}
     if 'TCCEN' in active_diags:
-        path = _dat_path(odir_ships, sid, 'TCCEN', idate)
+        path = _dat_path(odir_ships, longsid, 'TCCEN', idate)
         tccen_store = _read_existing_dat(path, ncols=5)
     if 'TCHODO' in active_diags:
-        path = _dat_path(odir_ships, sid, 'TCHODO', idate)
+        path = _dat_path(odir_ships, longsid, 'TCHODO', idate)
         tchodo_store = _read_existing_dat(path, ncols=4)
 
     # ---- Main forecast hour loop ----
@@ -1547,17 +1555,17 @@ def main():
     # ---- Write all DAT files ----
     for diag in scalar_diags:
         if diag in dat_store and dat_store[diag]:
-            path = _dat_path(odir_ships, sid, diag, idate)
+            path = _dat_path(odir_ships, longsid, diag, idate)
             _write_dat_2col(path, dat_store[diag])
             logger.info(f"  Wrote {path} ({len(dat_store[diag])} entries)")
 
     if tccen_store:
-        path = _dat_path(odir_ships, sid, 'TCCEN', idate)
+        path = _dat_path(odir_ships, longsid, 'TCCEN', idate)
         _write_dat_multicol(path, tccen_store, ncols=5)
         logger.info(f"  Wrote {path}")
 
     if tchodo_store:
-        path = _dat_path(odir_ships, sid, 'TCHODO', idate)
+        path = _dat_path(odir_ships, longsid, 'TCHODO', idate)
         _write_dat_multicol(path, tchodo_store, ncols=4)
         logger.info(f"  Wrote {path}")
 
