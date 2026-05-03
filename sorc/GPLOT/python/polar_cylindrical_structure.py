@@ -201,14 +201,16 @@ def main():
   ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
   # Lew.Gramer@noaa.gov: For Ensembles, also filter on ATCF_DATA for SID in ATCF_DATA[:,1:2]
   # Merged MD 5/1/2026
+  #MD Note 5/3/2026 - specifying UPPER on BASINID matching - not sure if we should automatically capitalize, assume capital
+  #or some other option.
   if ( ENSID != '' and SID != '' ):
-    if ( BASINID == 'L' ):
+    if ( BASINID.upper() == 'L' ):
       LONGBASINID = "AL"
-    elif ( BASINID == 'E' ):
+    elif ( BASINID.upper() == 'E' ):
       LONGBASINID = "EP"
-    elif ( BASINID == 'C' ):
+    elif ( BASINID.upper() == 'C' ):
       LONGBASINID = "CP"
-    elif ( BASINID == 'W' ):
+    elif ( BASINID.upper() == 'W' ):
       LONGBASINID = "WP"
     else:
       print(f'ERROR: BASINID "{BASINID}" not recognized! Exiting...')
