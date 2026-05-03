@@ -248,6 +248,7 @@ if [ "${IS_ENS}" == "False" ]; then
     MAX_JOBS=25
 else
     MAX_JOBS=525
+fi
 
 # Get file hour format information from table or namelist
 if [ -z "${FHRFMT}" ]; then

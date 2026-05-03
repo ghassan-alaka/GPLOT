@@ -238,6 +238,7 @@ if [ "${IS_ENS}" == "False" ]; then
     MAX_JOBS=300
 else
     MAX_JOBS=525 #increased max jobs for ensemble, hopefully is enough but unknown
+fi
 #LJG
 
 # Get the 'sbatch' executable
