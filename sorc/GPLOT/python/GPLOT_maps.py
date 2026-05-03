@@ -35,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gplot_utils import constants as C
 from gplot_utils.namelist import (read_master_namelist, read_maps_namelist,
                                    resolve_namelist_path)
-from gplot_utils.atcf import read_atcf, read_bdeck
+from gplot_utils.atcf import read_atcf, read_bdeck, derive_longsid
 from gplot_utils.grib_reader import (open_grib2, open_sat_file, get_var_2d,
                                       get_var_3d, get_layer_mean,
                                       get_wind_components, get_grid_info)
@@ -840,7 +840,13 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     add_disclaimer(ax, expt)
 
     # --- 12. Save ---
-    ofile_stem = os.path.join(odir, f"{filename}.{domain}.f{fhr:03d}")
+    # Filename pattern matches the legacy NCL/HRD convention so that
+    # operational consumers and side-by-side comparisons line up:
+    #   <longsid>.<recipe>.<idate>.<domain>.f<fhr>.gif
+    # e.g. maila30p.REFL_MSLP.2026040806.d03.f018.gif
+    ofile_stem = os.path.join(
+        odir,
+        f"{longsid.lower()}.{filename}.{idate}.{domain}.f{fhr:03d}")
     ofile = save_figure(fig, ofile_stem, do_trim=True, do_gif=True)
     logger.info(f"Saved: {ofile}")
     return ofile
@@ -1347,10 +1353,31 @@ def main():
     else:
         logger.warning("No ATCF file found")
 
-    # Parse storm info for long SID
+    # Parse storm info for long SID. Priority chain (matches the
+    # rest of GPLOT): ATCF filename's '<name><sid>' prefix (legacy
+    # NCL convention) -> B-deck column-28 storm_name -> A-deck
+    # column-28 storm_name -> bare sid lowercase.
     snum = sid[:2] if len(sid) >= 3 else '00'
     basin = sid[2:] if len(sid) >= 3 else 'L'
-    longsid = sid.lower()
+    bdeck_df_for_name = None
+    if bdeck_dir and os.path.isdir(bdeck_dir):
+        _basin_map = {'l': 'al', 'e': 'ep', 'c': 'cp', 'w': 'wp',
+                      's': 'sh', 'p': 'sh', 'a': 'io', 'b': 'io'}
+        try:
+            _basin1 = sid[2].lower()
+            _basin2 = _basin_map.get(_basin1, '')
+            _bdeck_path = os.path.join(bdeck_dir,
+                                       f'b{_basin2}{snum}{idate[:4]}.dat')
+            if os.path.isfile(_bdeck_path):
+                bdeck_df_for_name = read_bdeck(_bdeck_path)
+        except (IndexError, AttributeError):
+            pass
+    _name_source = (bdeck_df_for_name
+                    if bdeck_df_for_name is not None
+                    and len(bdeck_df_for_name) > 0
+                    else atcf_df)
+    longsid = derive_longsid(atcf_file, sid, _name_source)
+    logger.info(f"LONGSID resolved to: {longsid}")
 
     # ---- 4. Get StreamlineThin factor ----
     thin_factor = load_streamline_thin(gplot_dir, dsource, domain)
