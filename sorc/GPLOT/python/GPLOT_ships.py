@@ -638,7 +638,13 @@ def _draw_overlay_box(ax, corner, label, mag_kt, dir_deg, color):
             transform=ax.transAxes, ha='center', va='top',
             fontsize=9, fontweight='bold', zorder=21)
     cx, cy = x0 + w / 2, y0 + h / 2
-    arrow_len = 0.045
+    # Arrow length scales linearly with magnitude (0 kt -> minimum
+    # nub, 40 kt -> the full box width). Capped so a 60 kt SHRD or
+    # fast-mover motion vector still fits inside the box.
+    arrow_min = 0.020
+    arrow_max = 0.075
+    mag_ref = 40.0  # kt at which the arrow reaches arrow_max
+    arrow_len = arrow_min + (arrow_max - arrow_min) * min(mag_kt / mag_ref, 1.0)
     rad = np.radians(dir_deg)
     dx = arrow_len * np.sin(rad)
     dy = arrow_len * np.cos(rad)
@@ -767,6 +773,7 @@ def plot_tccen(centers, tc_lat, tc_lon, fhr, storm, idate, odir,
             transform=ccrs.PlateCarree(), zorder=10)
 
     # Marker-class legend (matches NCL: Lowest / Vortex / Non-Vtx?)
+    # plus the ATCF center marker drawn just below.
     legend_handles = [
         plt.Line2D([0], [0], marker='*', color='gray', markerfacecolor='gray',
                    markersize=12, linestyle='', label='Lowest'),
@@ -776,6 +783,9 @@ def plot_tccen(centers, tc_lat, tc_lon, fhr, storm, idate, odir,
         plt.Line2D([0], [0], marker='x', color='gray',
                    markersize=9, markeredgewidth=2.0, linestyle='',
                    label='Non-Vtx?'),
+        plt.Line2D([0], [0], marker='+', color='black',
+                   markersize=12, markeredgewidth=1.5, linestyle='',
+                   label='ATCF center'),
     ]
     ax.legend(handles=legend_handles, loc='lower left', fontsize=9,
               framealpha=0.85)
