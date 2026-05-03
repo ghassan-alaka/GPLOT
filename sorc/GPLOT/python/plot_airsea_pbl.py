@@ -165,20 +165,38 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
-  #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
-  TCNAME = LONGSID[::-1]
-  TCNAME = TCNAME[3:]
-  TCNAME = TCNAME[::-1]
-  SNUM = LONGSID[::-1]
-  SNUM = SNUM[1:3]
-  SNUM = SNUM[::-1]
-  BASINID = LONGSID[::-1]
-  BASINID = BASINID[0]
+
   # Parse ATCF into DataFrame (replaces manual genfromtxt + string reversal).
   # read_atcf() already filters to the 34-kt wind-radii rows, matching the
   # legacy ATCF_DATA[:,11]=='34' filter.
   atcf_df = atcf_utils.read_atcf(str(ATCF))
+
+  # LONGSID priority: ATCF filename's name+sid prefix (legacy NCL
+  # convention) -> B-deck column-28 storm_name -> A-deck storm_name
+  # -> bare SID. B-deck path is built from SID + IDATE year when
+  # BDECK_DIR is configured.
+  bdeck_df_for_name = None
+  _BDECK_DIR = (nml.get('BDECK_DIR') or '').strip()
+  if _BDECK_DIR:
+    _basin1 = SID[-1].lower() if SID else ''
+    _basin_map = {'l': 'al', 'e': 'ep', 'c': 'cp', 'w': 'wp',
+                  's': 'sh', 'p': 'sh', 'a': 'io', 'b': 'io'}
+    _basin2 = _basin_map.get(_basin1, '')
+    _snum = SID[:2] if SID else ''
+    _year = IDATE[:4] if IDATE else ''
+    _bdeck_path = os.path.join(_BDECK_DIR, f'b{_basin2}{_snum}{_year}.dat')
+    if os.path.isfile(_bdeck_path):
+      try:
+        bdeck_df_for_name = atcf_utils.read_bdeck(_bdeck_path)
+      except Exception as _e:
+        print(f'WARNING: could not read B-deck {_bdeck_path}: {_e}')
+  _name_source = bdeck_df_for_name if (bdeck_df_for_name is not None
+                                       and len(bdeck_df_for_name) > 0) else atcf_df
+  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID, _name_source)
+  TCNAME  = LONGSID[:-3].upper()
+  SNUM    = LONGSID[-3:-1]
+  BASINID = LONGSID[-1]
+  print(f'MSG: Running with this long Storm ID --> {LONGSID}')
 
 
   # Get the list of unplotted files

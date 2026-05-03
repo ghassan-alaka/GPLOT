@@ -157,6 +157,15 @@ def read_atcf(filepath, model_id=None, cycle=None, wind_radii=34):
                 storm_dir   = _opt_int(25)
                 storm_speed = _opt_int(26)  # tenths of knots
 
+                # Storm name (column 28, 0-indexed 27). Treat
+                # placeholder labels (INVEST/UNNAMED/NAMELESS) as
+                # absent so the longsid logic falls through to sid.
+                storm_name = ''
+                if len(fields) > 27:
+                    raw = fields[27].strip().upper()
+                    if raw and raw not in ('INVEST', 'UNNAMED', 'NAMELESS'):
+                        storm_name = raw
+
             except (ValueError, IndexError):
                 continue
 
@@ -182,6 +191,7 @@ def read_atcf(filepath, model_id=None, cycle=None, wind_radii=34):
                 'rmw': rmw,
                 'storm_dir': storm_dir,
                 'storm_speed': storm_speed,
+                'storm_name': storm_name,
             })
 
     if not records:
@@ -253,6 +263,16 @@ def read_bdeck(filepath, idate=None):
                 dev_type = fields[10].strip() if len(fields) > 10 else 'XX'
                 wr_thresh = int(fields[11]) if len(fields) > 11 and fields[11].strip() else 0
                 rmw = int(fields[19]) if len(fields) > 19 and fields[19].strip() and fields[19].strip() != '-99' else -99
+                # ATCF v0.1 column 28 (0-indexed 27) is the storm name.
+                # Older / unnamed-storm B-decks may have it blank or
+                # placeholder values like 'INVEST', 'UNNAMED', or
+                # 'NAMELESS'; surface them as empty strings so the
+                # longsid logic falls through to the sid.
+                storm_name = ''
+                if len(fields) > 27:
+                    raw = fields[27].strip().upper()
+                    if raw and raw not in ('INVEST', 'UNNAMED', 'NAMELESS'):
+                        storm_name = raw
 
             except (ValueError, IndexError):
                 continue
@@ -272,6 +292,7 @@ def read_bdeck(filepath, idate=None):
                 'mslp': mslp,
                 'dev_type': dev_type,
                 'rmw': rmw,
+                'storm_name': storm_name,
             })
 
     if not records:
@@ -342,6 +363,60 @@ def parse_storm_info(longsid):
         'basin2': basin2,
         'sid': sid,
     }
+
+
+def derive_longsid(atcf_file, sid, bdeck_df=None):
+    """
+    Derive the long storm identifier (e.g. 'melissa13l') for output
+    filenames and plot titles, with the priority chain:
+
+      1. Use the first dot-separated segment of the ATCF basename if
+         it carries more than just the sid (legacy NCL convention:
+         filenames like 'melissa13l.2025102100.trak.atcfunix').
+      2. Fall back to the storm-name column of the B-deck (ATCF
+         column 28) and concatenate '<name><sid>'.
+      3. Last-resort fallback: just the sid (lowercase) -- preserves
+         today's behavior for synthetic / nameless runs.
+
+    Parameters
+    ----------
+    atcf_file : str or None
+        Path to the ATCF a-deck used by the run, or None.
+    sid : str
+        Short storm id (e.g. '13L'). Lowercased internally.
+    bdeck_df : pandas.DataFrame, optional
+        DataFrame returned by ``read_bdeck``. If it has a non-empty
+        ``storm_name`` column, used for the fallback.
+
+    Returns
+    -------
+    str
+        Lowercase longsid such as 'melissa13l', or the bare sid in
+        lowercase when no name source is available.
+    """
+    sid_lc = (sid or '').lower()
+
+    # 1. ATCF filename first segment, if richer than the sid alone.
+    if atcf_file:
+        first_seg = os.path.basename(atcf_file).split('.')[0]
+        if first_seg and first_seg.lower() != sid_lc \
+                and first_seg.lower().endswith(sid_lc) \
+                and len(first_seg) > len(sid_lc):
+            return first_seg.lower()
+
+    # 2. B-deck column-28 storm name.
+    if bdeck_df is not None and len(bdeck_df) > 0 \
+            and 'storm_name' in bdeck_df.columns:
+        names = [str(n).strip() for n in bdeck_df['storm_name'].dropna()
+                 if str(n).strip()]
+        if names:
+            # Prefer the most recent entry (handles mid-cycle renames
+            # like POTENTIAL TROPICAL CYCLONE -> a real name).
+            name = names[-1].lower()
+            return f"{name}{sid_lc}"
+
+    # 3. Bare sid.
+    return sid_lc
 
 
 def find_atcf_file(search_dirs, sid, idate, tags=None):

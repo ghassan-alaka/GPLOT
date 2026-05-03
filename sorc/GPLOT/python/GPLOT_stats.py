@@ -36,7 +36,8 @@ import cartopy.feature as cfeature
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gplot_utils.namelist import read_master_namelist, read_stats_namelist
-from gplot_utils.atcf import read_atcf, read_bdeck, parse_storm_info
+from gplot_utils.atcf import (read_atcf, read_bdeck, parse_storm_info,
+                                derive_longsid)
 from gplot_utils.plot_utils import (save_figure, add_disclaimer,
                                     add_storm_marker, configure_cartopy)
 
@@ -1156,10 +1157,7 @@ def main():
 
     logger.info(f"Using ATCF: {atcf_file}")
 
-    # Derive LONGSID from filename (used for plot titles).
-    longsid = os.path.splitext(os.path.basename(atcf_file))[0]
-
-    # Derive the ATCF short ID (e.g., 'al082023') directly from the CLI
+    # Derive the ATCF short ID (e.g., 'al132025') directly from the CLI
     # --sid and cycle year rather than from the filename.  HAFS filenames
     # like '08l.2023082618.hfsb_multistorm.parent.trak' don't follow the
     # compact "{name}{NN}{b}" form parse_storm_info expects, so feeding
@@ -1178,13 +1176,10 @@ def main():
         basin1 = ''
         basin2 = ''
     sid2 = f"{basin2}{snum}{idate[:4]}"
-    storm_info = {
-        'name': longsid.upper(),
-        'number': snum,
-        'basin1': basin1,
-        'basin2': basin2,
-        'sid': sid.upper(),
-    }
+    # longsid is derived after the B-deck read below so the storm-name
+    # column-28 fallback is available when the ATCF filename is bare
+    # (e.g., '13l.2025102100.hfsb_multistorm.trak.atcfunix').
+    longsid = sid.lower()
 
     # --------------------------------------------------------
     # Step 2: Read ATCF data
@@ -1246,6 +1241,15 @@ def main():
         if os.path.isfile(bdeck_path):
             bdeck_df = read_bdeck(bdeck_path, idate=idate)
             logger.info(f"Read B-deck: {len(bdeck_df)} rows")
+
+    # Now that both A-deck and B-deck are loaded, resolve the long
+    # storm id used in output filenames and titles. Priority:
+    # ATCF filename's '<name><sid>' prefix (legacy NCL convention) ->
+    # B-deck column-28 storm_name -> A-deck storm_name -> bare sid.
+    name_source = (bdeck_df if bdeck_df is not None and len(bdeck_df) > 0
+                   else adeck_df)
+    longsid = derive_longsid(atcf_file, sid, name_source)
+    logger.info(f"LONGSID resolved to: {longsid}")
 
     # --------------------------------------------------------
     # Step 3: Guidance plots

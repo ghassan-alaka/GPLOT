@@ -1687,15 +1687,39 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
-  TCNAME  = LONGSID[:-3]
-  SNUM    = LONGSID[-3:-1]
-  BASINID = LONGSID[-1]
 
   # Session E: replace the legacy string-reverse ATCF parsing with
   # gplot_utils.atcf.read_atcf(), which returns a DataFrame with signed
   # lat/lon, vmax (kt), mslp (hPa), rmw (nmi), and 34-kt quadrant radii.
   atcf_df = atcf_utils.read_atcf(str(ATCF), wind_radii=34)
+
+  # LONGSID priority: ATCF filename's name+sid prefix (legacy NCL
+  # convention) -> ATCF column-28 storm_name -> bare SID. Read the
+  # B-deck if BDECK_DIR is configured and a matching b-deck file
+  # exists, since it's the most reliable name source for active
+  # named storms; fall back to the A-deck DataFrame otherwise.
+  bdeck_df_for_name = None
+  _BDECK_DIR = (nml.get('BDECK_DIR') or '').strip()
+  if _BDECK_DIR:
+    _basin1 = SID[-1].lower() if SID else ''
+    _basin_map = {'l': 'al', 'e': 'ep', 'c': 'cp', 'w': 'wp',
+                  's': 'sh', 'p': 'sh', 'a': 'io', 'b': 'io'}
+    _basin2 = _basin_map.get(_basin1, '')
+    _snum = SID[:2] if SID else ''
+    _year = IDATE[:4] if IDATE else ''
+    _bdeck_path = os.path.join(_BDECK_DIR, f'b{_basin2}{_snum}{_year}.dat')
+    if os.path.isfile(_bdeck_path):
+      try:
+        bdeck_df_for_name = atcf_utils.read_bdeck(_bdeck_path)
+      except Exception as _e:
+        print(f'WARNING: could not read B-deck {_bdeck_path}: {_e}')
+  _name_source = bdeck_df_for_name if (bdeck_df_for_name is not None
+                                       and len(bdeck_df_for_name) > 0) else atcf_df
+  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID, _name_source)
+  TCNAME  = LONGSID[:-3].upper()
+  SNUM    = LONGSID[-3:-1]
+  BASINID = LONGSID[-1]
+  print(f'MSG: Running with this long Storm ID --> {LONGSID}')
 
 
   # Get the list of unplotted files

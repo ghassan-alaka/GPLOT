@@ -44,7 +44,7 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gplot_utils.namelist import read_master_namelist, read_ships_namelist
-from gplot_utils.atcf import read_atcf
+from gplot_utils.atcf import read_atcf, read_bdeck, derive_longsid
 from gplot_utils.grib_reader import (open_grib2, get_var_2d, get_var_3d,
                                       get_layer_mean, get_wind_components,
                                       get_grid_info)
@@ -1227,6 +1227,34 @@ def main():
         logger.error("ATCF file is empty")
         return 1
 
+    # Resolve LONGSID for plot titles + figure filenames. Priority:
+    # ATCF filename's '<name><sid>' prefix (legacy NCL convention) ->
+    # B-deck column-28 storm_name -> A-deck column-28 storm_name ->
+    # bare sid. DAT filenames continue to use raw sid for stability
+    # (existing DAT files on disk would otherwise be orphaned when the
+    # storm gets named mid-cycle).
+    bdeck_df_for_name = None
+    bdeck_dir = (nml.get('BDECK_DIR') or '').strip()
+    if bdeck_dir and os.path.isdir(bdeck_dir):
+        _basin_map = {'l': 'al', 'e': 'ep', 'c': 'cp', 'w': 'wp',
+                      's': 'sh', 'p': 'sh', 'a': 'io', 'b': 'io'}
+        try:
+            _basin1 = sid[2].lower()
+            _basin2 = _basin_map.get(_basin1, '')
+            _snum = sid[:2]
+            _bdeck_path = os.path.join(bdeck_dir,
+                                       f'b{_basin2}{_snum}{idate[:4]}.dat')
+            if os.path.isfile(_bdeck_path):
+                bdeck_df_for_name = read_bdeck(_bdeck_path)
+        except (IndexError, AttributeError):
+            pass
+    _name_source = (bdeck_df_for_name
+                    if bdeck_df_for_name is not None
+                    and len(bdeck_df_for_name) > 0
+                    else atcf_df)
+    longsid = derive_longsid(atcf_file, sid, _name_source)
+    logger.info(f"  LONGSID: {longsid}")
+
     # Filter to this cycle
     if 'init_date' in atcf_df.columns:
         cycle_mask = atcf_df['init_date'] == idate
@@ -1355,13 +1383,13 @@ def main():
                 shtd_val = dat_store.get('SHTD', {}).get(fhr, np.nan)
                 shrs_val = dat_store.get('SHRS', {}).get(fhr, np.nan)
                 shts_val = dat_store.get('SHTS', {}).get(fhr, np.nan)
-                p = plot_tccen(centers, tc_lat, tc_lon, fhr, sid, idate,
+                p = plot_tccen(centers, tc_lat, tc_lon, fhr, longsid, idate,
                                odir_ships, shrd_val, shtd_val, shrs_val,
                                shts_val, motion_spd, motion_dir,
                                do_gif)
                 if p:
                     generated_plots.append(p)
-                p = plot_tccen(centers, tc_lat, tc_lon, fhr, sid, idate,
+                p = plot_tccen(centers, tc_lat, tc_lon, fhr, longsid, idate,
                                odir_ships, shrd_val, shtd_val, shrs_val,
                                shts_val, motion_spd, motion_dir,
                                do_gif, zoom=True)
@@ -1498,11 +1526,11 @@ def main():
 
             # Plot hodograph for each forecast hour
             if 'TCHODO' in plot_diags:
-                p = plot_hodograph(hodo, fhr, sid, idate, odir_ships,
+                p = plot_hodograph(hodo, fhr, longsid, idate, odir_ships,
                                     motion_spd, motion_dir, do_gif)
                 if p:
                     generated_plots.append(p)
-                p = plot_hodograph(hodo, fhr, sid, idate, odir_ships,
+                p = plot_hodograph(hodo, fhr, longsid, idate, odir_ships,
                                     motion_spd, motion_dir, do_gif,
                                     zoom=True)
                 if p:
@@ -1540,7 +1568,7 @@ def main():
             # TODO: Load prior cycles for multi-cycle overlay
             trend_data = [(idate, dat_store[diag])]
             ylabel = _diag_ylabel(diag)
-            p = plot_trend(trend_data, diag, odir_ships, sid, idate,
+            p = plot_trend(trend_data, diag, odir_ships, longsid, idate,
                            ylabel=ylabel, do_gif=do_gif)
             if p:
                 generated_plots.append(p)
