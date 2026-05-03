@@ -18,8 +18,8 @@ EXPT = HERC
 DO_MAPS = False
 DO_STATS = False
 DO_SHIPS = False
-DO_POLAR = True
-DO_AIRSEA = False
+DO_POLAR = False
+DO_AIRSEA = True
 ; Ocean not available from HERC bit bucket for 2025...
 DO_OCEAN_MAPS = False
 DO_OCEAN_OBS = False
@@ -50,7 +50,7 @@ EXT = .grb2
 
 ; 1I. OUTPUT PATH
 ;might have an issue here with ODIR_TYPE
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_POLAR_Only
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_AIRSEA_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH

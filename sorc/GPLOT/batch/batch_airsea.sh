@@ -14,6 +14,7 @@
 
 #set -x
 
+
 # 1. Get command line variables
 MACHINE="${1:-${MACHINE}}"
 PYTHONFILE="${2}"
@@ -37,7 +38,7 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 2. Build list in input arguments for Python
+# 4. Build list in input arguments for Python
 PYTHON_ARGS=()
 if [ ! -z "$IDATE" ]; then
     PYTHON_ARGS+=("${IDATE}")
@@ -90,7 +91,7 @@ else
     PYTHON_ARGS+=("MISSING")
 fi
 
-# 2. Submit the Python job
+# 5. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
 python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
 
