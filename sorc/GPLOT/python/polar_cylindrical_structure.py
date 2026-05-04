@@ -2914,6 +2914,22 @@ def main():
     levs_rh = np.linspace(0,100,41,endpoint=True)
     norm_rh = colors.BoundaryNorm(levs_rh,256)
 
+    # Symmetric -30 to +30% scale for the W1/W2 panels of the RH
+    # wavenumber figure -- the brown/green palette doubles as a
+    # diverging colormap centered on zero so dry vs moist anomalies
+    # read distinctly. 1 %-pt bins for finer resolution on the small
+    # range. Re-uses colormap_rh.
+    levs_rh_sym = np.linspace(-30,30,61,endpoint=True)
+    norm_rh_sym = colors.BoundaryNorm(levs_rh_sym,256)
+
+    # Symmetric -20 to +20 m/s scale for the W1/W2 panels of the
+    # tangential-wind wavenumber figure. Uses matplotlib's seismic
+    # diverging palette (blue<->red through white) to highlight the
+    # asymmetric components rather than the full-field colormap.
+    levs_vt_sym = np.linspace(-20,20,41,endpoint=True)
+    norm_vt_sym = colors.BoundaryNorm(levs_vt_sym,256)
+    colormap_vt_sym = plt.cm.seismic
+
 
     color_data_wind = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_wind.txt')
     colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
@@ -3321,7 +3337,10 @@ def main():
     # FIGURE 15: Wavenumber 0,1,2 components of 5-km Relative Humidity
     if do_rh5km_wavenumber == 'Y':
       fig15 = plt.figure(figsize=(15,15))
-      ticks15 = [0, 20, 40, 60, 80, 100]
+      # Top two panels span the full 0-100 % RH range; bottom two
+      # use a +/-30 % symmetric scale to highlight asymmetries.
+      ticks15      = [0, 20, 40, 60, 80, 100]
+      ticks15_sym  = [-30, -20, -10, 0, 10, 20, 30]
 
       # Panel A
       ax15a = fig15.add_subplot(2, 2, 1)
@@ -3352,23 +3371,23 @@ def main():
           fontsize=20, color='brown', loc='right')
       ax15b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel C
+      # Panel C: W1 anomaly -- +/-30 % RH on the brown/green palette
       ax15c = fig15.add_subplot(2, 2, 3)
-      co15c = ax15c.contourf(XI, YI, rh5_p_w1[:,:], levs_rh, \
-            cmap=colormap_rh, norm=norm_rh, extend='max')
+      co15c = ax15c.contourf(XI, YI, rh5_p_w1[:,:], levs_rh_sym, \
+            cmap=colormap_rh, norm=norm_rh_sym, extend='both')
       ax15c = plotting.axes_wavenumber(ax15c, rmax_plot, -rmax_plot, nx=9)
-      cbar15c = plt.colorbar(co15c, ticks=ticks15)
+      cbar15c = plt.colorbar(co15c, ticks=ticks15_sym)
       cbar15c.ax.tick_params(labelsize=18)
       ax15c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax15c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D
+      # Panel D: W2 anomaly -- +/-30 % RH on the brown/green palette
       ax15d = fig15.add_subplot(2, 2, 4)
-      co15d = ax15d.contourf(XI, YI, rh5_p_w2[:,:], levs_rh, \
-            cmap=colormap_rh, norm=norm_rh, extend='max')
+      co15d = ax15d.contourf(XI, YI, rh5_p_w2[:,:], levs_rh_sym, \
+            cmap=colormap_rh, norm=norm_rh_sym, extend='both')
       ax15d = plotting.axes_wavenumber(ax15d, rmax_plot, -rmax_plot, nx=9)
-      cbar15d = plt.colorbar(co15d, ticks=ticks15)
+      cbar15d = plt.colorbar(co15d, ticks=ticks15_sym)
       cbar15d.ax.tick_params(labelsize=18)
       ax15d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
@@ -3386,14 +3405,17 @@ def main():
     # FIGURE 16: Wavenumber 0,1,2 components of 10-m Tangential Wind
     if do_vt10_wavenumber == 'Y':
       fig16 = plt.figure(figsize=(15,15))
-      ticks16 = [-30, -20, -10, 0, 10, 20, 30]
+      # Top two panels span the full 0-80 m/s wind range; bottom two
+      # use a +/-20 m/s symmetric scale to highlight asymmetries.
+      ticks16_full = [0, 10, 20, 30, 40, 50, 60, 70, 80]
+      ticks16_sym  = [-20, -15, -10, -5, 0, 5, 10, 15, 20]
 
       # Panel A
       ax16a = fig16.add_subplot(2, 2, 1)
       co16a = ax16a.contourf(XI, YI, vt10_p[:,:], levs_vt, \
             cmap=colormap_vt, norm=norm_vt, extend='max')
       ax16a = plotting.axes_wavenumber(ax16a, rmax_plot, -rmax_plot, nx=9)
-      cbar16a = plt.colorbar(co16a, ticks=ticks16)
+      cbar16a = plt.colorbar(co16a, ticks=ticks16_full)
       cbar16a.ax.tick_params(labelsize=18)
       ax16a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
@@ -3408,7 +3430,7 @@ def main():
       co16b = ax16b.contourf(XI, YI, vt10_p_w0[:,:], levs_vt, \
             cmap=colormap_vt, norm=norm_vt, extend='max')
       ax16b = plotting.axes_wavenumber(ax16b, rmax_plot, -rmax_plot, nx=9)
-      cbar16b = plt.colorbar(co16b, ticks=ticks16)
+      cbar16b = plt.colorbar(co16b, ticks=ticks16_full)
       cbar16b.ax.tick_params(labelsize=18)
       ax16b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
@@ -3417,23 +3439,23 @@ def main():
           fontsize=20, color='brown', loc='right')
       ax16b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel C
+      # Panel C: W1 anomaly -- diverging seismic, +/-20 m/s
       ax16c = fig16.add_subplot(2, 2, 3)
-      co16c = ax16c.contourf(XI, YI, vt10_p_w1[:,:], levs_vt, \
-            cmap=colormap_vt, norm=norm_vt, extend='max')
+      co16c = ax16c.contourf(XI, YI, vt10_p_w1[:,:], levs_vt_sym, \
+            cmap=colormap_vt_sym, norm=norm_vt_sym, extend='both')
       ax16c = plotting.axes_wavenumber(ax16c, rmax_plot, -rmax_plot, nx=9)
-      cbar16c = plt.colorbar(co16c, ticks=ticks16)
+      cbar16c = plt.colorbar(co16c, ticks=ticks16_sym)
       cbar16c.ax.tick_params(labelsize=18)
       ax16c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax16c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D
+      # Panel D: W2 anomaly -- diverging seismic, +/-20 m/s
       ax16d = fig16.add_subplot(2, 2, 4)
-      co16d = ax16d.contourf(XI, YI, vt10_p_w2[:,:], levs_vt, \
-            cmap=colormap_vt, norm=norm_vt, extend='max')
+      co16d = ax16d.contourf(XI, YI, vt10_p_w2[:,:], levs_vt_sym, \
+            cmap=colormap_vt_sym, norm=norm_vt_sym, extend='both')
       ax16d = plotting.axes_wavenumber(ax16d, rmax_plot, -rmax_plot, nx=9)
-      cbar16d = plt.colorbar(co16d, ticks=ticks16)
+      cbar16d = plt.colorbar(co16d, ticks=ticks16_sym)
       cbar16d.ax.tick_params(labelsize=18)
       ax16d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
