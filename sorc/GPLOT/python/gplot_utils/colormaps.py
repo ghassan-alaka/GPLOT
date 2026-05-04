@@ -358,11 +358,14 @@ _LEVEL_REGISTRY = {
     # TPW (mm)
     ('TPW', ''): np.arange(0, 82, 2),
 
-    # Reflectivity (dBZ). NCL convention: -10 to 75 dBZ in 5-dBZ
-    # bins paired with the REFD.rgb palette. Matches the operational
-    # HRD product layout (15/25/35/.../75 dBZ tick labels).
-    ('REFL', ''): np.arange(-10, 80, 5),
-    ('REFD', ''): np.arange(-10, 80, 5),
+    # Reflectivity (dBZ). 5 to 75 dBZ in 5-dBZ bins paired with the
+    # REFD.rgb palette. Below 5 dBZ renders as white (build_discrete_cmap
+    # routes the palette's first color into set_under under extend='both').
+    # The 14-bin layout puts true yellow exactly at 35-40 dBZ (bin 6 of
+    # 14 lines up with palette index 18 of 39, which is RGB 245,228,0)
+    # so the colorbar transitions green->yellow at 35 dBZ.
+    ('REFL', ''): np.arange(5, 80, 5),
+    ('REFD', ''): np.arange(5, 80, 5),
 
     # Shear (kt). Range focused on the hurricane-relevant band:
     # below 5 kt saturates to white, above 50 kt saturates to a single
