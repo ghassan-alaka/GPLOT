@@ -20,8 +20,8 @@ DO_STATS = False
 DO_SHIPS = False
 DO_POLAR = False
 DO_AIRSEA = False
-DO_OCEAN_MAPS = True
-DO_OCEAN_OBS = False
+DO_OCEAN_MAPS = False
+DO_OCEAN_OBS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HFSB_MULTISTORM
@@ -50,7 +50,7 @@ ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HFSM_OCEAN_MAPS_Only
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HFSM_OCEAN_OBS_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH

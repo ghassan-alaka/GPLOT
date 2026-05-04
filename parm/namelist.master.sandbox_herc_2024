@@ -21,8 +21,8 @@ DO_SHIPS = False
 DO_POLAR = False
 DO_AIRSEA = False
 ; Ocean not available from HERC bit bucket for 2025...
-DO_OCEAN_MAPS = True
-DO_OCEAN_OBS = False
+DO_OCEAN_MAPS = False
+DO_OCEAN_OBS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -33,7 +33,7 @@ IS_MSTORM = True
 ; 1E. ENSEMBLE MEMBER NUMBER
 ; spawn_xxx.sh checks for both EID and ENSMEM in namelist - could probably consolidate (Matt Donahue 4/2/2026)
 ; in 2024, ensemble members 00-05, 11-20 have mom6, 06-10 and 21-30 have hycom
-EID = 06 22
+EID = 07-08
 
 ; 1E. SYSTEM ENVIRONMENT
 SYS_ENV = ORION
@@ -51,7 +51,7 @@ EXT = .grb2
 
 ; 1I. OUTPUT PATH
 ;might have an issue here with ODIR_TYPE
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_2024_OCEAN_MAPS_Only
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_2024_OCEAN_OBS_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH
@@ -196,6 +196,7 @@ OCEAN_SOURCE = HYCOM
 OCEAN_DOMAIN = domain d03
 ; LJG 2024-09-02
 ;OCEAN_DOMAIN; = d03
+OCEAN_OBS_DOMAIN = d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
 ;FIX_DIR; = /work/noaa/hwrf/noscrub/hafs-fix-files/hafs-20240703-fix/fix/fix_mom6/

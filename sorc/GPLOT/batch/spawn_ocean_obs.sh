@@ -277,7 +277,7 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -390,9 +390,16 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                if [ "${IS_ENS}" == "False" ]; then 
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        # Find storms based on contents of ATCF file(s)...
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} |sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/'  | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -415,8 +422,10 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
             # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                STORMS+=("00L")
+            if [ "${IS_ENS}" == "False" ]; then 
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    STORMS+=("00L")
+                fi
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -439,13 +448,20 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                 # Increase the storm counter
                 ((NSTORM=NSTORM+1))
     
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-                if [ -z "${STORM_ATCF[*]}" ]; then
-                    echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+		if [ "${IS_ENS}" == "False" ]; then 
+                    # Find the forecast hours from the ATCF for this particular storm
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                    if [ -z "${STORM_ATCF[*]}" ]; then
+                        echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+                    else
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                        #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                    fi
                 else
-                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                    #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                    if [ ! -z "${STORM_ATCF[*]}" ]; then
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
                 fi
     
                 #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -465,6 +481,7 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                 #########################
                 # LOOP OVER MAP DOMAINS #
                 #########################
+                # note - spawn_ocean_maps has many more domain checks here- is this missing something?
                 for DMN in ${OCEAN_OBS_DOMAIN[@]}; do
                     echo ""
     
@@ -583,20 +600,35 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                             ENSIDTAG=""
                             MODEL="${MID}"
                         else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                            #Matt change 2/18/2026 - reading ID=XX as a number treats it as octal type, fails for 08 and 09
+                            ENSID=$(printf "%02s\n" "$ID")
+                            #ENSID=$(printf "%02d\n" ${ID})
+                            # LJG no "E" 
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
 
                         # Reset FORCE
                         FORCE="${FORCE_ORIG}"
 
+                        #### MATT CHANGE 5/4/2026 - search for ensemble member ATCF file:
+                        #### note - need to do this within ensemble loop
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "$ATCF" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
+
                         # Create full output path
+                        #MD 5/4/2026 - CYCLE before ENSID, and include ENSID for ODIR1 and ODIR2
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/ocean_${DMN}_obs/"
+                            ODIR_FULL="${ODIR}/$(echo ${ENSIDTAG} | cut -c2-)/ocean_${DMN}_obs/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/ocean_${DMN}_obs/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/$(echo ${ENSIDTAG} | cut -c2-)/ocean_${DMN}_obs/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -753,7 +785,11 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${OCEAN_DIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${OCEAN_DIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${OCEAN_DIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                if [ "${IS_ENS}" == "False" ]; then 
+                                    FILE_SEARCH3="${OCEAN_DIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${OCEAN_DIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -1121,6 +1157,9 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
 
                         # Sleep to allow the current job to get started
                         sleep 10
+
+                        #### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+                        ((NID++))
 
                     done #end of ID loop
                 done #end of TR loop
