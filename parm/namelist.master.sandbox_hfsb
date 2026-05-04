@@ -19,8 +19,8 @@ DO_MAPS = False
 DO_STATS = False
 DO_SHIPS = False
 DO_POLAR = False
-DO_AIRSEA = True
-DO_OCEAN_MAPS = False
+DO_AIRSEA = False
+DO_OCEAN_MAPS = True
 DO_OCEAN_OBS = False
 
 ; 1C. DATA SOURCE
@@ -50,7 +50,7 @@ ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HFSB_AIRSEA_Only
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HFSB_OCEAN_MAPS_Only
 ODIR_TYPE = 1
 
 ; 1J. ATCF PATH Matt Note 4/5/2026 - testing HAFSB 2025 cycle and the filetag is reversed

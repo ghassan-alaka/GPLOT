@@ -292,7 +292,11 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+if [ "${IS_ENS}" == "False" ]; then
+    MAX_JOBS=25
+else
+    MAX_JOBS=525
+fi
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then

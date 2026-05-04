@@ -144,8 +144,9 @@ def main():
   if TIER == 'MISSING':
     TIER = ''
   ENSID = sys.argv[5]
-  if ENSID == 'MISSING':
-    ENSID = ''
+  if ENSID == 'XX':            ENSID = ''
+  if ENSID == 'MISSING':       ENSID = ''
+  if ENSID == '0':             ENSID = ''
   FORCE = sys.argv[6]
   if FORCE == 'MISSING':
     FORCE = ''
@@ -198,10 +199,16 @@ def main():
     ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
   except:
     ODIR_TYPE = 0
-  if ODIR_TYPE == 1:
-    ODIR = ODIR+'/ocean_'+OCEAN_DOMAIN+'/'
-  else:
-    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/ocean_'+OCEAN_DOMAIN+'/'
+  if ODIR_TYPE == 1: #Matt 5/3/2026 - adding ENSID logic for ODIR1 too
+    if ENSID == '':
+      ODIR = ODIR+'/ocean_'+OCEAN_DOMAIN+'/'
+    else:
+      ODIR = ODIR+'/'+ENSID.strip()+'/ocean_'+OCEAN_DOMAIN+'/'
+  else: #### MATT NOTE 7/27/2025 - adding logic to account for ensemble. copying from polar
+    if ENSID == '':
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/ocean_'+OCEAN_DOMAIN+'/'
+    else:
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENSID.strip()+'/ocean_'+OCEAN_DOMAIN+'/'
 
   figext = '.png'
   try:
@@ -262,10 +269,16 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  if ( ATCF == "NONE" ):
-    LONGSID='00L';
+  if ENSID == '':
+    if ( ATCF == "NONE" ):
+      LONGSID='00L';
+    else:
+      LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  elif SID != '':
+    LONGSID = SID
   else:
-    LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+    print(f'ERROR: NO VALID STORM IDENTIFIER: Exiting...')
+    sys.exit(1)
   #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
   TCNAME = LONGSID[::-1]
   TCNAME = TCNAME[3:]
@@ -278,6 +291,21 @@ def main():
   if ( OCEAN_DOMAIN == 'd03' ):
     ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
     ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
+    # Lew.Gramer@noaa.gov: For Ensembles, also filter on ATCF_DATA for SID in ATCF_DATA[:,1:2]
+    #MD 5/3/2026 - forcing uppercase for basin ID match
+    if ( ENSID != '' and SID != '' ):
+      if ( BASINID.upper() == 'L' ):
+        LONGBASINID = "AL"
+      elif ( BASINID.upper() == 'E' ):
+        LONGBASINID = "EP"
+      elif ( BASINID.upper() == 'C' ):
+        LONGBASINID = "CP"
+      elif ( BASINID.upper() == 'W' ):
+        LONGBASINID = "WP"
+      else:
+        print(f'ERROR: BASINID "{BASINID}" not recognized! Exiting...')
+        sys.exit(1)
+      ATCF_DATA = ATCF_DATA[(ATCF_DATA[:,0] == LONGBASINID) & (ATCF_DATA[:,1] == SNUM),:]
   
   
   # Get the list of unplotted files
