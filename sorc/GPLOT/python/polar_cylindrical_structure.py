@@ -2886,7 +2886,11 @@ def main():
 
     #Do the Sounding Plots First Since Those Call an External Function
     if ( do_soundings == 'Y'):
-      skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF)
+      # 2-km polar reflectivity slice for the inset reflectivity map
+      # drawn in the lower-left of every Skew-T figure. heightlevs is
+      # uniform 0-18 km in 37 steps so index 4 = 2000 m exactly.
+      skewTmodelTCpolar.skewTmodelTCpolar(r,theta,pressure_p,u_p,v_p,temp_p,rh_p,float(rmwnmi),GPLOT_DIR,EXPT,FHR,maxwind,minpressure,LONGSID,ODIR,forecastinit,DO_CONVERTGIF,
+                                          dbz_2km_polar=dbz_p[:, :, 4])
 
     #Load the colormaps needed
     color_data_vt = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_wind.txt')
