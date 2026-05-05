@@ -445,8 +445,11 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     Returns dict: level -> (lat, lon, hgt_value, use_flag).
     """
     if levels is None:
-        levels = [200, 250, 300, 350, 400, 450, 500, 550, 600, 650,
-                  700, 750, 800, 850, 900, 925, 950, 1000]
+        # 25 hPa increments from 200 to 1000, matching the NCL
+        # coordinate-subscript LEV(:{200:1000}). Models that don't
+        # provide every 25-hPa level will have those entries return
+        # None from get_var_2d and be filtered out downstream.
+        levels = list(range(200, 1001, 25))
 
     grid = get_grid_info(datasets, dsource)
     lat = grid['lat']
@@ -506,8 +509,8 @@ def compute_hodograph(datasets, dsource, tc_lat, tc_lon, centers=None,
     Returns dict: level -> (wind_mag_kts, wind_dir_deg)
     """
     if levels is None:
-        levels = [200, 250, 300, 350, 400, 450, 500, 550, 600, 650,
-                  700, 750, 800, 850, 900, 925, 950, 1000]
+        # 25 hPa increments to match compute_tccen / NCL convention.
+        levels = list(range(200, 1001, 25))
 
     hodo = {}
     for lev in levels:
