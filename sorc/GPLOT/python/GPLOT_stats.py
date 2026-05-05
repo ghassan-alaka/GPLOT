@@ -1248,7 +1248,7 @@ def main():
     # B-deck column-28 storm_name -> A-deck storm_name -> bare sid.
     name_source = (bdeck_df if bdeck_df is not None and len(bdeck_df) > 0
                    else adeck_df)
-    longsid = derive_longsid(atcf_file, sid, name_source)
+    longsid = derive_longsid(atcf_file, sid, name_source, idate=idate)
     logger.info(f"LONGSID resolved to: {longsid}")
 
     # --------------------------------------------------------

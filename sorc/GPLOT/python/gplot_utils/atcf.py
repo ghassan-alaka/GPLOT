@@ -157,13 +157,17 @@ def read_atcf(filepath, model_id=None, cycle=None, wind_radii=34):
                 storm_dir   = _opt_int(25)
                 storm_speed = _opt_int(26)  # tenths of knots
 
-                # Storm name (column 28, 0-indexed 27). Treat
-                # placeholder labels (INVEST/UNNAMED/NAMELESS) as
-                # absent so the longsid logic falls through to sid.
+                # Storm name (column 28, 0-indexed 27). 'INVEST' is a
+                # legitimate operational label for a pre-genesis
+                # system and is kept so longsid renders cleanly as
+                # 'invest13l' for those cycles. 'UNNAMED' and
+                # 'NAMELESS' are degenerate no-name sentinels -- treat
+                # them as empty so the longsid logic falls through to
+                # the bare sid.
                 storm_name = ''
                 if len(fields) > 27:
                     raw = fields[27].strip().upper()
-                    if raw and raw not in ('INVEST', 'UNNAMED', 'NAMELESS'):
+                    if raw and raw not in ('UNNAMED', 'NAMELESS'):
                         storm_name = raw
 
             except (ValueError, IndexError):
@@ -263,15 +267,17 @@ def read_bdeck(filepath, idate=None):
                 dev_type = fields[10].strip() if len(fields) > 10 else 'XX'
                 wr_thresh = int(fields[11]) if len(fields) > 11 and fields[11].strip() else 0
                 rmw = int(fields[19]) if len(fields) > 19 and fields[19].strip() and fields[19].strip() != '-99' else -99
-                # ATCF v0.1 column 28 (0-indexed 27) is the storm name.
-                # Older / unnamed-storm B-decks may have it blank or
-                # placeholder values like 'INVEST', 'UNNAMED', or
-                # 'NAMELESS'; surface them as empty strings so the
-                # longsid logic falls through to the sid.
+                # ATCF v0.1 column 28 (0-indexed 27) is the storm
+                # name. 'INVEST' is a legitimate operational label
+                # for a pre-genesis system and is kept so longsid
+                # renders cleanly as 'invest13l' for those cycles.
+                # 'UNNAMED' / 'NAMELESS' are degenerate no-name
+                # sentinels -- treated as empty so the longsid logic
+                # falls through to the bare sid.
                 storm_name = ''
                 if len(fields) > 27:
                     raw = fields[27].strip().upper()
-                    if raw and raw not in ('INVEST', 'UNNAMED', 'NAMELESS'):
+                    if raw and raw not in ('UNNAMED', 'NAMELESS'):
                         storm_name = raw
 
             except (ValueError, IndexError):
@@ -365,7 +371,7 @@ def parse_storm_info(longsid):
     }
 
 
-def derive_longsid(atcf_file, sid, bdeck_df=None):
+def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None):
     """
     Derive the long storm identifier (e.g. 'melissa13l') for output
     filenames and plot titles, with the priority chain:
@@ -373,8 +379,14 @@ def derive_longsid(atcf_file, sid, bdeck_df=None):
       1. Use the first dot-separated segment of the ATCF basename if
          it carries more than just the sid (legacy NCL convention:
          filenames like 'melissa13l.2025102100.trak.atcfunix').
-      2. Fall back to the storm-name column of the B-deck (ATCF
-         column 28) and concatenate '<name><sid>'.
+      2. Cycle-aware lookup in the B-deck (or A-deck) ``storm_name``
+         column. When ``idate`` is supplied, the lookup filters to
+         records at that initialization time before reading the
+         name. This keeps real-time and retrospective consistent:
+         the pre-genesis cycles of an invest that later becomes
+         Melissa will be tagged 'invest13l', and the post-genesis
+         cycles 'melissa13l', regardless of whether the b-deck on
+         disk is partial (real-time) or fully populated.
       3. Last-resort fallback: just the sid (lowercase) -- preserves
          today's behavior for synthetic / nameless runs.
 
@@ -385,14 +397,20 @@ def derive_longsid(atcf_file, sid, bdeck_df=None):
     sid : str
         Short storm id (e.g. '13L'). Lowercased internally.
     bdeck_df : pandas.DataFrame, optional
-        DataFrame returned by ``read_bdeck``. If it has a non-empty
-        ``storm_name`` column, used for the fallback.
+        DataFrame returned by ``read_bdeck`` or ``read_atcf``. The
+        column ``storm_name`` is consulted; when ``idate`` is
+        supplied the rows are first filtered by ``datetime`` (b-deck)
+        or ``cycle`` (a-deck) so the cycle-time name wins.
+    idate : str, optional
+        Initialization time (YYYYMMDDHH). Enables the cycle-aware
+        filter described above. When omitted the fallback is the
+        last non-empty name in the whole DataFrame (legacy behavior).
 
     Returns
     -------
     str
-        Lowercase longsid such as 'melissa13l', or the bare sid in
-        lowercase when no name source is available.
+        Lowercase longsid such as 'melissa13l' / 'invest13l', or the
+        bare sid in lowercase when no name source is available.
     """
     sid_lc = (sid or '').lower()
 
@@ -404,14 +422,34 @@ def derive_longsid(atcf_file, sid, bdeck_df=None):
                 and len(first_seg) > len(sid_lc):
             return first_seg.lower()
 
-    # 2. B-deck column-28 storm name.
+    # 2. Cycle-aware lookup in the supplied track DataFrame.
     if bdeck_df is not None and len(bdeck_df) > 0 \
             and 'storm_name' in bdeck_df.columns:
-        names = [str(n).strip() for n in bdeck_df['storm_name'].dropna()
+        candidate = bdeck_df
+        if idate is not None:
+            # b-deck stores per-record timestamps in 'datetime';
+            # a-deck stores forecast-init in 'cycle'. Use whichever
+            # the supplied DataFrame has.
+            if 'datetime' in bdeck_df.columns:
+                hit = bdeck_df[bdeck_df['datetime'] == idate]
+            elif 'cycle' in bdeck_df.columns:
+                hit = bdeck_df[bdeck_df['cycle'] == idate]
+            else:
+                hit = bdeck_df
+            if len(hit) > 0:
+                candidate = hit
+            # If no row matches the cycle exactly, fall through to
+            # the whole-DataFrame view (the legacy behavior) rather
+            # than going straight to bare sid -- still better than
+            # nothing for runs where the b-deck is from a slightly
+            # different time slice.
+        names = [str(n).strip() for n in candidate['storm_name'].dropna()
                  if str(n).strip()]
         if names:
-            # Prefer the most recent entry (handles mid-cycle renames
-            # like POTENTIAL TROPICAL CYCLONE -> a real name).
+            # When candidate is filtered to a single cycle the list
+            # is typically length 1 (BEST track has one record per
+            # cycle); keeping [-1] also handles the unfiltered
+            # fall-through path.
             name = names[-1].lower()
             return f"{name}{sid_lc}"
 

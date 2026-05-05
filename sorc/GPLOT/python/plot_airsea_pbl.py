@@ -192,7 +192,7 @@ def main():
         print(f'WARNING: could not read B-deck {_bdeck_path}: {_e}')
   _name_source = bdeck_df_for_name if (bdeck_df_for_name is not None
                                        and len(bdeck_df_for_name) > 0) else atcf_df
-  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID, _name_source)
+  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID, _name_source, idate=IDATE)
   TCNAME  = LONGSID[:-3].upper()
   SNUM    = LONGSID[-3:-1]
   BASINID = LONGSID[-1]

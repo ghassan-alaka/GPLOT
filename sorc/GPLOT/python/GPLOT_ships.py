@@ -1270,7 +1270,7 @@ def main():
                     if bdeck_df_for_name is not None
                     and len(bdeck_df_for_name) > 0
                     else atcf_df)
-    longsid = derive_longsid(atcf_file, sid, _name_source)
+    longsid = derive_longsid(atcf_file, sid, _name_source, idate=idate)
     logger.info(f"  LONGSID: {longsid}")
 
     # Filter to this cycle
