@@ -3513,12 +3513,12 @@ def main():
 
     # FIGURE 17: Wavenumber 0,1,2 components of 5-km Vertical Velocity
     if do_w5km_wavenumber == 'Y':
-      fig16w = plt.figure(figsize=(15,15))
+      fig17 = plt.figure(figsize=(15,15))
       ticks17_full = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
       ticks17_sym  = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
 
       # Panel A
-      ax17a = fig16w.add_subplot(2, 2, 1)
+      ax17a = fig17.add_subplot(2, 2, 1)
       co17a = ax17a.contourf(XI, YI, w5_p[:,:], levs_w_full, \
             cmap=colormap_w_sym, norm=norm_w_full, extend='both')
       ax17a = plotting.axes_wavenumber(ax17a, rmax_plot, -rmax_plot, nx=9)
@@ -3533,7 +3533,7 @@ def main():
       ax17a.text(0,rmax_plot-25,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel B
-      ax17b = fig16w.add_subplot(2, 2, 2)
+      ax17b = fig17.add_subplot(2, 2, 2)
       co17b = ax17b.contourf(XI, YI, w5_p_w0[:,:], levs_w_full, \
             cmap=colormap_w_sym, norm=norm_w_full, extend='both')
       ax17b = plotting.axes_wavenumber(ax17b, rmax_plot, -rmax_plot, nx=9)
@@ -3547,7 +3547,7 @@ def main():
       ax17b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel C
-      ax17c = fig16w.add_subplot(2, 2, 3)
+      ax17c = fig17.add_subplot(2, 2, 3)
       co17c = ax17c.contourf(XI, YI, w5_p_w1[:,:], levs_w_sym, \
             cmap=colormap_w_sym, norm=norm_w_sym, extend='both')
       ax17c = plotting.axes_wavenumber(ax17c, rmax_plot, -rmax_plot, nx=9)
@@ -3558,7 +3558,7 @@ def main():
       ax17c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
       # Panel D
-      ax17d = fig16w.add_subplot(2, 2, 4)
+      ax17d = fig17.add_subplot(2, 2, 4)
       co17d = ax17d.contourf(XI, YI, w5_p_w2[:,:], levs_w_sym, \
             cmap=colormap_w_sym, norm=norm_w_sym, extend='both')
       ax17d = plotting.axes_wavenumber(ax17d, rmax_plot, -rmax_plot, nx=9)
@@ -3570,9 +3570,9 @@ def main():
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.w5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
-      fig16w.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      fig16w.clf()
-      plt.close(fig16w)
+      fig17.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      fig17.clf()
+      plt.close(fig17)
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
 
@@ -3581,241 +3581,241 @@ def main():
     if do_vt_tendency == 'Y':
 
       # Mean Radial Flux
-      fig17 = plt.figure(figsize=(20.5,10.5))
-      ax17 = fig17.add_subplot(1, 1, 1)
-      co17 = ax17.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vt_tendency_mean_radial_flux*1e3,1)), levs_vt_budget, \
-               cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
-      ax17 = plotting.axes_radhgt(ax17, xmax=rmax_plot, nx=9, formatters=True)
-      cbar17 = plt.colorbar(co17, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
-      cbar17.ax.tick_params(labelsize=24)
-      sc17 = ax17.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
-      ax17.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$-\langle u_{r} \rangle \langle f+\zeta \rangle$ ($10^{-3} m s^{-2}$, Shading)' + \
-               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
-               fontsize=24, weight='bold', loc='left')
-      ax17.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term1_mean_radial_flux_mean.{forecastinit}.polar.f{FHR:03}'
-      fig17.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if DO_CONVERTGIF:
-        plot_utils.convert_to_gif(f'{figfname}{figext}')
-      fig17.clf()
-      plt.close(fig17)
-
-      # Mean Vertical Advection
       fig18 = plt.figure(figsize=(20.5,10.5))
       ax18 = fig18.add_subplot(1, 1, 1)
-      co18 = ax18.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vt_tendency_mean_vertical_advection*1e3,1)), levs_vt_budget, \
+      co18 = ax18.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vt_tendency_mean_radial_flux*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
       ax18 = plotting.axes_radhgt(ax18, xmax=rmax_plot, nx=9, formatters=True)
       cbar18 = plt.colorbar(co18, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar18.ax.tick_params(labelsize=24)
       sc18 = ax18.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax18.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$-\langle w \rangle \frac{\partial{\langle v_{t} \rangle}}{\partial z}$ ($10^{-3} m s^{-2}$, Shading)' + \
+               r'$-\langle u_{r} \rangle \langle f+\zeta \rangle$ ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax18.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term2_mean_vertical_advection_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term1_mean_radial_flux_mean.{forecastinit}.polar.f{FHR:03}'
       fig18.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig18.clf()
       plt.close(fig18)
 
-      # Mean Eddy Flux
+      # Mean Vertical Advection
       fig19 = plt.figure(figsize=(20.5,10.5))
       ax19 = fig19.add_subplot(1, 1, 1)
-      co19 = ax19.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vt_tendency_eddy_flux*1e3,1)), levs_vt_budget, \
+      co19 = ax19.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vt_tendency_mean_vertical_advection*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
       ax19 = plotting.axes_radhgt(ax19, xmax=rmax_plot, nx=9, formatters=True)
       cbar19 = plt.colorbar(co19, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar19.ax.tick_params(labelsize=24)
       sc19 = ax19.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax19.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$-\langle u^{\prime}_{r}\zeta^{\prime} \rangle$ ($10^{-3} m s^{-2}$, Shading)' + \
+               r'$-\langle w \rangle \frac{\partial{\langle v_{t} \rangle}}{\partial z}$ ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax19.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term3_eddy_flux_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term2_mean_vertical_advection_mean.{forecastinit}.polar.f{FHR:03}'
       fig19.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig19.clf()
       plt.close(fig19)
 
-      # Mean Vertical Eddy Advection
+      # Mean Eddy Flux
       fig20 = plt.figure(figsize=(20.5,10.5))
       ax20 = fig20.add_subplot(1, 1, 1)
-      co20 = ax20.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vt_tendency_vertical_eddy_advection*1e3,1)), levs_vt_budget, \
+      co20 = ax20.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vt_tendency_eddy_flux*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
       ax20 = plotting.axes_radhgt(ax20, xmax=rmax_plot, nx=9, formatters=True)
       cbar20 = plt.colorbar(co20, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar20.ax.tick_params(labelsize=24)
       sc20 = ax20.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax20.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$-\langle w^{\prime}\frac{\partial{v^{\prime}_{t}}}{\partial z} \rangle$ ($10^{-3} m s^{-2}$, Shading)' +
+               r'$-\langle u^{\prime}_{r}\zeta^{\prime} \rangle$ ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax20.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term4_vertical_eddy_advection_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term3_eddy_flux_mean.{forecastinit}.polar.f{FHR:03}'
       fig20.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig20.clf()
       plt.close(fig20)
 
-      # Sum of Mean Tendency Terms
+      # Mean Vertical Eddy Advection
       fig21 = plt.figure(figsize=(20.5,10.5))
       ax21 = fig21.add_subplot(1, 1, 1)
-      co21 = ax21.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vt_tendency_sum*1e3,1)), levs_vt_budget, \
+      co21 = ax21.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vt_tendency_vertical_eddy_advection*1e3,1)), levs_vt_budget, \
                cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
       ax21 = plotting.axes_radhgt(ax21, xmax=rmax_plot, nx=9, formatters=True)
       cbar21 = plt.colorbar(co21, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar21.ax.tick_params(labelsize=24)
       sc21 = ax21.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax21.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'Sum of $\frac{\partial{\langle v_{t} \rangle}}{\partial t}$ Terms ($10^{-3} m s^{-2}$, Shading)' + \
+               r'$-\langle w^{\prime}\frac{\partial{v^{\prime}_{t}}}{\partial z} \rangle$ ($10^{-3} m s^{-2}$, Shading)' +
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax21.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_terms_sum_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_term4_vertical_eddy_advection_mean.{forecastinit}.polar.f{FHR:03}'
       fig21.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig21.clf()
       plt.close(fig21)
 
-    # FIGURES 23-27: Vorticity Tendency Terms
-    if ( do_vort_tendency == 'Y'):
-
-      # Mean Horizontal Advection
+      # Sum of Mean Tendency Terms
       fig22 = plt.figure(figsize=(20.5,10.5))
       ax22 = fig22.add_subplot(1, 1, 1)
-      co22 = ax22.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vort_tendency_horizontal_advection*1e5*60,1)), levs_vort_budget, \
-               cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
+      co22 = ax22.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vt_tendency_sum*1e3,1)), levs_vt_budget, \
+               cmap=colormap_vt_budget, norm=norm_vt_budget, extend='both')
       ax22 = plotting.axes_radhgt(ax22, xmax=rmax_plot, nx=9, formatters=True)
-      cbar22 = plt.colorbar(co22, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
+      cbar22 = plt.colorbar(co22, ticks=[-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10])
       cbar22.ax.tick_params(labelsize=24)
       sc22 = ax22.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax22.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$\langle -u_{SR}\frac{\partial{\eta}} {\partial x} - v_{SR}\frac{\partial{\eta}} {\partial y} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
+               r'Sum of $\frac{\partial{\langle v_{t} \rangle}}{\partial t}$ Terms ($10^{-3} m s^{-2}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax22.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term1_horizontal_advection_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vt_tendency_terms_sum_mean.{forecastinit}.polar.f{FHR:03}'
       fig22.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig22.clf()
       plt.close(fig22)
 
-      # Mean Vertical Advection
+    # FIGURES 23-27: Vorticity Tendency Terms
+    if ( do_vort_tendency == 'Y'):
+
+      # Mean Horizontal Advection
       fig23 = plt.figure(figsize=(20.5,10.5))
       ax23 = fig23.add_subplot(1, 1, 1)
-      co23 = ax23.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vort_tendency_vertical_advection*1e5*60,1)), levs_vort_budget, \
+      co23 = ax23.contourf(r, heightlevs/1000, np.flipud(np.rot90(term1_vort_tendency_horizontal_advection*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
       ax23 = plotting.axes_radhgt(ax23, xmax=rmax_plot, nx=9, formatters=True)
       cbar23 = plt.colorbar(co23, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar23.ax.tick_params(labelsize=24)
       sc23 = ax23.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax23.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$\langle -w\frac{\partial{\zeta}} {\partial z} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
+               r'$\langle -u_{SR}\frac{\partial{\eta}} {\partial x} - v_{SR}\frac{\partial{\eta}} {\partial y} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax23.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term2_vertical_advection_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term1_horizontal_advection_mean.{forecastinit}.polar.f{FHR:03}'
       fig23.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig23.clf()
       plt.close(fig23)
 
-      # Mean Stretching COnvergence
+      # Mean Vertical Advection
       fig24 = plt.figure(figsize=(20.5,10.5))
       ax24 = fig24.add_subplot(1, 1, 1)
-      co24 = ax24.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vort_tendency_stretching_convergence*1e5*60,1)), levs_vort_budget, \
+      co24 = ax24.contourf(r, heightlevs/1000, np.flipud(np.rot90(term2_vort_tendency_vertical_advection*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
       ax24 = plotting.axes_radhgt(ax24, xmax=rmax_plot, nx=9, formatters=True)
       cbar24 = plt.colorbar(co24, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar24.ax.tick_params(labelsize=24)
       sc24 = ax24.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax24.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$\langle -\eta\frac{\partial{u_{SR}}} {\partial x} - \eta\frac{\partial{v_{SR}}} {\partial y} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
+               r'$\langle -w\frac{\partial{\zeta}} {\partial z} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax24.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term3_stretching_convergence_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term2_vertical_advection_mean.{forecastinit}.polar.f{FHR:03}'
       fig24.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig24.clf()
       plt.close(fig24)
 
-      # Mean Tilting
+      # Mean Stretching COnvergence
       fig25 = plt.figure(figsize=(20.5,10.5))
       ax25 = fig25.add_subplot(1, 1, 1)
-      co25 = ax25.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vort_tendency_tilting*1e5*60,1)), levs_vort_budget, \
+      co25 = ax25.contourf(r, heightlevs/1000, np.flipud(np.rot90(term3_vort_tendency_stretching_convergence*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
       ax25 = plotting.axes_radhgt(ax25, xmax=rmax_plot, nx=9, formatters=True)
       cbar25 = plt.colorbar(co25, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar25.ax.tick_params(labelsize=24)
       sc25 = ax25.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax25.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'$\langle -\frac{\partial{w}}{\partial x}\frac{\partial{v_{SR}}} {\partial z} + \frac{\partial{w}}{\partial y}\frac{\partial{u_{SR}}} {\partial z} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
+               r'$\langle -\eta\frac{\partial{u_{SR}}} {\partial x} - \eta\frac{\partial{v_{SR}}} {\partial y} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax25.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term4_tilting_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term3_stretching_convergence_mean.{forecastinit}.polar.f{FHR:03}'
       fig25.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig25.clf()
       plt.close(fig25)
 
-      # Sum of Mean Tendency Terms
+      # Mean Tilting
       fig26 = plt.figure(figsize=(20.5,10.5))
       ax26 = fig26.add_subplot(1, 1, 1)
-      co26 = ax26.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vort_tendency_sum*1e5*60,1)), levs_vort_budget, \
+      co26 = ax26.contourf(r, heightlevs/1000, np.flipud(np.rot90(term4_vort_tendency_tilting*1e5*60,1)), levs_vort_budget, \
                cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
       ax26 = plotting.axes_radhgt(ax26, xmax=rmax_plot, nx=9, formatters=True)
       cbar26 = plt.colorbar(co26, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar26.ax.tick_params(labelsize=24)
       sc26 = ax26.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax26.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'Sum of $\frac{\partial{\langle \zeta \rangle}}{\partial t}$ Terms ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
+               r'$\langle -\frac{\partial{w}}{\partial x}\frac{\partial{v_{SR}}} {\partial z} + \frac{\partial{w}}{\partial y}\frac{\partial{u_{SR}}} {\partial z} \rangle$ ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax26.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_terms_sum_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_term4_tilting_mean.{forecastinit}.polar.f{FHR:03}'
       fig26.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig26.clf()
       plt.close(fig26)
 
-    if ( do_ur_pbl_p_mean == 'Y'):
-      #Plot PBL Inflow
+      # Sum of Mean Tendency Terms
       fig27 = plt.figure(figsize=(20.5,10.5))
       ax27 = fig27.add_subplot(1, 1, 1)
-      co27 = ax27.contourf(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), levs_ur, \
-               cmap=colormap_ur, norm=norm_ur, extend='both')
-      ax27 = plotting.axes_radhgt(ax27, xmax=rmax_plot, nx=9, ymax=3000, ny=7, yunit='m', formatters=True)
-      cbar27 = plt.colorbar(co27, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
+      co27 = ax27.contourf(r, heightlevs/1000, np.flipud(np.rot90(terms_vort_tendency_sum*1e5*60,1)), levs_vort_budget, \
+               cmap=colormap_vort_budget, norm=norm_vort_budget, extend='both')
+      ax27 = plotting.axes_radhgt(ax27, xmax=rmax_plot, nx=9, formatters=True)
+      cbar27 = plt.colorbar(co27, ticks=[-40, -30, -20, -10, 0, 10, 20, 30, 40])
       cbar27.ax.tick_params(labelsize=24)
-      co27b = ax27.contour(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), \
-               levels=[0.1*np.nanmin(ur_pbl_p_mean)], colors='w', linewidths=4)
-      sc27 = ax27.scatter(rmw_pbl_mean, heightlevs_pbl, 70, 'k')
+      sc27 = ax27.scatter(rmw_mean[4:20], heightlevs[4:20]/1000, 70, 'k')
       ax27.set_title(f'{EXPT_TITLE.strip()}\n' + \
-               r'Radial Wind in PBL ($m\ s^{-1}$, Shading)' + \
+               r'Sum of $\frac{\partial{\langle \zeta \rangle}}{\partial t}$ Terms ($10^{-5} s^{-1} min^{-1}$, Shading)' + \
                f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
                fontsize=24, weight='bold', loc='left')
       ax27.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
-      figfname = f'{ODIR}/{LONGSID.lower()}.ur_pbl_p_mean.{forecastinit}.polar.f{FHR:03}'
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort_tendency_terms_sum_mean.{forecastinit}.polar.f{FHR:03}'
       fig27.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig27.clf()
       plt.close(fig27)
+
+    if ( do_ur_pbl_p_mean == 'Y'):
+      #Plot PBL Inflow
+      fig28 = plt.figure(figsize=(20.5,10.5))
+      ax28 = fig28.add_subplot(1, 1, 1)
+      co28 = ax28.contourf(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), levs_ur, \
+               cmap=colormap_ur, norm=norm_ur, extend='both')
+      ax28 = plotting.axes_radhgt(ax28, xmax=rmax_plot, nx=9, ymax=3000, ny=7, yunit='m', formatters=True)
+      cbar28 = plt.colorbar(co28, ticks=[-30, -25, -20, -15, -10, -5, -1, 1, 5, 10, 15, 20, 25, 30])
+      cbar28.ax.tick_params(labelsize=24)
+      co28b = ax28.contour(r, heightlevs_pbl, np.flipud(np.rot90(ur_pbl_p_mean,1)), \
+               levels=[0.1*np.nanmin(ur_pbl_p_mean)], colors='w', linewidths=4)
+      sc28 = ax28.scatter(rmw_pbl_mean, heightlevs_pbl, 70, 'k')
+      ax28.set_title(f'{EXPT_TITLE.strip()}\n' + \
+               r'Radial Wind in PBL ($m\ s^{-1}$, Shading)' + \
+               f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
+               fontsize=24, weight='bold', loc='left')
+      ax28.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
+      figfname = f'{ODIR}/{LONGSID.lower()}.ur_pbl_p_mean.{forecastinit}.polar.f{FHR:03}'
+      fig28.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+      fig28.clf()
+      plt.close(fig28)
 
     if ( do_radar_plots == 'Y'):
       #Make Plots for Comparison With Radar
