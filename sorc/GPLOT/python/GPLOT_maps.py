@@ -843,9 +843,14 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     # one low at the reported cyclone position.
     _draw_tc_low_marker(ax, tc_lat, tc_lon, mslp_val)
 
-    # --- 9. Draw ATCF track overlay ---
-    if atcf_df is not None and tc_lat is not None:
-        _draw_atcf_track(ax, atcf_df, fhr)
+    # NOTE: the previous version overlaid the full ATCF track
+    # polyline (past + future positions of the storm) on every
+    # map panel, but that line obscures features near the TC core
+    # on the storm-centric d03/hwrf panels. The 'L' low-pressure
+    # marker drawn above already conveys the storm's instantaneous
+    # position, so the track polyline is dropped. The
+    # ``_draw_atcf_track`` helper is kept in the module for any
+    # future caller that wants it back.
 
     # NOTE: the intensity-coded storm-marker dot used to be drawn
     # here, but it lives at the same lat/lon as the 'L' and was
