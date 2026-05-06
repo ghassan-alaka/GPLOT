@@ -190,9 +190,13 @@ def main():
         bdeck_df_for_name = atcf_utils.read_bdeck(_bdeck_path)
       except Exception as _e:
         print(f'WARNING: could not read B-deck {_bdeck_path}: {_e}')
-  _name_source = bdeck_df_for_name if (bdeck_df_for_name is not None
-                                       and len(bdeck_df_for_name) > 0) else atcf_df
-  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID, _name_source, idate=IDATE)
+  # Pass both b-deck and a-deck so derive_longsid can fall through
+  # to the operational a-deck's per-cycle storm_name when the
+  # b-deck has no row at IDATE (e.g., retrospective at pre-genesis).
+  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID,
+                                      bdeck_df_for_name,
+                                      idate=IDATE,
+                                      adeck_df=atcf_df)
   TCNAME  = LONGSID[:-3].upper()
   SNUM    = LONGSID[-3:-1]
   BASINID = LONGSID[-1]

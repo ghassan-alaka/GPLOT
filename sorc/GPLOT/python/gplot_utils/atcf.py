@@ -371,24 +371,35 @@ def parse_storm_info(longsid):
     }
 
 
-def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None):
+def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None,
+                   adeck_df=None):
     """
     Derive the long storm identifier (e.g. 'melissa13l') for output
     filenames and plot titles, with the priority chain:
 
-      1. Use the first dot-separated segment of the ATCF basename if
-         it carries more than just the sid (legacy NCL convention:
-         filenames like 'melissa13l.2025102100.trak.atcfunix').
-      2. Cycle-aware lookup in the B-deck (or A-deck) ``storm_name``
-         column. When ``idate`` is supplied, the lookup filters to
-         records at that initialization time before reading the
-         name. This keeps real-time and retrospective consistent:
-         the pre-genesis cycles of an invest that later becomes
-         Melissa will be tagged 'invest13l', and the post-genesis
-         cycles 'melissa13l', regardless of whether the b-deck on
-         disk is partial (real-time) or fully populated.
-      3. Last-resort fallback: just the sid (lowercase) -- preserves
-         today's behavior for synthetic / nameless runs.
+      1. ATCF basename's first dot-separated segment, when it
+         carries '<name><sid>' (legacy NCL convention; filenames
+         like 'melissa13l.2025102100.trak.atcfunix').
+      2. B-deck ``storm_name`` column at the run cycle (idate).
+      3. A-deck ``storm_name`` column at the run cycle (idate).
+      4. Bare sid (lowercase) -- last resort.
+
+    When ``idate`` is supplied, steps 2-3 only consider rows whose
+    timestamp matches the run cycle. If no rows match in a given
+    source, that source is **skipped** -- the function does NOT fall
+    through to the latest name in the whole DataFrame. This is the
+    fix for a real-world failure: post-season b-decks label every
+    record with the storm's eventual name (e.g. MELISSA at all
+    timestamps once a system is named), which under the previous
+    fall-through logic leaked 'melissa13l' onto retrospective runs
+    of pre-genesis cycles where the operational a-deck still held
+    'INVEST'. With separate b-deck / a-deck inputs and no
+    whole-DataFrame fallback, the operational a-deck's per-cycle
+    INVEST label wins for those pre-genesis runs -> 'invest13l'.
+
+    When ``idate`` is None (legacy callers), each source is consulted
+    in full and the latest non-empty name wins, matching the
+    behavior before the cycle-aware change.
 
     Parameters
     ----------
@@ -397,14 +408,15 @@ def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None):
     sid : str
         Short storm id (e.g. '13L'). Lowercased internally.
     bdeck_df : pandas.DataFrame, optional
-        DataFrame returned by ``read_bdeck`` or ``read_atcf``. The
-        column ``storm_name`` is consulted; when ``idate`` is
-        supplied the rows are first filtered by ``datetime`` (b-deck)
-        or ``cycle`` (a-deck) so the cycle-time name wins.
+        DataFrame returned by ``read_bdeck``. Tried first.
     idate : str, optional
         Initialization time (YYYYMMDDHH). Enables the cycle-aware
-        filter described above. When omitted the fallback is the
-        last non-empty name in the whole DataFrame (legacy behavior).
+        filter; when omitted the whole-DataFrame view is used.
+    adeck_df : pandas.DataFrame, optional
+        DataFrame returned by ``read_atcf`` (the operational /
+        experiment a-deck). Tried after the b-deck so the
+        operational per-cycle name wins when the b-deck doesn't
+        have a record for that cycle.
 
     Returns
     -------
@@ -420,40 +432,57 @@ def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None):
         if first_seg and first_seg.lower() != sid_lc \
                 and first_seg.lower().endswith(sid_lc) \
                 and len(first_seg) > len(sid_lc):
+            logger.debug(f"longsid: '{first_seg.lower()}' (from filename)")
             return first_seg.lower()
 
-    # 2. Cycle-aware lookup in the supplied track DataFrame.
-    if bdeck_df is not None and len(bdeck_df) > 0 \
-            and 'storm_name' in bdeck_df.columns:
-        candidate = bdeck_df
+    def _name_from(df, label):
+        """Return the latest non-empty storm_name from `df`, after
+        optional cycle filtering by ``idate``. Returns None when no
+        usable name exists in the (possibly filtered) view."""
+        if df is None or len(df) == 0 \
+                or 'storm_name' not in df.columns:
+            return None
         if idate is not None:
-            # b-deck stores per-record timestamps in 'datetime';
-            # a-deck stores forecast-init in 'cycle'. Use whichever
-            # the supplied DataFrame has.
-            if 'datetime' in bdeck_df.columns:
-                hit = bdeck_df[bdeck_df['datetime'] == idate]
-            elif 'cycle' in bdeck_df.columns:
-                hit = bdeck_df[bdeck_df['cycle'] == idate]
+            # b-deck records carry per-row 'datetime'; a-deck rows
+            # carry 'cycle' (the forecast init time).
+            if 'datetime' in df.columns:
+                hit = df[df['datetime'] == idate]
+            elif 'cycle' in df.columns:
+                hit = df[df['cycle'] == idate]
             else:
-                hit = bdeck_df
-            if len(hit) > 0:
-                candidate = hit
-            # If no row matches the cycle exactly, fall through to
-            # the whole-DataFrame view (the legacy behavior) rather
-            # than going straight to bare sid -- still better than
-            # nothing for runs where the b-deck is from a slightly
-            # different time slice.
-        names = [str(n).strip() for n in candidate['storm_name'].dropna()
+                hit = df  # source has no time column; treat as
+                          # legacy whole-DF lookup.
+        else:
+            hit = df
+        if len(hit) == 0:
+            # Cycle-aware filter found nothing in this source -- DO
+            # NOT fall through to the whole-DataFrame view, which
+            # would let a post-season MELISSA label leak onto a
+            # pre-genesis cycle. The caller can still recover via
+            # the next source (a-deck) or the bare-sid fallback.
+            return None
+        names = [str(n).strip() for n in hit['storm_name'].dropna()
                  if str(n).strip()]
-        if names:
-            # When candidate is filtered to a single cycle the list
-            # is typically length 1 (BEST track has one record per
-            # cycle); keeping [-1] also handles the unfiltered
-            # fall-through path.
-            name = names[-1].lower()
+        if not names:
+            return None
+        # When `hit` is the cycle-filtered slice this list is
+        # typically length 1 (BEST track is one record per cycle).
+        # The trailing [-1] also handles the unfiltered legacy
+        # case (idate=None) by picking the most recent name.
+        return names[-1].lower()
+
+    # 2 + 3: cycle-filtered lookups in priority order (b-deck wins
+    # when it has the cycle; otherwise the a-deck's per-cycle name
+    # is the source of truth).
+    for df, label in ((bdeck_df, 'bdeck'), (adeck_df, 'adeck')):
+        name = _name_from(df, label)
+        if name:
+            logger.debug(f"longsid: '{name}{sid_lc}' "
+                         f"(from {label}, idate={idate})")
             return f"{name}{sid_lc}"
 
-    # 3. Bare sid.
+    # 4. Bare sid.
+    logger.debug(f"longsid: '{sid_lc}' (bare sid fallback)")
     return sid_lc
 
 

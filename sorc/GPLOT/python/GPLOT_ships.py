@@ -1269,11 +1269,12 @@ def main():
                 bdeck_df_for_name = read_bdeck(_bdeck_path)
         except (IndexError, AttributeError):
             pass
-    _name_source = (bdeck_df_for_name
-                    if bdeck_df_for_name is not None
-                    and len(bdeck_df_for_name) > 0
-                    else atcf_df)
-    longsid = derive_longsid(atcf_file, sid, _name_source, idate=idate)
+    # Pass both b-deck and a-deck so derive_longsid can fall through
+    # to the operational a-deck's per-cycle storm_name when the
+    # b-deck has no row at idate (e.g., retrospective at pre-genesis
+    # cycles where the post-season b-deck doesn't go back that far).
+    longsid = derive_longsid(atcf_file, sid, bdeck_df_for_name,
+                             idate=idate, adeck_df=atcf_df)
     logger.info(f"  LONGSID: {longsid}")
 
     # Filter to this cycle

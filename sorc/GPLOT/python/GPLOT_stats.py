@@ -1245,10 +1245,13 @@ def main():
     # Now that both A-deck and B-deck are loaded, resolve the long
     # storm id used in output filenames and titles. Priority:
     # ATCF filename's '<name><sid>' prefix (legacy NCL convention) ->
-    # B-deck column-28 storm_name -> A-deck storm_name -> bare sid.
-    name_source = (bdeck_df if bdeck_df is not None and len(bdeck_df) > 0
-                   else adeck_df)
-    longsid = derive_longsid(atcf_file, sid, name_source, idate=idate)
+    # B-deck column-28 storm_name at idate ->
+    # A-deck column-28 storm_name at idate -> bare sid.
+    # Pass both DataFrames separately so derive_longsid can fall
+    # through to the operational a-deck's per-cycle name when the
+    # b-deck doesn't have a record for the run cycle.
+    longsid = derive_longsid(atcf_file, sid, bdeck_df,
+                             idate=idate, adeck_df=adeck_df)
     logger.info(f"LONGSID resolved to: {longsid}")
 
     # --------------------------------------------------------
