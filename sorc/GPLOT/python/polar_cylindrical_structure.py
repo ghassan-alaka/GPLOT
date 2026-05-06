@@ -3685,7 +3685,7 @@ def main():
       fig21.clf()
       plt.close(fig21)
 
-    # FIGURES 22-26: Vorticity Tendency Terms
+    # FIGURES 23-27: Vorticity Tendency Terms
     if ( do_vort_tendency == 'Y'):
 
       # Mean Horizontal Advection
