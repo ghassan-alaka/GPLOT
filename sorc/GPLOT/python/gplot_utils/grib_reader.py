@@ -110,9 +110,11 @@ _CFGRIB_VAR_MAP = {
     # explicit name below so get_var_2d() can find it.
     # Parameter numbers come from NCEP local table 4.2-3-192.
     'SIMIR':       ['sbtagr13'],   # ABI Band 13 (10.3 um, clean IR window)
+    'SIMWV_UPPER': ['sbtagr8'],    # ABI Band 8  (6.2  um, upper-trop WV)
+    'SIMWV_MID':   ['sbtagr9'],    # ABI Band 9  (6.9  um, mid-trop   WV)
     'SBTAGR13toa': ['sbtagr13'],
-    'SBTAGR8toa':  ['sbtagr8'],    # ABI Band 8  (6.2  um, upper-trop WV)
-    'SBTAGR9toa':  ['sbtagr9'],    # ABI Band 9  (6.9  um, mid-trop   WV)
+    'SBTAGR8toa':  ['sbtagr8'],
+    'SBTAGR9toa':  ['sbtagr9'],
     'SBTAGR10toa': ['sbtagr10'],   # ABI Band 10 (7.34 um, lower-trop WV)
 }
 
@@ -538,7 +540,8 @@ def _convert_units(data, var, units=None):
     # 'unknown'). Convert unconditionally so the colorbar reads
     # 'SIMIR (degC)' on a -100..+50 C scale matching the operational
     # Himawari/GOES IR convention.
-    if var in ('SIMIR', 'SBTAGR13toa', 'SBTAGR8toa',
+    if var in ('SIMIR', 'SIMWV_UPPER', 'SIMWV_MID',
+               'SBTAGR13toa', 'SBTAGR8toa',
                'SBTAGR9toa', 'SBTAGR10toa'):
         return data - 273.15, 'degC'
 

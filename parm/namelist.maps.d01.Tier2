@@ -16,3 +16,5 @@ True      DPT            2             SST          N/A     N/A          N/A    
 True      LHFLX          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            LHFLX_MSLP
 True      SHFLX          N/A           N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          10            SHFLX_MSLP
 True      SIMIR          N/A           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           SIMIR
+True      SIMWV_UPPER    N/A           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           SIMWV_UPPER
+True      SIMWV_MID      N/A           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     N/A         N/A           SIMWV_MID

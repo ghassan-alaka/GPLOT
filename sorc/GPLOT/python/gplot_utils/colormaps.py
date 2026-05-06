@@ -195,8 +195,24 @@ _CMAP_REGISTRY = {
     # McIDAS-style palette: magenta/pink for the coldest cloud tops,
     # deepening reds for strong convection, yellow/green through the
     # mid-troposphere, and grays/browns for warm surfaces.
-    ('SIMIR', ''): 'irsat.rgb',
-    ('SBTAGR13toa', ''): 'irsat.rgb',
+    # Simulated IR brightness temperature: McIDAS-X IR4 enhancement
+    # (256-color curve). White at warm surfaces, gray transitioning
+    # through dark red/orange/yellow/green/cyan as cloud tops go
+    # progressively colder, with a final gray->black ramp for very
+    # cold overshoot tops.
+    ('SIMIR', ''):       'IR4AVHRR6.rgb',
+    ('SBTAGR13toa', ''): 'IR4AVHRR6.rgb',
+
+    # Simulated water-vapor brightness temperatures (Band 8
+    # upper-trop, Band 9 mid-trop). CIMSS Water Vapor enhancement
+    # (reversed) sampled from metpy.plots.ctables: dark cloud-top
+    # tones at the cold end, white-cyan mid-cloud, warm/dry
+    # stratospheric brown at the warm end.
+    ('SIMWV_UPPER', ''): 'WVCIMSS_r.rgb',
+    ('SIMWV_MID', ''):   'WVCIMSS_r.rgb',
+    ('SBTAGR8toa', ''):  'WVCIMSS_r.rgb',
+    ('SBTAGR9toa', ''):  'WVCIMSS_r.rgb',
+    ('SBTAGR10toa', ''): 'WVCIMSS_r.rgb',
 
     # --- Ocean maps ---
     # Isotherm depths (m): Blues_r so shallow = dark blue, deep = white
@@ -376,11 +392,21 @@ _LEVEL_REGISTRY = {
 
     # Simulated IR brightness temperature (degC after K->degC
     # conversion in grib_reader._convert_units). Range -100..+50 C
-    # in 5 C bins matches the operational Himawari/GOES IR
-    # convention: warm surfaces in light gray, deep convection in
-    # red/orange/black, overshooting tops in pink at the cold end.
-    ('SIMIR', ''): np.arange(-100, 55, 5),
-    ('SBTAGR13toa', ''): np.arange(-100, 55, 5),
+    # in 1 C bins so the IR4AVHRR6 (256-color) enhancement renders
+    # as a smooth gradient. The colorbar code in GPLOT_maps caps
+    # the displayed tick labels at 10 C spacing.
+    ('SIMIR', ''): np.arange(-100, 51, 1),
+    ('SBTAGR13toa', ''): np.arange(-100, 51, 1),
+
+    # Water-vapor channels (degC after K->degC conversion). Range
+    # -90..-10 C in 1 C bins so the WVCIMSS_r enhancement renders
+    # as a smooth gradient. The colorbar code in GPLOT_maps caps
+    # the displayed tick labels at 10 C spacing.
+    ('SIMWV_UPPER', ''): np.arange(-90, -9, 1),
+    ('SIMWV_MID', ''):   np.arange(-90, -9, 1),
+    ('SBTAGR8toa', ''):  np.arange(-90, -9, 1),
+    ('SBTAGR9toa', ''):  np.arange(-90, -9, 1),
+    ('SBTAGR10toa', ''): np.arange(-90, -9, 1),
 
     # --- Ocean maps ---
     # Isotherm depths (m)

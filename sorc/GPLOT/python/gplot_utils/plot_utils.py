@@ -566,11 +566,16 @@ def get_plot_title(var_name):
         'LHFLX_MSLP': 'Latent Heat Flux, 10-m Wind, & MSLP',
         'SHFLX_MSLP': 'Sensible Heat Flux, 10-m Wind, & MSLP',
 
-        # Simulated satellite. Title shortened from "Simulated IR
-        # Brightness Temperature ..." so the left-aligned title row
-        # doesn't overflow into the right-aligned VMAX/MSLP block.
-        'SIMIR': 'Simulated IR (Band 13, 10.3 um)',
+        # Simulated satellite. Titles trimmed from the legacy
+        # "Simulated XX Brightness Temperature ..." form so the
+        # left-aligned title row doesn't overflow into the
+        # right-aligned VMAX/MSLP block on narrow domains.
+        'SIMIR':       'Simulated IR (Band 13, 10.3 um)',
+        'SIMWV_UPPER': 'Simulated WV Upper Level (Band 8, 6.2 um)',
+        'SIMWV_MID':   'Simulated WV Mid Level (Band 9, 6.9 um)',
         'SBTAGR13toa': 'Simulated IR (Band 13, 10.3 um)',
+        'SBTAGR8toa':  'Simulated WV Upper Level (Band 8, 6.2 um)',
+        'SBTAGR9toa':  'Simulated WV Mid Level (Band 9, 6.9 um)',
 
         # SHIPS-style vortex diagnostics
         'TCCEN': 'Center Fixes (Geopotential Height Centroid)',

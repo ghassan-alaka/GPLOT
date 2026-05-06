@@ -758,12 +758,30 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
         cbar_label += f" ({base_field['units']})"
     cbar.set_label(cbar_label, fontsize=10)
 
+    # Satellite variables use a 1-degC fill (smooth gradient on the
+    # IR4 / WVCIMSS_r palettes) but should label only every 10 degC
+    # so the colorbar stays readable. Pick ticks at multiples of 10
+    # within the level range.
+    _SAT_VARS = {'SIMIR', 'SBTAGR13toa',
+                 'SIMWV_UPPER', 'SIMWV_MID',
+                 'SBTAGR8toa', 'SBTAGR9toa', 'SBTAGR10toa'}
+    if base_var in _SAT_VARS and levels is not None and len(levels) >= 2:
+        lvmin, lvmax = float(levels[0]), float(levels[-1])
+        # Round inward to nearest 10 so the displayed ticks are clean
+        # multiples (-100, -90, ..., 50 etc.).
+        import math as _math
+        tick_lo = int(_math.ceil(lvmin / 10.0) * 10)
+        tick_hi = int(_math.floor(lvmax / 10.0) * 10)
+        ticks = list(range(tick_lo, tick_hi + 1, 10))
+        if ticks:
+            cbar.set_ticks(ticks)
+        cbar.ax.tick_params(labelsize=8)
     # Label every level boundary when the scale has <=15 bins so
     # non-uniformly spaced breaks (e.g., Saffir-Simpson wind thresholds
     # 0/10/20/34/50/64/83/96/114/137) don't get silently dropped by
     # matplotlib's default locator. For denser scales (MSLP, RVO) the
     # default locator picks readable round-number ticks.
-    if levels is not None and 0 < len(levels) <= 15:
+    elif levels is not None and 0 < len(levels) <= 15:
         cbar.set_ticks(list(levels))
         cbar.ax.tick_params(labelsize=8)
 
