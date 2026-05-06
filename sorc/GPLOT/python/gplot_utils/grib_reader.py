@@ -531,6 +531,17 @@ def _convert_units(data, var, units=None):
     if var == 'TPRCP' and 'kg' in units:
         return data / 25.4, 'in'
 
+    # Simulated GOES-R ABI brightness temperatures: K -> degC.
+    # GRIB records carry these values in Kelvin regardless of
+    # whether a units string is present (HAFS sat files often write
+    # an empty units attribute, which the colorbar then renders as
+    # 'unknown'). Convert unconditionally so the colorbar reads
+    # 'SIMIR (degC)' on a -100..+50 C scale matching the operational
+    # Himawari/GOES IR convention.
+    if var in ('SIMIR', 'SBTAGR13toa', 'SBTAGR8toa',
+               'SBTAGR9toa', 'SBTAGR10toa'):
+        return data - 273.15, 'degC'
+
     return data, units
 
 

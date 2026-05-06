@@ -374,12 +374,13 @@ _LEVEL_REGISTRY = {
     # green -> yellow -> orange -> red gradient legible.
     ('SHDL', ''): np.arange(5, 55, 5),
 
-    # Simulated IR brightness temperature (K). Range 150-320 K covers
-    # from overshooting-top cirrus (~150 K) to warm desert surfaces
-    # (~320 K) at 5 K intervals. 34 bins pair 1:1 with irsat.rgb's 36
-    # colors (34 interior + under + over).
-    ('SIMIR', ''): np.arange(150, 325, 5),
-    ('SBTAGR13toa', ''): np.arange(150, 325, 5),
+    # Simulated IR brightness temperature (degC after K->degC
+    # conversion in grib_reader._convert_units). Range -100..+50 C
+    # in 5 C bins matches the operational Himawari/GOES IR
+    # convention: warm surfaces in light gray, deep convection in
+    # red/orange/black, overshooting tops in pink at the cold end.
+    ('SIMIR', ''): np.arange(-100, 55, 5),
+    ('SBTAGR13toa', ''): np.arange(-100, 55, 5),
 
     # --- Ocean maps ---
     # Isotherm depths (m)
