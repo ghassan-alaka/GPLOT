@@ -14,6 +14,7 @@ do_rh_acrosshear,Y
 do_dbz5km_wavenumber,N
 do_rh5km_wavenumber,Y
 do_vt10_wavenumber,Y
+do_w5km_wavenumber,Y
 do_vt_tendency,N
 do_vort_tendency,N
 do_ur_pbl_p_mean,Y

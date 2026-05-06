@@ -745,10 +745,11 @@ def _azimuthal_means(vt_p, ur_p, w_p, dbz_p, temp_p, q_p, rh_p, pressure_p,
 
 
 ##############################
-def _wavenumber_decomp(dbz_p, rh_p, vt10_p, ur10_p, XI, r, theta):
+def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta):
   """Azimuthal Fourier decomposition (wavenumbers 0, 1, 2, >2) for:
     * dbz5_p   (reflectivity at level index 10, ~5 km)
     * rh5_p    (RH at level index 10, ~5 km)
+    * w5_p     (vertical velocity at level index 10, ~5 km)
     * vt10_p   (10-m tangential wind)
     * ur10_p   (10-m radial wind)
 
@@ -756,6 +757,7 @@ def _wavenumber_decomp(dbz_p, rh_p, vt10_p, ur10_p, XI, r, theta):
   """
   dbz5_p = dbz_p[:, :, 10]
   rh5_p  = rh_p[:, :, 10]
+  w5_p   = w_p[:, :, 10]
 
   dbz5_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   dbz5_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
@@ -765,6 +767,10 @@ def _wavenumber_decomp(dbz_p, rh_p, vt10_p, ur10_p, XI, r, theta):
   rh5_p_w0 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   rh5_p_w1 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   rh5_p_w2 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+
+  w5_p_w0 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  w5_p_w1 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  w5_p_w2 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
 
   vt10_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   vt10_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
@@ -797,6 +803,15 @@ def _wavenumber_decomp(dbz_p, rh_p, vt10_p, ur10_p, XI, r, theta):
     rh5_p_w1[:, j] = A1_rh*np.cos(theta)   + B1_rh*np.sin(theta)
     rh5_p_w2[:, j] = A2_rh*np.cos(2*theta) + B2_rh*np.sin(2*theta)
 
+    wdata = w5_p[:, j]
+    fourier_w = np.fft.fft(wdata) / len(wdata)
+    amp0_w = np.real(fourier_w[0])
+    A1_w = 2*np.real(fourier_w[1]); B1_w = -2*np.imag(fourier_w[1])
+    A2_w = 2*np.real(fourier_w[2]); B2_w = -2*np.imag(fourier_w[2])
+    w5_p_w0[:, j] = amp0_w
+    w5_p_w1[:, j] = A1_w*np.cos(theta)   + B1_w*np.sin(theta)
+    w5_p_w2[:, j] = A2_w*np.cos(2*theta) + B2_w*np.sin(2*theta)
+
     vt10data = vt10_p[:, j]
     fourier_vt10 = np.fft.fft(vt10data) / len(vt10data)
     amp0_vt10 = np.real(fourier_vt10[0])
@@ -820,10 +835,11 @@ def _wavenumber_decomp(dbz_p, rh_p, vt10_p, ur10_p, XI, r, theta):
     ur10_p_w2[:, j] = A2_ur10*np.cos(2*theta) + B2_ur10*np.sin(2*theta)
 
   return {
-    'dbz5_p': dbz5_p, 'rh5_p': rh5_p,
+    'dbz5_p': dbz5_p, 'rh5_p': rh5_p, 'w5_p': w5_p,
     'dbz5_p_w0': dbz5_p_w0, 'dbz5_p_w1': dbz5_p_w1,
     'dbz5_p_w2': dbz5_p_w2, 'dbz5_p_whigher': dbz5_p_whigher,
     'rh5_p_w0': rh5_p_w0, 'rh5_p_w1': rh5_p_w1, 'rh5_p_w2': rh5_p_w2,
+    'w5_p_w0': w5_p_w0, 'w5_p_w1': w5_p_w1, 'w5_p_w2': w5_p_w2,
     'vt10_p_w0': vt10_p_w0, 'vt10_p_w1': vt10_p_w1,
     'vt10_p_w2': vt10_p_w2, 'vt10_p_whigher': vt10_p_whigher,
     'ur10_p_w0': ur10_p_w0, 'ur10_p_w1': ur10_p_w1, 'ur10_p_w2': ur10_p_w2,
@@ -2098,9 +2114,10 @@ def main():
     rh_p_rightshear_mean  = means['rh_p_rightshear_mean']
 
     # F-1.6: Azimuthal Fourier decomposition (w0/w1/w2/whigher)
-    waves = _wavenumber_decomp(dbz_p, rh_p, vt10_p, ur10_p, XI, r, theta)
+    waves = _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta)
     dbz5_p          = waves['dbz5_p']
     rh5_p           = waves['rh5_p']
+    w5_p            = waves['w5_p']
     dbz5_p_w0       = waves['dbz5_p_w0']
     dbz5_p_w1       = waves['dbz5_p_w1']
     dbz5_p_w2       = waves['dbz5_p_w2']
@@ -2108,6 +2125,9 @@ def main():
     rh5_p_w0        = waves['rh5_p_w0']
     rh5_p_w1        = waves['rh5_p_w1']
     rh5_p_w2        = waves['rh5_p_w2']
+    w5_p_w0         = waves['w5_p_w0']
+    w5_p_w1         = waves['w5_p_w1']
+    w5_p_w2         = waves['w5_p_w2']
     vt10_p_w0       = waves['vt10_p_w0']
     vt10_p_w1       = waves['vt10_p_w1']
     vt10_p_w2       = waves['vt10_p_w2']
@@ -2153,7 +2173,7 @@ def main():
     dbz_2km = dbz[:,:,4]
 
     # Session E: load the polar.structure module namelist via nml_utils
-    # (replaces np.genfromtxt). Rebuild a (24,2) shim array so existing
+    # (replaces np.genfromtxt). Rebuild a (25,2) shim array so existing
     # positional accesses `namelist_structure_vars[N,1]` continue to work.
     _polar_nml_path = f'{NMLDIR}/namelist.polar.structure.{EXPT}'
     if not os.path.exists(_polar_nml_path):
@@ -2164,6 +2184,7 @@ def main():
       'do_dbz_alongshear', 'do_ur_alongshear', 'do_w_alongshear', 'do_rh_alongshear',
       'do_dbz_acrosshear', 'do_ur_acrosshear', 'do_w_acrosshear', 'do_rh_acrosshear',
       'do_dbz5km_wavenumber', 'do_rh5km_wavenumber', 'do_vt10_wavenumber',
+      'do_w5km_wavenumber',
       'do_vt_tendency', 'do_vort_tendency',
       'do_ur_pbl_p_mean', 'do_radar_plots', 'do_soundings', 'do_shear_and_rh_plots',
       'do_write_netcdf', 'do_tdr_recentering',
@@ -2714,7 +2735,7 @@ def main():
 
     #############################################################################################################
     ###Start of Block of code to do center calculations at each height based on Michael Fischer's methodology
-    do_tdr_recentering = namelist_structure_vars[23,1]
+    do_tdr_recentering = namelist_structure_vars[24,1]
     if do_tdr_recentering == 'Y':
       print('MADE IT INSIDE THE RECENTERING LOOP')
 
@@ -2834,7 +2855,7 @@ def main():
     #############################################################################################################################################
     # THIS BLOCK OF CODE WRITES AN OPTIONAL NETCDF FILE (BASED ON A NAMELIST PARAMETER) WITH AZIMUTHAL MEAN VARIABLES
     #############################################################################################################################################
-    do_write_netcdf = namelist_structure_vars[22,1]
+    do_write_netcdf = namelist_structure_vars[23,1]
     if do_write_netcdf == 'Y':
       _write_netcdf(
         ODIR, LONGSID, forecastinit, FHR,
@@ -2878,12 +2899,13 @@ def main():
     do_dbz5km_wavenumber = namelist_structure_vars[13,1]
     do_rh5km_wavenumber = namelist_structure_vars[14,1]
     do_vt10_wavenumber = namelist_structure_vars[15,1]
-    do_vt_tendency = namelist_structure_vars[16,1]
-    do_vort_tendency = namelist_structure_vars[17,1]
-    do_ur_pbl_p_mean = namelist_structure_vars[18,1]
-    do_radar_plots = namelist_structure_vars[19,1]
-    do_soundings = namelist_structure_vars[20,1]
-    do_shear_and_rh_plots = namelist_structure_vars[21,1]
+    do_w5km_wavenumber = namelist_structure_vars[16,1]
+    do_vt_tendency = namelist_structure_vars[17,1]
+    do_vort_tendency = namelist_structure_vars[18,1]
+    do_ur_pbl_p_mean = namelist_structure_vars[19,1]
+    do_radar_plots = namelist_structure_vars[20,1]
+    do_soundings = namelist_structure_vars[21,1]
+    do_shear_and_rh_plots = namelist_structure_vars[22,1]
 
     if not DO_DBZ:
       do_dbz_mean = 'N'
@@ -2940,6 +2962,14 @@ def main():
     levs_vt_sym = np.linspace(-20,20,41,endpoint=True)
     norm_vt_sym = colors.BoundaryNorm(levs_vt_sym,256)
     colormap_vt_sym = plt.cm.seismic
+
+    # Symmetric W scales for the 5-km wavenumber figure:
+    # full field/WN0: +/-5 m/s, WN1/WN2: +/-2 m/s.
+    levs_w_full = np.linspace(-5,5,41,endpoint=True)
+    norm_w_full = colors.BoundaryNorm(levs_w_full,256)
+    levs_w_sym = np.linspace(-2,2,41,endpoint=True)
+    norm_w_sym = colors.BoundaryNorm(levs_w_sym,256)
+    colormap_w_sym = plt.cm.seismic
 
 
     color_data_wind = np.genfromtxt(f'{PYTHONDIR}/colormaps/colormap_wind.txt')
@@ -3481,7 +3511,73 @@ def main():
         plot_utils.convert_to_gif(f'{figfname}{figext}')
 
 
-    # FIGURES 17-21: Tangential Wind Tendency Terms
+    # FIGURE 17: Wavenumber 0,1,2 components of 5-km Vertical Velocity
+    if do_w5km_wavenumber == 'Y':
+      fig16w = plt.figure(figsize=(15,15))
+      ticks17_full = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+      ticks17_sym  = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2]
+
+      # Panel A
+      ax17a = fig16w.add_subplot(2, 2, 1)
+      co17a = ax17a.contourf(XI, YI, w5_p[:,:], levs_w_full, \
+            cmap=colormap_w_sym, norm=norm_w_full, extend='both')
+      ax17a = plotting.axes_wavenumber(ax17a, rmax_plot, -rmax_plot, nx=9)
+      cbar17a = plt.colorbar(co17a, ticks=ticks17_full)
+      cbar17a.ax.tick_params(labelsize=18)
+      ax17a.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax17a.set_title(f'{EXPT_TITLE.strip()}\n' +\
+          r'WV#0,1,2 5-km W ($m\ s^{-1}$, Shading)' + \
+          f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]', \
+          fontsize=20, weight='bold', loc='left')
+      ax17a.text(0,rmax_plot-25,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Panel B
+      ax17b = fig16w.add_subplot(2, 2, 2)
+      co17b = ax17b.contourf(XI, YI, w5_p_w0[:,:], levs_w_full, \
+            cmap=colormap_w_sym, norm=norm_w_full, extend='both')
+      ax17b = plotting.axes_wavenumber(ax17b, rmax_plot, -rmax_plot, nx=9)
+      cbar17b = plt.colorbar(co17b, ticks=ticks17_full)
+      cbar17b.ax.tick_params(labelsize=18)
+      ax17b.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax17b.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n' + \
+          f'Shear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\\circ$', \
+          fontsize=20, color='brown', loc='right')
+      ax17b.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Panel C
+      ax17c = fig16w.add_subplot(2, 2, 3)
+      co17c = ax17c.contourf(XI, YI, w5_p_w1[:,:], levs_w_sym, \
+            cmap=colormap_w_sym, norm=norm_w_sym, extend='both')
+      ax17c = plotting.axes_wavenumber(ax17c, rmax_plot, -rmax_plot, nx=9)
+      cbar17c = plt.colorbar(co17c, ticks=ticks17_sym)
+      cbar17c.ax.tick_params(labelsize=18)
+      ax17c.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax17c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Panel D
+      ax17d = fig16w.add_subplot(2, 2, 4)
+      co17d = ax17d.contourf(XI, YI, w5_p_w2[:,:], levs_w_sym, \
+            cmap=colormap_w_sym, norm=norm_w_sym, extend='both')
+      ax17d = plotting.axes_wavenumber(ax17d, rmax_plot, -rmax_plot, nx=9)
+      cbar17d = plt.colorbar(co17d, ticks=ticks17_sym)
+      cbar17d.ax.tick_params(labelsize=18)
+      ax17d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
+          linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax17d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Finalize figure
+      figfname = f'{ODIR}/{LONGSID.lower()}.w5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
+      fig16w.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      fig16w.clf()
+      plt.close(fig16w)
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+
+
+    # FIGURES 18-22: Tangential Wind Tendency Terms
     if do_vt_tendency == 'Y':
 
       # Mean Radial Flux

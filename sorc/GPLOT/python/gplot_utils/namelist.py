@@ -545,6 +545,7 @@ def read_polar_namelist(nml_path):
         'do_dbz5km_wavenumber': True,
         'do_rh5km_wavenumber': True,
         'do_vt10_wavenumber': True,
+        'do_w5km_wavenumber': True,
         'do_vt_tendency': False,
         'do_vort_tendency': False,
         'do_ur_pbl_p_mean': True,
