@@ -73,6 +73,28 @@ def is_storm_centered(domain):
     return _DOMAIN_NEST.get(domain.lower(), 1) == 3
 
 
+# Domains for which output filenames + plot titles should embed the
+# storm-specific identifier (longsid). Storm-following nests (d03)
+# and the legacy HWRF outer domain show one TC per panel, so the
+# storm name belongs in the filename + title. Larger domains (d01,
+# atl, basin, global, ...) may carry multiple storms in a single
+# plot for multistorm / global runs and should be storm-agnostic.
+_STORM_NAMED_DOMAINS = frozenset({'d03', 'hwrf'})
+
+
+def is_storm_named_filename(domain):
+    """Whether output filenames + titles for ``domain`` should
+    include the storm-specific identifier.
+
+    True for d03 and hwrf; False for all large-scale domains
+    (d01, atl, basin, global, ...). Distinct from
+    ``is_storm_centered`` (which keys off NEST=3 in
+    DomainInfo.dat) because hwrf is logically storm-centric for
+    naming purposes despite being declared NEST=1 in the registry.
+    """
+    return domain.lower() in _STORM_NAMED_DOMAINS
+
+
 # Default half-width (degrees) for each storm-centered domain.  These
 # match the NCL GPLOT_util.ncl conventions:
 #   d03   -> ±4°   (tight vortex-core view)

@@ -44,6 +44,7 @@ from gplot_utils.wn0_filter import remove_wavenumber0
 from gplot_utils.colormaps import (get_colormap, get_contour_levels, get_norm,
                                     resample_cmap, build_discrete_cmap)
 from gplot_utils.domains import (get_domain_bounds, is_storm_centered,
+                                  is_storm_named_filename,
                                   get_nest_number)
 from gplot_utils.plot_utils import (setup_map_axes, create_figure, add_titles,
                                      add_disclaimer, add_storm_marker,
@@ -852,19 +853,34 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     # the title (VMAX=..) and in the wind-field colors. Dropped.
 
     # --- 11. Add titles ---
+    # Storm-named domains (d03, hwrf) show one TC per panel, so the
+    # right-side title carries longsid + VMAX/MSLP. Large-scale
+    # domains (d01, atl, basin, ...) may carry multiple storms in a
+    # single plot, so the title and filename are storm-agnostic.
     var_title = get_plot_title(filename)
-    add_titles(ax, expt, var_title, fhr, idate, longsid=longsid,
-               vmax=vmax, mslp=mslp_val, ensid=ensid)
+    if is_storm_named_filename(domain):
+        add_titles(ax, expt, var_title, fhr, idate, longsid=longsid,
+                   vmax=vmax, mslp=mslp_val, ensid=ensid)
+    else:
+        add_titles(ax, expt, var_title, fhr, idate, longsid='',
+                   vmax=None, mslp=None, ensid=ensid)
     add_disclaimer(ax, expt)
 
     # --- 12. Save ---
     # Filename pattern matches the legacy NCL/HRD convention so that
-    # operational consumers and side-by-side comparisons line up:
-    #   <longsid>.<recipe>.<idate>.<domain>.f<fhr>.gif
-    # e.g. maila30p.REFL_MSLP.2026040806.d03.f018.gif
-    ofile_stem = os.path.join(
-        odir,
-        f"{longsid.lower()}.{filename}.{idate}.{domain}.f{fhr:03d}")
+    # operational consumers and side-by-side comparisons line up.
+    # Storm-named domains: <longsid>.<recipe>.<idate>.<domain>.f<fhr>
+    #   e.g. maila30p.REFL_MSLP.2026040806.d03.f018.gif
+    # Other domains: <recipe>.<idate>.<domain>.f<fhr>
+    #   e.g. REFL_MSLP.2026040806.d01.f018.gif
+    if is_storm_named_filename(domain):
+        ofile_stem = os.path.join(
+            odir,
+            f"{longsid.lower()}.{filename}.{idate}.{domain}.f{fhr:03d}")
+    else:
+        ofile_stem = os.path.join(
+            odir,
+            f"{filename}.{idate}.{domain}.f{fhr:03d}")
     ofile = save_figure(fig, ofile_stem, do_trim=True, do_gif=True)
     logger.info(f"Saved: {ofile}")
     return ofile

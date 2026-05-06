@@ -23,6 +23,7 @@ from gplot_utils import atcf as atcf_utils
 from gplot_utils import plot_utils
 from gplot_utils import colormaps as cmap_utils
 from gplot_utils import ocean_reader
+from gplot_utils.domains import is_storm_named_filename
 
 GPLOT_DIR = os.environ['GPLOT_DIR']
 print('MSG: Found this GPLOT location --> ' + GPLOT_DIR)
@@ -658,12 +659,18 @@ def main():
 
         # ------------------------------------------------------------------ #
         # Figure helpers
+        # Storm-named domains (d03, hwrf) embed LONGSID in the
+        # filename + show storm-specific titles. Large-scale domains
+        # (atl, basin, global, ...) are storm-agnostic.
+        _storm_named = is_storm_named_filename(OCEAN_DOMAIN)
+
         def _figfname(tag):
-            return (ODIR + '/' + LONGSID.lower() + '.' + tag + '.'
+            prefix = (LONGSID.lower() + '.') if _storm_named else ''
+            return (ODIR + '/' + prefix + tag + '.'
                     + forecastinit + '.ocean_' + OCEAN_DOMAIN
                     + '.f' + format(FHR, '03d'))
 
-        def _set_titles_d03(ax, left_title):
+        def _set_titles_storm(ax, left_title):
             ax.set_title(left_title, fontsize=small_fontsize, weight='bold', loc='left')
             ax.set_title('VMAX= ' + maxwind + ' kt\nPMIN= ' + minpressure + ' hPa\n' + LONGSID.upper(),
                          fontsize=fontsize, color='brown', loc='right')
@@ -672,11 +679,11 @@ def main():
         def _apply_domain(ax, left_title_d03, left_title_global, stream=True):
             ax.contour(lon, lat, depths, levels=[150],
                        colors='lightblue', linestyles='--', linewidths=3)
-            if OCEAN_DOMAIN == 'd03':
+            if _storm_named:
                 add_center_label(ax, centerlon, centerlat, minpressure)
                 if stream:
                     Axes.streamplot(ax, xi, yi, MLu, MLv, color='gray', density=0.5)
-                _set_titles_d03(ax, left_title_d03)
+                _set_titles_storm(ax, left_title_d03)
             else:
                 ax.set_title(left_title_global, fontsize=small_fontsize, weight='bold', loc='left')
 
