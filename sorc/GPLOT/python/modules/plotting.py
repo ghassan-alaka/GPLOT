@@ -186,6 +186,10 @@ def _draw_reflectivity_inset(fig, skew_ax, GPLOT_DIR, inset, region):
 	# Reflectivity palette: prefer the maps registry (5-75 dBZ on
 	# REFD.rgb with white set_under). Fall back to viridis on any
 	# import / loader hiccup so the rest of the figure still renders.
+	# `levels` is needed for contourf; default to the maps registry's
+	# 5-75 dBZ ladder if the import path failed.
+	levels = np.arange(5, 80, 5)
+	dcmap, norm = plt.cm.viridis, None
 	if _gplot_cmaps is not None:
 		try:
 			cmap = _gplot_cmaps.get_colormap('REFL', '', GPLOT_DIR)
@@ -194,15 +198,15 @@ def _draw_reflectivity_inset(fig, skew_ax, GPLOT_DIR, inset, region):
 				cmap, len(levels) - 1, extend='both')
 			norm = _gplot_cmaps.get_norm(levels)
 		except Exception:
-			dcmap, norm = plt.cm.viridis, None
-	else:
-		dcmap, norm = plt.cm.viridis, None
+			pass  # keep the viridis / np.arange(5,80,5) fallback
 
 	# Anchor the inset to the SkewT axes -- bounds are axes-fraction
-	# (0..1) of the SkewT plot box. ~30% wide, ~25% tall, lower-left.
-	inset_ax = skew_ax.inset_axes([0.02, 0.02, 0.30, 0.25])
-	inset_ax.pcolormesh(X, Y, dbz_polar, cmap=dcmap, norm=norm,
-	                    shading='auto')
+	# (0..1) of the SkewT plot box. ~30% wide, ~25% tall, lifted a
+	# bit off the bottom so it sits cleanly within the SkewT corner
+	# rather than crowding the bottom edge / SkewT x-axis labels.
+	inset_ax = skew_ax.inset_axes([0.02, 0.06, 0.30, 0.25])
+	inset_ax.contourf(X, Y, dbz_polar, levels=levels, cmap=dcmap,
+	                  norm=norm, extend='both')
 	inset_ax.set_xlim(-rmax_nmi, rmax_nmi)
 	inset_ax.set_ylim(-rmax_nmi, rmax_nmi)
 	inset_ax.set_aspect('equal')
@@ -210,6 +214,19 @@ def _draw_reflectivity_inset(fig, skew_ax, GPLOT_DIR, inset, region):
 	inset_ax.set_xticks([-200, -100, 0, 100, 200])
 	inset_ax.set_yticks([-200, -100, 0, 100, 200])
 	inset_ax.grid(alpha=0.3, linestyle=':', linewidth=0.5)
+
+	# "nmi" axis-unit labels placed INSIDE the inset (axes-fraction
+	# coords) so they don't push the inset frame outward and crowd
+	# the surrounding SkewT. Small white background keeps them
+	# legible on top of any reflectivity color.
+	_unit_bbox = dict(facecolor='white', alpha=0.75,
+	                  edgecolor='none', pad=1)
+	inset_ax.text(0.97, 0.04, 'nmi', transform=inset_ax.transAxes,
+	              ha='right', va='bottom', fontsize=7, color='black',
+	              bbox=_unit_bbox, zorder=7)
+	inset_ax.text(0.04, 0.97, 'nmi', transform=inset_ax.transAxes,
+	              ha='left',  va='top',    fontsize=7, color='black',
+	              bbox=_unit_bbox, zorder=7)
 
 	# Subtle range rings at the sounding-band boundaries.
 	for nmi in (50, 100, 150, 200):
@@ -222,7 +239,7 @@ def _draw_reflectivity_inset(fig, skew_ax, GPLOT_DIR, inset, region):
 	inset_ax.plot(0, 0, '+', color='black', markersize=7,
 	              markeredgewidth=1.2, zorder=4)
 
-	inset_ax.set_title('2-km Reflectivity (nmi)', fontsize=9,
+	inset_ax.set_title('2-km Reflectivity (dBZ)', fontsize=9,
 	                    weight='bold')
 
 	# Region highlight.
