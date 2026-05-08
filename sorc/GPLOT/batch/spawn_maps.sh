@@ -864,7 +864,20 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        # Python modules write 2-column PlottedFiles
+                                        # entries ("<file> <status>"), while legacy NCL
+                                        # wrote 3 columns ("<file> <NATCF> <ATCFDONE>").
+                                        # Accept both formats so processed files are
+                                        # removed from IFILES reliably.
+                                        REMOVE_DONE="False"
+                                        if [[ "${NATCF}" =~ ^[0-9]+$ ]]; then
+                                            if [ "${ATCF_EXP}" -eq "${NATCF}" ] || [ "${ATCFDONE}" == "True" ]; then
+                                                REMOVE_DONE="True"
+                                            fi
+                                        else
+                                            REMOVE_DONE="True"
+                                        fi
+                                        if [ "${REMOVE_DONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi

@@ -722,11 +722,18 @@ if [ "${DO_POLAR}" = "True" ]; then
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)
                         # Define the file that contains the status (STATUS_FILE)
                         PLOTTED_FILE="${ODIR_FULL}PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        # Compatibility path for Python polar module, which
+                        # writes control files under .../polar/.
+                        if [ "${ODIR_TYPE}" == "1" ]; then
+                            PLOTTED_FILE_ALT="${ODIR}/polar/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        else
+                            PLOTTED_FILE_ALT="${ODIR}/${EXPT}/${CYCLE}/polar/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        fi
                         STATUS_FILE="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
                         LOCK_FILE="${STATUS_FILE}.lock"
 
                         # Get the list of plotted files for this case
-                        CASE_PLOTTED=(`cat ${PLOTTED_FILE} | sed 's#//*#/#g' 2>/dev/null`)
+                        CASE_PLOTTED=(`cat ${PLOTTED_FILE} ${PLOTTED_FILE_ALT} | sed 's#//*#/#g' 2>/dev/null`)
 
                         # Get the status for this case
                         lockfile -r-1 -l 180 "${LOCK_FILE}"
@@ -747,6 +754,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                                     echo "MSG: Graphic production will be forced."
                                     echo "MSG: Deleting the processed file log --> ${PLOTTED_FILE}"
                                     rm -f ${PLOTTED_FILE}
+                                    rm -f ${PLOTTED_FILE_ALT}
                                     CASE_PLOTTED=()
                                     CASE_STATUS="force"
                                 fi
@@ -775,7 +783,10 @@ if [ "${DO_POLAR}" = "True" ]; then
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
                                 #TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
-                                TMP=$(grep "${FILE}" ${PLOTTED_FILE})
+                                TMP=$(grep -F "${FILE}" ${PLOTTED_FILE} 2>/dev/null)
+                                if [ -z "${TMP}" ]; then
+                                    TMP=$(grep -F "${FILE}" ${PLOTTED_FILE_ALT} 2>/dev/null)
+                                fi
                                 CFILE=`echo "${TMP}" | cut -d' ' -f1`
                                 NATCF=`echo "${TMP}" | cut -d' ' -f2`
                                 if [ ${SC} == "True" ]; then
