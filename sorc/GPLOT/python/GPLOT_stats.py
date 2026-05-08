@@ -983,14 +983,18 @@ def _write_status(status_file, value):
 
 def _sidlong_from_atcf_filename(atcf_file, sid):
     """
-    Parse SIDLONG (e.g., '13l') from ATCF basename.
+    Parse SIDLONG (e.g., '13l' or 'ten10l') from ATCF basename.
 
     spawn_stats.sh derives the same token from ATCF filename segments and
     uses it in status.<sidlong>.log, so mirror that convention here.
     """
     base = os.path.basename(atcf_file)
     for part in base.split('.'):
-        if re.match(r'^[0-9]{2}[A-Za-z]$', part):
+        # Match spawn_stats.sh behavior:
+        #   if the last 3 chars are [0-9]{2}[a-z], use the FULL token.
+        # This preserves forms like "ten10l" (not just "10l").
+        if len(part) >= 3 and re.match(r'^[0-9]{2}[A-Za-z]$',
+                                       part[-3:]):
             return part.lower()
     return sid.lower()
 
