@@ -59,6 +59,14 @@ from gplot_utils import constants as C
 logger = logging.getLogger('__main__')
 
 
+def _write_status(status_file, value):
+    """Write module status with a lockfile (spawn-compatible)."""
+    status_lock = f"{status_file}.lock"
+    os.system(f'lockfile -r-1 -l 180 "{status_lock}"')
+    os.system(f'echo "{value}" > "{status_file}"')
+    os.system(f'rm -f "{status_lock}"')
+
+
 # ============================================================
 # DAT file I/O
 # ============================================================
@@ -1203,6 +1211,8 @@ def main():
     else:
         odir_ships = os.path.join(odir, expt, idate, domain)
     os.makedirs(odir_ships, exist_ok=True)
+    status_file = os.path.join(odir_ships, f'status.{domain}.{tier}.{sid}.log')
+    _write_status(status_file, 'working')
 
     # Plotted-file tracking (matches the polar/airsea/maps convention
     # and the spawn_ships.sh expectation of
@@ -1240,12 +1250,14 @@ def main():
     atcf_file = find_atcf_file(atcf_dirs, atcf_tag, idate, sid)
     if atcf_file is None:
         logger.error("No ATCF file found; SHIPS requires ATCF data")
+        _write_status(status_file, 'failed')
         return 1
 
     logger.info(f"  ATCF: {atcf_file}")
     atcf_df = read_atcf(atcf_file)
     if atcf_df.empty:
         logger.error("ATCF file is empty")
+        _write_status(status_file, 'failed')
         return 1
 
     # Resolve LONGSID for plot titles + figure filenames. Priority:
@@ -1293,6 +1305,7 @@ def main():
                                   init_hr, fnl_hr, dt)
     if not grib_files:
         logger.error(f"No GRIB2 files found in {idir}")
+        _write_status(status_file, 'failed')
         return 1
 
     logger.info(f"  Found {len(grib_files)} GRIB2 files")
@@ -1596,6 +1609,7 @@ def main():
 
     logger.info(f"GPLOT Ships complete: {n_processed} forecast hours processed, "
                 f"{len(generated_plots)} plots generated")
+    _write_status(status_file, 'complete')
     return 0
 
 

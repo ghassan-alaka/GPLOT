@@ -71,6 +71,14 @@ logger = logging.getLogger(__name__)
 _VORTEX_CACHE = {}
 
 
+def _write_status(status_file, value):
+    """Write module status with a lockfile (spawn-compatible)."""
+    status_lock = f"{status_file}.lock"
+    os.system(f'lockfile -r-1 -l 180 "{status_lock}"')
+    os.system(f'echo "{value}" > "{status_file}"')
+    os.system(f'rm -f "{status_lock}"')
+
+
 def _clear_vortex_cache():
     """Drop all cached filtered cubes. Called once per forecast hour."""
     _VORTEX_CACHE.clear()
@@ -1357,6 +1365,8 @@ def main():
     else:
         odir_full = os.path.join(odir, expt, idate, domain)
     os.makedirs(odir_full, exist_ok=True)
+    status_file = os.path.join(odir_full, f'status.{domain}.{tier}.{sid}.log')
+    _write_status(status_file, 'working')
 
     # ATCF directories.  Prefer ATCF2_DIR (higher-res / merged output
     # from the experiment) and fall back to ATCF1_DIR.  A --atcf-dir
@@ -1374,6 +1384,7 @@ def main():
                                            domain, tier)
     if maps_nml_path is None:
         logger.error("Could not find maps namelist")
+        _write_status(status_file, 'failed')
         sys.exit(1)
 
     logger.info(f"Maps namelist: {maps_nml_path}")
@@ -1426,130 +1437,135 @@ def main():
     fhrs = list(range(init_hr, fnl_hr + 1, dt))
     n_plots = 0
 
-    for fhr in fhrs:
-        logger.info(f"--- Processing FHR {fhr:03d} ---")
+    try:
+        for fhr in fhrs:
+            logger.info(f"--- Processing FHR {fhr:03d} ---")
 
-        # Get TC position for this forecast hour
-        tc_lat, tc_lon, vmax, mslp_val = get_tc_position(atcf_df, fhr)
+            # Get TC position for this forecast hour
+            tc_lat, tc_lon, vmax, mslp_val = get_tc_position(atcf_df, fhr)
 
-        # Compute domain bounds
-        if is_storm_centered(domain):
-            if tc_lat is None:
-                logger.warning(f"FHR {fhr:03d}: No TC position, skipping "
-                               "storm-centered domain")
-                continue
-            bounds = get_domain_bounds(domain, tc_lat, tc_lon)
-        else:
-            bounds = get_domain_bounds(domain)
-            # d01/hwrf parent domains return None from the registry because
-            # their geographic extent varies per run (moving-nest parent grid
-            # is recentered on the cyclone). Resolve them below from the
-            # actual GRIB2 file after it's been opened.
+            # Compute domain bounds
+            if is_storm_centered(domain):
+                if tc_lat is None:
+                    logger.warning(f"FHR {fhr:03d}: No TC position, skipping "
+                                   "storm-centered domain")
+                    continue
+                bounds = get_domain_bounds(domain, tc_lat, tc_lon)
+            else:
+                bounds = get_domain_bounds(domain)
+                # d01/hwrf parent domains return None from the registry because
+                # their geographic extent varies per run (moving-nest parent grid
+                # is recentered on the cyclone). Resolve them below from the
+                # actual GRIB2 file after it's been opened.
 
-        # Find GRIB2 file
-        grib_path = find_grib_files(idir, idate, fhr, dsource, domain,
-                                     itag, ext, fhrfmt)
-        if grib_path is None:
-            logger.warning(f"FHR {fhr:03d}: No GRIB2 file found")
-            continue
-
-        logger.info(f"GRIB2 file: {grib_path}")
-
-        # Check if already plotted (unless forced). Match the legacy
-        # GPLOT polar/airsea naming convention so spawn_maps.sh and the
-        # downstream scripts can find this file:
-        # PlottedFiles.<DOMAIN>.<TIER>.<SID>.log
-        plotted_log = os.path.join(
-            odir_full,
-            f'PlottedFiles.{domain}.{tier}.{sid}.log')
-        if not args.force and os.path.isfile(plotted_log):
-            with open(plotted_log, 'r') as f:
-                plotted_content = f.read()
-            if grib_path in plotted_content:
-                logger.info(f"FHR {fhr:03d}: Already plotted, skipping")
+            # Find GRIB2 file
+            grib_path = find_grib_files(idir, idate, fhr, dsource, domain,
+                                         itag, ext, fhrfmt)
+            if grib_path is None:
+                logger.warning(f"FHR {fhr:03d}: No GRIB2 file found")
                 continue
 
-        # Open GRIB2
-        try:
-            datasets = open_grib2(grib_path)
-        except Exception as e:
-            logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
-            continue
+            logger.info(f"GRIB2 file: {grib_path}")
 
-        # HAFS ships simulated IR brightness temperatures in a separate
-        # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
-        # locate and open it; if present, append its datasets so recipes
-        # like SIMIR can resolve via the same get_var_2d() path.
-        sat_path = grib_path.replace('.atm.', '.sat.')
-        if sat_path != grib_path and os.path.isfile(sat_path):
+            # Check if already plotted (unless forced). Match the legacy
+            # GPLOT polar/airsea naming convention so spawn_maps.sh and the
+            # downstream scripts can find this file:
+            # PlottedFiles.<DOMAIN>.<TIER>.<SID>.log
+            plotted_log = os.path.join(
+                odir_full,
+                f'PlottedFiles.{domain}.{tier}.{sid}.log')
+            if not args.force and os.path.isfile(plotted_log):
+                with open(plotted_log, 'r') as f:
+                    plotted_content = f.read()
+                if grib_path in plotted_content:
+                    logger.info(f"FHR {fhr:03d}: Already plotted, skipping")
+                    continue
+
+            # Open GRIB2
             try:
-                sat_datasets = open_sat_file(sat_path)
-                if sat_datasets:
-                    datasets = list(datasets) + list(sat_datasets)
-                    logger.info(f"Sat GRIB2 file: {sat_path} "
-                                f"({len(sat_datasets)} bands)")
+                datasets = open_grib2(grib_path)
             except Exception as e:
-                logger.warning(f"Failed to open sat file {sat_path}: {e}")
-
-        # Resolve parent-domain bounds from the GRIB2 grid extent when the
-        # domain registry didn't provide any. Use a tiny inset so cartopy
-        # doesn't try to draw right at the edge.
-        if bounds is None:
-            grid = get_grid_info(datasets, dsource, gplot_dir)
-            lat_arr = grid.get('lat')
-            lon_arr = grid.get('lon')
-            if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
-                logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
+                logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
                 continue
-            # Convert 0..360 longitudes to -180..180 for cartopy-friendly bounds.
-            lon_min = float(np.min(lon_arr))
-            lon_max = float(np.max(lon_arr))
-            if lon_max > 180:
-                lon_min = lon_min - 360 if lon_min > 180 else lon_min
-                lon_max = lon_max - 360 if lon_max > 180 else lon_max
-            bounds = (
-                float(np.max(lat_arr)),
-                float(np.min(lat_arr)),
-                lon_min,
-                lon_max,
-            )
-            logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
 
-        # Reset the vortex-filter cache so we don't accidentally reuse a
-        # smoothed cube from the previous forecast hour (the `datasets`
-        # list id() also changes, but being explicit keeps memory bounded).
-        _clear_vortex_cache()
+            # HAFS ships simulated IR brightness temperatures in a separate
+            # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
+            # locate and open it; if present, append its datasets so recipes
+            # like SIMIR can resolve via the same get_var_2d() path.
+            sat_path = grib_path.replace('.atm.', '.sat.')
+            if sat_path != grib_path and os.path.isfile(sat_path):
+                try:
+                    sat_datasets = open_sat_file(sat_path)
+                    if sat_datasets:
+                        datasets = list(datasets) + list(sat_datasets)
+                        logger.info(f"Sat GRIB2 file: {sat_path} "
+                                    f"({len(sat_datasets)} bands)")
+                except Exception as e:
+                    logger.warning(f"Failed to open sat file {sat_path}: {e}")
 
-        # Loop over plot recipes. Track successes per-FHR so we can
-        # gate the plotted-file marker on actually having produced
-        # something -- a failed FHR (every recipe raised) must not be
-        # marked plotted, otherwise the next run skips it and the
-        # forecast hour is silently lost from output.
-        n_recipe_plots = 0
-        for recipe in recipes:
-            try:
-                ofile = draw_map(
-                    recipe, datasets, dsource, bounds, fhr, idate, expt,
-                    tc_lat, tc_lon, vmax, mslp_val, longsid, args.ensid,
-                    gplot_dir, odir_full, domain, thin_factor, atcf_df,
+            # Resolve parent-domain bounds from the GRIB2 grid extent when the
+            # domain registry didn't provide any. Use a tiny inset so cartopy
+            # doesn't try to draw right at the edge.
+            if bounds is None:
+                grid = get_grid_info(datasets, dsource, gplot_dir)
+                lat_arr = grid.get('lat')
+                lon_arr = grid.get('lon')
+                if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
+                    logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
+                    continue
+                # Convert 0..360 longitudes to -180..180 for cartopy-friendly bounds.
+                lon_min = float(np.min(lon_arr))
+                lon_max = float(np.max(lon_arr))
+                if lon_max > 180:
+                    lon_min = lon_min - 360 if lon_min > 180 else lon_min
+                    lon_max = lon_max - 360 if lon_max > 180 else lon_max
+                bounds = (
+                    float(np.max(lat_arr)),
+                    float(np.min(lat_arr)),
+                    lon_min,
+                    lon_max,
                 )
-                if ofile:
-                    n_plots += 1
-                    n_recipe_plots += 1
-            except Exception as e:
-                logger.error(f"FHR {fhr:03d} {recipe['FILE_NAME']}: {e}",
-                             exc_info=True)
+                logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
 
-        # Mark this GRIB2 file as plotted only if at least one recipe
-        # produced output. Allows the user to rerun the same case and
-        # have failed FHRs retried automatically without --force.
-        if n_recipe_plots > 0:
-            update_plotted_file(plotted_log, grib_path)
-        else:
-            logger.warning(f"FHR {fhr:03d}: no plots produced; "
-                           f"not marking GRIB2 as plotted")
+            # Reset the vortex-filter cache so we don't accidentally reuse a
+            # smoothed cube from the previous forecast hour (the `datasets`
+            # list id() also changes, but being explicit keeps memory bounded).
+            _clear_vortex_cache()
+
+            # Loop over plot recipes. Track successes per-FHR so we can
+            # gate the plotted-file marker on actually having produced
+            # something -- a failed FHR (every recipe raised) must not be
+            # marked plotted, otherwise the next run skips it and the
+            # forecast hour is silently lost from output.
+            n_recipe_plots = 0
+            for recipe in recipes:
+                try:
+                    ofile = draw_map(
+                        recipe, datasets, dsource, bounds, fhr, idate, expt,
+                        tc_lat, tc_lon, vmax, mslp_val, longsid, args.ensid,
+                        gplot_dir, odir_full, domain, thin_factor, atcf_df,
+                    )
+                    if ofile:
+                        n_plots += 1
+                        n_recipe_plots += 1
+                except Exception as e:
+                    logger.error(f"FHR {fhr:03d} {recipe['FILE_NAME']}: {e}",
+                                 exc_info=True)
+
+            # Mark this GRIB2 file as plotted only if at least one recipe
+            # produced output. Allows the user to rerun the same case and
+            # have failed FHRs retried automatically without --force.
+            if n_recipe_plots > 0:
+                update_plotted_file(plotted_log, grib_path)
+            else:
+                logger.warning(f"FHR {fhr:03d}: no plots produced; "
+                               f"not marking GRIB2 as plotted")
+    except Exception:
+        _write_status(status_file, 'failed')
+        raise
 
     logger.info(f"GPLOT Maps complete: {n_plots} plots generated")
+    _write_status(status_file, 'complete')
 
 
 if __name__ == '__main__':
