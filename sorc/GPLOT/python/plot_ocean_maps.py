@@ -189,13 +189,24 @@ def main():
     ST_LOCK_FILE   = STATUS_FILE + '.lock'
 
     # Find ATCF file
-    ATCF_LIST = np.genfromtxt(ODIR + 'ATCF_FILES.dat', dtype='str')
-    if ATCF_LIST.size > 1:
-        print('Found multiple ATCFs')
-        print(f'DEBUG:: {ATCF_LIST}: {SID.lower()}')
-        ATCF = ATCF_LIST[[i for i, s in enumerate(ATCF_LIST) if str(SID + '.').lower() in s][:]][0]
+    atcf_list_path = ODIR + 'ATCF_FILES.dat'
+    if os.path.isfile(atcf_list_path):
+        ATCF_LIST = np.atleast_1d(np.genfromtxt(atcf_list_path, dtype='str'))
     else:
-        ATCF = ATCF_LIST
+        print(f'WARNING: Missing ATCF file list: {atcf_list_path}')
+        ATCF_LIST = np.array(['NONE'])
+    valid_atcfs = [str(s) for s in ATCF_LIST if str(s) and str(s) != 'NONE']
+    if len(valid_atcfs) > 1:
+        print('Found multiple ATCFs')
+        print(f'DEBUG:: {valid_atcfs}: {SID.lower()}')
+        sid_key = f'{SID.lower()}.'
+        sid_matches = [s for s in valid_atcfs if sid_key in s.lower()]
+        # Fallback to first valid entry when no direct SID match is found.
+        ATCF = sid_matches[0] if sid_matches else valid_atcfs[0]
+    elif len(valid_atcfs) == 1:
+        ATCF = valid_atcfs[0]
+    else:
+        ATCF = 'NONE'
     print('MSG: Found this ATCF --> ' + str(ATCF))
 
     if str(ATCF) == 'NONE':
@@ -208,7 +219,7 @@ def main():
 
     # Load ATCF DataFrame for d03
     atcf_df = None
-    if OCEAN_DOMAIN == 'd03':
+    if OCEAN_DOMAIN == 'd03' and str(ATCF) != 'NONE':
         atcf_df = atcf_utils.read_atcf(str(ATCF))
 
     # Forecast hour / file lists

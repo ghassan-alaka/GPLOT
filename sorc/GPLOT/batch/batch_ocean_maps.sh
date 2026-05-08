@@ -44,84 +44,33 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 2. Build list in input arguments for Python
+# 2. Build list of named input arguments for Python
 PYTHON_ARGS=()
-if [ ! -z "$IDATE" ]; then
-    PYTHON_ARGS+=("${IDATE}")
-else
-    PYTHON_ARGS+=("MISSING")
+PYTHON_ARGS+=("--idate" "${IDATE}")
+PYTHON_ARGS+=("--sid" "${SID}")
+PYTHON_ARGS+=("--ocean-domain" "${OCEAN_DOMAIN}")
+PYTHON_ARGS+=("--tier" "${TIER}")
+PYTHON_ARGS+=("--ensid" "${ENSID}")
+PYTHON_ARGS+=("--resolution" "${RESOLUTION}")
+PYTHON_ARGS+=("--rmax" "${RMAX}")
+PYTHON_ARGS+=("--levs" "${LEVS}")
+PYTHON_ARGS+=("--master-nml" "${NMLIST}")
+PYTHON_ARGS+=("--ocean-source" "${OCEAN_SOURCE}")
+PYTHON_ARGS+=("--ocean-cfg" "${OCEAN_CFG}")
+if [ ! -z "${FIX_DIR}" ] && [ "${FIX_DIR}" != "MISSING" ]; then
+    PYTHON_ARGS+=("--fix-dir" "${FIX_DIR}")
 fi
-if [ ! -z "$SID" ]; then
-    PYTHON_ARGS+=("${SID}")
-else
-    PYTHON_ARGS+=("MISSING")
+if [ "${FORCE}" == "True" ]; then
+    PYTHON_ARGS+=("--force" "True")
 fi
-if [ ! -z "$OCEAN_DOMAIN" ]; then
-    PYTHON_ARGS+=("${OCEAN_DOMAIN}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$TIER" ]; then
-    PYTHON_ARGS+=("${TIER}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$ENSID" ]; then
-    PYTHON_ARGS+=("${ENSID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$FORCE" ]; then
-    PYTHON_ARGS+=("${FORCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RESOLUTION" ]; then
-    PYTHON_ARGS+=("${RESOLUTION}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RMAX" ]; then
-    PYTHON_ARGS+=("${RMAX}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$LEVS" ]; then
-    PYTHON_ARGS+=("${LEVS}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$NMLIST" ]; then
-    PYTHON_ARGS+=("${NMLIST}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$OCEAN_SOURCE" ]; then
-    PYTHON_ARGS+=("${OCEAN_SOURCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$OCEAN_CFG" ]; then
-    PYTHON_ARGS+=("${OCEAN_CFG}")
-else
-    PYTHON_ARGS+=("MISSING")
+if [ "${OCEAN_WRAP_LON}" == "True" ] || [ "${OCEAN_WRAP_LON}" == "true" ] || \
+   [ "${OCEAN_WRAP_LON}" == "1" ]; then
+    PYTHON_ARGS+=("--wrap-lon")
 fi
 
-if [ ! -z "$FIX_DIR" ]; then
-    PYTHON_ARGS+=("${FIX_DIR}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-
-if [ ! -z "$OCEAN_WRAP_LON" ]; then
-    PYTHON_ARGS+=("${OCEAN_WRAP_LON}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-
-# 2. Submit the Python job
-echo "${PYTHON_ARGS[*]}"
-python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
+# 3. Submit the Python job
+echo "python3 ${PYTHONFILE} ${PYTHON_ARGS[@]}"
+python3 ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE}
 
 wait
 

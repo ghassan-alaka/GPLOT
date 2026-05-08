@@ -1063,13 +1063,20 @@ if [ "${DO_OCEAN_MAPS}" == "True" ]; then
                             # This file should only be updated when a new job is being submitted.
                             # If this file changes and a job is not submitted, then it could cause
                             # issues with storm labels for non-storm-centered graphics.
-                            if [ -z "${MODEL_ATCF2[*]}" ]; then
+                            # For storm-centered domains (e.g. d03), keep the
+                            # ATCF list storm-specific. For large-scale domains,
+                            # keep cycle-wide ATCFs for multistorm markers.
+                            WRITE_ATCF=("${MODEL_ATCF2[@]}")
+                            if [ "${SC}" == "True" ] && [ ! -z "${MODEL_ATCF1[*]}" ]; then
+                                WRITE_ATCF=("${MODEL_ATCF1[@]}")
+                            fi
+                            if [ -z "${WRITE_ATCF[*]}" ]; then
                                 echo "NONE" > ${ODIR_FULL}ATCF_FILES.dat
                             else
                                 if [ -f "${ODIR_FULL}ATCF_FILES.dat" ]; then
                                     rm -f ${ODIR_FULL}ATCF_FILES.dat
                                 fi
-                                for ATCF in ${MODEL_ATCF2[@]}; do
+                                for ATCF in ${WRITE_ATCF[@]}; do
                                     echo "${ATCF}" >> ${ODIR_FULL}ATCF_FILES.dat
                                 done
                             fi
