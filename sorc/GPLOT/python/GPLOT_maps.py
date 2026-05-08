@@ -1365,7 +1365,9 @@ def main():
     else:
         odir_full = os.path.join(odir, expt, idate, domain)
     os.makedirs(odir_full, exist_ok=True)
-    status_file = os.path.join(odir_full, f'status.{domain}.{tier}.{sid}.log')
+    # Match spawn_maps naming: only hwrf/d03 carry a storm tag.
+    storm_tag = f'.{sid}' if is_storm_named_filename(domain) else ''
+    status_file = os.path.join(odir_full, f'status.{domain}.{tier}{storm_tag}.log')
     _write_status(status_file, 'working')
 
     # ATCF directories.  Prefer ATCF2_DIR (higher-res / merged output
@@ -1470,10 +1472,10 @@ def main():
             # Check if already plotted (unless forced). Match the legacy
             # GPLOT polar/airsea naming convention so spawn_maps.sh and the
             # downstream scripts can find this file:
-            # PlottedFiles.<DOMAIN>.<TIER>.<SID>.log
+            # PlottedFiles.<DOMAIN>.<TIER>[.<SID>].log
             plotted_log = os.path.join(
                 odir_full,
-                f'PlottedFiles.{domain}.{tier}.{sid}.log')
+                f'PlottedFiles.{domain}.{tier}{storm_tag}.log')
             if not args.force and os.path.isfile(plotted_log):
                 with open(plotted_log, 'r') as f:
                     plotted_content = f.read()

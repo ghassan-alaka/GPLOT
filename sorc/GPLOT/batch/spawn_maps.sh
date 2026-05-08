@@ -419,12 +419,10 @@ if [ "${DO_MAPS}" = "True" ]; then
                 for DMN in ${DOMAIN[@]}; do
                     echo ""
     
-                    # Skip some domains for Tier3. VERY SUBJECTIVE.
+                    # Skip some domains for Tier3. Keep d01/d03 enabled so
+                    # Tier3 can run there when requested by the namelist.
                     if [ "${TR}" == "Tier3" ]; then
-                        if [ "${DMN}" == "basin" ] || [ "${DMN}" == "bigd01" ] || [ "${DMN}" == "d03" ] || [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ]; then
-                            continue
-                        fi
-                        if [ "${DSOURCE}" == "HWRF" ] && [ "${DMN}" == "d01" ]; then
+                        if [ "${DMN}" == "basin" ] || [ "${DMN}" == "bigd01" ] || [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ]; then
                             continue
                         fi
                     fi
