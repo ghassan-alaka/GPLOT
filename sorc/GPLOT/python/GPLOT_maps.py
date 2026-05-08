@@ -1465,7 +1465,7 @@ def main():
         if not args.force and os.path.isfile(plotted_log):
             with open(plotted_log, 'r') as f:
                 plotted_content = f.read()
-            if os.path.basename(grib_path) in plotted_content:
+            if grib_path in plotted_content:
                 logger.info(f"FHR {fhr:03d}: Already plotted, skipping")
                 continue
 
@@ -1544,7 +1544,7 @@ def main():
         # produced output. Allows the user to rerun the same case and
         # have failed FHRs retried automatically without --force.
         if n_recipe_plots > 0:
-            update_plotted_file(plotted_log, os.path.basename(grib_path))
+            update_plotted_file(plotted_log, grib_path)
         else:
             logger.warning(f"FHR {fhr:03d}: no plots produced; "
                            f"not marking GRIB2 as plotted")

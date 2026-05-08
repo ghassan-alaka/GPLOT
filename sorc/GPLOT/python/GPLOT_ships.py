@@ -1208,7 +1208,7 @@ def main():
     # and the spawn_ships.sh expectation of
     # ${ODIR_FULL}/PlottedFiles.${DMN}.${TR}${STORMTAG}.log). Per-FHR
     # GRIB2 paths are appended on successful FHR processing; on
-    # subsequent runs (without --force) any FHR whose basename is
+    # subsequent runs (without --force) any FHR whose full path is
     # already in this log is skipped. Coexists with the in-memory
     # dat_store skip below -- either skip mechanism wins.
     plotted_log = os.path.join(
@@ -1341,10 +1341,9 @@ def main():
         #       for this FHR in the in-memory dat_store (the legacy
         #       ships behavior, preserved for backward compatibility).
         if not args.force:
-            grib_basename = os.path.basename(grib_path)
             if os.path.isfile(plotted_log):
                 with open(plotted_log, 'r') as f:
-                    if grib_basename in f.read():
+                    if grib_path in f.read():
                         logger.debug(f"FHR {fhr:03d} already in "
                                      f"PlottedFiles, skipping")
                         continue
@@ -1564,7 +1563,7 @@ def main():
         # without raising and at least one diag wrote into dat_store).
         # Mark in PlottedFiles.<dmn>.<tier>.<sid>.log so subsequent
         # runs without --force skip this GRIB cleanly.
-        update_plotted_file(plotted_log, os.path.basename(grib_path))
+        update_plotted_file(plotted_log, grib_path)
 
     # ---- Write all DAT files ----
     for diag in scalar_diags:

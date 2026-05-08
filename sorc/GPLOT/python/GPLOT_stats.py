@@ -968,6 +968,33 @@ def parse_args():
     return parser.parse_args()
 
 
+def _status_path(odir, sidlong):
+    """Build the spawn_stats-compatible status file path."""
+    return os.path.join(odir, f'status.{sidlong}.log')
+
+
+def _write_status(status_file, value):
+    """Write module status used by spawn_stats.sh."""
+    os.makedirs(os.path.dirname(status_file) or '.', exist_ok=True)
+    with open(status_file, 'w') as f:
+        f.write(f'{value}\n')
+    logger.info(f"Wrote stats status: {value} -> {status_file}")
+
+
+def _sidlong_from_atcf_filename(atcf_file, sid):
+    """
+    Parse SIDLONG (e.g., '13l') from ATCF basename.
+
+    spawn_stats.sh derives the same token from ATCF filename segments and
+    uses it in status.<sidlong>.log, so mirror that convention here.
+    """
+    base = os.path.basename(atcf_file)
+    for part in base.split('.'):
+        if re.match(r'^[0-9]{2}[A-Za-z]$', part):
+            return part.lower()
+    return sid.lower()
+
+
 def main():
     args = parse_args()
 
@@ -1058,6 +1085,8 @@ def main():
     else:
         odir = os.path.join(odir_base, 'guidance')
     os.makedirs(odir, exist_ok=True)
+    status_sidlong = sid.lower()
+    status_file = _status_path(odir, status_sidlong)
 
     logger.info(f"GPLOT_stats: IDATE={idate}, SID={sid}, EXPT={expt}")
     logger.info(f"  Output: {odir}")
@@ -1153,7 +1182,12 @@ def main():
 
     if atcf_file is None:
         logger.error(f"No ATCF file found for SID={sid}, IDATE={idate}")
+        _write_status(status_file, 'failed')
         sys.exit(1)
+
+    status_sidlong = _sidlong_from_atcf_filename(atcf_file, sid)
+    status_file = _status_path(odir, status_sidlong)
+    _write_status(status_file, 'working')
 
     logger.info(f"Using ATCF: {atcf_file}")
 
@@ -1199,6 +1233,7 @@ def main():
 
     if len(adeck_df) == 0:
         logger.error("No valid ATCF data read")
+        _write_status(status_file, 'failed')
         sys.exit(1)
 
     # Relabel the originating model (MORIG) with the display code
@@ -1384,6 +1419,7 @@ def main():
             if result:
                 logger.info(f"  Created: {result}")
 
+    _write_status(status_file, 'complete')
     logger.info("GPLOT_stats complete.")
 
 

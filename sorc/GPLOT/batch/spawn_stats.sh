@@ -412,7 +412,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
 
         # If the ATCF is new enough, force production.
-        test=$(find ${ATCF} -mmin -60 2>/dev/null)
+        test=$(find ${ATCF} -mmin -30 2>/dev/null)
         if [[ -n ${test} ]]; then
             echo "MSG: This ATCF is not old enough. Forcing production."
             FORCE="True"
@@ -422,7 +422,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # If the BDECK is new enough, force production.
         if [ -f "${BDECK}" ]; then
             echo "MSG: Found this B-Deck --> ${BDECK}"
-            test=$(find ${BDECK} -mmin -60 2>/dev/null)
+            test=$(find ${BDECK} -mmin -30 2>/dev/null)
             if [[ -n ${test} ]]; then
                 echo "MSG: This BDECK is not old enough. Forcing production."
                 FORCE="True"
