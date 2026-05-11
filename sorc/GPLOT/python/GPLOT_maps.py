@@ -1047,18 +1047,18 @@ def _draw_tc_low_marker(ax, tc_lat, tc_lon, mslp_val):
         return
 
     import matplotlib.patheffects as pe
-    outline = [pe.withStroke(linewidth=2.5, foreground='white')]
+    outline = [pe.withStroke(linewidth=1.8, foreground='white')]
 
-    ax.text(tc_lon, tc_lat, 'L', fontsize=16, fontweight='bold',
+    ax.text(tc_lon, tc_lat, 'L', fontsize=11, fontweight='bold',
             color='red', ha='center', va='center',
             transform=ccrs.PlateCarree(), zorder=12,
             path_effects=outline)
     if mslp_val is not None and mslp_val > 0:
-        ax.text(tc_lon, tc_lat - 0.8, f'{int(mslp_val)}',
+        ax.text(tc_lon, tc_lat - 0.5, f'{int(mslp_val)}',
                 fontsize=8, fontweight='bold', color='red',
                 ha='center', va='top',
                 transform=ccrs.PlateCarree(), zorder=12,
-                path_effects=[pe.withStroke(linewidth=1.8, foreground='white')])
+                path_effects=[pe.withStroke(linewidth=1.5, foreground='white')])
 
 
 def _draw_atcf_track(ax, atcf_df, current_fhr):
