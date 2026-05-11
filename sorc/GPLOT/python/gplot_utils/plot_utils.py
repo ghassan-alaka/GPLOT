@@ -457,6 +457,73 @@ def save_figure(fig, ofile, do_trim=True, do_gif=True, dpi=150):
     return png_path
 
 
+def read_spawn_file_list(odir, domain, tier, sid):
+    """
+    Read the per-FHR GRIB2 list that ``spawn_*.sh`` prepared for this run.
+
+    The spawn shell does directory-layout discovery via its ``IDIR_OPTS``
+    list (~30 variants covering HAFS, HWRF, HFSA, GFS, ECMWF, ensemble,
+    etc.) and writes the resulting (file_path, fhr) pairs to a matching
+    pair of logs under ``odir``:
+
+    - ``UnplottedFiles.<domain>.<tier>{.<sid>}.log`` — one GRIB2 path per line
+    - ``AllForecastHours.<domain>.<tier>{.<sid>}.log`` — matching FHRs
+
+    The storm-tag suffix is only added by spawn for storm-centered (SC=True)
+    domains (hwrf, d03, d02, tkfull, alld03, storm, core, tcparent per
+    ``spawn_maps.sh:456-458``). We try the tagged path first and fall back
+    to the un-tagged path so this works for both groups without Python
+    needing to mirror the shell's SC list.
+
+    Parameters
+    ----------
+    odir : str
+        Output directory (where spawn wrote the lists).
+    domain : str
+        Domain name (e.g. ``d03``, ``atl``).
+    tier : str
+        Tier name (e.g. ``Tier1``).
+    sid : str
+        Storm ID, e.g. ``09L``. Used to build the storm-tagged filename;
+        the helper uppercases it internally to match spawn's
+        ``STORMTAG=".${STORM^^}"`` convention.
+
+    Returns
+    -------
+    list of (int, str) or None
+        Sorted list of ``(fhr, grib_path)`` pairs, or ``None`` if neither
+        log file exists. Callers should fall back to their legacy
+        discovery (``find_grib_files``) when this returns ``None`` so
+        standalone-Python dev/test workflows keep working.
+    """
+    sid_up = sid.upper() if sid else ''
+    candidates = []
+    if sid_up:
+        candidates.append(
+            (os.path.join(odir, f'UnplottedFiles.{domain}.{tier}.{sid_up}.log'),
+             os.path.join(odir, f'AllForecastHours.{domain}.{tier}.{sid_up}.log')))
+    candidates.append(
+        (os.path.join(odir, f'UnplottedFiles.{domain}.{tier}.log'),
+         os.path.join(odir, f'AllForecastHours.{domain}.{tier}.log')))
+
+    for unplotted_log, fhr_log in candidates:
+        if not (os.path.isfile(unplotted_log) and os.path.isfile(fhr_log)):
+            continue
+        with open(unplotted_log) as f:
+            files = [ln.strip() for ln in f if ln.strip()]
+        with open(fhr_log) as f:
+            fhrs = [int(ln.strip()) for ln in f if ln.strip()]
+        if not files or not fhrs:
+            return []
+        if len(files) != len(fhrs):
+            # Spawn writes them in lockstep; a length mismatch means one
+            # is stale. Bail out -- the caller's fallback will recover.
+            return None
+        return sorted(zip(fhrs, files), key=lambda p: p[0])
+
+    return None
+
+
 def update_plotted_file(plotted_log, input_file, status=1):
     """
     Update the PlottedFiles log to track completed graphics.

@@ -53,7 +53,8 @@ from gplot_utils.coord_transform import (sph2cart, sph2cart_3d,
                                           annular_mean, circular_mean,
                                           compute_wind_shear)
 from gplot_utils.plot_utils import (save_figure, configure_cartopy,
-                                    update_plotted_file)
+                                    update_plotted_file,
+                                    read_spawn_file_list)
 from gplot_utils import constants as C
 
 logger = logging.getLogger('__main__')
@@ -1301,8 +1302,24 @@ def main():
             atcf_df = atcf_df[model_mask].copy()
 
     # ---- Find GRIB2 files ----
-    grib_files = find_grib_files(idir, itag, ext, idate, fhrfmt,
-                                  init_hr, fnl_hr, dt)
+    # Prefer the file list spawn_ships.sh prepared: it does the full
+    # IDIR_OPTS directory-layout discovery (HAFS, HWRF, HFSA, GFS,
+    # ECMWF, ensembles, ...) that the in-Python find_grib_files()
+    # cannot replicate. Polar/airsea already consume these lists; this
+    # brings ships in line so HFSA + any other spawn-supported layout
+    # works without duplicating directory-discovery logic.
+    #
+    # Fallback to in-Python discovery when the spawn lists are absent
+    # (e.g. running GPLOT_ships.py directly for dev / smoke testing).
+    grib_files = read_spawn_file_list(odir_ships, domain, tier, sid)
+    if grib_files is not None:
+        logger.info(f"  Using spawn-prepared file list: "
+                    f"{len(grib_files)} FHRs")
+    else:
+        logger.info("  No spawn file list found; falling back to "
+                    "find_grib_files() discovery")
+        grib_files = find_grib_files(idir, itag, ext, idate, fhrfmt,
+                                      init_hr, fnl_hr, dt)
     if not grib_files:
         logger.error(f"No GRIB2 files found in {idir}")
         _write_status(status_file, 'failed')

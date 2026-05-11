@@ -49,6 +49,7 @@ from gplot_utils.domains import (get_domain_bounds, is_storm_centered,
 from gplot_utils.plot_utils import (setup_map_axes, create_figure, add_titles,
                                      add_disclaimer, add_storm_marker,
                                      save_figure, update_plotted_file,
+                                     read_spawn_file_list,
                                      get_plot_title, configure_cartopy)
 
 logger = logging.getLogger(__name__)
@@ -1454,12 +1455,37 @@ def main():
     thin_factor = load_streamline_thin(gplot_dir, dsource, domain)
     logger.info(f"Vector thinning factor: {thin_factor}")
 
-    # ---- 5. Loop over forecast hours ----
-    fhrs = list(range(init_hr, fnl_hr + 1, dt))
+    # ---- 5. Build (fhr, grib_path) iteration list ----
+    # Prefer the file list spawn_maps.sh prepared: it does the full
+    # IDIR_OPTS directory-layout discovery (~30 variants spanning HAFS,
+    # HWRF, HFSA, GFS, ECMWF, ensembles, etc.) that the in-Python
+    # find_grib_files() cannot replicate. Polar/airsea already consume
+    # these lists; bringing maps in line means HFSA and any other
+    # spawn-supported layout works here without duplicating
+    # directory-discovery logic in two places.
+    #
+    # Fallback to in-Python discovery when the spawn lists are absent
+    # (e.g. running GPLOT_maps.py directly from the command line for dev
+    # / smoke testing). That path preserves the legacy iter-by-FHR-range
+    # behavior and is unchanged from before this refactor.
+    iter_pairs = read_spawn_file_list(odir_full, domain, tier, sid)
+    if iter_pairs is not None:
+        logger.info(f"Using spawn-prepared file list: {len(iter_pairs)} FHRs")
+    else:
+        logger.info("No spawn file list found; falling back to "
+                    "find_grib_files() per-FHR discovery")
+        iter_pairs = []
+        for fhr in range(init_hr, fnl_hr + 1, dt):
+            gp = find_grib_files(idir, idate, fhr, dsource, domain,
+                                  itag, ext, fhrfmt)
+            if gp is not None:
+                iter_pairs.append((fhr, gp))
+        logger.info(f"find_grib_files() discovered {len(iter_pairs)} FHRs")
+
     n_plots = 0
 
     try:
-        for fhr in fhrs:
+        for fhr, grib_path_from_spawn in iter_pairs:
             logger.info(f"--- Processing FHR {fhr:03d} ---")
 
             # Get TC position for this forecast hour
@@ -1499,20 +1525,18 @@ def main():
                                        for p in expected_ofiles):
                 logger.info(f"FHR {fhr:03d}: all recipe figures on disk, "
                             f"skipping")
-                # Re-mark in PlottedFiles so the spawn-level skip can also
-                # short-circuit on the next loop. find_grib_files() is
-                # cheap relative to open_grib2(), so we still pay it.
-                grib_path = find_grib_files(idir, idate, fhr, dsource,
-                                             domain, itag, ext, fhrfmt)
-                if grib_path is not None:
-                    update_plotted_file(plotted_log, grib_path)
+                # Re-mark in PlottedFiles so the spawn-level skip can
+                # also short-circuit on the next loop.
+                update_plotted_file(plotted_log, grib_path_from_spawn)
                 continue
 
-            # Find GRIB2 file
-            grib_path = find_grib_files(idir, idate, fhr, dsource, domain,
-                                         itag, ext, fhrfmt)
-            if grib_path is None:
-                logger.warning(f"FHR {fhr:03d}: No GRIB2 file found")
+            # GRIB2 path already resolved upstream -- either pulled from
+            # spawn's UnplottedFiles list (operational) or discovered via
+            # the legacy find_grib_files() fallback (standalone dev).
+            grib_path = grib_path_from_spawn
+            if not os.path.isfile(grib_path):
+                logger.warning(f"FHR {fhr:03d}: GRIB2 file missing on disk "
+                               f"--> {grib_path}")
                 continue
 
             logger.info(f"GRIB2 file: {grib_path}")
