@@ -167,6 +167,17 @@ _CFGRIB_SURFACE_VARS = {
 }
 
 
+# cfgrib defaults to writing a persistent ``<path>.<hash>.idx`` pickle
+# next to every GRIB2 it opens. When multiple GPLOT modules (maps, ships,
+# polar, airsea, ocean) hit the same GRIB2 file concurrently each writes
+# a different .idx (one per filter_by_keys hash), and the writes race --
+# producing zero-byte / truncated pickles that the next reader chokes on
+# with ``EOFError: Ran out of input``. Force cfgrib to keep the index in
+# memory only by passing ``indexpath=''``. The per-open re-scan cost on
+# HAFS-sized GRIB2 files is sub-second and well worth the stability.
+_CFGRIB_INDEXPATH = ''
+
+
 def open_grib2(filepath, filter_by_keys=None):
     """
     Open a GRIB2 file with xarray + cfgrib.
@@ -192,7 +203,8 @@ def open_grib2(filepath, filter_by_keys=None):
     if filter_by_keys is not None:
         return [xr.open_dataset(
             filepath, engine='cfgrib',
-            backend_kwargs={'filter_by_keys': filter_by_keys}
+            backend_kwargs={'filter_by_keys': filter_by_keys,
+                            'indexpath': _CFGRIB_INDEXPATH}
         )]
 
     # GRIB2 files contain multiple level types that must be opened separately.
@@ -238,6 +250,7 @@ def open_grib2(filepath, filter_by_keys=None):
                 backend_kwargs={
                     'filter_by_keys': filt,
                     'errors': 'ignore',
+                    'indexpath': _CFGRIB_INDEXPATH,
                 }
             )
             if len(ds.data_vars) > 0:
@@ -250,7 +263,8 @@ def open_grib2(filepath, filter_by_keys=None):
         try:
             ds = xr.open_dataset(
                 filepath, engine='cfgrib',
-                backend_kwargs={'errors': 'ignore'}
+                backend_kwargs={'errors': 'ignore',
+                                'indexpath': _CFGRIB_INDEXPATH}
             )
             if len(ds.data_vars) > 0:
                 datasets.append(ds)
@@ -275,6 +289,7 @@ def open_grib2(filepath, filter_by_keys=None):
                         'typeOfLevel': lev,
                     },
                     'errors': 'ignore',
+                    'indexpath': _CFGRIB_INDEXPATH,
                 },
             )
         except Exception as e:
@@ -332,6 +347,7 @@ def open_sat_file(filepath):
                         'parameterNumber': pnum,
                     },
                     'errors': 'ignore',
+                    'indexpath': _CFGRIB_INDEXPATH,
                 },
             )
             if 'unknown' in ds.data_vars:
