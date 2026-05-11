@@ -363,6 +363,38 @@ if [ "${DO_STATS}" = "True" ]; then
             continue
         fi
 
+        # Gate: skip this case if no GRIB2 input files exist anywhere
+        # under IDIR for this cycle/storm. Historically stats was the
+        # only module that would still queue jobs purely from ATCFs
+        # even when no model output existed -- which fills real-time
+        # queues with guidance-only jobs for cycles whose model data
+        # hasn't been retained on disk. Mirror the IDIR_OPTS gating
+        # that maps/polar/ships/airsea apply: no GRIB2 => no job.
+        IDIR_OPTS=("" "${EXPT}/com/${CYCLE}/${STORM}/" "${EXPT}/com/${CYCLE}/" \
+                   "${EXPT}/com/" "${EXPT}/" "${CYCLE}/${STORM}/" "${CYCLE}/" \
+                   "${STORM}/" "${EXPT}/${CYCLE}/${STORM}/" "${EXPT}/${CYCLE}/" \
+                   "com/${CYCLE}/${STORM}/" "com/${CYCLE}/" \
+                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" \
+                   "${YYYY}${MM}${DD}/${HH}/" \
+                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/" \
+                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
+        EXT_CHK="${EXT:-.grb2}"
+        INPUT_FOUND="False"
+        for IO in "${IDIR_OPTS[@]}"; do
+            IDIR_FULL_CHK="$(echo "${IDIR}/${IO}" | sed s#//*#/#g)"
+            [ -d "${IDIR_FULL_CHK}" ] || continue
+            if compgen -G "${IDIR_FULL_CHK}*${CYCLE}*${EXT_CHK}" > /dev/null \
+               || compgen -G "${IDIR_FULL_CHK}*${STORM,,}*${CYCLE}*${EXT_CHK}" > /dev/null; then
+                INPUT_FOUND="True"
+                break
+            fi
+        done
+        if [ "${INPUT_FOUND}" == "False" ]; then
+            echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
+            echo "WARNING: Skipping stats for this case; check that model output exists for this cycle."
+            continue
+        fi
+
         # OK, checks have been passed so let's process this file.
         echo ""
         echo "************************"

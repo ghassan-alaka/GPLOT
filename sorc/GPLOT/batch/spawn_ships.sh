@@ -704,13 +704,14 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                             # Break the loop if all input directory options have been searched
                             if [ ${F} -gt ${#IDIR_OPTS[@]} ]; then
-                                echo "ERROR: No files were found. Try fixing IDIR in the namelist."
+                                echo "MSG: Searched all known IDIR_OPTS subdirectory layouts for ${STORM} ${CYCLE} under IDIR=${IDIR}; nothing matched."
                                 break
                                 #exit
                             fi
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "WARNING: Nothing to do here. Moving on to the next case."
+                            echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
+                            echo "WARNING: Skipping ships for this case; check that model output exists for this cycle."
                             echo ""
                             continue
                         fi
