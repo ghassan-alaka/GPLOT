@@ -1346,6 +1346,23 @@ def main():
         tc_lat = atcf_row.iloc[0]['lat']
         tc_lon = atcf_row.iloc[0]['lon']
 
+        # On-disk figure gate. If any ships figure for this FHR exists,
+        # treat the FHR as done -- regardless of --force. Mirrors the
+        # polar/airsea behavior so the spawn FORCE flip (triggered by
+        # recent ATCF mtime while the model is running) doesn't cause
+        # already-finished FHRs to re-render every loop. dat_store /
+        # tccen_store / tchodo_store are preloaded from existing DAT
+        # files above, so end-of-run DAT writers stay consistent --
+        # values for skipped FHRs come from disk and get rewritten
+        # unchanged. To genuinely re-render, delete the figure files.
+        fhr_glob = os.path.join(
+            odir_ships,
+            f"{longsid.lower()}.*.{idate}.ships.f{fhr:03d}.*")
+        if glob.glob(fhr_glob):
+            logger.debug(f"FHR {fhr:03d}: ships figure(s) on disk, "
+                         f"skipping")
+            continue
+
         # Skip if already done and not forcing.
         # Two independent skip checks; either may fire:
         #   (a) PlottedFiles.<dmn>.<tier>.<sid>.log lists this GRIB

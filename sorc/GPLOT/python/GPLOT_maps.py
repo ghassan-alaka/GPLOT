@@ -615,6 +615,25 @@ def find_hl_markers(data, lat, lon, var='MSLP', min_dist_deg=5.0,
 # Plot composition
 # ---------------------------------------------------------------------------
 
+def _expected_ofile(recipe, longsid, fhr, idate, domain, odir):
+    """
+    Return the .gif path that ``draw_map`` would write for this recipe.
+
+    Mirrors the filename-stem construction at the bottom of ``draw_map``
+    (see the ``ofile_stem`` block there). Kept in lockstep with that
+    block; if the naming convention ever changes, update both.
+
+    Used by the FHR-loop on-disk gate to detect already-produced
+    figures and avoid re-rendering them under ``--force``.
+    """
+    fname = recipe['FILE_NAME']
+    if is_storm_named_filename(domain):
+        stem = f"{longsid.lower()}.{fname}.{idate}.{domain}.f{fhr:03d}"
+    else:
+        stem = f"{fname}.{idate}.{domain}.f{fhr:03d}"
+    return os.path.join(odir, stem + '.gif')
+
+
 def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
              tc_lat, tc_lon, vmax, mslp_val, longsid, ensid,
              gplot_dir, odir, domain, thin_factor=4, atcf_df=None):
@@ -1460,6 +1479,35 @@ def main():
                 # is recentered on the cyclone). Resolve them below from the
                 # actual GRIB2 file after it's been opened.
 
+            # PlottedFiles log path (used by both the fast-path on-disk gate
+            # below and the per-recipe gate inside the recipe loop).
+            plotted_log = os.path.join(
+                odir_full,
+                f'PlottedFiles.{domain}.{tier}{storm_tag}.log')
+
+            # Fast-path on-disk gate. If every recipe's .gif is already on
+            # disk, skip the entire FHR before the expensive GRIB2 open.
+            # Runs regardless of --force, mirroring polar/airsea: the spawn
+            # FORCE flip (triggered by recent ATCF mtime) wipes
+            # PlottedFiles every loop while the model is running, and
+            # without this gate every completed FHR re-renders. To
+            # genuinely re-render, delete the .gif files.
+            expected_ofiles = [_expected_ofile(r, longsid, fhr, idate,
+                                                domain, odir_full)
+                               for r in recipes]
+            if expected_ofiles and all(os.path.isfile(p)
+                                       for p in expected_ofiles):
+                logger.info(f"FHR {fhr:03d}: all recipe figures on disk, "
+                            f"skipping")
+                # Re-mark in PlottedFiles so the spawn-level skip can also
+                # short-circuit on the next loop. find_grib_files() is
+                # cheap relative to open_grib2(), so we still pay it.
+                grib_path = find_grib_files(idir, idate, fhr, dsource,
+                                             domain, itag, ext, fhrfmt)
+                if grib_path is not None:
+                    update_plotted_file(plotted_log, grib_path)
+                continue
+
             # Find GRIB2 file
             grib_path = find_grib_files(idir, idate, fhr, dsource, domain,
                                          itag, ext, fhrfmt)
@@ -1473,9 +1521,6 @@ def main():
             # GPLOT polar/airsea naming convention so spawn_maps.sh and the
             # downstream scripts can find this file:
             # PlottedFiles.<DOMAIN>.<TIER>[.<SID>].log
-            plotted_log = os.path.join(
-                odir_full,
-                f'PlottedFiles.{domain}.{tier}{storm_tag}.log')
             if not args.force and os.path.isfile(plotted_log):
                 with open(plotted_log, 'r') as f:
                     plotted_content = f.read()
@@ -1539,8 +1584,22 @@ def main():
             # something -- a failed FHR (every recipe raised) must not be
             # marked plotted, otherwise the next run skips it and the
             # forecast hour is silently lost from output.
+            #
+            # Also track recipes whose .gif already existed on disk
+            # (per-recipe on-disk gate). The fast-path above only fires
+            # when *all* recipes are on disk; this handles the
+            # partial-FHR case where some recipes succeeded last time
+            # and others failed -- only the missing ones get re-rendered.
             n_recipe_plots = 0
+            n_recipe_existing = 0
             for recipe in recipes:
+                expected = _expected_ofile(recipe, longsid, fhr, idate,
+                                           domain, odir_full)
+                if os.path.isfile(expected):
+                    logger.info(f"FHR {fhr:03d} {recipe['FILE_NAME']}: "
+                                f"figure exists, skipping")
+                    n_recipe_existing += 1
+                    continue
                 try:
                     ofile = draw_map(
                         recipe, datasets, dsource, bounds, fhr, idate, expt,
@@ -1554,10 +1613,13 @@ def main():
                     logger.error(f"FHR {fhr:03d} {recipe['FILE_NAME']}: {e}",
                                  exc_info=True)
 
-            # Mark this GRIB2 file as plotted only if at least one recipe
-            # produced output. Allows the user to rerun the same case and
-            # have failed FHRs retried automatically without --force.
-            if n_recipe_plots > 0:
+            # Mark this GRIB2 file as plotted if either (a) at least one
+            # recipe was freshly produced, or (b) every recipe was either
+            # freshly produced or already on disk -- i.e. the FHR is
+            # fully satisfied. Failed FHRs (every recipe raised) are
+            # still left unmarked so they retry next run.
+            n_recipe_done = n_recipe_plots + n_recipe_existing
+            if n_recipe_plots > 0 or n_recipe_done == len(recipes):
                 update_plotted_file(plotted_log, grib_path)
             else:
                 logger.warning(f"FHR {fhr:03d}: no plots produced; "
