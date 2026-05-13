@@ -509,14 +509,24 @@ def main():
     theta_e_700_levs = np.arange(330,380+1e-6,2.0);    theta_e_700_ticks = np.arange(330,380+1e-6,5.0)
     theta_e_850_levs = np.arange(330,380+1e-6,2.0);    theta_e_850_ticks = np.arange(330,380+1e-6,5.0)
     delta_t_levs = np.arange(-6,12+1e-6,0.2);          delta_t_ticks = np.arange(-6,12+1e-6,0.5)
-    #delta_q_levs = np.arange(0.5,2.5+1e-6,0.05);       delta_q_ticks = np.arange(0.5,2.5+1e-6,0.1)
-    delta_q_levs = np.arange(1.05,1.20+1e-6,0.002);    delta_q_ticks = np.arange(1.05,1.20+1e-6,0.01)
-    
+    # Air-sea specific-humidity contrast, plotted in g/kg.  Typical
+    # tropical sat-minus-2m values land 3-8 g/kg; 0..15 g/kg covers
+    # the cold/dry and warm/moist ends comfortably.
+    delta_q_levs  = np.arange(0.0, 15.0+1e-6, 0.5)
+    delta_q_ticks = np.arange(0.0, 15.0+1e-6, 2.0)
+
     DELTA_T = sst - temp[...,0].squeeze();
-    # DPT=SST at sfc
+    # DPT=SST at sfc.  sfcq is a saturation specific humidity at SST
+    # (kg/kg) returned by metpy as a pint.Quantity; the contrast is
+    # against the 2-m specific humidity field (q2m) that was read
+    # directly above -- NOT q[...,0], whose level ordering is not
+    # guaranteed and which was rendering DELTA_Q as all-NaN (hence
+    # the blank/white plot).  Strip units and rescale to g/kg so the
+    # plot levels + title units match.
     sfcq = mpcalc.specific_humidity_from_dewpoint(mslp.squeeze()*metpy.units.units.hPa,\
                                                   (sst+273.15)*metpy.units.units.K)
-    DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
+    sfcq_arr = np.asarray(getattr(sfcq, 'magnitude', sfcq)).squeeze()
+    DELTA_Q  = (sfcq_arr - q2m) * 1000.0
     DPT = mpcalc.dewpoint_from_specific_humidity(levs*metpy.units.units.hPa,\
                                                  temp*metpy.units.units.K,\
                                                  q*metpy.units.units("kg/kg"))
@@ -703,7 +713,7 @@ def main():
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
       add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/km, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/kg, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
       ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
@@ -712,9 +722,19 @@ def main():
 
     # FIGURE: Wind Gusts
     if do_gusts == 'Y':
+        # Cartopy's default PlateCarree expects longitudes in [-180,180].
+        # HAFS data sometimes comes in [0,360], in which case Atlantic
+        # storms (centerlon ~250-300) fall outside cartopy's native
+        # domain and the gridliner silently drops every x-line. Force
+        # the cartopy-facing coordinates to [-180,180]; latitude is
+        # already fine. Defensive: works whether source lon is in
+        # [-180,180] or [0,360].
+        _to180 = lambda x: ((np.asarray(x) + 180.0) % 360.0) - 180.0
+        lon_c  = _to180(lon)
+        clon_c = float(_to180(centerlon))
         #Make 6x6 plot of Wind Gusts
-        lonplotmin = centerlon-3
-        lonplotmax = centerlon+3
+        lonplotmin = clon_c-3
+        lonplotmax = clon_c+3
         latplotmin = centerlat-3
         latplotmax = centerlat+3
         lonplot = np.arange(int(round(lonplotmin,0))-1,int(round(lonplotmax,0))+1,1)
@@ -723,7 +743,7 @@ def main():
         fig1 = plt.figure(figsize=(15.5,15.5))
         ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         ax1.set_extent([lonplotmin,lonplotmax,latplotmin,latplotmax], crs=ccrs.PlateCarree())
-        plt.contourf(lon, lat, wstt2_new*1.94, levs_wind, cmap=colormap_wind, norm=norm_wind, extend='both', transform=ccrs.PlateCarree())
+        plt.contourf(lon_c, lat, wstt2_new*1.94, levs_wind, cmap=colormap_wind, norm=norm_wind, extend='both', transform=ccrs.PlateCarree())
         ax1.set_title(EXPT_TITLE.strip()+'\n'+ 'Gusts (kt)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
         ax1.add_feature(cfeature.COASTLINE.with_scale('50m'), zorder=10)
@@ -755,8 +775,15 @@ def main():
         plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
         #Make 6x6 plot of 10-m Wind With GF Overlaid
-        lonplotmin = centerlon-3
-        lonplotmax = centerlon+3
+        # Normalize longitudes for cartopy (same rationale as the
+        # gusts block above). lon_c / clon_c are already defined
+        # under the do_gusts guard, but redefine here so this block
+        # stays self-contained if the first ever gets moved.
+        _to180 = lambda x: ((np.asarray(x) + 180.0) % 360.0) - 180.0
+        lon_c  = _to180(lon)
+        clon_c = float(_to180(centerlon))
+        lonplotmin = clon_c-3
+        lonplotmax = clon_c+3
         latplotmin = centerlat-3
         latplotmax = centerlat+3
         lonplot = np.arange(int(round(lonplotmin,0))-1,int(round(lonplotmax,0))+1,1)
@@ -764,14 +791,14 @@ def main():
         fig1 = plt.figure(figsize=(15.5,15.5))
         ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         ax1.set_extent([lonplotmin,lonplotmax,latplotmin,latplotmax], crs=ccrs.PlateCarree())
-        plt.contourf(lon, lat, gf2_new, levs_gf, cmap='Reds', norm=norm_gf, extend='both', transform=ccrs.PlateCarree())
+        plt.contourf(lon_c, lat, gf2_new, levs_gf, cmap='Reds', norm=norm_gf, extend='both', transform=ccrs.PlateCarree())
         cbar = plt.colorbar(ticks=[1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0],shrink=0.8)
         cbar.ax.tick_params(labelsize=24)
         # CS=plt.contour(lon, lat, ws1_new*1.94, [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150], colors='xkcd:black',linewidths=4,linestyles='solid',zorder=11)
         # plt.clabel(CS, inline=True, fmt='%3i', fontsize=16)
         # Lew.Gramer@noaa.gov 2024-07-19 change suggested by role.aoml-hafs1@noaa.gov based on comment from Lev Looney
         #plt.barbs(lon2d[::10,::10],lat2d[::10,::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94)
-        plt.barbs(lon[::10],lat[::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94)
+        plt.barbs(lon_c[::10],lat[::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94,transform=ccrs.PlateCarree())
         ax1.set_title(EXPT_TITLE.strip()+'\n'+ '10-m Wind (kt) and Gust Factor'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
         ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
         ax1.add_feature(cfeature.COASTLINE.with_scale('50m'), zorder=10)
