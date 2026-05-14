@@ -446,6 +446,13 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
   finish = time.perf_counter()
   print(f'MSG: Total time for polar interpolation: {finish-start:.2f} second(s)')
 
+  # NaN-coverage gauge for the d03-moving-nest-edge-encroachment case.
+  # Computed on u_p (the primary 3D field) and returned to the caller
+  # so main()'s FHR loop can soft-WARN at >1% and hard-STOP at >25%.
+  # NaN here means the polar grid point fell outside the GRIB's
+  # storm-relative extent; see polar_interp.interp_to_polarcylindrical().
+  nan_frac = float(np.mean(~np.isfinite(u_p)))
+
   # Calculate tangential (vt) and radial (ur) wind.
   # F-3 vectorization: theta depends only on the azimuth axis (axis=0); broadcast
   # it to (ntheta, 1, 1) so the rotation runs as one whole-array multiply.
@@ -458,8 +465,12 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
   v_pbl_p = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
 
   for k in range(zsize_pbl):
-    f_uwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), uwind_pbl[:,:,k])
-    f_vwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vwind_pbl[:,:,k])
+    # bounds_error=False + NaN fill: polar grid points outside the
+    # storm-relative (y_sr, x_sr) extent (d03 moving nest behind the
+    # storm) return NaN instead of crashing the FHR. See
+    # polar_interp.interp_to_polarcylindrical() for the rationale.
+    f_uwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), uwind_pbl[:,:,k], bounds_error=False, fill_value=np.nan)
+    f_vwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vwind_pbl[:,:,k], bounds_error=False, fill_value=np.nan)
     u_pbl_p[:,:,k] = f_uwind_pbl((YI, XI), method='linear')
     v_pbl_p[:,:,k] = f_vwind_pbl((YI, XI), method='linear')
 
@@ -473,18 +484,20 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
   # 2D polar interpolation for 10-m / 850 / 200 hPa winds.
   u10_p  = np.ones((np.shape(XI)[0], np.shape(XI)[1]))*np.nan
   v10_p  = np.ones((np.shape(XI)[0], np.shape(XI)[1]))*np.nan
-  f_u10 = interpolate.RegularGridInterpolator((y_sr, x_sr), u10[:,:])
-  f_v10 = interpolate.RegularGridInterpolator((y_sr, x_sr), v10[:,:])
+  # bounds_error=False + NaN fill for the 2-D single-level fields, same
+  # rationale as the PBL loop above and polar_interp module.
+  f_u10 = interpolate.RegularGridInterpolator((y_sr, x_sr), u10[:,:], bounds_error=False, fill_value=np.nan)
+  f_v10 = interpolate.RegularGridInterpolator((y_sr, x_sr), v10[:,:], bounds_error=False, fill_value=np.nan)
   u10_p[:,:] = f_u10((YI, XI), method='linear')
   v10_p[:,:] = f_v10((YI, XI), method='linear')
 
   # (Pre-allocation of u/v/vt/ur at 200/850 removed — outputs are assigned
   #  directly below from interpolators and broadcast rotations.)
 
-  f_u200 = interpolate.RegularGridInterpolator((y_sr, x_sr), u200[:,:])
-  f_v200 = interpolate.RegularGridInterpolator((y_sr, x_sr), v200[:,:])
-  f_u850 = interpolate.RegularGridInterpolator((y_sr, x_sr), u850[:,:])
-  f_v850 = interpolate.RegularGridInterpolator((y_sr, x_sr), v850[:,:])
+  f_u200 = interpolate.RegularGridInterpolator((y_sr, x_sr), u200[:,:], bounds_error=False, fill_value=np.nan)
+  f_v200 = interpolate.RegularGridInterpolator((y_sr, x_sr), v200[:,:], bounds_error=False, fill_value=np.nan)
+  f_u850 = interpolate.RegularGridInterpolator((y_sr, x_sr), u850[:,:], bounds_error=False, fill_value=np.nan)
+  f_v850 = interpolate.RegularGridInterpolator((y_sr, x_sr), v850[:,:], bounds_error=False, fill_value=np.nan)
 
   u200_p = f_u200((YI, XI), method='linear')
   v200_p = f_v200((YI, XI), method='linear')
@@ -516,6 +529,7 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
       'vt10_p':  vt10_p,  'ur10_p':  ur10_p,
       'vt850_p': vt850_p, 'ur850_p': ur850_p,
       'vt200_p': vt200_p, 'ur200_p': ur200_p,
+      'nan_frac': nan_frac,
   }
 
 
@@ -1180,7 +1194,7 @@ def _compute_vort_tendency(uwind, vwind, vt_p, ur_p, w_p,
 
   vort_p = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize)) * np.nan
   for k in range(zsize):
-    f_vort = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vort[:, :, k])
+    f_vort = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vort[:, :, k], bounds_error=False, fill_value=np.nan)
     vort_p[:, :, k] = f_vort((YI, XI), method='linear')
 
   f = 2 * 7.292e-5 * np.sin(centerlat*3.14159/180)
@@ -1413,11 +1427,11 @@ def _partition_precip(dbz, heightlevs, xgrad, ygrad, rmw_2km,
   # Polar interpolation
   ptype = np.squeeze(ptype)
   ptype_p = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
-  f_ptype = interpolate.RegularGridInterpolator((y_sr, x_sr), ptype[:, :])
+  f_ptype = interpolate.RegularGridInterpolator((y_sr, x_sr), ptype[:, :], bounds_error=False, fill_value=np.nan)
   ptype_p = f_ptype((YI, XI), method='linear')
   ptype_p = np.round(ptype_p)
 
-  f_ptype_norm = interpolate.RegularGridInterpolator((y_sr/rmw_2km, x_sr/rmw_2km), ptype[:, :])
+  f_ptype_norm = interpolate.RegularGridInterpolator((y_sr/rmw_2km, x_sr/rmw_2km), ptype[:, :], bounds_error=False, fill_value=np.nan)
   ptype_p_norm = f_ptype_norm((YInorm, XInorm), method='linear')
   ptype_p_norm = np.round(ptype_p_norm)
 
@@ -1984,6 +1998,30 @@ def main():
                              u850, v850, x_sr, y_sr, XI, YI, theta,
                              heightlevs, heightlevs_pbl, zsize, zsize_pbl,
                              centerlat)
+
+    # Moving-nest edge-encroachment gating. When the d03 nest falls
+    # behind the storm, polar grid points outside the GRIB's storm-
+    # relative extent come back NaN from the interpolators (see
+    # polar_interp.interp_to_polarcylindrical). At >25% NaN the
+    # axisymmetric ring averages and wavenumber-FFT panels lose
+    # physical meaning, so stop the FHR loop here; the post-loop
+    # block still runs to paste the per-FHR text files, build the
+    # time-series products with the FHRs already processed, and
+    # mark the status complete. The broken FHR is intentionally NOT
+    # marked plotted, so on the next spawn pass STATUS=complete
+    # short-circuits the case rather than re-trying.
+    nan_frac = pgrid.get('nan_frac', 0.0)
+    if nan_frac > 0.25:
+        print(f"WARNING: FHR {FHR:03d}: polar grid is {nan_frac:.1%} NaN "
+              f"(d03 moving nest has fallen behind the storm; storm-"
+              f"relative GRIB extent < rmax={rmax} km). Stopping the "
+              f"polar module here and finalizing time-series products "
+              f"with the {fff} FHRs already processed.")
+        break
+    elif nan_frac > 0.01:
+        print(f"WARNING: FHR {FHR:03d}: polar grid is {nan_frac:.1%} NaN "
+              f"(d03 edge encroachment); panel output is partial.")
+
     u_p         = pgrid['u_p']
     v_p         = pgrid['v_p']
     w_p         = pgrid['w_p']

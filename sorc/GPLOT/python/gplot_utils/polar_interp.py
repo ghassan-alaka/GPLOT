@@ -151,7 +151,17 @@ def interp_to_polarcylindrical(varIn, lev, x, y, xi, yi, idx, ivar, verbose=Fals
   """
   if verbose:
     print(f'MSG: Interpolating to polar cylindrical coordinates for level {int(lev)} for var{ivar} - {datetime.datetime.now()}')
-  varTmp = interpolate.RegularGridInterpolator((y, x), varIn)
+  # bounds_error=False + fill_value=NaN: when the d03 moving nest has
+  # fallen behind the storm, some polar points (yi, xi) fall outside
+  # the storm-relative (y, x) bounds. Default would raise
+  # "ValueError: One of the requested xi is out of bounds in
+  # dimension 0" and abort the whole FHR. Filling with NaN keeps
+  # ring metrics + panels usable for the covered quadrant; the caller
+  # in polar_cylindrical_structure.py owns the >25%-NaN hard stop
+  # that finalizes the time-series products and exits cleanly.
+  varTmp = interpolate.RegularGridInterpolator((y, x), varIn,
+                                                bounds_error=False,
+                                                fill_value=np.nan)
   varPolar = varTmp((yi, xi), method='linear')
   return varPolar, lev, idx
 
