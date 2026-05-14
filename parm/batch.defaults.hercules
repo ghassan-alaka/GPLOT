@@ -1,0 +1,6 @@
+# Default batch information for MSI Hercules
+CPU_ACCT = aoml-hafs1
+QOS = batch
+PARTITION = hercules
+sbatch = /opt/slurm/bin/sbatch
+squeue = /opt/slurm/bin/squeue
