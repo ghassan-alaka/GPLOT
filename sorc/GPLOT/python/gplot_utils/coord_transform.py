@@ -158,11 +158,21 @@ def radial_distance(x_km, y_km):
     return np.sqrt(xx ** 2 + yy ** 2)
 
 
-def annular_mean(data, x_km, y_km, r_inner, r_outer):
+def annular_mean(data, x_km, y_km, r_inner, r_outer, min_coverage=0.50):
     """
     Compute the mean of data within an annular region.
 
     Used for SHIPS diagnostics like SHRD (200-800 km annulus).
+
+    When the storm is near the edge of the GRIB extent (e.g. d03
+    moving nest has fallen behind the storm), a large portion of the
+    annulus may be NaN. Averaging over only the covered sliver would
+    silently write a biased value into the per-FHR DAT file --
+    visible downstream in the guidance time series as a "real"
+    signal when it's actually just partial-coverage bias. Require at
+    least ``min_coverage`` of the annulus area to be finite before
+    reporting a value; below that, return NaN so the FHR shows up as
+    a gap in the time series rather than a misleading point.
 
     Parameters
     ----------
@@ -176,24 +186,40 @@ def annular_mean(data, x_km, y_km, r_inner, r_outer):
         Inner radius of the annulus (km).
     r_outer : float
         Outer radius of the annulus (km).
+    min_coverage : float, optional
+        Fraction (0..1) of the annulus area that must be finite for a
+        value to be returned. Default 0.50. Set to 0.0 to disable the
+        coverage gate and recover the legacy "any-points-suffice"
+        behavior.
 
     Returns
     -------
     float
-        Mean value within the annulus, or NaN if no valid points.
+        Mean value within the annulus, or NaN if coverage is below
+        ``min_coverage`` (or no annulus cells exist at all).
     """
     r = radial_distance(x_km, y_km)
-    mask = (r >= r_inner) & (r <= r_outer) & np.isfinite(data)
-
-    if not np.any(mask):
+    in_annulus = (r >= r_inner) & (r <= r_outer)
+    n_annulus = int(in_annulus.sum())
+    if n_annulus == 0:
         return np.nan
 
-    return np.nanmean(data[mask])
+    valid = in_annulus & np.isfinite(data)
+    coverage = valid.sum() / float(n_annulus)
+    if coverage < min_coverage:
+        return np.nan
+
+    return np.nanmean(data[valid])
 
 
-def circular_mean(data, x_km, y_km, radius):
+def circular_mean(data, x_km, y_km, radius, min_coverage=0.50):
     """
     Compute the mean of data within a circular region.
+
+    Thin wrapper around :func:`annular_mean` with ``r_inner=0``. The
+    same ``min_coverage`` gate applies; see the docstring on
+    ``annular_mean`` for the rationale (avoid silently biased per-FHR
+    DAT values when the storm is near the GRIB edge).
 
     Parameters
     ----------
@@ -203,13 +229,17 @@ def circular_mean(data, x_km, y_km, radius):
         1D coordinate arrays.
     radius : float
         Radius of the circle (km).
+    min_coverage : float, optional
+        Pass-through to ``annular_mean``. Default 0.50.
 
     Returns
     -------
     float
-        Mean value within the circle, or NaN if no valid points.
+        Mean value within the circle, or NaN if coverage is below
+        ``min_coverage``.
     """
-    return annular_mean(data, x_km, y_km, 0, radius)
+    return annular_mean(data, x_km, y_km, 0, radius,
+                        min_coverage=min_coverage)
 
 
 def azimuthal_mean(data, x_km, y_km, radii):
