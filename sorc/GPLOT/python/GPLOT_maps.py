@@ -1078,7 +1078,8 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
         logger.debug(f"Streamline overlay failed: {e}")
 
 
-def _discover_nest_outlines(parent_grib_path, fhr, fhrfmt='%03d'):
+def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
+                             fhrfmt='%03d', is_mstorm=False):
     """
     For a parent-domain panel, find every per-storm nest GRIB2 file
     sitting alongside it for the same FHR and return the data needed
@@ -1098,8 +1099,21 @@ def _discover_nest_outlines(parent_grib_path, fhr, fhrfmt='%03d'):
         ``_NEST_TOKEN_RE``.
     fhr : int
         Forecast hour, used to scope the glob to this specific FHR.
+    idate : str, optional
+        Cycle date (YYYYMMDDHH). When provided, included in the glob
+        pattern to keep cross-cycle leftover GRIB2 files out of the
+        results (relevant especially for the multistorm sibling sweep
+        below).
     fhrfmt : str
         Format spec for the FHR (default ``'%03d'``).
+    is_mstorm : bool
+        When True, also search sibling subdirectories of the parent's
+        directory. The HAFS multistorm workflow puts each storm's
+        files in a per-storm subdir under ``COMhafs``, and each
+        per-storm GPLOT invocation only sees its own subdir as
+        ``IDIR`` (so the 00L "fake storm" pass would otherwise find
+        zero nests on its d01 panel). Defaults to False for
+        single-storm runs.
 
     Returns
     -------
@@ -1112,14 +1126,40 @@ def _discover_nest_outlines(parent_grib_path, fhr, fhrfmt='%03d'):
     if parent_grib_path is None:
         return []
 
-    nest_dir = os.path.dirname(parent_grib_path)
+    parent_dir = os.path.dirname(parent_grib_path)
     fhr_str = fhrfmt % fhr
 
-    # Glob the parent's directory for any .grb2 at this FHR, then
-    # filter to nest-token matches (and exclude *.sat.* satellite
-    # bundles).
-    candidates = sorted(glob.glob(
-        os.path.join(nest_dir, f"*f{fhr_str}*.grb2")))
+    # Build the list of directories to search. Always include the
+    # parent's own dir; in multistorm mode, also include every sibling
+    # subdirectory (the per-storm subdirs under COMhafs).
+    search_dirs = [parent_dir]
+    if is_mstorm:
+        root = os.path.dirname(parent_dir)
+        if root and os.path.isdir(root):
+            for entry in sorted(os.listdir(root)):
+                sib = os.path.join(root, entry)
+                if os.path.isdir(sib) and os.path.abspath(sib) != \
+                        os.path.abspath(parent_dir):
+                    search_dirs.append(sib)
+
+    # Glob each search dir for GRIB2 files at this FHR. When idate is
+    # supplied (operational path), require it in the filename so a
+    # sibling dir holding a stale prior-cycle file doesn't pollute the
+    # results.
+    glob_pat = (f"*{idate}*f{fhr_str}*.grb2" if idate
+                else f"*f{fhr_str}*.grb2")
+    candidates = []
+    for d in search_dirs:
+        candidates.extend(sorted(glob.glob(os.path.join(d, glob_pat))))
+
+    # De-dupe while preserving order (a sibling dir could be a symlink
+    # back into parent_dir).
+    seen = set()
+    candidates = [c for c in candidates
+                  if not (c in seen or seen.add(c))]
+
+    # Filter to nest-token matches (storm1, storm2, d03, ...) and drop
+    # companion *.sat.* satellite bundles.
     nest_files = [
         f for f in candidates
         if _NEST_TOKEN_RE.search(os.path.basename(f))
@@ -1622,14 +1662,24 @@ def main():
     # every storm/d03 GRIB2 file sitting next to the parent file at
     # each FHR, so multistorm runs draw multiple boxes on one panel
     # without spawn-side changes.
+    #
+    # IS_MSTORM=True widens the nest-file search across sibling
+    # per-storm subdirs under COMhafs. The HAFS multistorm workflow
+    # (exhafs_hrdgraphics.sh) runs one GPLOT invocation per storm,
+    # each pointing at COMhafs/<STORMID>/ — so without the sibling
+    # sweep the 00L "fake storm" pass sees zero nests on its d01
+    # panel.
     draw_nests = bool(nml.get('DRAW_NESTS', False))
+    is_mstorm  = bool(nml.get('IS_MSTORM', False))
     if draw_nests and is_storm_named_filename(domain):
         logger.info(f"DRAW_NESTS=True but domain={domain} is itself a "
                     f"nest domain; nest-outline overlay disabled.")
         draw_nests = False
     elif draw_nests:
-        logger.info(f"DRAW_NESTS=True: parent panel will overlay every "
-                    f"per-storm nest outline discovered at each FHR.")
+        mode = "multistorm sibling-sweep" if is_mstorm else "single-dir"
+        logger.info(f"DRAW_NESTS=True ({mode}): parent panel will "
+                    f"overlay every per-storm nest outline discovered "
+                    f"at each FHR.")
 
     # ---- 5. Build (fhr, grib_path) iteration list ----
     # Prefer the file list spawn_maps.sh prepared: it does the full
@@ -1789,8 +1839,9 @@ def main():
             # d01 panel can carry several nest outlines without any
             # changes to the spawn-side per-storm iteration.
             if draw_nests and not is_storm_named_filename(domain):
-                nest_outlines = _discover_nest_outlines(grib_path, fhr,
-                                                        fhrfmt)
+                nest_outlines = _discover_nest_outlines(
+                    grib_path, fhr, idate=idate, fhrfmt=fhrfmt,
+                    is_mstorm=is_mstorm)
                 if nest_outlines:
                     logger.info(f"FHR {fhr:03d}: drawing "
                                 f"{len(nest_outlines)} nest outline(s)")
