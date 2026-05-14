@@ -21,6 +21,7 @@ import sys
 from datetime import datetime, timedelta
 
 import matplotlib
+import xarray as xr
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -53,6 +54,23 @@ from gplot_utils.plot_utils import (setup_map_axes, create_figure, add_titles,
                                      get_plot_title, configure_cartopy)
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Filename token regexes (shared by find_grib_files and the nest-outline
+# helpers). Match against dot-delimited filename components rather than as
+# raw substrings so experiment names like "hfsb_multistorm" don't get
+# mis-classified as a storm-nest file because they happen to contain
+# "storm".
+# ---------------------------------------------------------------------------
+_NEST_TOKEN_RE = re.compile(
+    r'(?:^|[._-])(storm\d*|nest\d*|moving|d03)(?:[._-]|$)',
+    re.IGNORECASE,
+)
+_PARENT_TOKEN_RE = re.compile(
+    r'(?:^|[._-])(parent|d01|hwrf)(?:[._-]|$)',
+    re.IGNORECASE,
+)
+
 
 # ---------------------------------------------------------------------------
 # Vortex-filter cache
@@ -637,7 +655,8 @@ def _expected_ofile(recipe, longsid, fhr, idate, domain, odir):
 
 def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
              tc_lat, tc_lon, vmax, mslp_val, longsid, ensid,
-             gplot_dir, odir, domain, thin_factor=4, atcf_df=None):
+             gplot_dir, odir, domain, thin_factor=4, atcf_df=None,
+             nest_outlines=None):
     """
     Produce a single map plot from a maps namelist recipe.
 
@@ -871,6 +890,14 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     # one low at the reported cyclone position.
     _draw_tc_low_marker(ax, tc_lat, tc_lon, mslp_val)
 
+    # Optional moving-nest outlines (DRAW_NESTS=True in the master
+    # namelist; only computed by main() for parent-style domains).
+    # Each entry traces the actual defined-data footprint of a per-
+    # storm d03/storm-nest GRIB2 file at this FHR, so multistorm
+    # parent panels show every active nest at once.
+    if nest_outlines:
+        _draw_nest_outlines(ax, nest_outlines)
+
     # NOTE: the previous version overlaid the full ATCF track
     # polyline (past + future positions of the storm) on every
     # map panel, but that line obscures features near the TC core
@@ -1051,6 +1078,152 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
         logger.debug(f"Streamline overlay failed: {e}")
 
 
+def _discover_nest_outlines(parent_grib_path, fhr, fhrfmt='%03d'):
+    """
+    For a parent-domain panel, find every per-storm nest GRIB2 file
+    sitting alongside it for the same FHR and return the data needed
+    to draw each nest's defined-region outline.
+
+    The nest grid is typically rotated relative to lat/lon (or otherwise
+    non-axis-aligned), so cfgrib presents it on a covering axis-aligned
+    rectangle with NaN halo padding. ~44% of cells in a typical HAFS
+    multistorm nest are halo NaN, which is why we trace the validity
+    mask rather than drawing the bounding rectangle.
+
+    Parameters
+    ----------
+    parent_grib_path : str
+        Resolved path to the parent-domain GRIB2 we're plotting. The
+        directory is searched for sibling nest files via
+        ``_NEST_TOKEN_RE``.
+    fhr : int
+        Forecast hour, used to scope the glob to this specific FHR.
+    fhrfmt : str
+        Format spec for the FHR (default ``'%03d'``).
+
+    Returns
+    -------
+    list of (str, np.ndarray, np.ndarray, np.ndarray)
+        ``(label, lat_1d, lon_1d, valid_mask_2d)`` per nest. ``label``
+        is the matched nest token from the filename (``storm1``,
+        ``storm2``, ``d03``, ...). Empty list if no nest files are
+        found or all opens fail.
+    """
+    if parent_grib_path is None:
+        return []
+
+    nest_dir = os.path.dirname(parent_grib_path)
+    fhr_str = fhrfmt % fhr
+
+    # Glob the parent's directory for any .grb2 at this FHR, then
+    # filter to nest-token matches (and exclude *.sat.* satellite
+    # bundles).
+    candidates = sorted(glob.glob(
+        os.path.join(nest_dir, f"*f{fhr_str}*.grb2")))
+    nest_files = [
+        f for f in candidates
+        if _NEST_TOKEN_RE.search(os.path.basename(f))
+        and '.sat.' not in os.path.basename(f)
+    ]
+
+    if not nest_files:
+        return []
+
+    # Try a small set of cheap 2D filters in order; the first one that
+    # opens with data wins. NaN halo pattern is the same across fields
+    # for a given nest, so the choice doesn't affect the resulting
+    # mask shape.
+    _MASK_FILTERS = [
+        {'typeOfLevel': 'meanSea'},
+        {'typeOfLevel': 'heightAboveGround', 'level': 2},
+        {'typeOfLevel': 'surface', 'stepType': 'instant'},
+    ]
+
+    outlines = []
+    for fn in nest_files:
+        ds = None
+        for filt in _MASK_FILTERS:
+            try:
+                cand = xr.open_dataset(
+                    fn, engine='cfgrib',
+                    backend_kwargs={'filter_by_keys': filt,
+                                    'errors': 'ignore',
+                                    'indexpath': ''})
+                if cand.data_vars:
+                    ds = cand
+                    break
+            except Exception:
+                continue
+        if ds is None:
+            logger.warning(f"nest outline: no usable 2D field in {fn}")
+            continue
+
+        try:
+            field = next(iter(ds.data_vars.values())).values
+            lat = ds['latitude'].values
+            lon = ds['longitude'].values
+            mask = np.isfinite(field).astype(np.uint8)
+            if int(mask.sum()) < 100:
+                logger.warning(
+                    f"nest outline: <100 valid points in {fn}; skipping")
+                continue
+            m = _NEST_TOKEN_RE.search(os.path.basename(fn))
+            label = m.group(1).lower() if m else 'nest'
+            outlines.append((label, lat, lon, mask))
+        except Exception as e:
+            logger.warning(f"nest outline: could not read {fn}: {e}")
+            continue
+
+    return outlines
+
+
+def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
+                        linewidth=1.5, label_storms=False):
+    """
+    Overlay each nest's defined-region boundary on a cartopy axis as
+    a dashed polyline at the 0.5 isoline of the validity mask.
+
+    Cartopy auto-clips the contour when a nest has moved outside the
+    parent panel's extent, so off-panel nests just don't draw. Any
+    contour failure is logged and the nest skipped — the panel
+    completes either way.
+
+    Parameters
+    ----------
+    ax
+        Matplotlib axes with a cartopy projection.
+    nests : list of (label, lat_1d, lon_1d, valid_mask_2d)
+        Output of ``_discover_nest_outlines``.
+    color, linestyle, linewidth
+        Pass-throughs to ``ax.contour``. Defaults match the user's
+        "dashed black" requested style.
+    label_storms : bool
+        If True, drop the nest's filename token (e.g. ``storm1``) as
+        small text at the centroid of the defined region — useful for
+        multistorm debugging.
+    """
+    for label, lat, lon, mask in nests:
+        try:
+            ax.contour(lon, lat, mask, levels=[0.5],
+                       colors=color, linestyles=linestyle,
+                       linewidths=linewidth,
+                       transform=ccrs.PlateCarree(), zorder=8)
+        except Exception as e:
+            logger.warning(
+                f"nest outline: contour failed for {label}: {e}")
+            continue
+        if label_storms:
+            ys, xs = np.where(mask > 0)
+            if ys.size:
+                ax.text(float(lon[int(xs.mean())]),
+                        float(lat[int(ys.mean())]),
+                        label,
+                        transform=ccrs.PlateCarree(),
+                        fontsize=8, color=color, zorder=9,
+                        ha='center', va='center',
+                        fontweight='bold')
+
+
 def _draw_tc_low_marker(ax, tc_lat, tc_lon, mslp_val):
     """
     Draw a single 'L' marker at the ATCF-reported TC center.
@@ -1166,20 +1339,9 @@ def find_grib_files(idir, idate, fhr, dsource, domain, itag='', ext='.grb2',
     patterns.append(os.path.join(idir, f"*{idate}*f{fhr_str}*{ext}"))
     patterns.append(os.path.join(idir, f"*{idate}*.f{fhr_str}{ext}"))
 
-    # Domain tokens are matched against dot-delimited components of the
-    # filename (e.g., "storm2", "parent") rather than as raw substrings.
-    # Substring matching mis-identifies experiment names like
-    # "hfsb_multistorm" as a storm-nest file because they contain "storm".
-    import re as _re
-    _NEST_TOKEN_RE = _re.compile(
-        r'(?:^|[._-])(storm\d*|nest\d*|moving|d03)(?:[._-]|$)',
-        _re.IGNORECASE,
-    )
-    _PARENT_TOKEN_RE = _re.compile(
-        r'(?:^|[._-])(parent|d01|hwrf)(?:[._-]|$)',
-        _re.IGNORECASE,
-    )
-
+    # Domain-token classification uses the module-level _NEST_TOKEN_RE /
+    # _PARENT_TOKEN_RE compiled near the top of this file (shared with
+    # the nest-outline helpers below).
     for pat in patterns:
         matches = sorted(glob.glob(pat))
         # Filter out non-atm files (e.g., .sat. files)
@@ -1455,6 +1617,20 @@ def main():
     thin_factor = load_streamline_thin(gplot_dir, dsource, domain)
     logger.info(f"Vector thinning factor: {thin_factor}")
 
+    # DRAW_NESTS=True overlays per-storm moving-nest outlines on
+    # parent-style domains (d01, atl, basin, ...). Auto-discovers
+    # every storm/d03 GRIB2 file sitting next to the parent file at
+    # each FHR, so multistorm runs draw multiple boxes on one panel
+    # without spawn-side changes.
+    draw_nests = bool(nml.get('DRAW_NESTS', False))
+    if draw_nests and is_storm_named_filename(domain):
+        logger.info(f"DRAW_NESTS=True but domain={domain} is itself a "
+                    f"nest domain; nest-outline overlay disabled.")
+        draw_nests = False
+    elif draw_nests:
+        logger.info(f"DRAW_NESTS=True: parent panel will overlay every "
+                    f"per-storm nest outline discovered at each FHR.")
+
     # ---- 5. Build (fhr, grib_path) iteration list ----
     # Prefer the file list spawn_maps.sh prepared: it does the full
     # IDIR_OPTS directory-layout discovery (~30 variants spanning HAFS,
@@ -1603,6 +1779,24 @@ def main():
             # list id() also changes, but being explicit keeps memory bounded).
             _clear_vortex_cache()
 
+            # Moving-nest outline overlay. Discovered once per FHR
+            # (shared across every recipe's draw_map call so MSLP, REFD,
+            # IR, etc. all show the same set of dashed boxes). Only
+            # active on parent-style domains -- a d03/hwrf panel
+            # showing its own outline would be redundant. For
+            # multistorm runs the helper auto-discovers every per-storm
+            # nest GRIB2 sitting next to the parent file, so a single
+            # d01 panel can carry several nest outlines without any
+            # changes to the spawn-side per-storm iteration.
+            if draw_nests and not is_storm_named_filename(domain):
+                nest_outlines = _discover_nest_outlines(grib_path, fhr,
+                                                        fhrfmt)
+                if nest_outlines:
+                    logger.info(f"FHR {fhr:03d}: drawing "
+                                f"{len(nest_outlines)} nest outline(s)")
+            else:
+                nest_outlines = None
+
             # Loop over plot recipes. Track successes per-FHR so we can
             # gate the plotted-file marker on actually having produced
             # something -- a failed FHR (every recipe raised) must not be
@@ -1629,6 +1823,7 @@ def main():
                         recipe, datasets, dsource, bounds, fhr, idate, expt,
                         tc_lat, tc_lon, vmax, mslp_val, longsid, args.ensid,
                         gplot_dir, odir_full, domain, thin_factor, atcf_df,
+                        nest_outlines=nest_outlines,
                     )
                     if ofile:
                         n_plots += 1

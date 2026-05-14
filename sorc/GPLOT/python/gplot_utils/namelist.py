@@ -71,6 +71,7 @@ _MASTER_DEFAULTS = {
     'DO_OCEAN_OBS': False,
     'ENSMEM': 0,
     'DO_TOPOMASK': False,
+    'DRAW_NESTS': False,
     'BATCH_MODE': 'SBatch',
     'CPU_ACCT': '',
 }
@@ -82,7 +83,7 @@ _BOOL_KEYS = {
     'DO_MARKERS', 'DO_FHRLABELS', 'ATCF_REQD', 'DO_TOPOMASK',
     'DO_MAPS', 'DO_STATS', 'DO_SHIPS', 'DO_POLAR',
     'DO_AIRSEA', 'DO_OCEAN_MAPS', 'DO_OCEAN_OBS',
-    'DO_DBZ', 'OCEAN_WRAP_LON',
+    'DO_DBZ', 'OCEAN_WRAP_LON', 'DRAW_NESTS',
 }
 
 # Keys that should be parsed as integers
