@@ -2337,11 +2337,17 @@ def main():
     stretching_convergence_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
     tilting_p = np.ones((np.shape(XI)[0],np.shape(XI)[1],zsize))*np.nan
 
+    # bounds_error=False + NaN fill for the vorticity-budget per-level
+    # interpolators. Same rationale as polar_interp.interp_to_polarcylindrical
+    # and the other storm-relative sites: when the d03 moving nest has
+    # fallen behind the storm, polar grid points outside the (y_sr, x_sr)
+    # extent come back NaN instead of crashing the FHR.
+    _rgi_budget_kw = dict(bounds_error=False, fill_value=np.nan)
     for k in range(zsize):
-      f_horizontal_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), horizontal_advection[:,:,k])
-      f_vertical_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vertical_advection[:,:,k])
-      f_stretching_convergence = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), stretching_convergence[:,:,k])
-      f_tilting = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), tilting[:,:,k])
+      f_horizontal_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), horizontal_advection[:,:,k], **_rgi_budget_kw)
+      f_vertical_advection = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vertical_advection[:,:,k], **_rgi_budget_kw)
+      f_stretching_convergence = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), stretching_convergence[:,:,k], **_rgi_budget_kw)
+      f_tilting = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), tilting[:,:,k], **_rgi_budget_kw)
 
       horizontal_advection_p[:,:,k] = f_horizontal_advection((YI,XI),method='linear')
       vertical_advection_p[:,:,k] = f_vertical_advection((YI,XI),method='linear')
@@ -3905,13 +3911,16 @@ def main():
       x_sr_250 = np.linspace(-250,250,(int(rmaxlocal//resolution)+1))
       y_sr_250 = np.linspace(-250,250,(int(rmaxlocal//resolution)+1))
       X_SR_250,Y_SR_250 = np.meshgrid(x_sr_250,y_sr_250)
-      f_u2km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), u2km)
+      # bounds_error=False + NaN fill for the 2-km / 5-km wind-shear plot
+      # interpolators. Same nest-edge-encroachment rationale as elsewhere.
+      _rgi_shearplot_kw = dict(bounds_error=False, fill_value=np.nan)
+      f_u2km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), u2km, **_rgi_shearplot_kw)
       u2km_plot = f_u2km_plot((Y_SR_250,X_SR_250),method='linear')
-      f_v2km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), v2km)
+      f_v2km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), v2km, **_rgi_shearplot_kw)
       v2km_plot = f_v2km_plot((Y_SR_250,X_SR_250),method='linear')
-      f_u5km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), u5km)
+      f_u5km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), u5km, **_rgi_shearplot_kw)
       u5km_plot = f_u5km_plot((Y_SR_250,X_SR_250),method='linear')
-      f_v5km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), v5km)
+      f_v5km_plot = interpolate.RegularGridInterpolator((y_sr,x_sr), v5km, **_rgi_shearplot_kw)
       v5km_plot = f_v5km_plot((Y_SR_250,X_SR_250),method='linear')
       #plt.gca().streamplot(x_sr_2,y_sr_2,u2km*1.94,v2km*1.94,density=3,color='k',linewidth=2,arrowstyle='->',arrowsize=2)
       #plt.gca().streamplot(x_sr_2,y_sr_2,u5km*1.94,v5km*1.94,density=3,color='0.5',linewidth=2,arrowstyle='->',arrowsize=2)
