@@ -720,7 +720,29 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
                                    "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/" \
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
-    
+
+                        # Multistorm: HAFS workflow points OCEAN_DIR at COMhafs/<STORM>/,
+                        # so the shared ocean output (model side) is a *sibling* of
+                        # OCEAN_DIR rather than a subdir. The existing 00L entries above
+                        # all stay below OCEAN_DIR, so they never resolve to
+                        # <root>/com/<cycle>/00L/. Add an explicit sibling-00L variant
+                        # here when it makes sense:
+                        #   * IS_MSTORM=True (don't perturb single-storm runs)
+                        #   * The parent of OCEAN_DIR contains a 00L/ subdir
+                        #   * That subdir is genuinely different from OCEAN_DIR itself
+                        #     (so the 00L pass, whose OCEAN_DIR already ends in 00L/,
+                        #     gets no additional variant)
+                        # Same pattern as the spawn_ocean_maps.sh fix in 8431fee.
+                        if [ "${IS_MSTORM}" == "True" ]; then
+                            OCEAN_DIR_PARENT="$(dirname "${OCEAN_DIR%/}")"
+                            SIBLING_00L="${OCEAN_DIR_PARENT}/00L"
+                            if [ -d "${SIBLING_00L}" ] \
+                               && [ "$(cd "${SIBLING_00L}" && pwd -P)" != "$(cd "${OCEAN_DIR%/}" && pwd -P)" ]; then
+                                OCEAN_DIR_OPTS+=("../00L/")
+                                echo "MSG: IS_MSTORM=True; appended sibling-00L variant (resolved: ${SIBLING_00L}) to OCEAN_DIR_OPTS."
+                            fi
+                        fi
+
                         # Get the right list of lead times
                         if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
                             FILE_FHRS=( ${ATCF_FHRS[@]} )
@@ -777,7 +799,22 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                         IFILES+=("${FILE_LS[*]}")
                                         IFHRS+=( ${FHR} )
                                     else
-                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
+                                        # Strict gate: operational dsources (HAFS/HWRF/HMON)
+                                        # skip the tagless search in normal per-storm dirs
+                                        # to avoid grabbing the wrong storm's file. In
+                                        # IS_MSTORM mode the 00L subdir holds shared
+                                        # output that's never per-storm-tagged, so the
+                                        # per-storm passes (12L, 13L, 14L) need the
+                                        # tagless search exactly there to pick it up.
+                                        # Path-match */00L/* covers every operational
+                                        # variant in OCEAN_DIR_OPTS that targets the 00L
+                                        # subdir -- including the new sibling ../00L/
+                                        # entry (whose resolved path also contains the
+                                        # literal '/00L/' substring). Same pattern as
+                                        # the spawn_ocean_maps.sh fix in b06cbda.
+                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]] \
+                                           || ( [[ "${IS_MSTORM}" == "True" ]] \
+                                                && [[ "${OCEAN_DIR_FULL}" == */00L/* ]] ); then
                                             FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
                                             #DEBUG:                                            echo "DEBUG:: FILE_SEARCH: ${FILE_LS}"
                                             if [ "${#FILE_LS[@]}" -eq "1" ]; then
