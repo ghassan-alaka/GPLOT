@@ -772,7 +772,18 @@ if [ "${DO_OCEAN_MAPS}" == "True" ]; then
                                         IFILES+=("${FILE_LS[*]}")
                                         IFHRS+=( ${FHR} )
                                     else
-                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
+                                        # Strict gate: operational dsources (HAFS/HWRF/HMON) skip
+                                        # the tagless search in normal per-storm dirs to avoid
+                                        # grabbing the wrong storm's file. In IS_MSTORM mode the
+                                        # 00L subdir holds a single shared ocean file that's
+                                        # never per-storm-tagged, so the per-storm passes (12L,
+                                        # 13L, 14L) need the tagless search exactly there to
+                                        # pick it up. Path-match */00L/* covers every
+                                        # operational variant in OCEAN_DIR_OPTS that targets
+                                        # the 00L subdir.
+                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]] \
+                                           || ( [[ "${IS_MSTORM}" == "True" ]] \
+                                                && [[ "${OCEAN_DIR_FULL}" == */00L/* ]] ); then
                                             FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
                                             #echo "DEBUG:: FILE_SEARCH: ${FILE_LS}"
                                             if [ "${#FILE_LS[@]}" -eq "1" ]; then
