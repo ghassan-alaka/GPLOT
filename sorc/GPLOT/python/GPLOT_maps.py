@@ -1079,8 +1079,56 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
         logger.debug(f"Streamline overlay failed: {e}")
 
 
+def _extract_storm_sid_from_filename(fn):
+    """
+    Derive a storm SID (e.g. '12L') from a HAFS-style nest GRIB2
+    filename. Tries the filename prefix first (matches ``12l.YYYY...``)
+    and falls back to the immediate parent directory name (HAFS
+    multistorm puts each storm under a SID-named subdir of COMhafs).
+    Returns the uppercased SID or None.
+    """
+    basename = os.path.basename(fn)
+    m = re.match(r'^(\d{2}[a-z])\.', basename, re.IGNORECASE)
+    if m:
+        return m.group(1).upper()
+    parent = os.path.basename(os.path.dirname(fn))
+    if re.fullmatch(r'\d{2}[A-Za-z]', parent):
+        return parent.upper()
+    return None
+
+
+def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
+    """
+    Look up a single storm's center position and MSLP at a given FHR
+    by finding + reading its per-storm ATCF. Returns
+    ``(lat, lon, mslp)`` or ``(None, None, None)`` on any failure.
+    """
+    if not sid or not atcf_dirs:
+        return None, None, None
+    try:
+        atcf_file = find_atcf_file(atcf_dirs, idate, sid,
+                                    atcf_tag=atcf_tag)
+        if not atcf_file:
+            return None, None, None
+        atcf_df = read_atcf(atcf_file, model_id=mcode)
+        if atcf_df is None or atcf_df.empty:
+            atcf_df = read_atcf(atcf_file)
+        if atcf_df is None or atcf_df.empty:
+            return None, None, None
+        row = atcf_df[atcf_df['fhr'] == fhr]
+        if row.empty:
+            return None, None, None
+        return (float(row.iloc[0]['lat']),
+                float(row.iloc[0]['lon']),
+                float(row.iloc[0]['mslp']))
+    except Exception as e:
+        logger.debug(f"_lookup_storm_center failed for sid={sid}: {e}")
+        return None, None, None
+
+
 def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
-                             fhrfmt='%03d', is_mstorm=False):
+                             fhrfmt='%03d', is_mstorm=False,
+                             atcf_dirs=None, atcf_tag=None, mcode=None):
     """
     For a parent-domain panel, find every per-storm nest GRIB2 file
     sitting alongside it for the same FHR and return the data needed
@@ -1223,7 +1271,15 @@ def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
                 continue
             m = _NEST_TOKEN_RE.search(os.path.basename(fn))
             label = m.group(1).lower() if m else 'nest'
-            outlines.append((label, lat, lon, mask))
+            # Per-storm position lookup so callers can drop an L
+            # marker + PMIN inside each nest box. SID derived from
+            # the GRIB filename prefix (or the parent dir name as a
+            # fallback); position read from the storm's own ATCF.
+            sid = _extract_storm_sid_from_filename(fn)
+            c_lat, c_lon, c_mslp = _lookup_storm_center(
+                sid, idate, fhr, atcf_dirs, atcf_tag, mcode)
+            outlines.append((label, sid, lat, lon, mask,
+                             c_lat, c_lon, c_mslp))
         except Exception as e:
             logger.warning(f"nest outline: could not read {fn}: {e}")
             continue
@@ -1232,7 +1288,8 @@ def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
 
 
 def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
-                        linewidth=1.5, label_storms=False):
+                        linewidth=1.5, label_storms=False,
+                        draw_markers=True):
     """
     Overlay each nest's defined-region boundary on a cartopy axis as
     a dashed polyline at the 0.5 isoline of the validity mask.
@@ -1246,8 +1303,11 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
     ----------
     ax
         Matplotlib axes with a cartopy projection.
-    nests : list of (label, lat_1d, lon_1d, valid_mask_2d)
-        Output of ``_discover_nest_outlines``.
+    nests : list of tuples
+        Output of ``_discover_nest_outlines``. Each tuple is
+        ``(label, sid, lat_1d, lon_1d, valid_mask_2d, c_lat, c_lon,
+        c_mslp)``. The last three fields drive the in-nest L marker
+        and are None when the storm's ATCF lookup failed.
     color, linestyle, linewidth
         Pass-throughs to ``ax.contour``. Defaults match the user's
         "dashed black" requested style.
@@ -1255,8 +1315,21 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
         If True, drop the nest's filename token (e.g. ``storm1``) as
         small text at the centroid of the defined region — useful for
         multistorm debugging.
+    draw_markers : bool
+        If True (default), draw an L marker + PMIN value at the
+        ATCF-reported center of each nest. Mirrors the primary-storm
+        marker style so the multistorm d01 panel shows every active
+        storm's L. Silently skipped per-nest when the ATCF lookup
+        returned None.
     """
-    for label, lat, lon, mask in nests:
+    for entry in nests:
+        # Tolerate the legacy 4-tuple shape in case any caller hasn't
+        # been migrated; the in-nest marker just doesn't draw there.
+        if len(entry) == 4:
+            label, lat, lon, mask = entry
+            sid = c_lat = c_lon = c_mslp = None
+        else:
+            label, sid, lat, lon, mask, c_lat, c_lon, c_mslp = entry
         try:
             ax.contour(lon, lat, mask, levels=[0.5],
                        colors=color, linestyles=linestyle,
@@ -1266,12 +1339,14 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
             logger.warning(
                 f"nest outline: contour failed for {label}: {e}")
             continue
+        if draw_markers and c_lat is not None and c_lon is not None:
+            _draw_tc_low_marker(ax, c_lat, c_lon, c_mslp)
         if label_storms:
             ys, xs = np.where(mask > 0)
             if ys.size:
                 ax.text(float(lon[int(xs.mean())]),
                         float(lat[int(ys.mean())]),
-                        label,
+                        sid or label,
                         transform=ccrs.PlateCarree(),
                         fontsize=8, color=color, zorder=9,
                         ha='center', va='center',
@@ -1863,7 +1938,8 @@ def main():
             if draw_nests and not is_storm_named_filename(domain):
                 nest_outlines = _discover_nest_outlines(
                     grib_path, fhr, idate=idate, fhrfmt=fhrfmt,
-                    is_mstorm=is_mstorm)
+                    is_mstorm=is_mstorm,
+                    atcf_dirs=atcf_dirs, atcf_tag=atcf_tag, mcode=mcode)
                 # Bumped to WARNING so it's visible at the default log
                 # level used by the operational spawn (batch_maps.sh
                 # doesn't pass -v). Without this the only signal that
