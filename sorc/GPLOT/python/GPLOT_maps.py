@@ -1167,6 +1167,19 @@ def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
         and '.sat.' not in os.path.basename(f)
     ]
 
+    # Diagnostic logging at WARNING level (visible without -v) for
+    # operational multistorm runs. Single line per call summarizes the
+    # full pipeline so a missing-overlay case is debuggable from the
+    # spawn log alone.
+    if is_mstorm:
+        logger.warning(
+            f"nest discovery [fhr={fhr:03d}, is_mstorm=True]: "
+            f"walked {len(search_dirs)} dir(s), "
+            f"{len(candidates)} candidate(s), "
+            f"{len(nest_files)} after filter. "
+            f"search_dirs={search_dirs} "
+            f"nest_files={[os.path.basename(f) for f in nest_files]}")
+
     if not nest_files:
         return []
 
@@ -1672,15 +1685,23 @@ def main():
     # panel.
     draw_nests = bool(nml.get('DRAW_NESTS', False))
     is_mstorm  = bool(nml.get('IS_MSTORM', False))
+    # Promoted to WARNING level: visible under the operational spawn's
+    # default log config (batch_maps.sh runs python3 without -v, so the
+    # logger.basicConfig WARNING default applies). One line per run
+    # tells the operator at a glance whether DRAW_NESTS is in effect
+    # and which mode is selected.
     if draw_nests and is_storm_named_filename(domain):
-        logger.info(f"DRAW_NESTS=True but domain={domain} is itself a "
-                    f"nest domain; nest-outline overlay disabled.")
+        logger.warning(f"DRAW_NESTS=True but domain={domain} is itself a "
+                       f"nest domain; nest-outline overlay disabled.")
         draw_nests = False
     elif draw_nests:
         mode = "multistorm sibling-sweep" if is_mstorm else "single-dir"
-        logger.info(f"DRAW_NESTS=True ({mode}): parent panel will "
-                    f"overlay every per-storm nest outline discovered "
-                    f"at each FHR.")
+        logger.warning(f"DRAW_NESTS=True ({mode}, IS_MSTORM={is_mstorm}): "
+                       f"parent panel will overlay every per-storm nest "
+                       f"outline discovered at each FHR.")
+    else:
+        logger.warning(f"DRAW_NESTS=False (or unset) for {domain}; "
+                       f"no nest-outline overlay will be drawn.")
 
     # ---- 5. Build (fhr, grib_path) iteration list ----
     # Prefer the file list spawn_maps.sh prepared: it does the full
@@ -1843,9 +1864,20 @@ def main():
                 nest_outlines = _discover_nest_outlines(
                     grib_path, fhr, idate=idate, fhrfmt=fhrfmt,
                     is_mstorm=is_mstorm)
+                # Bumped to WARNING so it's visible at the default log
+                # level used by the operational spawn (batch_maps.sh
+                # doesn't pass -v). Without this the only signal that
+                # the nest overlay ran was its presence on the panel
+                # itself, which is invisible when the helper returns 0.
                 if nest_outlines:
-                    logger.info(f"FHR {fhr:03d}: drawing "
-                                f"{len(nest_outlines)} nest outline(s)")
+                    logger.warning(f"FHR {fhr:03d}: drawing "
+                                   f"{len(nest_outlines)} nest outline(s) "
+                                   f"on {domain} panel")
+                elif draw_nests:
+                    logger.warning(f"FHR {fhr:03d}: DRAW_NESTS=True but "
+                                   f"_discover_nest_outlines returned 0 "
+                                   f"outline(s) for {domain}; see preceding "
+                                   f"'nest discovery' WARNING for details.")
             else:
                 nest_outlines = None
 
