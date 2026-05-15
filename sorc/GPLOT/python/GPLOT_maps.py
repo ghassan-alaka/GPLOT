@@ -51,6 +51,7 @@ from gplot_utils.plot_utils import (setup_map_axes, create_figure, add_titles,
                                      add_disclaimer, add_storm_marker,
                                      save_figure, update_plotted_file,
                                      read_spawn_file_list,
+                                     sweep_orphan_pngs,
                                      get_plot_title, configure_cartopy)
 
 logger = logging.getLogger(__name__)
@@ -1899,6 +1900,12 @@ def main():
         raise
 
     logger.info(f"GPLOT Maps complete: {n_plots} plots generated")
+    # Catch any orphan .png files left behind by transient ImageMagick
+    # failures (NFS lag, etc.) and retry the conversion. Without this,
+    # the next spawn iteration would notice the missing .gif via the
+    # on-disk gate and re-render the whole FHR -- which usually still
+    # fails the same way under disk pressure.
+    sweep_orphan_pngs(odir_full)
     _write_status(status_file, 'complete')
 
 

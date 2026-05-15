@@ -39,7 +39,8 @@ from gplot_utils.namelist import read_master_namelist, read_stats_namelist
 from gplot_utils.atcf import (read_atcf, read_bdeck, parse_storm_info,
                                 derive_longsid)
 from gplot_utils.plot_utils import (save_figure, add_disclaimer,
-                                    add_storm_marker, configure_cartopy)
+                                    add_storm_marker, configure_cartopy,
+                                    sweep_orphan_pngs)
 
 logger = logging.getLogger('GPLOT_stats')
 
@@ -1423,6 +1424,9 @@ def main():
             if result:
                 logger.info(f"  Created: {result}")
 
+    # Retry-convert any orphan .png left behind by transient ImageMagick
+    # failures (NFS lag, etc.) before declaring complete.
+    sweep_orphan_pngs(odir)
     _write_status(status_file, 'complete')
     logger.info("GPLOT_stats complete.")
 

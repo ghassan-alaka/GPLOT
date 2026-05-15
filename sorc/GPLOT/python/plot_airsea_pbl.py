@@ -829,6 +829,10 @@ def main():
     # Write the input file to a log to mark that it has been processed
     plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
   
+  # Retry-convert any orphan .png left behind by transient ImageMagick
+  # failures (NFS lag, etc.) before declaring complete.
+  plot_utils.sweep_orphan_pngs(ODIR)
+
   print('MSG: COMPLETING')
   os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
   os.system('echo "complete" > '+STATUS_FILE)

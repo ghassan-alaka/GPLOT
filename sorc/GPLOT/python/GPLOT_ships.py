@@ -54,7 +54,8 @@ from gplot_utils.coord_transform import (sph2cart, sph2cart_3d,
                                           compute_wind_shear)
 from gplot_utils.plot_utils import (save_figure, configure_cartopy,
                                     update_plotted_file,
-                                    read_spawn_file_list)
+                                    read_spawn_file_list,
+                                    sweep_orphan_pngs)
 from gplot_utils import constants as C
 
 logger = logging.getLogger('__main__')
@@ -1643,6 +1644,9 @@ def main():
 
     logger.info(f"GPLOT Ships complete: {n_processed} forecast hours processed, "
                 f"{len(generated_plots)} plots generated")
+    # Retry-convert any orphan .png left behind by transient ImageMagick
+    # failures (NFS lag, etc.) before declaring complete.
+    sweep_orphan_pngs(odir_ships)
     _write_status(status_file, 'complete')
     return 0
 

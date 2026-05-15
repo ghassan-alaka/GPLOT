@@ -4153,6 +4153,10 @@ def main():
 #  subprocess.call(runcmd,shell=True)
   #edit12/23end-------------------------------
 
+  # Retry-convert any orphan .png left behind by transient ImageMagick
+  # failures (NFS lag, etc.) before declaring complete.
+  plot_utils.sweep_orphan_pngs(ODIR)
+
   print('MSG: COMPLETING')
   os.system(f'lockfile -r-1 -l 180 {ST_LOCK_FILE}')
   os.system(f'echo "complete" > {STATUS_FILE}')

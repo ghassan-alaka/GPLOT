@@ -7,8 +7,10 @@ storm marker drawing, and output file handling (PNG->GIF conversion,
 whitespace trimming).
 """
 
+import glob
 import os
 import subprocess
+import time
 import logging
 from datetime import datetime, timedelta
 
@@ -397,6 +399,99 @@ def convert_to_gif(png_path, remove_png=True):
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         logger.warning(f"GIF conversion failed: {e}")
         return png_path
+
+
+def sweep_orphan_pngs(odir, recursive=False):
+    """
+    Catch-all sweep: convert any leftover .png files in ``odir`` to .gif.
+
+    Save-figure pipeline does ``savefig -> trim_whitespace -> convert_to_gif``
+    and removes the .png on a successful convert. If ImageMagick has a
+    transient hiccup (NFS lag producing an "improper image header" read,
+    timeout, etc.) the .png is left behind and no .gif is written. The
+    on-disk gate in maps/ships/etc. then sees the missing .gif on the next
+    spawn iteration and re-renders the whole FHR -- wasteful, and not
+    guaranteed to succeed.
+
+    Call this once per module right before writing the final
+    ``status=complete`` so any orphan .png from the just-finished run gets
+    a retry conversion. Tries once with a brief settle to give NFS / disk
+    buffers a chance to flush. Always returns; never raises -- a sweep
+    failure must not block the module from completing.
+
+    Parameters
+    ----------
+    odir : str
+        Output directory to scan.
+    recursive : bool, optional
+        If True, recurse into subdirectories. Default False (matches the
+        flat-output convention used by every module today).
+
+    Returns
+    -------
+    dict
+        ``{'retried_ok': int, 'orphans_cleaned': int, 'still_failed': int,
+           'inspected': int}``. Logged as a single MSG line; escalated to
+        WARNING only if ``still_failed > 0``.
+    """
+    if not odir or not os.path.isdir(odir):
+        return {'retried_ok': 0, 'orphans_cleaned': 0,
+                'still_failed': 0, 'inspected': 0}
+
+    pattern = os.path.join(odir, '**', '*.png') if recursive else \
+              os.path.join(odir, '*.png')
+    pngs = sorted(glob.glob(pattern, recursive=recursive))
+
+    if not pngs:
+        return {'retried_ok': 0, 'orphans_cleaned': 0,
+                'still_failed': 0, 'inspected': 0}
+
+    # Brief settle for NFS / disk buffers before retrying conversion.
+    # If our caller just finished writing these files, the headers may
+    # not yet be readable on a different node.
+    time.sleep(2)
+
+    retried_ok = 0
+    orphans_cleaned = 0
+    still_failed = 0
+    for png in pngs:
+        # Skip ones a concurrent process already cleaned up.
+        if not os.path.isfile(png):
+            continue
+        gif = png[:-4] + '.gif'
+        if os.path.isfile(gif):
+            # GIF already exists; PNG is orphan leftover (rare -- means
+            # convert_to_gif succeeded but the post-convert os.remove
+            # didn't land, typically NFS flake). Drop the orphan.
+            try:
+                os.remove(png)
+                orphans_cleaned += 1
+            except OSError as e:
+                logger.debug(f"sweep_orphan_pngs: could not remove "
+                             f"orphan {png}: {e}")
+            continue
+        # No gif yet -- retry the convert.
+        result = convert_to_gif(png)
+        # convert_to_gif returns the gif path on success, or the png
+        # path on failure.
+        if result.endswith('.gif') and os.path.isfile(result):
+            retried_ok += 1
+        else:
+            still_failed += 1
+
+    summary = (f"sweep_orphan_pngs[{odir}]: inspected={len(pngs)} "
+               f"retried_ok={retried_ok} orphans_cleaned={orphans_cleaned} "
+               f"still_failed={still_failed}")
+    if still_failed > 0:
+        logger.warning(summary + " -- some PNGs could not be converted; "
+                       "they will be retried on the next spawn iteration.")
+    elif retried_ok > 0 or orphans_cleaned > 0:
+        logger.info(summary)
+    else:
+        logger.debug(summary)
+
+    return {'retried_ok': retried_ok, 'orphans_cleaned': orphans_cleaned,
+            'still_failed': still_failed, 'inspected': len(pngs)}
 
 
 def trim_whitespace(png_path):
