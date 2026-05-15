@@ -714,7 +714,31 @@ if [ "${DO_OCEAN_MAPS}" == "True" ]; then
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
                                    "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/" \
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
-    
+
+                        # Multistorm: HAFS workflow points OCEAN_DIR at COMhafs/<STORM>/,
+                        # so the shared ocean output is a *sibling* of OCEAN_DIR rather
+                        # than a subdir. The existing 00L entries above all stay below
+                        # OCEAN_DIR (e.g. "${CYCLE_STR}/00L/" resolves to
+                        # ${OCEAN_DIR}/${CYCLE_STR}/00L/), so they never reach
+                        # <root>/com/<cycle>/00L/. Add an explicit sibling-00L variant
+                        # here when it makes sense:
+                        #   * IS_MSTORM=True (don't perturb single-storm runs)
+                        #   * The parent of OCEAN_DIR contains a 00L/ subdir
+                        #   * That subdir is genuinely different from OCEAN_DIR itself
+                        #     (so the 00L pass, whose OCEAN_DIR already ends in 00L/,
+                        #     gets no additional variant)
+                        # The kernel resolves '..' in the concatenated path; the b06cbda
+                        # */00L/* substring gate matches because '/00L/' appears literal.
+                        if [ "${IS_MSTORM}" == "True" ]; then
+                            OCEAN_DIR_PARENT="$(dirname "${OCEAN_DIR%/}")"
+                            SIBLING_00L="${OCEAN_DIR_PARENT}/00L"
+                            if [ -d "${SIBLING_00L}" ] \
+                               && [ "$(cd "${SIBLING_00L}" && pwd -P)" != "$(cd "${OCEAN_DIR%/}" && pwd -P)" ]; then
+                                OCEAN_DIR_OPTS+=("../00L/")
+                                echo "MSG: IS_MSTORM=True; appended sibling-00L variant (resolved: ${SIBLING_00L}) to OCEAN_DIR_OPTS."
+                            fi
+                        fi
+
                         # Get the right list of lead times
                         if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
                             FILE_FHRS=( ${ATCF_FHRS[@]} )
