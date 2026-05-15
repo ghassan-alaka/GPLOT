@@ -394,6 +394,31 @@ if [ "${DO_STATS}" = "True" ]; then
         if [ "${INPUT_FOUND}" == "False" ]; then
             echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
             echo "WARNING: Skipping stats for this case; check that model output exists for this cycle."
+            # Mark the case as 'incomplete' so the workflow's status check
+            # (find -name 'status.*') sees a non-complete entry and keeps
+            # retrying. Only fill the gap if no status file exists yet --
+            # never overwrite an active or terminal state. ODIR_FULL hasn't
+            # been computed yet at this gate, so mirror the assignment from
+            # below so the status lands at the same path the rest of the
+            # script would have used.
+            if [ "${ODIR_TYPE}" == "1" ]; then
+                ODIR_FULL_NOINPUT="${ODIR}/guidance/"
+            else
+                ODIR_FULL_NOINPUT="${ODIR}${EXPT}/${CYCLE}/guidance/"
+            fi
+            ODIR_FULL_NOINPUT="$(echo "${ODIR_FULL_NOINPUT}" | sed s#//*#/#g)"
+            mkdir -p "${ODIR_FULL_NOINPUT}"
+            STATUS_FILE_NOINPUT="${ODIR_FULL_NOINPUT}status.${SIDLONG}.log"
+            LOCK_FILE_NOINPUT="${STATUS_FILE_NOINPUT}.lock"
+            lockfile -r-1 -l 180 "${LOCK_FILE_NOINPUT}"
+            EXISTING_STATUS=$(cat "${STATUS_FILE_NOINPUT}" 2>/dev/null)
+            if [ -z "${EXISTING_STATUS}" ]; then
+                echo "MSG: No prior status; writing 'incomplete' so the workflow knows this case is outstanding."
+                echo "incomplete" > "${STATUS_FILE_NOINPUT}"
+            else
+                echo "MSG: Status exists (${EXISTING_STATUS}); leaving it alone."
+            fi
+            rm -f "${LOCK_FILE_NOINPUT}"
             continue
         fi
 
