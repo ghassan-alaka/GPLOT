@@ -1322,6 +1322,20 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
         storm's L. Silently skipped per-nest when the ATCF lookup
         returned None.
     """
+    # White-halo path effect so the dashed outline reads on every
+    # background -- dark IR cold tops, busy reflectivity, and light
+    # surfaces all give the black line enough contrast via the halo.
+    # Mirrors the convention already used by _draw_tc_low_marker for
+    # the L marker. Halo width is chosen so the black line remains
+    # the dominant visual element: just ~0.5pt of white on each side,
+    # enough for contrast against dark fills without making the dashes
+    # read as white framed by black. Lazy-import patheffects to avoid
+    # touching it on runs that don't draw nests.
+    import matplotlib.patheffects as pe
+    halo_effect = [pe.withStroke(linewidth=linewidth + 1.5,
+                                  foreground='white'),
+                   pe.Normal()]
+
     for entry in nests:
         # Tolerate the legacy 4-tuple shape in case any caller hasn't
         # been migrated; the in-nest marker just doesn't draw there.
@@ -1331,10 +1345,18 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
         else:
             label, sid, lat, lon, mask, c_lat, c_lon, c_mslp = entry
         try:
-            ax.contour(lon, lat, mask, levels=[0.5],
-                       colors=color, linestyles=linestyle,
-                       linewidths=linewidth,
-                       transform=ccrs.PlateCarree(), zorder=8)
+            cs = ax.contour(lon, lat, mask, levels=[0.5],
+                            colors=color, linestyles=linestyle,
+                            linewidths=linewidth,
+                            transform=ccrs.PlateCarree(), zorder=8)
+            # Apply the halo to the contour's line collections.
+            # Matplotlib >= 3.8 returns a ContourSet that's itself
+            # collection-like; older versions expose `.collections`.
+            try:
+                for coll in cs.collections:
+                    coll.set_path_effects(halo_effect)
+            except AttributeError:
+                cs.set_path_effects(halo_effect)
         except Exception as e:
             logger.warning(
                 f"nest outline: contour failed for {label}: {e}")
