@@ -2031,12 +2031,21 @@ def main():
 
     logger.info(f"GPLOT Maps complete: {n_plots} plots generated")
     # Catch any orphan .png files left behind by transient ImageMagick
-    # failures (NFS lag, etc.) and retry the conversion. Without this,
-    # the next spawn iteration would notice the missing .gif via the
-    # on-disk gate and re-render the whole FHR -- which usually still
-    # fails the same way under disk pressure.
-    sweep_orphan_pngs(odir_full)
-    _write_status(status_file, 'complete')
+    # failures (NFS lag, etc.) and retry the conversion. If the retry
+    # also fails, write status='incomplete' instead of 'complete' so
+    # the workflow's status-check loop re-invokes us; the next spawn
+    # iteration's on-disk fast-path will notice the missing .gif and
+    # re-render that FHR, giving the convert another shot under
+    # (typically) better disk conditions.
+    sweep_result = sweep_orphan_pngs(odir_full)
+    if sweep_result.get('still_failed', 0) > 0:
+        logger.warning(
+            f"GPLOT Maps: {sweep_result['still_failed']} PNG(s) still "
+            f"unconverted after sweep; writing status='incomplete' to "
+            f"trigger another spawn iteration.")
+        _write_status(status_file, 'incomplete')
+    else:
+        _write_status(status_file, 'complete')
 
 
 if __name__ == '__main__':

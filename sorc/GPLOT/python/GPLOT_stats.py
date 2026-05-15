@@ -1425,9 +1425,16 @@ def main():
                 logger.info(f"  Created: {result}")
 
     # Retry-convert any orphan .png left behind by transient ImageMagick
-    # failures (NFS lag, etc.) before declaring complete.
-    sweep_orphan_pngs(odir)
-    _write_status(status_file, 'complete')
+    # failures. If the retry also fails, write status='incomplete' so
+    # the workflow re-invokes us.
+    sweep_result = sweep_orphan_pngs(odir)
+    if sweep_result.get('still_failed', 0) > 0:
+        logger.warning(
+            f"GPLOT_stats: {sweep_result['still_failed']} PNG(s) still "
+            f"unconverted after sweep; writing status='incomplete'.")
+        _write_status(status_file, 'incomplete')
+    else:
+        _write_status(status_file, 'complete')
     logger.info("GPLOT_stats complete.")
 
 

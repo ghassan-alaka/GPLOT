@@ -1645,9 +1645,17 @@ def main():
     logger.info(f"GPLOT Ships complete: {n_processed} forecast hours processed, "
                 f"{len(generated_plots)} plots generated")
     # Retry-convert any orphan .png left behind by transient ImageMagick
-    # failures (NFS lag, etc.) before declaring complete.
-    sweep_orphan_pngs(odir_ships)
-    _write_status(status_file, 'complete')
+    # failures. If the retry also fails, write status='incomplete' so
+    # the workflow re-invokes us and the on-disk fast-path picks up
+    # the missing .gif FHRs.
+    sweep_result = sweep_orphan_pngs(odir_ships)
+    if sweep_result.get('still_failed', 0) > 0:
+        logger.warning(
+            f"GPLOT Ships: {sweep_result['still_failed']} PNG(s) still "
+            f"unconverted after sweep; writing status='incomplete'.")
+        _write_status(status_file, 'incomplete')
+    else:
+        _write_status(status_file, 'complete')
     return 0
 
 

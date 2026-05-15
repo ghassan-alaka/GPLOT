@@ -948,12 +948,17 @@ def main():
         print(f'MSG: Done with Plots {datetime.now()}')
 
     # Retry-convert any orphan .png left behind by transient ImageMagick
-    # failures (NFS lag, etc.) before declaring complete.
-    plot_utils.sweep_orphan_pngs(ODIR)
+    # failures. If the retry also fails, write status='incomplete' so
+    # the workflow re-invokes us next iteration.
+    _sweep = plot_utils.sweep_orphan_pngs(ODIR)
+    _status_value = 'incomplete' if _sweep.get('still_failed', 0) > 0 else 'complete'
+    if _status_value == 'incomplete':
+        print(f"WARNING: ocean_maps: {_sweep['still_failed']} PNG(s) still "
+              f"unconverted after sweep; writing status='incomplete'.")
 
     print('MSG: COMPLETING')
     os.system('lockfile -r-1 -l 180 ' + ST_LOCK_FILE)
-    os.system('echo "complete" > ' + STATUS_FILE)
+    os.system('echo "' + _status_value + '" > ' + STATUS_FILE)
     os.system('rm -f ' + ST_LOCK_FILE)
 
 
