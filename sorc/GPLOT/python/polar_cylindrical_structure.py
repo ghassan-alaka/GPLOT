@@ -1919,24 +1919,40 @@ def main():
 
     #Get storm-centered data
     # cfgrib may return lon in [-180,180] while ATCF centerlon is in [0,360]
-    # (or vice-versa). Normalize the data lon to match centerlon's convention
-    # before computing the storm-relative offset, otherwise lon_sr is off
-    # by 360 deg and x_sr ends up tens of thousands of km from the storm.
+    # (or vice-versa). Two adjustments are needed:
+    #
+    # (1) Uniform shift of the lon array when it is *entirely* in the
+    #     "wrong" convention (e.g. all-negative array while centerlon
+    #     is > 180). Use max/min tests rather than np.where(lon<0, ...)
+    #     -- the previous partial conversion would break monotonicity on
+    #     any meridian-spanning array (e.g. lon=[-15..0..5] with
+    #     centerlon=354.3 became [345..359, 0..5], not strictly
+    #     ascending, which crashed scipy's RegularGridInterpolator at
+    #     f096 of 12L on the 2024100512 multistorm cycle with
+    #     ValueError: "points in dimension 1 must be strictly ascending
+    #     or descending").
+    #
+    # (2) Storm-relative offset via modular arithmetic so prime-
+    #     meridian or dateline crossings produce continuous lon_sr
+    #     regardless of where centerlon sits. ((lon - centerlon + 180)
+    #     % 360) - 180 always lands in (-180, 180] and stays monotonic
+    #     for any reasonably-sized nest (<180 deg span).
     lon_data = np.asarray(lon, dtype=float)
-    if centerlon > 180.0 and lon_data.min() < 0.0:
-      lon_data = np.where(lon_data < 0.0, lon_data + 360.0, lon_data)
-    elif centerlon < 0.0 and lon_data.max() > 180.0:
-      lon_data = np.where(lon_data > 180.0, lon_data - 360.0, lon_data)
+    if centerlon > 180.0 and lon_data.max() < 0.0:
+      lon_data = lon_data + 360.0
+    elif centerlon < 0.0 and lon_data.min() > 180.0:
+      lon_data = lon_data - 360.0
     lon = lon_data
     if 'lon_full' in raw and raw['lon_full'] is not None:
       lf = np.asarray(raw['lon_full'], dtype=float)
-      if centerlon > 180.0 and lf.min() < 0.0:
-        lf = np.where(lf < 0.0, lf + 360.0, lf)
-      elif centerlon < 0.0 and lf.max() > 180.0:
-        lf = np.where(lf > 180.0, lf - 360.0, lf)
+      if centerlon > 180.0 and lf.max() < 0.0:
+        lf = lf + 360.0
+      elif centerlon < 0.0 and lf.min() > 180.0:
+        lf = lf - 360.0
       lon_full = lf
 
-    lon_sr, lat_sr = lon-centerlon, lat-centerlat
+    lon_sr = ((lon - centerlon + 180.0) % 360.0) - 180.0
+    lat_sr = lat - centerlat
     x_sr = lon_sr*111.1e3*np.cos(centerlat*3.14159/180)
     y_sr = lat_sr*111.1e3
 
