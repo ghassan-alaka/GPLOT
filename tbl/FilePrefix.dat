@@ -13,6 +13,8 @@ GEFS          gep                     gep                        gep
 HAFSV0.3      hafs.grid01             hafs.grid02                hafs.grid02
 HAFSV1.0      hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
 HAFS          hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
+HFSA          hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
+HFSB          hfs[a-z].parent.atm     hfs[a-z].storm.atm         hfs[a-z].storm.atm
 HAFS_HYCOM    hfs[a-z].hycom.3z       hfs[a-z].hycom.3z          hfs[a-z].hycom.3z
 HAFSV0.3_HYCOM hafs.hycom.3z          hafs.hycom.3z              hafs.hycom.3z
 HAFS_MOM6     hfs[a-z].mom6           hfs[a-z].mom6              hfs[a-z].mom6
