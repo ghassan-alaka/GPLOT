@@ -1787,9 +1787,14 @@ def main():
     # logger.basicConfig WARNING default applies). One line per run
     # tells the operator at a glance whether DRAW_NESTS is in effect
     # and which mode is selected.
-    if draw_nests and is_storm_named_filename(domain):
+    # Gate on is_storm_centered (NEST=3 -> d03, alld03, core, storm),
+    # NOT is_storm_named_filename. The HWRF "hwrf" outer domain is
+    # storm-named for filename purposes (one TC per panel embeds
+    # longsid) but is the PARENT containing d03, not the inner moving
+    # nest -- so it should get nest overlays just like d01/atl/basin.
+    if draw_nests and is_storm_centered(domain):
         logger.warning(f"DRAW_NESTS=True but domain={domain} is itself a "
-                       f"nest domain; nest-outline overlay disabled.")
+                       f"moving nest (NEST=3); nest-outline overlay disabled.")
         draw_nests = False
     elif draw_nests:
         mode = "multistorm sibling-sweep" if is_mstorm else "single-dir"
@@ -1957,7 +1962,12 @@ def main():
             # nest GRIB2 sitting next to the parent file, so a single
             # d01 panel can carry several nest outlines without any
             # changes to the spawn-side per-storm iteration.
-            if draw_nests and not is_storm_named_filename(domain):
+            # See the matching gate-rationale comment near draw_nests
+            # config read: is_storm_centered (NEST=3) is the correct
+            # "this domain IS the moving nest" predicate; the HWRF
+            # outer "hwrf" domain is the parent containing d03 and
+            # gets the overlay.
+            if draw_nests and not is_storm_centered(domain):
                 nest_outlines = _discover_nest_outlines(
                     grib_path, fhr, idate=idate, fhrfmt=fhrfmt,
                     is_mstorm=is_mstorm,
