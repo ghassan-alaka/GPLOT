@@ -367,38 +367,72 @@ def add_storm_marker(ax, lat, lon, intensity=None, label='',
 
 def convert_to_gif(png_path, remove_png=True):
     """
-    Convert a PNG file to GIF using ImageMagick.
+    Convert a PNG file to GIF using ImageMagick, retrying on transient
+    failures.
+
+    The most common failure mode is ImageMagick reading the PNG before
+    matplotlib has fully flushed it to NFS-backed scratch (-> "improper
+    image header"). Those failures resolve within a few seconds, so try
+    a small backoff sequence before giving up. A genuinely corrupt PNG
+    (zero-byte / truncated) fails on each retry; total wall-time wasted
+    on the unrecoverable case is bounded by the sum of the backoffs.
 
     Parameters
     ----------
     png_path : str
         Path to the PNG file.
     remove_png : bool, optional
-        If True, remove the PNG after conversion (default True).
+        If True, remove the PNG after a successful conversion. Default True.
 
     Returns
     -------
     str
-        Path to the created GIF file, or the original PNG if conversion failed.
+        Path to the created GIF file on success, or the original PNG
+        path if every retry failed.
     """
     gif_path = png_path.replace('.png', '.gif')
 
-    try:
-        result = subprocess.run(
-            ['convert', png_path, '+repage', f'gif:{gif_path}'],
-            capture_output=True, text=True, timeout=60
-        )
-        if result.returncode == 0:
-            if remove_png:
-                os.remove(png_path)
-            logger.debug(f"Converted to GIF: {gif_path}")
-            return gif_path
-        else:
-            logger.warning(f"ImageMagick convert failed: {result.stderr}")
-            return png_path
-    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-        logger.warning(f"GIF conversion failed: {e}")
-        return png_path
+    # Backoffs in seconds before each attempt. The 0 means "try once
+    # immediately"; the 3 and 8 give NFS / disk buffers room to settle
+    # if the first error was a half-written PNG.
+    backoffs = (0, 3, 8)
+    last_err = None
+
+    for attempt_idx, delay in enumerate(backoffs, start=1):
+        if delay > 0:
+            time.sleep(delay)
+        try:
+            result = subprocess.run(
+                ['convert', png_path, '+repage', f'gif:{gif_path}'],
+                capture_output=True, text=True, timeout=60
+            )
+            if result.returncode == 0:
+                if remove_png:
+                    try:
+                        os.remove(png_path)
+                    except OSError:
+                        pass
+                if attempt_idx > 1:
+                    # Surface successful retries at WARNING so the operator
+                    # can see that we hit (and recovered from) a flaky write.
+                    logger.warning(
+                        f"convert_to_gif: succeeded on attempt {attempt_idx} "
+                        f"after transient failure(s): {png_path}")
+                else:
+                    logger.debug(f"Converted to GIF: {gif_path}")
+                return gif_path
+            else:
+                last_err = (result.stderr or '').strip() or \
+                           f"rc={result.returncode}"
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            last_err = repr(e)
+
+    # All retries exhausted -- log once (vs. once per attempt) and
+    # leave the PNG in place for the end-of-run sweep.
+    logger.warning(
+        f"ImageMagick convert failed after {len(backoffs)} attempt(s) "
+        f"on {png_path}: {last_err}")
+    return png_path
 
 
 def sweep_orphan_pngs(odir, recursive=False):
