@@ -935,7 +935,15 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${OCEAN_DIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        # Accept Python's 2-column "<file> <status>"
+                                        # format (empty ATCFDONE = mere presence is
+                                        # "done"). Legacy NCL 3-column form still
+                                        # uses the ATCF_EXP/NATCF match. Old gate
+                                        # broke multistorm dedup (see spawn_ocean_maps.sh
+                                        # commit message for details).
+                                        if [ -z "${ATCFDONE}" ] \
+                                           || [ "${ATCF_EXP}" -eq "${NATCF}" ] \
+                                           || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi

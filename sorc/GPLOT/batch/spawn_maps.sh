@@ -883,20 +883,18 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        # Python modules write 2-column PlottedFiles
-                                        # entries ("<file> <status>"), while legacy NCL
-                                        # wrote 3 columns ("<file> <NATCF> <ATCFDONE>").
-                                        # Accept both formats so processed files are
-                                        # removed from IFILES reliably.
-                                        REMOVE_DONE="False"
-                                        if [[ "${NATCF}" =~ ^[0-9]+$ ]]; then
-                                            if [ "${ATCF_EXP}" -eq "${NATCF}" ] || [ "${ATCFDONE}" == "True" ]; then
-                                                REMOVE_DONE="True"
-                                            fi
-                                        else
-                                            REMOVE_DONE="True"
-                                        fi
-                                        if [ "${REMOVE_DONE}" == "True" ]; then
+                                        # Python's update_plotted_file writes a 2-column
+                                        # "<file> <status>" row. The legacy NCL pipeline
+                                        # wrote 3 columns "<file> <NATCF> <ATCFDONE>"
+                                        # where ATCF_EXP/NATCF had to match. Accept both:
+                                        # empty ATCFDONE means Python wrote the row, so
+                                        # the entry's mere presence is the "done" signal
+                                        # -- critically, this works under multistorm
+                                        # where ATCF_EXP=N (number of storms in the
+                                        # cycle) wouldn't equal Python's NATCF=1.
+                                        if [ -z "${ATCFDONE}" ] \
+                                           || [ "${ATCF_EXP}" -eq "${NATCF}" ] \
+                                           || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi

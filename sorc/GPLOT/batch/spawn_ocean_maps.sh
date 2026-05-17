@@ -928,7 +928,19 @@ if [ "${DO_OCEAN_MAPS}" == "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${OCEAN_DIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        # Python's update_plotted_file writes a 2-column
+                                        # "<file> <status>" row -- empty ATCFDONE means
+                                        # Python wrote it, so the entry's mere presence
+                                        # is the "done" signal. The legacy NCL 3-column
+                                        # "<file> <NATCF> <ATCFDONE>" format still uses
+                                        # the ATCF_EXP/NATCF match. The previous code
+                                        # ONLY accepted the legacy form, which broke
+                                        # multistorm dedup (ATCF_EXP=N for N storms in
+                                        # the cycle vs. Python's NATCF=1 -> mismatch ->
+                                        # files never removed from UnplottedFiles).
+                                        if [ -z "${ATCFDONE}" ] \
+                                           || [ "${ATCF_EXP}" -eq "${NATCF}" ] \
+                                           || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi
