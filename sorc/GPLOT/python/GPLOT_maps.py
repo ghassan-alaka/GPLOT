@@ -1838,8 +1838,44 @@ def main():
         for fhr, grib_path_from_spawn in iter_pairs:
             logger.info(f"--- Processing FHR {fhr:03d} ---")
 
+            # Re-read the ATCF per-FHR. The model writes the tracker
+            # incrementally as it produces each FHR, and a spawn-driven
+            # maps run easily spans the window where rows for the
+            # later FHRs are still being appended -- so the module-
+            # start read can miss them. Cost is a few ms per FHR (the
+            # whole tracker is typically <100 KB) which is negligible
+            # next to GRIB2 open + draw_map. Use the same mcode-then-
+            # fallback chain as the initial read.
+            if atcf_file:
+                fresh = read_atcf(atcf_file, model_id=mcode)
+                if fresh is None or fresh.empty:
+                    fresh = read_atcf(atcf_file)
+                if fresh is not None and not fresh.empty:
+                    atcf_df = fresh
+
             # Get TC position for this forecast hour
             tc_lat, tc_lon, vmax, mslp_val = get_tc_position(atcf_df, fhr)
+
+            # Skip storm-named domains (d03, hwrf) when the ATCF row
+            # for this FHR is missing -- the panel needs the L marker
+            # + VMAX/PMIN in the title to be useful, and rendering
+            # without those would bake a defective panel into the .gif
+            # that the on-disk fast-path then refuses to re-render.
+            # The previous storm-centered-only check (below) only
+            # caught d03 / alld03 / core / storm; "hwrf" (storm-named
+            # but NEST=1, the HWRF outer storm-following parent) fell
+            # through and produced exactly this bug for FHRs whose
+            # tracker row hadn't landed by the time maps started.
+            if (tc_lat is None
+                    and is_storm_named_filename(domain)
+                    and not is_storm_centered(domain)):
+                logger.warning(
+                    f"FHR {fhr:03d}: No TC position in ATCF for "
+                    f"storm-named domain {domain}; skipping rather "
+                    f"than baking a panel without L marker / VMAX / "
+                    f"PMIN. Will retry on next spawn iteration when "
+                    f"the tracker has caught up.")
+                continue
 
             # Compute domain bounds
             if is_storm_centered(domain):
