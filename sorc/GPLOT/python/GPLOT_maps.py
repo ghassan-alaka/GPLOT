@@ -1126,6 +1126,62 @@ def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
         return None, None, None
 
 
+def _enumerate_active_sids(atcf_dirs, idate, fhr, atcf_tag=None,
+                            mcode=None):
+    """
+    Return the set of storm SIDs (uppercased, e.g. ``{'12L', '13L'}``)
+    that the tracker reports as still-active at the given FHR.
+
+    Source of truth for the d01 / hwrf race-condition detector. We
+    glob the per-storm parsed ATCFs in ``atcf_dirs`` (skipping ``.all``
+    splits, ``.orig`` backups, and per-FHR shards), pull each storm's
+    SID from the filename prefix, and call ``_lookup_storm_center``
+    to check whether a non-trivial row exists at this FHR. A storm
+    with no row at this FHR is considered legitimately absent (e.g.
+    dissipated, or hasn't formed yet) -- in either case the d01
+    panel should render without waiting for it.
+
+    Returns an empty set if ``atcf_dirs`` is empty or no per-storm
+    parsed files match.
+    """
+    if not atcf_dirs:
+        return set()
+    if not isinstance(atcf_dirs, (list, tuple)):
+        atcf_dirs = [atcf_dirs]
+
+    _fhr_suffix_re = re.compile(r'\.f\d{3,4}$')
+    _sid_prefix_re = re.compile(r'^(\d{2}[a-z])\.', re.IGNORECASE)
+    pattern = f"*{idate}*trak*"
+
+    seen_files = set()
+    active = set()
+    for adir in atcf_dirs:
+        if not adir or not os.path.isdir(adir):
+            continue
+        for fn in sorted(glob.glob(os.path.join(adir, pattern))):
+            bn = os.path.basename(fn)
+            if bn in seen_files:
+                continue
+            seen_files.add(bn)
+            if bn.endswith(('.all', '.orig')) or _fhr_suffix_re.search(bn):
+                continue
+            m = _sid_prefix_re.match(bn)
+            if not m:
+                continue
+            sid = m.group(1).upper()
+            if sid == '00L':
+                # Fake storm; no real position, never "expected" for
+                # nest-overlay purposes.
+                continue
+            c_lat, _, _ = _lookup_storm_center(sid, idate, fhr,
+                                                [adir], atcf_tag, mcode)
+            # Treat (0, 0) ATCF rows as absent -- they're placeholders
+            # written before genesis.
+            if c_lat is not None and c_lat != 0.0:
+                active.add(sid)
+    return active
+
+
 def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
                              fhrfmt='%03d', is_mstorm=False,
                              atcf_dirs=None, atcf_tag=None, mcode=None):
@@ -1834,15 +1890,6 @@ def main():
 
     n_plots = 0
 
-    # Track the highest nest-outline count seen so far in this run.
-    # Used downstream as a race-condition signal: if a later FHR
-    # discovers strictly fewer nests than we've seen at an earlier FHR
-    # in the same run, the storm grb2(s) for that FHR almost certainly
-    # haven't landed on disk yet, and we shouldn't bake a defective
-    # d01 panel into a .gif that the on-disk fast-path will refuse to
-    # re-render. See the WARNING below for the skip + retry behavior.
-    nest_max_seen = 0
-
     try:
         for fhr, grib_path_from_spawn in iter_pairs:
             logger.info(f"--- Processing FHR {fhr:03d} ---")
@@ -2032,51 +2079,59 @@ def main():
                                    f"outline(s) for {domain}; see preceding "
                                    f"'nest discovery' WARNING for details.")
 
-                # Race-condition detector. The model writes nest grb2
-                # files and ATCF tracker rows incrementally; a spawn-
-                # driven d01 run easily reaches a late FHR before its
-                # storm grb2 / ATCF row has landed. Without this check,
-                # we'd render a defective panel (no nest outline, or
-                # outline with no L marker) and the on-disk fast-path
-                # would refuse to re-render on the next iteration.
+                # Race-condition detector (ATCF-driven). The model
+                # writes nest grb2 files and ATCF tracker rows
+                # incrementally; a spawn-driven d01 run easily reaches
+                # a late FHR before its storm grb2 / ATCF row has
+                # landed. Without this check, we'd render a defective
+                # panel (no nest outline, or outline with no L marker)
+                # and the on-disk fast-path would refuse to re-render.
+                #
+                # Truth source: the per-storm ATCF tracker, queried
+                # per-FHR. A storm is "expected at this FHR" iff its
+                # ATCF has a non-trivial row at this FHR; a storm
+                # that has dissipated (or hasn't formed yet) drops
+                # out of the expected set automatically.
                 #
                 # Two flavors of "incomplete":
-                #   (a) Strictly fewer nests than a prior FHR in this
-                #       run discovered (= storm grb2 missing on disk).
-                #   (b) At least one discovered nest has no center
-                #       coords (= storm grb2 present but per-storm
-                #       ATCF row missing -- the L marker would be
-                #       skipped by _draw_nest_outlines anyway).
+                #   (a) An expected SID has no nest grb2 on disk
+                #       (model post lagging the tracker).
+                #   (b) A discovered nest has no ATCF center (tracker
+                #       lagging the model post).
                 # Skip this FHR + don't mark plotted; the next spawn
                 # iteration retries when the data catches up.
-                n_nests = len(nest_outlines) if nest_outlines else 0
-                n_nests_with_center = sum(
-                    1 for e in (nest_outlines or [])
-                    if len(e) >= 8 and e[5] is not None and e[6] is not None
-                )
-                race_short_count = (is_mstorm and n_nests < nest_max_seen)
-                race_missing_center = (
-                    is_mstorm and n_nests > 0
-                    and n_nests_with_center < n_nests
-                )
-                if race_short_count or race_missing_center:
-                    reason = []
-                    if race_short_count:
-                        reason.append(
-                            f"discovered {n_nests} nest(s) but prior "
-                            f"FHR saw {nest_max_seen}")
-                    if race_missing_center:
-                        reason.append(
-                            f"{n_nests - n_nests_with_center} of "
-                            f"{n_nests} nest(s) have no ATCF center")
-                    logger.warning(
-                        f"FHR {fhr:03d}: incomplete nest data on "
-                        f"{domain} ({'; '.join(reason)}). Skipping "
-                        f"FHR + won't mark plotted; will retry on "
-                        f"next spawn iteration when storm grb2 / "
-                        f"ATCF rows have caught up.")
-                    continue
-                nest_max_seen = max(nest_max_seen, n_nests)
+                if is_mstorm:
+                    expected_sids = _enumerate_active_sids(
+                        atcf_dirs, idate, fhr, atcf_tag=atcf_tag,
+                        mcode=mcode)
+                    discovered_sids = {
+                        e[1] for e in (nest_outlines or [])
+                        if len(e) >= 8 and e[1] is not None
+                    }
+                    discovered_with_center = {
+                        e[1] for e in (nest_outlines or [])
+                        if len(e) >= 8 and e[1] is not None
+                        and e[5] is not None and e[6] is not None
+                    }
+                    missing_grb2 = expected_sids - discovered_sids
+                    missing_center = discovered_sids - discovered_with_center
+                    if missing_grb2 or missing_center:
+                        reason = []
+                        if missing_grb2:
+                            reason.append(
+                                f"missing grb2 for "
+                                f"{sorted(missing_grb2)}")
+                        if missing_center:
+                            reason.append(
+                                f"missing ATCF row for "
+                                f"{sorted(missing_center)}")
+                        logger.warning(
+                            f"FHR {fhr:03d}: incomplete nest data on "
+                            f"{domain} ({'; '.join(reason)}). Skipping "
+                            f"FHR + won't mark plotted; will retry on "
+                            f"next spawn iteration when storm grb2 / "
+                            f"ATCF rows have caught up.")
+                        continue
             else:
                 nest_outlines = None
 
