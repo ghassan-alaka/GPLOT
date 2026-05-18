@@ -1123,6 +1123,10 @@ def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
     WARNING, so these surface without needing -v.
     """
     if not sid or not atcf_dirs:
+        logger.warning(
+            f"_lookup_storm_center(sid={sid!r}, fhr={fhr}, "
+            f"atcf_dirs={atcf_dirs!r}): falsy guard returned None. "
+            f"sid_falsy={not sid} atcf_dirs_falsy={not atcf_dirs}")
         return None, None, None
     try:
         atcf_file = find_atcf_file(atcf_dirs, idate, sid,
