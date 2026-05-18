@@ -1834,6 +1834,15 @@ def main():
 
     n_plots = 0
 
+    # Track the highest nest-outline count seen so far in this run.
+    # Used downstream as a race-condition signal: if a later FHR
+    # discovers strictly fewer nests than we've seen at an earlier FHR
+    # in the same run, the storm grb2(s) for that FHR almost certainly
+    # haven't landed on disk yet, and we shouldn't bake a defective
+    # d01 panel into a .gif that the on-disk fast-path will refuse to
+    # re-render. See the WARNING below for the skip + retry behavior.
+    nest_max_seen = 0
+
     try:
         for fhr, grib_path_from_spawn in iter_pairs:
             logger.info(f"--- Processing FHR {fhr:03d} ---")
@@ -2022,6 +2031,52 @@ def main():
                                    f"_discover_nest_outlines returned 0 "
                                    f"outline(s) for {domain}; see preceding "
                                    f"'nest discovery' WARNING for details.")
+
+                # Race-condition detector. The model writes nest grb2
+                # files and ATCF tracker rows incrementally; a spawn-
+                # driven d01 run easily reaches a late FHR before its
+                # storm grb2 / ATCF row has landed. Without this check,
+                # we'd render a defective panel (no nest outline, or
+                # outline with no L marker) and the on-disk fast-path
+                # would refuse to re-render on the next iteration.
+                #
+                # Two flavors of "incomplete":
+                #   (a) Strictly fewer nests than a prior FHR in this
+                #       run discovered (= storm grb2 missing on disk).
+                #   (b) At least one discovered nest has no center
+                #       coords (= storm grb2 present but per-storm
+                #       ATCF row missing -- the L marker would be
+                #       skipped by _draw_nest_outlines anyway).
+                # Skip this FHR + don't mark plotted; the next spawn
+                # iteration retries when the data catches up.
+                n_nests = len(nest_outlines) if nest_outlines else 0
+                n_nests_with_center = sum(
+                    1 for e in (nest_outlines or [])
+                    if len(e) >= 8 and e[5] is not None and e[6] is not None
+                )
+                race_short_count = (is_mstorm and n_nests < nest_max_seen)
+                race_missing_center = (
+                    is_mstorm and n_nests > 0
+                    and n_nests_with_center < n_nests
+                )
+                if race_short_count or race_missing_center:
+                    reason = []
+                    if race_short_count:
+                        reason.append(
+                            f"discovered {n_nests} nest(s) but prior "
+                            f"FHR saw {nest_max_seen}")
+                    if race_missing_center:
+                        reason.append(
+                            f"{n_nests - n_nests_with_center} of "
+                            f"{n_nests} nest(s) have no ATCF center")
+                    logger.warning(
+                        f"FHR {fhr:03d}: incomplete nest data on "
+                        f"{domain} ({'; '.join(reason)}). Skipping "
+                        f"FHR + won't mark plotted; will retry on "
+                        f"next spawn iteration when storm grb2 / "
+                        f"ATCF rows have caught up.")
+                    continue
+                nest_max_seen = max(nest_max_seen, n_nests)
             else:
                 nest_outlines = None
 
