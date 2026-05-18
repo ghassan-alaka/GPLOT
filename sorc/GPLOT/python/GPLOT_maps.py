@@ -1082,14 +1082,27 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
 
 def _extract_storm_sid_from_filename(fn):
     """
-    Derive a storm SID (e.g. '12L') from a HAFS-style nest GRIB2
-    filename. Tries the filename prefix first (matches ``12l.YYYY...``)
-    and falls back to the immediate parent directory name (HAFS
-    multistorm puts each storm under a SID-named subdir of COMhafs).
-    Returns the uppercased SID or None.
+    Derive a storm SID (e.g. '12L') from a HAFS-style filename.
+
+    Handles both naming conventions in use:
+
+    - **Bare SID prefix** (pre-genesis / multistorm fake storm /
+      INVEST cycles): ``12l.<idate>.<expt>.<...>.grb2``.
+    - **Named-storm prefix** (operational, once tracker emits a
+      storm name): ``kirk12l.<idate>.<...>.grb2``,
+      ``nine09l.<idate>.<...>.atcfunix``, etc.
+
+    Falls back to the immediate parent directory name when neither
+    pattern matches (HAFS multistorm puts each storm under a
+    SID-named subdir of COMhafs).  Returns the uppercased SID or
+    None.
     """
     basename = os.path.basename(fn)
-    m = re.match(r'^(\d{2}[a-z])\.', basename, re.IGNORECASE)
+    # Match the SID embedded at the start of the longsid token:
+    #   <optional name letters><2 digits><1 basin letter>.
+    # The `[a-z]*` part eats the storm name (e.g. "kirk", "nine")
+    # when present; an empty match handles the bare-SID prefix.
+    m = re.match(r'^[a-z]*(\d{2}[a-z])\.', basename, re.IGNORECASE)
     if m:
         return m.group(1).upper()
     parent = os.path.basename(os.path.dirname(fn))
@@ -1158,7 +1171,11 @@ def _atcf_state(atcf_dirs, idate, fhr, atcf_tag=None, mcode=None):
         atcf_dirs = [atcf_dirs]
 
     _fhr_suffix_re = re.compile(r'\.f\d{3,4}$')
-    _sid_prefix_re = re.compile(r'^(\d{2}[a-z])\.', re.IGNORECASE)
+    # Match bare-SID prefix (``12l.<...>``) AND named-storm prefix
+    # (``kirk12l.<...>``, ``nine09l.<...>``). The `[a-z]*` eats any
+    # storm name that may have been prepended by the tracker once it
+    # promoted the storm out of INVEST status.
+    _sid_prefix_re = re.compile(r'^[a-z]*(\d{2}[a-z])\.', re.IGNORECASE)
     pattern = f"*{idate}*trak*"
 
     seen_files = set()
