@@ -2216,8 +2216,8 @@ def main():
                         if race_global:
                             reason.append(
                                 f"global tracker behind this FHR "
-                                f"(max={global_max}) but we had nests "
-                                f"at earlier FHRs")
+                                f"(max={global_max}) and no nests "
+                                f"on disk yet")
                         logger.warning(
                             f"FHR {fhr:03d}: incomplete nest data on "
                             f"{domain} ({'; '.join(reason)}). Skipping "
