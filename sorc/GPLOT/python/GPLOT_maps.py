@@ -1926,12 +1926,6 @@ def main():
 
     n_plots = 0
 
-    # Track whether we've ever seen at least one nest in this run.
-    # Used by the global-race fallback (below) to distinguish "no
-    # storms in this cycle" (no nests ever -> don't trip) from "nests
-    # existed earlier but are missing now" (potential global race).
-    seen_any_nest = False
-
     try:
         for fhr, grib_path_from_spawn in iter_pairs:
             logger.info(f"--- Processing FHR {fhr:03d} ---")
@@ -2173,15 +2167,33 @@ def main():
                     missing_grb2 = expected_sids - discovered_sids
                     missing_center = discovered_sids - discovered_with_center
 
-                    # Global-race fallback (case c). Only triggers when
-                    # the per-storm ATCF rows can't tell us whether
-                    # to trust the current state. Mtime gate gives us
-                    # a long-stop: if the parent grb2 has been on disk
-                    # for > 30 min, the model has clearly moved past
-                    # this FHR and any "missing" data is dissipation
-                    # not race, so we render whatever we have.
+                    # Global-race fallback (case c). Trips when:
+                    #
+                    #   * the per-storm tracker has rows for THIS
+                    #     cycle (global_max >= 0 — i.e. genesis has
+                    #     happened for at least one storm), AND
+                    #   * the tracker hasn't progressed past the
+                    #     current FHR yet (global_max < fhr), AND
+                    #   * we found no nest grb2s at the current FHR,
+                    #     AND
+                    #   * the parent grb2 has been on disk for less
+                    #     than 30 minutes (long-stop: past that, the
+                    #     model has clearly moved on and missing data
+                    #     is dissipation not race).
+                    #
+                    # Note the `global_max >= 0` gate replaces the
+                    # earlier `seen_any_nest` gate. The old gate
+                    # required us to have observed a nest at some
+                    # earlier FHR in this run -- which defangs
+                    # detection for cycles that start at INVEST /
+                    # pre-genesis (no nest at f000, then storm forms
+                    # at f024 and nest grb2s start landing). The
+                    # ATCF-driven gate fires the moment a storm has
+                    # ANY non-trivial row anywhere in its tracker,
+                    # which is the right "storms exist for this
+                    # cycle" signal.
                     race_global = False
-                    if (global_max < fhr and seen_any_nest
+                    if (global_max >= 0 and global_max < fhr
                             and not nest_outlines):
                         try:
                             parent_age = time.time() - os.path.getmtime(
@@ -2213,11 +2225,6 @@ def main():
                             f"next spawn iteration when storm grb2 / "
                             f"ATCF rows have caught up.")
                         continue
-
-                    # Made it past the gate -- if we found any nest,
-                    # remember for the next FHR's global-race check.
-                    if nest_outlines:
-                        seen_any_nest = True
             else:
                 nest_outlines = None
 
