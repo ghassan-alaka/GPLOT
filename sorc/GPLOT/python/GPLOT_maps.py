@@ -1111,6 +1111,56 @@ def _extract_storm_sid_from_filename(fn):
     return None
 
 
+def _expand_atcf_dirs_mstorm(atcf_dirs):
+    """
+    For multistorm cycles, expand ``atcf_dirs`` to include sibling
+    per-storm ATCF directories.
+
+    The HAFS multistorm workflow gives each storm its own COMhafs
+    subdirectory (``<root>/com/<cycle>/<SID>/``) and writes each
+    storm's parsed ATCF into ``<that subdir>/hrdgraphics/``. When the
+    00L pass plots a d01 panel, its ``atcf_dirs`` points only at
+    ``<COMhafs>/00L/hrdgraphics`` -- so per-storm lookups for the
+    real storms (07L, 12L, ...) fail because their parsed ATCFs live
+    in sibling per-storm hrdgraphics dirs we never search.
+
+    This helper walks one level up from each entry in ``atcf_dirs``,
+    enumerates sibling directories, and adds each sibling's same-name
+    subdirectory (typically ``hrdgraphics``) to the list. Sibling
+    sweep is the same shape as the one in ``_discover_nest_outlines``.
+
+    Empty input or non-list inputs return the input unchanged. Order
+    is preserved; the original entries always come first. Safe to
+    call when not in multistorm mode -- caller should gate on
+    ``IS_MSTORM`` to avoid the file-system walk overhead.
+    """
+    if not atcf_dirs:
+        return atcf_dirs
+    if not isinstance(atcf_dirs, (list, tuple)):
+        atcf_dirs = [atcf_dirs]
+    expanded = list(atcf_dirs)
+    seen = {os.path.abspath(d) for d in expanded if d}
+    for d in atcf_dirs:
+        if not d:
+            continue
+        d_abs = os.path.abspath(d)
+        storm_dir = os.path.dirname(d_abs)        # <root>/com/<cycle>/00L
+        cycle_root = os.path.dirname(storm_dir)   # <root>/com/<cycle>
+        subdir = os.path.basename(d_abs)          # hrdgraphics
+        if not os.path.isdir(cycle_root):
+            continue
+        for entry in sorted(os.listdir(cycle_root)):
+            sib_storm = os.path.join(cycle_root, entry)
+            if not os.path.isdir(sib_storm) or sib_storm == storm_dir:
+                continue
+            sib_atcf = os.path.join(sib_storm, subdir)
+            sib_abs = os.path.abspath(sib_atcf)
+            if os.path.isdir(sib_atcf) and sib_abs not in seen:
+                expanded.append(sib_atcf)
+                seen.add(sib_abs)
+    return expanded
+
+
 def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
     """
     Look up a single storm's center position and MSLP at a given FHR
@@ -1915,6 +1965,24 @@ def main():
     # panel.
     draw_nests = bool(nml.get('DRAW_NESTS', False))
     is_mstorm  = bool(nml.get('IS_MSTORM', False))
+
+    # Multistorm sibling-expansion for atcf_dirs. The HAFS multistorm
+    # workflow gives each storm its own COMhafs subdir and parsed
+    # ATCFs live in that subdir's hrdgraphics dir. For the 00L pass
+    # plotting d01, atcf_dirs only points at 00L's hrdgraphics, so
+    # per-storm ATCF lookups for the real storms (07L etc.) fail
+    # because their parsed files are in sibling subdirs we never
+    # searched. Mirrors the same sibling-sweep strategy
+    # _discover_nest_outlines uses for nest grb2s.
+    if is_mstorm:
+        atcf_dirs_orig = list(atcf_dirs)
+        atcf_dirs = _expand_atcf_dirs_mstorm(atcf_dirs)
+        if len(atcf_dirs) > len(atcf_dirs_orig):
+            logger.warning(
+                f"IS_MSTORM=True: expanded atcf_dirs from "
+                f"{atcf_dirs_orig} to {atcf_dirs} to include sibling "
+                f"per-storm hrdgraphics directories where the other "
+                f"storms' parsed ATCFs live.")
     # Promoted to WARNING level: visible under the operational spawn's
     # default log config (batch_maps.sh runs python3 without -v, so the
     # logger.basicConfig WARNING default applies). One line per run
