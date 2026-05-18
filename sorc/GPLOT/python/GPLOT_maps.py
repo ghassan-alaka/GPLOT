@@ -1116,6 +1116,11 @@ def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
     Look up a single storm's center position and MSLP at a given FHR
     by finding + reading its per-storm ATCF. Returns
     ``(lat, lon, mslp)`` or ``(None, None, None)`` on any failure.
+
+    Emits WARNING-level diagnostics when a lookup fails so the
+    operator can tell which step (file location, file read, row
+    match) failed. Default log level for the operational spawn is
+    WARNING, so these surface without needing -v.
     """
     if not sid or not atcf_dirs:
         return None, None, None
@@ -1123,20 +1128,39 @@ def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
         atcf_file = find_atcf_file(atcf_dirs, idate, sid,
                                     atcf_tag=atcf_tag)
         if not atcf_file:
+            logger.warning(
+                f"_lookup_storm_center({sid}, fhr={fhr}): "
+                f"find_atcf_file returned None; atcf_dirs={atcf_dirs} "
+                f"atcf_tag={atcf_tag!r}")
             return None, None, None
         atcf_df = read_atcf(atcf_file, model_id=mcode)
+        used_fallback = False
         if atcf_df is None or atcf_df.empty:
             atcf_df = read_atcf(atcf_file)
+            used_fallback = True
         if atcf_df is None or atcf_df.empty:
+            logger.warning(
+                f"_lookup_storm_center({sid}, fhr={fhr}): "
+                f"read_atcf returned empty for {atcf_file} "
+                f"(model_id={mcode!r}, fallback={used_fallback})")
             return None, None, None
         row = atcf_df[atcf_df['fhr'] == fhr]
         if row.empty:
+            present_fhrs = sorted(atcf_df['fhr'].unique().tolist())
+            logger.warning(
+                f"_lookup_storm_center({sid}, fhr={fhr}): "
+                f"no row at fhr={fhr} in {atcf_file} "
+                f"(model_id={mcode!r}, fallback_to_no_filter="
+                f"{used_fallback}, "
+                f"fhrs_present={present_fhrs[:5]}..."
+                f"{present_fhrs[-5:] if len(present_fhrs) > 10 else ''})")
             return None, None, None
         return (float(row.iloc[0]['lat']),
                 float(row.iloc[0]['lon']),
                 float(row.iloc[0]['mslp']))
     except Exception as e:
-        logger.debug(f"_lookup_storm_center failed for sid={sid}: {e}")
+        logger.warning(f"_lookup_storm_center({sid}, fhr={fhr}) "
+                       f"raised: {type(e).__name__}: {e}")
         return None, None, None
 
 
