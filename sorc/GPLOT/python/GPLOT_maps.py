@@ -1669,11 +1669,21 @@ def find_atcf_file(atcf_dir, idate, sid, atcf_tag=''):
     else:
         dirs = [atcf_dir] if atcf_dir else []
 
+    # Glob with case-insensitive SID matching. Linux file systems are
+    # case-sensitive and Python's glob.glob honors that, so a pattern
+    # like `*07l*` won't match `seven07L.<...>` if the tracker / parser
+    # writes uppercase basin letters. Instead of relying on glob's
+    # case sensitivity, we glob broadly on (idate + trak/atcf) and
+    # then filter the results with a case-insensitive regex on the
+    # SID. Same fix conceptually applied to _atcf_state's discovery
+    # loop -- both code paths now find files regardless of basin-
+    # letter case.
     sid_lower = sid.lower()
-    patterns = [
-        f"*{sid_lower}*{idate}*trak*",
-        f"*{sid_lower}*{idate}*atcf*",
-        f"*{sid_lower}*{idate}*",
+    sid_re = re.compile(re.escape(sid_lower), re.IGNORECASE)
+    broad_patterns = [
+        f"*{idate}*trak*",
+        f"*{idate}*atcf*",
+        f"*{idate}*",
     ]
 
     def _rank(path):
@@ -1687,7 +1697,7 @@ def find_atcf_file(atcf_dir, idate, sid, atcf_tag=''):
     for adir in dirs:
         if not adir or not os.path.isdir(adir):
             continue
-        for pat in patterns:
+        for pat in broad_patterns:
             matches = glob.glob(os.path.join(adir, pat))
             matches = [m for m in matches
                        if not m.endswith(('.grb2', '.grb', '.idx',
@@ -1695,6 +1705,9 @@ def find_atcf_file(atcf_dir, idate, sid, atcf_tag=''):
             matches = [m for m in matches
                        if not os.path.basename(m).endswith('.all')
                        and not _FHR_RE.search(os.path.basename(m))]
+            # Case-insensitive SID filter on basename.
+            matches = [m for m in matches
+                       if sid_re.search(os.path.basename(m))]
             if matches:
                 matches.sort(key=_rank)
                 return matches[0]
