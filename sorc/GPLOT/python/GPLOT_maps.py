@@ -17,6 +17,7 @@ import glob
 import logging
 import os
 import re
+import time
 import sys
 from datetime import datetime, timedelta
 
@@ -1126,26 +1127,33 @@ def _lookup_storm_center(sid, idate, fhr, atcf_dirs, atcf_tag, mcode):
         return None, None, None
 
 
-def _enumerate_active_sids(atcf_dirs, idate, fhr, atcf_tag=None,
-                            mcode=None):
+def _atcf_state(atcf_dirs, idate, fhr, atcf_tag=None, mcode=None):
     """
-    Return the set of storm SIDs (uppercased, e.g. ``{'12L', '13L'}``)
-    that the tracker reports as still-active at the given FHR.
+    Per-storm tracker state at a given FHR.
 
-    Source of truth for the d01 / hwrf race-condition detector. We
-    glob the per-storm parsed ATCFs in ``atcf_dirs`` (skipping ``.all``
-    splits, ``.orig`` backups, and per-FHR shards), pull each storm's
-    SID from the filename prefix, and call ``_lookup_storm_center``
-    to check whether a non-trivial row exists at this FHR. A storm
-    with no row at this FHR is considered legitimately absent (e.g.
-    dissipated, or hasn't formed yet) -- in either case the d01
-    panel should render without waiting for it.
+    Walks the per-storm parsed ATCFs in ``atcf_dirs`` (skipping ``.all``
+    splits, ``.orig`` backups, and per-FHR shards). For each storm,
+    returns:
 
-    Returns an empty set if ``atcf_dirs`` is empty or no per-storm
-    parsed files match.
+    - ``max_fhr``: highest FHR with a non-trivial row in that storm's
+      tracker (lat or lon non-zero). Used to distinguish "model has
+      progressed past this FHR for somebody" from "tracker is globally
+      behind".
+    - ``has_row_here``: True iff the storm has a non-trivial row at
+      ``fhr`` specifically. Used as the "expected at this FHR" signal.
+
+    Returns ``{sid_upper: {'max_fhr': int, 'has_row_here': bool}, ...}``.
+    Empty dict if ``atcf_dirs`` is empty or no per-storm parsed files
+    match.
+
+    Used by the d01 / hwrf race-condition detector. ``has_row_here``
+    drives the "expected" set; ``max_fhr`` drives the global-race
+    fallback for the case where both tracker AND grb2 are missing at
+    the current FHR (which the per-FHR row check alone can't tell
+    apart from legitimate dissipation).
     """
     if not atcf_dirs:
-        return set()
+        return {}
     if not isinstance(atcf_dirs, (list, tuple)):
         atcf_dirs = [atcf_dirs]
 
@@ -1154,7 +1162,7 @@ def _enumerate_active_sids(atcf_dirs, idate, fhr, atcf_tag=None,
     pattern = f"*{idate}*trak*"
 
     seen_files = set()
-    active = set()
+    state = {}
     for adir in atcf_dirs:
         if not adir or not os.path.isdir(adir):
             continue
@@ -1173,13 +1181,24 @@ def _enumerate_active_sids(atcf_dirs, idate, fhr, atcf_tag=None,
                 # Fake storm; no real position, never "expected" for
                 # nest-overlay purposes.
                 continue
-            c_lat, _, _ = _lookup_storm_center(sid, idate, fhr,
-                                                [adir], atcf_tag, mcode)
-            # Treat (0, 0) ATCF rows as absent -- they're placeholders
-            # written before genesis.
-            if c_lat is not None and c_lat != 0.0:
-                active.add(sid)
-    return active
+            try:
+                df = read_atcf(fn, model_id=mcode)
+                if df is None or df.empty:
+                    df = read_atcf(fn)
+            except Exception as e:
+                logger.debug(f"_atcf_state: read_atcf({fn}) failed: {e}")
+                continue
+            if df is None or df.empty:
+                continue
+            # Strip (0, 0) placeholders -- they're pre-genesis sentinels.
+            valid = df[(df['lat'] != 0.0) | (df['lon'] != 0.0)]
+            if valid.empty:
+                continue
+            max_fhr = int(valid['fhr'].max())
+            has_row_here = bool((valid['fhr'] == fhr).any())
+            state[sid] = {'max_fhr': max_fhr,
+                          'has_row_here': has_row_here}
+    return state
 
 
 def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
@@ -1890,6 +1909,12 @@ def main():
 
     n_plots = 0
 
+    # Track whether we've ever seen at least one nest in this run.
+    # Used by the global-race fallback (below) to distinguish "no
+    # storms in this cycle" (no nests ever -> don't trip) from "nests
+    # existed earlier but are missing now" (potential global race).
+    seen_any_nest = False
+
     try:
         for fhr, grib_path_from_spawn in iter_pairs:
             logger.info(f"--- Processing FHR {fhr:03d} ---")
@@ -2079,31 +2104,46 @@ def main():
                                    f"outline(s) for {domain}; see preceding "
                                    f"'nest discovery' WARNING for details.")
 
-                # Race-condition detector (ATCF-driven). The model
-                # writes nest grb2 files and ATCF tracker rows
-                # incrementally; a spawn-driven d01 run easily reaches
-                # a late FHR before its storm grb2 / ATCF row has
-                # landed. Without this check, we'd render a defective
-                # panel (no nest outline, or outline with no L marker)
-                # and the on-disk fast-path would refuse to re-render.
+                # Race-condition detector (ATCF-driven, with global-
+                # race fallback). The model writes nest grb2 files and
+                # ATCF tracker rows incrementally; a spawn-driven d01
+                # run easily reaches a late FHR before its storm grb2
+                # / ATCF row has landed. Without this check, we'd
+                # render a defective panel (no nest outline, or
+                # outline with no L marker) and the on-disk fast-path
+                # would refuse to re-render.
                 #
-                # Truth source: the per-storm ATCF tracker, queried
-                # per-FHR. A storm is "expected at this FHR" iff its
-                # ATCF has a non-trivial row at this FHR; a storm
-                # that has dissipated (or hasn't formed yet) drops
-                # out of the expected set automatically.
-                #
-                # Two flavors of "incomplete":
+                # Three flavors of "incomplete":
                 #   (a) An expected SID has no nest grb2 on disk
                 #       (model post lagging the tracker).
                 #   (b) A discovered nest has no ATCF center (tracker
                 #       lagging the model post).
-                # Skip this FHR + don't mark plotted; the next spawn
-                # iteration retries when the data catches up.
+                #   (c) Global race: both tracker AND grb2 missing at
+                #       this FHR, but we've seen nests at earlier FHRs
+                #       in this run AND no per-storm tracker has
+                #       progressed past this FHR yet. Without (c),
+                #       a synchronized lag of both sides looks
+                #       identical to legitimate dissipation.
+                #
+                # Dissipation handling: when a storm dissipates, its
+                # per-storm tracker stops writing further rows. At
+                # later FHRs, that storm's ``max_fhr`` is < current
+                # fhr. If at least one OTHER storm has progressed past
+                # this FHR (multi-storm case), we trust the per-storm
+                # ATCF rows and the dissipated storm correctly drops
+                # out of the expected set. Single-storm dissipation
+                # is the documented limitation -- a 30-min mtime
+                # fallback on the parent grb2 lets the workflow stop
+                # waiting after the model has clearly moved on.
                 if is_mstorm:
-                    expected_sids = _enumerate_active_sids(
-                        atcf_dirs, idate, fhr, atcf_tag=atcf_tag,
-                        mcode=mcode)
+                    state = _atcf_state(atcf_dirs, idate, fhr,
+                                        atcf_tag=atcf_tag, mcode=mcode)
+                    expected_sids = {sid for sid, info in state.items()
+                                     if info['has_row_here']}
+                    global_max = max(
+                        (info['max_fhr'] for info in state.values()),
+                        default=-1)
+
                     discovered_sids = {
                         e[1] for e in (nest_outlines or [])
                         if len(e) >= 8 and e[1] is not None
@@ -2115,7 +2155,26 @@ def main():
                     }
                     missing_grb2 = expected_sids - discovered_sids
                     missing_center = discovered_sids - discovered_with_center
-                    if missing_grb2 or missing_center:
+
+                    # Global-race fallback (case c). Only triggers when
+                    # the per-storm ATCF rows can't tell us whether
+                    # to trust the current state. Mtime gate gives us
+                    # a long-stop: if the parent grb2 has been on disk
+                    # for > 30 min, the model has clearly moved past
+                    # this FHR and any "missing" data is dissipation
+                    # not race, so we render whatever we have.
+                    race_global = False
+                    if (global_max < fhr and seen_any_nest
+                            and not nest_outlines):
+                        try:
+                            parent_age = time.time() - os.path.getmtime(
+                                grib_path)
+                        except OSError:
+                            parent_age = 0
+                        if parent_age < 30 * 60:
+                            race_global = True
+
+                    if missing_grb2 or missing_center or race_global:
                         reason = []
                         if missing_grb2:
                             reason.append(
@@ -2125,6 +2184,11 @@ def main():
                             reason.append(
                                 f"missing ATCF row for "
                                 f"{sorted(missing_center)}")
+                        if race_global:
+                            reason.append(
+                                f"global tracker behind this FHR "
+                                f"(max={global_max}) but we had nests "
+                                f"at earlier FHRs")
                         logger.warning(
                             f"FHR {fhr:03d}: incomplete nest data on "
                             f"{domain} ({'; '.join(reason)}). Skipping "
@@ -2132,6 +2196,11 @@ def main():
                             f"next spawn iteration when storm grb2 / "
                             f"ATCF rows have caught up.")
                         continue
+
+                    # Made it past the gate -- if we found any nest,
+                    # remember for the next FHR's global-race check.
+                    if nest_outlines:
+                        seen_any_nest = True
             else:
                 nest_outlines = None
 
