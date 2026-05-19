@@ -1533,6 +1533,46 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
             continue
         if draw_markers and c_lat is not None and c_lon is not None:
             _draw_tc_low_marker(ax, c_lat, c_lon, c_mslp)
+
+        # Storm-ID text at the top-inside of the nest. Mask-based so it
+        # works for both axis-aligned nests (rectangle) and rotated
+        # lat-lon nests (parallelogram-shaped valid region). Placing the
+        # text at the top makes it easy to scan a multistorm panel and
+        # see which nest belongs to which storm; combined with the
+        # presence/absence of the L marker inside, the reader can tell
+        # at a glance whether the storm is actively tracked (outline +
+        # L + SID) or a remnant nest the tracker has dropped (outline +
+        # SID, no L). Drawn for any nest where we extracted a SID
+        # successfully -- which is the common case after the regex
+        # accepts named-storm prefixes too.
+        sid_to_label = sid or (label.upper() if label else None)
+        if sid_to_label:
+            valid_rows = np.where(mask.any(axis=1))[0]
+            if valid_rows.size:
+                lat_asc = lat[0] < lat[-1]
+                top_row = valid_rows[-1] if lat_asc else valid_rows[0]
+                valid_cols = np.where(mask[top_row])[0]
+                if valid_cols.size:
+                    center_col = int(np.mean(valid_cols))
+                    top_lat = float(lat[top_row])
+                    label_lon = float(lon[center_col])
+                    # Inset enough that the text sits clearly inside
+                    # the dashed boundary at the typical d01 / parent
+                    # panel extent. 0.4 deg ~ 44 km is comfortable on
+                    # a 25 deg panel (~1.6 %) and stays readable on
+                    # both larger global / Atlantic panels and tighter
+                    # storm-centered panels.
+                    inset_deg = 0.40
+                    label_lat = (top_lat - inset_deg if lat_asc
+                                 else top_lat + inset_deg)
+                    ax.text(label_lon, label_lat, sid_to_label,
+                            fontsize=9, fontweight='bold',
+                            color=color, ha='center', va='top',
+                            transform=ccrs.PlateCarree(), zorder=9,
+                            path_effects=[pe.withStroke(
+                                linewidth=2.0, foreground='white')])
+
+        # Legacy debug-only centroid label, kept for backward compat.
         if label_storms:
             ys, xs = np.where(mask > 0)
             if ys.size:
