@@ -2274,7 +2274,21 @@ def main():
                         and e[5] is not None and e[6] is not None
                     }
                     missing_grb2 = expected_sids - discovered_sids
-                    missing_center = discovered_sids - discovered_with_center
+                    # Case (b) gate: only count a discovered nest as
+                    # "missing center" when the storm is also still
+                    # expected (its per-storm tracker has a row at
+                    # this FHR). When a storm's tracker ends but the
+                    # model keeps producing its nest grb2 for another
+                    # FHR or two -- a meteorologically valid outcome
+                    # of the moving nest continuing to run after the
+                    # vortex tracker drops the storm -- we want to
+                    # draw the nest outline (mask-based, no tracker
+                    # data needed) and just skip the L marker for
+                    # that storm. The whole-FHR skip below should NOT
+                    # fire just because one dissipated storm has a
+                    # leftover grb2.
+                    missing_center = ((discovered_sids & expected_sids)
+                                      - discovered_with_center)
 
                     # Global-race fallback (case c). Trips when:
                     #
