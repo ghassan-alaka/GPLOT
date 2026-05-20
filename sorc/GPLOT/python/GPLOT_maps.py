@@ -2298,8 +2298,9 @@ def main():
                 if is_mstorm:
                     state = _atcf_state(atcf_dirs, idate, fhr,
                                         atcf_tag=atcf_tag, mcode=mcode)
-                    expected_sids = {sid for sid, info in state.items()
-                                     if info['has_row_here']}
+                    state_sids = set(state.keys())
+                    rows_here_sids = {sid for sid, info in state.items()
+                                      if info['has_row_here']}
                     global_max = max(
                         (info['max_fhr'] for info in state.values()),
                         default=-1)
@@ -2313,58 +2314,65 @@ def main():
                         if len(e) >= 8 and e[1] is not None
                         and e[5] is not None and e[6] is not None
                     }
-                    missing_grb2 = expected_sids - discovered_sids
-                    # Case (b) gate: only count a discovered nest as
-                    # "missing center" when the storm is also still
-                    # expected (its per-storm tracker has a row at
-                    # this FHR). When a storm's tracker ends but the
-                    # model keeps producing its nest grb2 for another
-                    # FHR or two -- a meteorologically valid outcome
-                    # of the moving nest continuing to run after the
-                    # vortex tracker drops the storm -- we want to
-                    # draw the nest outline (mask-based, no tracker
-                    # data needed) and just skip the L marker for
-                    # that storm. The whole-FHR skip below should NOT
-                    # fire just because one dissipated storm has a
-                    # leftover grb2.
-                    missing_center = ((discovered_sids & expected_sids)
-                                      - discovered_with_center)
 
-                    # Global-race fallback (case c). Trips when:
-                    #
-                    #   * the per-storm tracker has rows for THIS
-                    #     cycle (global_max >= 0 — i.e. genesis has
-                    #     happened for at least one storm), AND
-                    #   * the tracker hasn't progressed past the
-                    #     current FHR yet (global_max < fhr), AND
-                    #   * we found no nest grb2s at the current FHR,
-                    #     AND
-                    #   * the parent grb2 has been on disk for less
-                    #     than 30 minutes (long-stop: past that, the
-                    #     model has clearly moved on and missing data
-                    #     is dissipation not race).
-                    #
-                    # Note the `global_max >= 0` gate replaces the
-                    # earlier `seen_any_nest` gate. The old gate
-                    # required us to have observed a nest at some
-                    # earlier FHR in this run -- which defangs
-                    # detection for cycles that start at INVEST /
-                    # pre-genesis (no nest at f000, then storm forms
-                    # at f024 and nest grb2s start landing). The
-                    # ATCF-driven gate fires the moment a storm has
-                    # ANY non-trivial row anywhere in its tracker,
-                    # which is the right "storms exist for this
-                    # cycle" signal.
-                    race_global = False
-                    if (global_max >= 0 and global_max < fhr
-                            and not nest_outlines):
-                        try:
-                            parent_age = time.time() - os.path.getmtime(
-                                grib_path)
-                        except OSError:
-                            parent_age = 0
-                        if parent_age < 30 * 60:
-                            race_global = True
+                    # Race-vs-dissipation arbiter: parent grb2 mtime.
+                    # While the model run is still active, the parent
+                    # grb2 was written within the last few minutes.
+                    # Once the run is long over, both the parent and
+                    # the nests are stale and any tracker gaps are
+                    # legitimate dissipation. 30 minutes is generous
+                    # enough to cover the longest expected tracker /
+                    # post lag inside a HAFS cycle but short enough
+                    # that retrospective reruns don't sit in
+                    # perpetual "race" state.
+                    try:
+                        parent_age = time.time() - os.path.getmtime(
+                            grib_path)
+                    except OSError:
+                        parent_age = 0
+                    fresh = parent_age < 30 * 60
+
+                    # Expected-storm set widens during the race
+                    # window. While the parent grb2 is fresh, we
+                    # expect every storm with any tracker presence
+                    # (state_sids) to also have a row at this FHR --
+                    # the tracker just hasn't caught up yet. Past
+                    # the race window, fall back to the narrower
+                    # has_row_here view so dissipated storms don't
+                    # trigger spurious skips.
+                    expected_sids = state_sids if fresh else rows_here_sids
+
+                    missing_grb2 = expected_sids - discovered_sids
+                    # Case (b): discovered nest with no ATCF center.
+                    # In the race window, every such storm is a race
+                    # candidate (tracker hasn't written this FHR's
+                    # row yet, even though the model post has dropped
+                    # the storm's nest grb2). Past the race window,
+                    # only count it when the storm still has a row
+                    # at THIS FHR -- otherwise it's legit dissipation
+                    # and we want to keep the mask-based outline +
+                    # SID label without the L marker.
+                    discovered_no_center = (discovered_sids
+                                            - discovered_with_center)
+                    if fresh:
+                        missing_center = discovered_no_center
+                    else:
+                        missing_center = (discovered_no_center
+                                          & rows_here_sids)
+
+                    # Global-race fallback (case c). Same arbiter as
+                    # cases (a) and (b): if no nest grb2s are on disk
+                    # yet but the parent grb2 is fresh, we're in the
+                    # race window and should retry rather than render
+                    # a storm-less panel. The `global_max >= 0` gate
+                    # additionally requires that at least one storm
+                    # has had any tracker presence this cycle, so we
+                    # don't keep skipping forever for genuinely
+                    # quiet basins.
+                    race_global = (fresh
+                                   and global_max >= 0
+                                   and global_max < fhr
+                                   and not nest_outlines)
 
                     if missing_grb2 or missing_center or race_global:
                         reason = []
