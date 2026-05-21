@@ -327,8 +327,14 @@ _LEVEL_REGISTRY = {
     # CAPE (J/kg)
     ('CAPE', ''): np.arange(0, 4200, 200),
 
-    # Storm-relative helicity (m^2/s^2, 0-3 km)
-    ('HLCY', ''): np.arange(0, 630, 30),
+    # Storm-relative helicity (m^2/s^2, 0-3 km). 100 m^2/s^2 spacing on
+    # the CAPE_HLCY_MSLP overlay -- the prior 30 m^2/s^2 (21 lines)
+    # produced solid black bands across the Atlantic that buried the
+    # CAPE fill. 100 falls naturally on SPC severe-weather break
+    # points (100/200/300/400/500) and keeps the lower-end TC
+    # rotation signal visible. HLCY appears only as OV_CN_LINE in
+    # every namelist, so this entry is safe to coarsen directly.
+    ('HLCY', ''): np.arange(0, 700, 100),
 
     # Potential vorticity (PVU). Range -10 to +10 is symmetric about
     # zero so the RdBu_r diverging cmap puts near-zero PV (tropical
