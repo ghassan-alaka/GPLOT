@@ -994,6 +994,22 @@ def _draw_contour_overlay(ax, datasets, dsource, var, level_str, bounds,
                       inline=True)
         except (IndexError, ValueError):
             pass
+    elif var == 'SST':
+        # SST as an overlay (e.g., DPT2_SST recipe). The fill-side
+        # registry entry uses 0.5 K spacing so the SST_T2 colorbar
+        # can resolve the ~1-2 K cold-wake signal, but that's 31
+        # lines as an overlay -- unreadable static noise. Override
+        # to 1 K spacing so the overlay shows the warm-pool /
+        # cold-wake gradients without overwhelming the fill.
+        levels = np.arange(290, 306, 1)
+        cs = ax.contour(field['lon'], field['lat'], field['data'],
+                        levels=levels, colors=color, linewidths=linewidths,
+                        transform=ccrs.PlateCarree())
+        try:
+            ax.clabel(cs, cs.levels[::2], fontsize=7, fmt='%d',
+                      inline=True)
+        except (IndexError, ValueError):
+            pass
     else:
         if levels is not None:
             cs = ax.contour(field['lon'], field['lat'], field['data'],
