@@ -293,9 +293,13 @@ _LEVEL_REGISTRY = {
     ('T', '850'): np.arange(240, 312, 2),
     ('T', '500'): np.arange(230, 280, 2),
     ('T', '200'): np.arange(190, 240, 2),
-    # Near-surface temperature (2 m above ground; HAFS surface 't' is in K)
-    ('T', '2'): np.arange(270, 312, 1),
-    ('T2', ''): np.arange(270, 312, 1),
+    # Near-surface temperature (2 m above ground; HAFS surface 't' is in K).
+    # 2 K spacing on the SST_T2 overlay: 1 K produced an unreadable tangle
+    # of contour lines over land (steep orographic gradients on Florida /
+    # Cuba / Hispaniola), and the 21-line, 2 K version still resolves the
+    # warm tongue around the cyclone that motivates overlaying air T on SST.
+    ('T', '2'): np.arange(270, 312, 2),
+    ('T2', ''): np.arange(270, 312, 2),
 
     # Sea-surface temperature (K). Range 290-305 K (~17-32 C) focuses
     # the colorbar on the TC-relevant window: below 293 K (20 C) TC
