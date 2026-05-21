@@ -549,6 +549,22 @@ def _convert_units(data, var, units=None):
     if var == 'TPRCP' and 'kg' in units:
         return data / 25.4, 'in'
 
+    # Total precipitable water: convert mass-per-area to depth via
+    # the density of liquid water.  A column of N kg/m^2 of water
+    # vapor would condense to a liquid layer of:
+    #     depth_m  = (N kg/m^2) / (rho_water kg/m^3)
+    #     depth_mm = depth_m * 1000
+    # With rho_water = 1000 kg/m^3 this is numerically identity, but
+    # we keep the derivation explicit so the colorbar label is the
+    # physically meaningful "mm" rather than the raw "kg m**-2", and
+    # so the conversion factor is obvious to anyone reading the code
+    # later (e.g., porting to a different fluid).
+    if var == 'TPW' and 'kg' in units:
+        rho_water = 1000.0     # kg/m^3
+        data_m = data / rho_water
+        data_mm = data_m * 1000.0
+        return data_mm, 'mm'
+
     # Simulated GOES-R ABI brightness temperatures: K -> degC.
     # GRIB records carry these values in Kelvin regardless of
     # whether a units string is present (HAFS sat files often write

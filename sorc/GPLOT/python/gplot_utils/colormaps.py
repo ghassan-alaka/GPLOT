@@ -172,8 +172,11 @@ _CMAP_REGISTRY = {
     ('TPRCP', ''): 'tprcp2.rgb',
     ('PRATE', ''): 'tprcp2.rgb',
 
-    # TPW
-    ('TPW', ''): 'BrBG',
+    # TPW -- MIMIC-TPW2 palette (CIMSS-style), keyed off user-
+    # calibrated RGB anchors at every 10 mm + an explicit yellow
+    # stop at 45 mm so the yellow band renders crisply between
+    # the green (40 mm) and orange (50 mm) anchors.
+    ('TPW', ''): 'MIMIC_TPW2.rgb',
 
     # Reflectivity. Maps uses the NCL REFD.rgb 5-dBZ-bin palette
     # (kept for visual continuity with the operational HRD products);
@@ -381,8 +384,10 @@ _LEVEL_REGISTRY = {
     ('PRCP', ''): np.array([0, 0.5, 1, 2, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50, 75, 100]),
     ('TPRCP', ''): np.array([0, 0.5, 1, 2, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50, 75, 100]),
 
-    # TPW (mm)
-    ('TPW', ''): np.arange(0, 82, 2),
+    # TPW (mm). Range 0-76 mm covers the calibrated MIMIC-TPW2
+    # color stops; values above land in extend-over pink (which the
+    # published CIMSS product also uses for the rare >70 mm plumes).
+    ('TPW', ''): np.arange(0, 76, 2),
 
     # Reflectivity (dBZ). 5 to 75 dBZ in 5-dBZ bins paired with the
     # REFD.rgb palette. Below 5 dBZ renders as white (build_discrete_cmap
