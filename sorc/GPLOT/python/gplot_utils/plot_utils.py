@@ -767,6 +767,7 @@ def get_plot_title(var_name):
         # left-aligned title row doesn't overflow into the
         # right-aligned VMAX/MSLP block on narrow domains.
         'SIMIR':       'Simulated IR (Band 13, 10.3 um)',
+        'SIMIR_SHDL':  'Simulated IR (B13) & 200-850 hPa Shear',
         'SIMWV_UPPER': 'Simulated WV Upper Level (Band 8, 6.2 um)',
         'SIMWV_MID':   'Simulated WV Mid Level (Band 9, 6.9 um)',
         'SBTAGR13toa': 'Simulated IR (Band 13, 10.3 um)',

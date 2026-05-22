@@ -581,7 +581,7 @@ def _convert_units(data, var, units=None):
 
 
 def get_var_2d(datasets, dsource, var, level='', bounds=None,
-               gplot_dir=None):
+               gplot_dir=None, smooth_target_km=0.0):
     """
     Extract a 2D variable from GRIB2 data.
 
@@ -614,7 +614,8 @@ def get_var_2d(datasets, dsource, var, level='', bounds=None,
     if var == 'UV':
         return _get_wind_speed_2d(datasets, dsource, level, bounds, gplot_dir)
     if var == 'SHDL':
-        return _get_deep_layer_shear(datasets, dsource, bounds, gplot_dir)
+        return _get_deep_layer_shear(datasets, dsource, bounds, gplot_dir,
+                                     smooth_target_km=smooth_target_km)
 
     # Potential vorticity is not stored in the HAFS GRIB2 output; derive
     # it on demand from T/u/v on pressure levels. PV needs vertical
@@ -1179,11 +1180,46 @@ def _derive_dpt_from_t_rh(datasets, level, bounds):
     }
 
 
-def _get_deep_layer_shear(datasets, dsource, bounds, gplot_dir):
+def _resolution_adaptive_sigma(lat_arr, target_km):
+    """
+    Return a Gaussian-filter sigma (in grid points) that produces a
+    fixed physical e-folding scale ``target_km`` regardless of the
+    grid's native resolution.
+
+    Computed from the meridional grid spacing (``lat[1] - lat[0]``)
+    using the standard 111 km/degree approximation, which is exact
+    at the equator and within a few percent everywhere a TC panel
+    typically extends. Returns 0.0 when the lat array is missing or
+    degenerate, so callers can short-circuit smoothing safely.
+    """
+    if lat_arr is None or len(lat_arr) < 2:
+        return 0.0
+    dlat_deg = abs(float(lat_arr[1]) - float(lat_arr[0]))
+    if dlat_deg < 1e-6 or target_km <= 0:
+        return 0.0
+    km_per_deg = 111.0
+    return float(target_km) / (dlat_deg * km_per_deg)
+
+
+def _get_deep_layer_shear(datasets, dsource, bounds, gplot_dir,
+                           smooth_target_km=0.0):
     """
     Compute deep-layer wind shear (200-850 hPa vector difference).
 
     Shear = sqrt((U200-U850)^2 + (V200-V850)^2)
+
+    Parameters
+    ----------
+    smooth_target_km : float, optional
+        When > 0, smooth the U/V difference field with a Gaussian filter
+        whose sigma is computed from the grid spacing so the physical
+        e-folding scale is ``smooth_target_km`` regardless of resolution
+        (HAFS parent ~0.06 deg, d03 ~0.02 deg, GFS ~0.25 deg all map to
+        the same physical filter). Used by the SIMIR_SHDL recipe to
+        wipe convection-scale noise from both the contoured magnitude
+        and the streamlined vector field. Default 0.0 keeps the
+        standalone SHDL recipe byte-for-byte identical to the
+        pre-smoothing behavior.
     """
     u200 = get_var_2d(datasets, dsource, 'U', '200', bounds, gplot_dir)
     u850 = get_var_2d(datasets, dsource, 'U', '850', bounds, gplot_dir)
@@ -1196,6 +1232,17 @@ def _get_deep_layer_shear(datasets, dsource, bounds, gplot_dir):
 
     du = u200['data'] - u850['data']
     dv = v200['data'] - v850['data']
+
+    if smooth_target_km > 0:
+        sigma = _resolution_adaptive_sigma(u200['lat'], smooth_target_km)
+        if sigma > 0:
+            from scipy.ndimage import gaussian_filter
+            du = gaussian_filter(du, sigma=sigma)
+            dv = gaussian_filter(dv, sigma=sigma)
+            logger.debug(
+                f"SHDL smoother: dlat={abs(float(u200['lat'][1])-float(u200['lat'][0])):.4f} deg "
+                f"-> sigma={sigma:.2f} grid pts (target {smooth_target_km:.0f} km)")
+
     shear = np.sqrt(du ** 2 + dv ** 2)
 
     return {

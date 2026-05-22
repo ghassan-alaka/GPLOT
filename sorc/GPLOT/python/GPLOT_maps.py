@@ -282,7 +282,7 @@ def parse_level_code(level_str):
 
 
 def get_field(datasets, dsource, var, level_str, bounds, gplot_dir,
-              tc_lat=None, tc_lon=None):
+              tc_lat=None, tc_lon=None, smooth_target_km=0.0):
     """
     Retrieve a 2D field from GRIB2, handling compound level codes.
 
@@ -310,11 +310,12 @@ def get_field(datasets, dsource, var, level_str, bounds, gplot_dir,
     lc = parse_level_code(level_str)
 
     if lc['type'] == 'none':
-        return get_var_2d(datasets, dsource, var, '', bounds, gplot_dir)
+        return get_var_2d(datasets, dsource, var, '', bounds, gplot_dir,
+                          smooth_target_km=smooth_target_km)
 
     if lc['type'] == 'surface' or lc['type'] == 'single':
         return get_var_2d(datasets, dsource, var, lc['level'], bounds,
-                          gplot_dir)
+                          gplot_dir, smooth_target_km=smooth_target_km)
 
     if lc['type'] == 'difference':
         # Vector difference of two levels (e.g., shear)
@@ -775,6 +776,15 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     cmap = get_colormap(cmap_var, cmap_lev, gplot_dir)
     levels = get_contour_levels(cmap_var, cmap_lev)
 
+    # Recipe-filename override: SIMIR_SHDL renders the IR base in
+    # grayscale (cold cloud-tops white, warm surface black) so the
+    # colored deep-layer-shear contours dominate the visual identity
+    # of the panel. Standalone SIMIR keeps the IR4 color enhancement
+    # used elsewhere in the maps suite for cloud-pattern interpretation.
+    if base_var == 'SIMIR' and filename.startswith('SIMIR_SHDL'):
+        cmap = plt.cm.gray_r
+        levels = np.arange(-90, 31, 1)
+
     if levels is not None and len(levels) > 0:
         # Build a discrete cmap sized for the interior bins, with
         # set_under/set_over populated from the source palette endpoints
@@ -854,11 +864,22 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
         except (IndexError, ValueError):
             pass
 
+    # Recipe-filename override: the SIMIR_SHDL recipe wants the SHDL
+    # contour overlay AND the matching shear streamlines to be
+    # smoothed with a fixed ~75 km e-folding scale (resolution-
+    # adaptive sigma), so convection-scale noise doesn't bury the
+    # synoptic-scale shear axes. Streamlines also use a tan color
+    # because black would be invisible against the grayscale IR base.
+    is_simir_shdl = filename.startswith('SIMIR_SHDL')
+    shdl_smooth_km = 75.0 if is_simir_shdl else 0.0
+    stline_color = '#c8a464' if is_simir_shdl else 'black'
+
     # --- 4. Draw contour line overlay 1 ---
     _draw_contour_overlay(ax, datasets, dsource, recipe['OV_CN_LINE'],
                           recipe['LEV2'], bounds, gplot_dir,
                           color='black', linewidths=1.0,
-                          tc_lat=tc_lat, tc_lon=tc_lon)
+                          tc_lat=tc_lat, tc_lon=tc_lon,
+                          smooth_target_km=shdl_smooth_km)
 
     # --- 5. Draw contour line overlay 2 ---
     _draw_contour_overlay(ax, datasets, dsource, recipe['OV_CN_LINE2'],
@@ -880,7 +901,9 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     if ov_stline not in ('N/A', 'n/a', ''):
         _draw_streamline_overlay(ax, datasets, dsource, ov_stline_lev,
                                  bounds, gplot_dir, thin_factor,
-                                 tc_lat=tc_lat, tc_lon=tc_lon)
+                                 tc_lat=tc_lat, tc_lon=tc_lon,
+                                 color=stline_color,
+                                 smooth_target_km=shdl_smooth_km)
 
     # --- 8. Draw TC low marker (from ATCF) ---
     # Every storm-centered plot benefits from a clear marker at the
@@ -950,13 +973,21 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
 
 def _draw_contour_overlay(ax, datasets, dsource, var, level_str, bounds,
                            gplot_dir, color='black', linewidths=1.0,
-                           tc_lat=None, tc_lon=None):
-    """Draw contour line overlay for a variable."""
+                           tc_lat=None, tc_lon=None,
+                           smooth_target_km=0.0):
+    """Draw contour line overlay for a variable.
+
+    ``smooth_target_km`` forwards to the field-fetch path so callers
+    can request a Gaussian-smoothed field with a fixed physical
+    e-folding scale (used by the SIMIR_SHDL recipe to wipe
+    convection-scale noise from the deep-layer shear overlay).
+    """
     if var in ('N/A', 'n/a', ''):
         return
 
     field = get_field(datasets, dsource, var, level_str, bounds, gplot_dir,
-                      tc_lat=tc_lat, tc_lon=tc_lon)
+                      tc_lat=tc_lat, tc_lon=tc_lon,
+                      smooth_target_km=smooth_target_km)
     if field is None:
         return
 
@@ -1008,6 +1039,51 @@ def _draw_contour_overlay(ax, datasets, dsource, var, level_str, bounds,
         try:
             ax.clabel(cs, cs.levels[::2], fontsize=7, fmt='%d',
                       inline=True)
+        except (IndexError, ValueError):
+            pass
+    elif var == 'SHDL':
+        # SHDL as an overlay (e.g., SIMIR_SHDL recipe). Color each
+        # contour by shear magnitude so the favorable / marginal /
+        # unfavorable bands jump out at a glance:
+        #
+        #     5, 10, 15 kt: green   -- favorable TC environment
+        #            20 kt: yellow  -- marginal
+        #   25-50 kt:       red     -- unfavorable, vertical disruption
+        #
+        # Mirrors the CIMSS WG8 deep-layer-shear product convention.
+        # The `color` argument from the caller is ignored here because
+        # the per-level color mapping carries more information than a
+        # single line color, and that's the whole point of this
+        # overlay variant.
+        import matplotlib.patheffects as pe
+        shdl_levels = np.arange(5, 55, 5)
+        shdl_colors = []
+        for lvl in shdl_levels:
+            if lvl <= 15:
+                shdl_colors.append('#22aa22')   # green
+            elif lvl == 20:
+                shdl_colors.append('#dddd00')   # yellow
+            else:
+                shdl_colors.append('#cc0000')   # red
+        cs = ax.contour(field['lon'], field['lat'], field['data'],
+                        levels=shdl_levels, colors=shdl_colors,
+                        linewidths=1.0,
+                        transform=ccrs.PlateCarree())
+        # Thin black halo so the green/yellow/red lines stay legible
+        # over both the dark surface and the bright cloud tops of the
+        # IR base in the SIMIR_SHDL recipe.
+        try:
+            for coll in cs.collections:
+                coll.set_path_effects([pe.withStroke(linewidth=2.0,
+                                                     foreground='black'),
+                                       pe.Normal()])
+        except AttributeError:
+            cs.set_path_effects([pe.withStroke(linewidth=2.0,
+                                               foreground='black'),
+                                 pe.Normal()])
+        try:
+            ax.clabel(cs, cs.levels[::2], fontsize=7, fmt='%d',
+                      inline=True, colors='white')
         except (IndexError, ValueError):
             pass
     else:
@@ -1069,14 +1145,34 @@ def _draw_wind_overlay(ax, datasets, dsource, level_str, bounds, gplot_dir,
 
 
 def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
-                              gplot_dir, thin, tc_lat=None, tc_lon=None):
-    """Draw streamline overlay."""
+                              gplot_dir, thin, tc_lat=None, tc_lon=None,
+                              color='black', smooth_target_km=0.0):
+    """Draw streamline overlay.
+
+    ``color`` lets callers override the default black streamlines for
+    recipes where black would be hard to read (e.g., SIMIR_SHDL uses
+    tan against the grayscale IR base).
+
+    ``smooth_target_km`` runs the U/V components through a Gaussian
+    filter with a resolution-adaptive sigma before plotting, so the
+    physical e-folding scale stays constant across grids. Used by
+    SIMIR_SHDL to match the smoothing applied to the SHDL contour
+    overlay so the streamlines and the contoured magnitudes line up.
+    """
     wind = get_wind_field(datasets, dsource, level_str, bounds, gplot_dir,
                           tc_lat=tc_lat, tc_lon=tc_lon)
     if wind is None:
         return
 
     wind['lon'] = _normalize_lon(wind['lon'])
+
+    if smooth_target_km > 0:
+        from scipy.ndimage import gaussian_filter
+        from gplot_utils.grib_reader import _resolution_adaptive_sigma
+        sigma = _resolution_adaptive_sigma(wind['lat'], smooth_target_km)
+        if sigma > 0:
+            wind['u'] = gaussian_filter(wind['u'], sigma=sigma)
+            wind['v'] = gaussian_filter(wind['v'], sigma=sigma)
 
     # Matplotlib's streamplot is expensive on dense grids; down-sample
     # first so it completes in reasonable time on the storm nest.
@@ -1090,7 +1186,7 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
 
     try:
         ax.streamplot(lon, lat, u, v,
-                      density=1.5, linewidth=0.5, color='black',
+                      density=1.5, linewidth=0.7, color=color,
                       transform=ccrs.PlateCarree(), zorder=4)
     except Exception as e:
         logger.debug(f"Streamline overlay failed: {e}")
