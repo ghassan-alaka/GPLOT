@@ -1530,11 +1530,43 @@ def _draw_nest_outlines(ax, nests, color='black', linestyle='--',
             sid = c_lat = c_lon = c_mslp = None
         else:
             label, sid, lat, lon, mask, c_lat, c_lon, c_mslp = entry
+
+        sid_or_label = sid or (label.upper() if label else '?')
         try:
             cs = ax.contour(lon, lat, mask, levels=[0.5],
                             colors=color, linestyles=linestyle,
                             linewidths=linewidth,
                             transform=ccrs.PlateCarree(), zorder=8)
+
+            # Per-nest diagnostic. The aggregate "drawing N nest
+            # outline(s)" log fires upstream based on the discovery
+            # count, not the rendered count, so when a nest reaches
+            # this loop but produces 0 contour paths the symptom is
+            # invisible from logs alone. Log lat/lon ranges, mask
+            # validity, the actual path count produced, and whether
+            # the in-nest L marker is going to draw, so the next
+            # "outline didn't show up" report has the data we need
+            # to root-cause it (off-panel lon convention vs. zero
+            # 0.5-crossings on the mask vs. ATCF marker-only gap
+            # vs. stale .gif from a prior partial run) without
+            # re-running with extra instrumentation.
+            try:
+                n_segs = sum(len(level_segs) for level_segs
+                             in getattr(cs, 'allsegs', []))
+            except Exception:
+                n_segs = -1
+            lat_min, lat_max = float(np.nanmin(lat)), float(np.nanmax(lat))
+            lon_min, lon_max = float(np.nanmin(lon)), float(np.nanmax(lon))
+            marker_state = ('drawn' if (c_lat is not None
+                                        and c_lon is not None)
+                            else 'no-ATCF-center')
+            logger.warning(
+                f"nest outline draw [{sid_or_label}]: "
+                f"lat=[{lat_min:.2f},{lat_max:.2f}], "
+                f"lon=[{lon_min:.2f},{lon_max:.2f}], "
+                f"mask_valid={int(mask.sum())}, "
+                f"contour_paths={n_segs}, marker={marker_state}")
+
             # Apply the halo to the contour's line collections.
             # Matplotlib >= 3.8 returns a ContourSet that's itself
             # collection-like; older versions expose `.collections`.
