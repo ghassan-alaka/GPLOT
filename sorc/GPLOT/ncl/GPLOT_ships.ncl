@@ -135,6 +135,18 @@ NML = Read_Master_Namelist(MASTER_NML)
 ; 3. Get basic variables from the master namelist:
 if(.not.isvar("DOMAIN"))then            DOMAIN = NML@DOMAIN                     end if
 if(.not.isvar("TIER"))then              TIER = NML@TIER                         end if
+if(.not.isvar("ENSID")) then
+    if(isatt(NML,"ENSID"))then
+        ENSID = NML@ENSID
+    else if(isatt(NML,"EID"))then
+        ENSID = NML@EID
+    else if(isatt(NML,"ENSMEM"))then
+        ENSID = NML@ENSMEM
+    else
+        print("WARNING: No ENSID/EID/ENSMEM found in namelist")
+        ENSID = ""   ; or some default
+    end if  end if  end if
+end if
 if(.not.isvar("DSOURCE"))then           DSOURCE = NML@DSOURCE                   end if
 if(.not.isvar("MACHINE"))then           MACHINE = NML@MACHINE                   end if
 if(.not.isvar("IDATE"))then             IDATE = NML@IDATE                       end if
@@ -161,8 +173,11 @@ if(.not.isvar("FORCE"))then		FORCE = NML@FORCE
 else					FORCE := where(FORCE.eq."True",True,False)
 end if
 
-if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/","//","/")
-else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
+; Matt 4/28 - add ensemble num to ODIR whether in ODIR1 or ODIR0;
+if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/"+ENSID+"/"+DOMAIN+"/","//","/")
+; MATT CHANGE 7/27/2025 - ensemble odir should be idate before ensid - merged 04/03/2026
+else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+IDATE+"/"+ENSID+"/"+DOMAIN+"/","//","/")
+;else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
 end if
 print("MSG: I will place graphics in this location --> "+ODIR)
 
@@ -483,7 +498,12 @@ end if
 	
 ; Find the ATCF that corresponds to this case.
 ; ATCF is required, so script will fail if it is missing.
-val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)+"."))
+;ensemble check - written LG 09/17/2025 merged 04/03/2026 MD
+if(ENSID.eq."")then
+		val := ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)+"."))
+else
+        val := 0
+end if
 if(ismissing(val(0)))then
 	print("ERROR: Found no ATCF files. Can not proceed for storm-centered domain.")
 	exit
@@ -504,15 +524,44 @@ tcM6hB	:= new((/nFHR/),float)
 ; Storm ID (SID) should already be defined.
 ; Get the long Storm ID, e.g., HARVEY09L
 ; Get the storm number, e.g., 9
-LONGSID = str_upper(systemfunc("echo "+ATCF_FILES+" | rev | cut -d'/' -f1 | rev | cut -d'.' -f1"))
-;ALL_SID		= str_upper(systemfunc("echo "+ALL_LONGSID+" | rev | cut -c1-3 | rev"))
-SNUM	= toint(systemfunc("echo "+SID+" | rev | cut -c1-2 | rev"))
+;ensemble check - written LG 09/17/2025 merged 04/03/2026 MD
+if (ENSID.ne."") then
+        LONGSID = SID
+else
+		LONGSID = str_upper(systemfunc("echo "+ATCF_FILES+" | rev | cut -d'/' -f1 | rev | cut -d'.' -f1"))
+		;ALL_SID		= str_upper(systemfunc("echo "+ALL_LONGSID+" | rev | cut -c1-3 | rev"))
+end if
+SNUM	= toint(systemfunc("echo "+SID+" | rev | cut -c2-3 | rev"))
 TCNAME	= str_upper(systemfunc("echo "+LONGSID+" | rev | cut -c4- | rev"))
 SID_OLD = getInvestSID(YYYY,SID)
 			
 
 ; Read the ATCF data
-data := adeckRead(ATCF_FILES,"",IDATE)
+;Lew.Gramer@noaa.gov 2025-09-17 merged 04/03/2026 MD
+;;;; data := adeckRead(ATCF_FILES,"",IDATE)
+if (ENSID.eq."") then
+        adeckFilt = IDATE
+else
+        SBAS = systemfunc("echo "+SID+" | rev | cut -c1")
+        if ( SBAS .eq. "L" ) then
+                LONGBAS = "AL"
+        else if ( SBAS .eq. "E" ) then
+                LONGBAS = "EP"
+        else
+                print("ERROR: Basin "+SBAS+" of storm "+SID+" not supported for Ensemble: "+tostring(SNUM))
+                exit                        
+        end if
+        end if
+        if ( SNUM .gt. 9 ) then
+               SNUM_S = tostring(SNUM)
+        else
+               SNUM_S = "0"+tostring(SNUM)
+        end if
+        print("DEBUG: SID="+SID+", SNUM="+SNUM+", IDATE="+IDATE+", SNUM_S="+SNUM_S+", LONGBAS="+LONGBAS)
+        adeckFilt = (/ IDATE, SNUM_S, LONGBAS /)
+end if
+data := adeckRead(ATCF_FILES,str_upper(MODELID),adeckFilt)
+
 do fff = 0,nFHR-1		
 	val	:= ind(toint(where(ismissing(data(2,:)),default_fillvalue("integer"),data(2,:))).eq.FHR(fff))
 	if(fff.eq.nFHR-1)then	val1	= default_fillvalue("integer")

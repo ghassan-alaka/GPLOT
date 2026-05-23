@@ -218,7 +218,8 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+### Matt Donahue 04/02/2026 - removed EID == 00 -> deterministic behavior
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -233,7 +234,11 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+if [ "${IS_ENS}" == "False" ]; then
+    MAX_JOBS=25
+else
+    MAX_JOBS=525
+fi
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -325,9 +330,18 @@ if [ "${DO_SHIPS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                # Lew.Gramer@noaa.gov 2025-09-04 (merged by Matt Donahue 2026-04-02)
+                if [ "${IS_ENS}" == "False" ]; then 
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        # Find storms based on contents of ATCF file(s)...
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} |sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/'  | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
+                # end Lew + Matt changes from 2025-09-04 and 2026-04-02
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -349,9 +363,11 @@ if [ "${DO_SHIPS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                STORMS+=("00L")
+            # were found, i.e., STORMS != NONE, 2026-04-02 M.D. - only if not ENS!
+            if [ "${IS_ENS}" == "False" ]; then 
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    STORMS+=("00L")
+                fi
             fi
 
 
@@ -368,17 +384,29 @@ if [ "${DO_SHIPS}" = "True" ]; then
             # LOOP OVER STORMS #
             ####################
             for STORM in ${STORMS[@]}; do
-    
-                # Never process the fake storm (00L)
-                if [ "${STORM^^}" == "00L" ]; then
-                    echo "MSG: Fake storm detected ${STORM}. Skipping."
-                    continue
+
+                ### MATT CHANGE 7/26/2025 - only skip fake storm in deterministic
+                ### Merged 04/02/2026
+                if [ "${IS_ENS}" == "False" ]; then 
+                    # Never process the fake storm (00L)
+                    if [ "${STORM^^}" == "00L" ]; then
+                        echo "MSG: Fake storm detected ${STORM}. Skipping."
+                        continue
+                    fi
                 fi
     
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-                if [ ! -z "${STORM_ATCF[*]}" ]; then
-                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+		        if [ "${IS_ENS}" == "False" ]; then 
+                    # Find the forecast hours from the ATCF for this particular storm
+                    # only in deterministic - Matt Donahue 04/02/2026
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                    if [ ! -z "${STORM_ATCF[*]}" ]; then
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
+                else
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                    if [ ! -z "${STORM_ATCF[*]}" ]; then
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
                 fi
     
                 #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -504,21 +532,41 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             ENSID="XX"
                             ENSIDTAG=""
                             MODEL="${MID}"
-                        else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                        else ### MATT CHANGE 7/26/2025 - don't index MID, one model
+                            ### merged 04/02/2026
+                            ENSID=$(printf "%02s\n" "$ID")
+                            
+                            # LJG no "E" 
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
+			            ### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+                        #((NID++))
 
                         # Reset FORCE
                         FORCE="${FORCE_ORIG}"
 
+                        #### MATT CHANGE 7/27/2025 - search for ensemble member ATCF file:
+                        #### note - can put this above in ELSE part of ensemble check, was just working on this at other time
+                        #### Merged 04/02/2026
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "$ATCF" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
+
                         # Create full output path
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
+                            ODIR_FULL="${ODIR}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            #### MATT CHANGE 7/27/2025 - switch order of cycle and ensidtag
+                            #### Merged 04/02/2026
+                            #ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -670,7 +718,12 @@ if [ "${DO_SHIPS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                #### ensemble change merged 04/02/2026
+                                if [ "${IS_ENS}" == "False" ]; then 
+                                    FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -1029,6 +1082,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                         # Sleep to allow the current job to get started
                         sleep 10
+
+			            ### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+			            ((NID++))
 
                     done #end of ID loop
                 done #end of TR loop

@@ -12,74 +12,57 @@
 ;================================================================
 
 ; 1A. EXPERIMENT NAME.
-EXPT = HERC
+EXPT = HAFS_B
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
-DO_MAPS = True
-DO_STATS = True
-DO_SHIPS = True
-DO_POLAR = True
-DO_AIRSEA = True
-; Ocean not available from HERC bit bucket for 2025...
+DO_MAPS = False
+DO_STATS = False
+DO_SHIPS = False
+DO_POLAR = False
+DO_AIRSEA = False
 DO_OCEAN_MAPS = False
-DO_OCEAN_OBS = False
+DO_OCEAN_OBS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
 
 ; 1D. IS THIS MULTISTORM DATA?
-IS_MSTORM = True
+;IS_MSTORM; = False
+IS_MSTORM = False
 
 ; 1E. ENSEMBLE MEMBER NUMBER
-;ENSMEM; = 0
-; Testing
-;EID; = 00
-;EID; = 07
-; HERC 2024
-;EID; = 00-30
-; HERC 2025
-EID = 00-20
+; spawn_xxx.sh checks for both EID and ENSMEM in namelist - could probably consolidate (Matt Donahue 4/2/2026)
+ENSMEM = 0
 
 ; 1E. SYSTEM ENVIRONMENT
 SYS_ENV = ORION
+ACCOUNT = aoml-hafs1
 
 ; 1F. FORECAST CYCLE
-;IDATE; = 2025081512 2025081600 2025081612 2025081800 2025081812
-;IDATE; = 2025081600
-;IDATE; = 2025081612
-;IDATE; = 2025081512
-;IDATE; = 2025081500
-;IDATE; = 2025081412 2025081500 2025081512
-;IDATE; = 2025081500
-;IDATE; = 2025092800 2025100700 2025100712 2025100800
-;IDATE; = 2025092700 2025092800 2025092812 2025100100 2025100112 2025100200 2025100700 2025100712 2025100800 2025100812
-;IDATE; = 2025100700 2025100712 2025100800 2025100812 2025101000 2025101012 2025101100 2025101112 2025101312 2025101400 2025101412 2025101500 2025102300
-;IDATE; = 2025102300 2025102600 2025102612 2025102700
-IDATE = 
+IDATE = 2025102812
 
 ; 1G. STORM ID
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble/
-ITAG = .hfsa.parent.atm
+IDIR = /work/noaa/aoml-hafs1/lgramer/staging/data/sandbox/HAFS_v2p1p1b
+ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /work/noaa/aoml-hafs1/lgramer/GPOUT
-ODIR_TYPE = 0
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HFSB_OCEAN_OBS_Only
+ODIR_TYPE = 1
 
-; 1J. ATCF PATH
-ATCF1_DIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble/
-ATCF1_TAG = hfsa.trak.atcfunix.all
-ATCF2_DIR = /work/noaa/aoml-hafs1/galaka/adeck/NHC
-ATCF2_TAG = trak.hafs.atcfunix
+; 1J. ATCF PATH Matt Note 4/5/2026 - testing HAFSB 2025 cycle and the filetag is reversed
+; current atcf1tag needs to be hfsb.trak.atcfunix
+ATCF1_DIR = /work/noaa/aoml-hafs1/lgramer/staging/data/sandbox/HAFS_v2p1p1b
+ATCF1_TAG = hfsb.trak.atcfunix
+ATCF2_DIR = /work/noaa/aoml-hafs1/lgramer/staging/data/sandbox/HAFS_v2p1p1b
+ATCF2_TAG = hfsb.trak.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-;ADECK_DIR; = /work/noaa/aoml-hafs1/galaka/adeck
-;BDECK_DIR; = /work/noaa/aoml-hafs1/galaka/bdeck
-ADECK_DIR = /work/noaa/aoml-hafs1/lgramer/staging/Verification/Statistics/real-time-2025_tmp
-BDECK_DIR = /work/noaa/aoml-hafs1/lgramer/staging/Verification/Statistics/real-time-2025_tmp
+ADECK_DIR = /work/noaa/hwrf/noscrub/input/abdeck/aid
+BDECK_DIR = /work/noaa/hwrf/noscrub/input/abdeck/btk
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
@@ -113,8 +96,6 @@ DO_CONVERTGIF = True
 ; 1V. COMPUTER ACCOUNT (for BATCH_MODE = SBatch)
 CPU_ACCT = aoml-hafs1
 
-; 1W. Maximum number of simultaneous model CYCLES (does not count ensemble members!)
-MAX_CYCLES = 150
 
 
 ;================================================================
@@ -122,8 +103,8 @@ MAX_CYCLES = 150
 ;================================================================
 
 ; 2A. MAP GRAPHICS DOMAIN NAME
-DOMAIN = hwrf d03
-;DOMAIN; = d01
+;DOMAIN; = hwrf d03
+DOMAIN = d01 d03
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1 Tier2
@@ -131,7 +112,10 @@ TIER = Tier1 Tier2
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
 
-; 2D. MAXIMUM NUMBER OF FILES TO PROCESS
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20
+
+; 2E. MAXIMUM NUMBER OF FILES TO PROCESS
 NMAX_MAPS = 21
 
 
@@ -141,27 +125,26 @@ NMAX_MAPS = 21
 ;================================================================
 
 ; 3A. MODEL NAMES
-; THIS IS BEING USED IN POLAR ;
-MORIG = HFSA
-MCODE = HERC
-MCODEI = HECI
-MCODE12 = HEC2
+MORIG = HFSB
+MCODE = HFXM
+MCODEI = HXMI
+MCODE12 = HXM2
 
 ; 3B. FORECAST GUIDANCE MODELS
-TRKM = HERC HFXB HFXA HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR
-TRKIM = HERC HFXB HFXA HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR CMC
-INTM = HERC HFXB HFXA HFSB HFSA AVNO HWRF HMON DSHP LGEM CTCX
-PRSM = HERC HFXB HFXA HFSB HFSA AVNO HWRF HMON CTCX
-TRKMI = HECI HXBI HXAI HFBI HFAI AVNI HWFI HMNI EGRI CTCI TVCN OFCL
-INTMI = HECI HXBI HXAI HFBI HFAI AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
+TRKM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR
+TRKIM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON NVGM CTCX EGRR CMC
+INTM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON DSHP LGEM CTCX
+PRSM = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON CTCX
+TRKMI = HXMI HXBI HXAI HFBI HFAI AVNI HWFI HMNI EGRI CTCI TVCN OFCL
+INTMI = HXMI HXBI HXAI HFBI HFAI AVNI HWFI HMNI DSHP LGEM CTCI IVCN OFCL
 TRKMT = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON CTCX EGRR OFCL
 INTMT = HFXM HFXB HFXA HFSB HFSA AVNO HWRF HMON DSHP CTCX OFCL
 
 ; 3C. VERIFICATION MODELS
-ETM = HECI HXBI HXAI HFBI HFAI GFSI HWFI HMNI TVCN OFCL
-EIM = HECI HXBI HXAI HFBI HFAI HWFI HMNI DSHP LGEM IVCN OFCL
-LTM = HERC HFXB HFXA HFSB HFSA GFSO HWRF HMON
-LIM = HERC HFXB HFXA HFSB HFSA HWRF HMON
+ETM = HXMI HXBI HXAI HFBI HFAI GFSI HWFI HMNI TVCN OFCL
+EIM = HXMI HXBI HXAI HFBI HFAI HWFI HMNI DSHP LGEM IVCN OFCL
+LTM = HFXM HFXB HFXA HFSB HFSA GFSO HWRF HMON
+LIM = HFXM HFXB HFXA HFSB HFSA HWRF HMON
 
 ; 3D. VERIFICATION TIMES
 LEAD_TIMES = 00 12 24 36 48 60 72 84 96 108 120
@@ -182,9 +165,9 @@ DO_INTERP = True
 ;================================================================
 
 PYTHONFILE = polar_cylindrical_structure.py
-RESOLUTION = 4.0
+RESOLUTION = 2.0
 RMAX = 600
-LEVS = 45
+LEVS = 46
 
 ;================================================================
 ; SECTION 6: GPLOT_Airsea variables
@@ -197,7 +180,7 @@ AIRSEA_PYTHONFILE = plot_airsea_pbl.py
 ; Script to produce ocean map graphics
 OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
 ; Ocean data input directory
-OCEAN_DIR = /work2/noaa/aoml-hafs1/lgramer/ocean/data/ensemble/
+OCEAN_DIR = /work/noaa/aoml-hafs1/lgramer/staging/data/sandbox/HAFS_v2p1p1b
 ; Base coupled model config
 OCEAN_DSOURCE = HAFS
 ; Ocean model (codes)
@@ -205,10 +188,14 @@ OCEAN_DSOURCE = HAFS
 OCEAN_SOURCE = MOM6
 ; Ocean graphical regions to plot (LJG: 2025-04-30)
 OCEAN_DOMAIN = domain d03
+;OCEAN_OBS_DOMAIN; = domain d03
+OCEAN_OBS_DOMAIN = d03
 ; LJG 2024-09-02
 ;OCEAN_DOMAIN; = d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
-FIX_DIR = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20250205-fix/fix/fix_mom6/
+;FIX_DIR; = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20250205-fix/fix/fix_mom6/
+;FIX_DIR; = /scratch3/HFIP/hwrfv3/noscrub/hafs-fix-files/hafs-20250205-fix/fix/fix_mom6/
+FIX_DIR = /work/noaa/hwrf/noscrub/hafs-fix-files/hafs-20260101-fix/fix/fix_mom6/
 ; Does ocean model longitude need to be wrapped (-180-180 => 0-360)?
 OCEAN_WRAP_LON = True

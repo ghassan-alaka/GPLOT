@@ -11,6 +11,7 @@ HFVGFS        .nc
 fvGFS_ATL     .nc
 GEFS          NONE
 HAFS          .grb2
+HFSB          .grb2
 HAFS_HYCOM    .nc
 HFSB_MULTISTORM .grb2
 HFSB_MULTISTORM_HYCOM    .nc

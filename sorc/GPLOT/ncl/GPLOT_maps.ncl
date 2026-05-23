@@ -211,8 +211,11 @@ if(DSOURCE.eq."GFS")then   IDATE = str_sub_str(IDATE,"gfs.","")   end if
 if(isStrSubset(DSOURCE,"d03"))then   DOMAIN = "d03"   end if
 
 
-if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/"+DOMAIN+"/","//","/")
-else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
+; Matt 4/28 - add ensemble num to ODIR whether in ODIR1 or ODIR0;
+if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/"+ENSID+"/"+DOMAIN+"/","//","/")
+; MATT CHANGE 7/27/2025 - ensemble ODIR should be IDATE/ENSID merged 4/29/2026
+else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+IDATE+"/"+ENSID+"/"+DOMAIN+"/","//","/")
+;else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/"+DOMAIN+"/","//","/")
 end if
 print("MSG: I will place graphics in this location --> "+ODIR)
 
@@ -579,10 +582,11 @@ print("MSG: Searching for matching ATCFs.")
                 
 ; 1. Get the list of ATCF files from a pre-existing text file
 ;    If the text file does not exist, then set ATCF_FILES=NONE
-if(fileexists(ODIR+"ATCF_FILES.dat"))then       ATCF_FILES = asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
+if(fileexists(ODIR+"ATCF_FILES.dat"))then
+       print("MSG: OPENING "+ODIR+"ATCF_FILES.dat.") ;print message added by unknown, merged by Matt 4/29/2026
+       ATCF_FILES = asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
 else                                            ATCF_FILES = "NONE"
 end if
-
                 
 ; 2. Check if there are no ATCF files
 if(ATCF_FILES(0).eq."NONE")then
@@ -599,7 +603,9 @@ end if
         
 ; 3. Determine how many ATCFs are needed.
 ;    If this case is storm-centered, then only 1 ATCF is needed
-if(SC_DOMAIN)then       NATCF            := 1
+; Lew.Gramer@noaa.gov 2025-09-02 - merged by Matt 4/29/2026
+if(SC_DOMAIN .and. ENSID.eq."")then
+                        NATCF            := 1
                         ATCF_FILES      := ATCF_FILES(ind(isStrSubset2(str_lower(ATCF_FILES),str_lower(SID)+".")))
 else                    NATCF            := dimsizes(ATCF_FILES)
 end if
@@ -634,14 +640,48 @@ do sss = 0,NATCF-1
         ;      --> LONGSID_LIST: string of long Storm IDs for graphics
         ;      --> ALL_SID: list of short Storm IDs, e.g., 09L
         ;      --> ALL_SNUM: list of storm numbers, e.g., 09
-        ALL_LONGSID(sss) = str_upper(systemfunc("echo "+ATCF_FILES(sss)+" | rev | cut -d'/' -f1 | rev | cut -d'.' -f1"))
+        ;Lew.Gramer@noaa.gov 2025-09-05 - merged by Matt 4/29/2026
+        if (ENSID.ne."") then
+                if ( SC_GRAPHICS ) then
+                        ALL_LONGSID(sss) = SID
+                else
+                        ALL_LONGSID(sss) = SID
+                        print("WARNING: Current logic does not allow all SIDs to be shown for outer-domain Ensemble graphics!");
+                end if
+        else
+                ALL_LONGSID(sss) = str_upper(systemfunc("echo "+ATCF_FILES(sss)+" | rev | cut -d'/' -f1 | rev | cut -d'.' -f1"))
+        end if
         LONGSID_LIST = LONGSID_LIST+" "+ALL_LONGSID(sss)
         LONGSID_LIST = str_squeeze(LONGSID_LIST)
         ALL_SID(sss)    = str_upper(systemfunc("echo "+ALL_LONGSID(sss)+" | rev | cut -c1-3 | rev"))
-        ALL_SNUM(sss)   = toint(systemfunc("echo "+ALL_SID(sss)+" | rev | cut -c1-2 | rev"))
+        ALL_SNUM(sss)   = toint(systemfunc("echo "+ALL_SID(sss)+" | rev | cut -c2-3 | rev"))
                         
         ; c. Read the ATCF data
-	data := adeckRead(ATCF_FILES(sss),str_upper(MODELID),IDATE)
+        ;Lew.Gramer@noaa.gov 2025-09-05 - merged by Matt 4/29/2026
+        if (ENSID.eq."") then
+                adeckFilt = IDATE
+        else
+                SBAS = systemfunc("echo "+ALL_SID(sss)+" | rev | cut -c1")
+                if ( SBAS .eq. "L" ) then
+                        LONGBAS = "AL"
+                else if ( SBAS .eq. "E" ) then
+                        LONGBAS = "EP"
+                else
+                        print("ERROR: Basin "+SBAS+" of storm "+ALL_SID(sss)+" not supported for Ensemble: "+tostring(ALL_SNUM(sss)))
+                        exit                        
+                end if
+                end if
+                if ( ALL_SNUM(sss) .gt. 9 ) then
+                       SNUM = tostring(ALL_SNUM(sss))
+                else
+                       SNUM = "0"+tostring(ALL_SNUM(sss))
+                end if
+                print("DEBUG: ALL_SID(sss)="+ALL_SID(sss)+", ALL_SNUM(sss)="+ALL_SNUM(sss)+", IDATE="+IDATE+", SNUM="+SNUM+", LONGBAS="+LONGBAS)
+                adeckFilt = (/ IDATE, SNUM, LONGBAS /)
+        end if
+	data := adeckRead(ATCF_FILES(sss),str_upper(MODELID),adeckFilt)
+        print("DEBUG: ATCF dimsizes="+dimsizes(data));
+        ; end Ensemble changes on 9/5/2025 and 4/29/2026
         
         ; d. Loop over all forecast hours (from input files)
         do fff = 0,nFHR-1               

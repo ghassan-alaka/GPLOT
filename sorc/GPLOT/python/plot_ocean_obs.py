@@ -902,8 +902,9 @@ def main():
   if TIER == 'MISSING':
     TIER = ''
   ENSID = sys.argv[5]
-  if ENSID == 'MISSING':
-    ENSID = ''
+  if ENSID == 'XX':            ENSID = ''
+  if ENSID == 'MISSING':       ENSID = ''
+  if ENSID == '0':             ENSID = ''
   FORCE = sys.argv[6]
   if FORCE == 'MISSING':
     FORCE = ''
@@ -953,9 +954,15 @@ def main():
   except:
     ODIR_TYPE = 0
   if ODIR_TYPE == 1:
-    ODIR = ODIR+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
+    if ENSID == '':
+      ODIR = ODIR+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
+    else:
+      ODIR = ODIR+'/'+ENSID.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
   else:
-    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
+    if ENSID == '':
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
+    else:
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+ENSID.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
 
   figext = '.png'
   try:

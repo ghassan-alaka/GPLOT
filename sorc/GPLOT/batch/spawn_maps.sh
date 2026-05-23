@@ -227,7 +227,9 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+#### MATT CHANGE 7/26/2025 - removing eid == 0 -> deterministic behavior
+#### Merged 4/29/2026
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -242,7 +244,11 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=20
+if [ "${IS_ENS}" == "False" ]; then
+    MAX_JOBS=25
+else
+    MAX_JOBS=525
+fi
 
 # Get file hour format information from table or namelist
 if [ -z "${FHRFMT}" ]; then
@@ -346,10 +352,19 @@ if [ "${DO_MAPS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
+                # Lew.Gramer@noaa.gov 2025-09-04 - merged by Matt 4/29/2026
+                if [ "${IS_ENS}" == "False" ]; then 
                 for ATCF in ${CYCLE_ATCF[@]}; do
                     STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
                 done
+                else
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        # Find storms based on contents of ATCF file(s)...
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} |sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/'  | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
+            #End Lew changes 2025-09-04
     
             # 3) Try to get STORMS from the HWRF file path.
             # This is hard-coded and might not work.
@@ -369,10 +384,12 @@ if [ "${DO_MAPS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                # STORMS=(`echo "${STORMS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
-                STORMS+=("00L")
+            # were found, i.e., STORMS != NONE (ONLY IF NOT ENS - Matt 4/29/2026)
+            if [ "${IS_ENS}" == "False" ]; then 
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    # STORMS=(`echo "${STORMS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
+                    STORMS+=("00L")
+                    fi
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -394,14 +411,21 @@ if [ "${DO_MAPS}" = "True" ]; then
     
                 # Increase the storm counter
                 ((NSTORM=NSTORM+1))
-    
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-                if [ -z "${STORM_ATCF[*]}" ]; then
-                    echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+            #only deterministic here - Matt 4/29/2026
+		if [ "${IS_ENS}" == "False" ]; then 
+                    # Find the forecast hours from the ATCF for this particular storm
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                    if [ -z "${STORM_ATCF[*]}" ]; then
+                        echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+                    else
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                        #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                    fi
                 else
-                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                    #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                    if [ ! -z "${STORM_ATCF[*]}" ]; then
+                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    fi
                 fi
     
                 # Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -480,10 +504,14 @@ if [ "${DO_MAPS}" = "True" ]; then
                         continue
                     fi
     
-                    # Skip the fake storm (00L) for storm-centered domains
-                    if [ "${SC}" == "True" ] && [ "${STORM^^}" == "00L" ]; then
-                        echo "WARNING: Skipping this domain (${DMN}) because it is storm-centered and this is the fake storm (00L)."
-                        continue
+                    ##### MATT CHANGE 7/26/2025 - only skip fake storm if not ensemble
+                    #Merged 4/29/2026
+                    if [ "${IS_ENS}" == "False" ]; then
+                        # Skip the fake storm (00L) for storm-centered domains
+                        if [ "${SC}" == "True" ] && [ "${STORM^^}" == "00L" ]; then
+                            echo "WARNING: Skipping this domain (${DMN}) because it is storm-centered and this is the fake storm (00L)."
+                            continue
+                        fi
                     fi
     
                     # If not a storm-centered domain, set FOUND_FILES=False
@@ -578,18 +606,33 @@ if [ "${DO_MAPS}" = "True" ]; then
                             ENSID="XX"
                             ENSIDTAG=""
                             MODEL="${MID}"
-                        else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                        else ##### MATT CHANGE 7/26/2025 - don't index MID, all ensemble output should have same model
+                            ### MATT CHANGE 2/18/2026 - bash got confused when using 
+                            ### ENSID=$(printf "%02d\n" ${ID}) at ID=08 and 09
+                            ### because it was treating them as octal numbers - Merged 4/29/2026
+                            ENSID=$(printf "%02s\n" "$ID")
+                            # LJG no "E" 
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
-
-                        # Create full output path
+                        #### MATT CHANGE 7/27/2025 - search for ensemble member ATCF file: - Merged 4/29/2026
+                        #### note - can put this above in ELSE part of ensemble check, was just working on this at other time
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "$ATCF" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
+                        # Create full output path - Matt addition 4/29/2026 to include ensidtag in all cases 
+                        #when blank, it just becomes "//" which gets replaced with "/"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
-                        else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
+                        else ####### MATT CHANGE 7/26/2025 - switch order of ens tag and cycle - merged 4/29/2026
+                            #ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+			                ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -741,10 +784,14 @@ if [ "${DO_MAPS}" = "True" ]; then
                             # Loop over all lead times to find available files.
                             for FHR in ${FILE_FHRS[@]}; do
     
-                                # Build the file search string.
+                                # Build the file search string. - file_search3 adjusted for ensemble Matt 4/29/2026
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                if [ "${IS_ENS}" == "False" ]; then 
+                                    FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -1016,25 +1063,25 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
                             RUNTIME="04:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
                             RUNTIME="04:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="05:29:59"
+                        else
+                            RUNTIME="05:59:59"
                         fi
 
 
@@ -1107,6 +1154,8 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
+			#### MATT CHANGE 7/26/2025 - moved increment from beginning of ensemble loop
+			((NID++))
     
                     done #end of ID loop
     

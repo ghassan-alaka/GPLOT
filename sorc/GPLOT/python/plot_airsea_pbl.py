@@ -100,6 +100,10 @@ def main():
   if TIER == 'MISSING':
     TIER = ''
   ENSID = sys.argv[5]
+  if ENSID == 'XX':
+    ENSID = ''
+  if ENSID == '0':
+    ENSID = ''
   if ENSID == 'MISSING':
     ENSID = ''
   FORCE = sys.argv[6]
@@ -138,12 +142,20 @@ def main():
     ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
   except:
     ODIR_TYPE = 0
-  if ODIR_TYPE == 1:
-    ODIR = ODIR+'/airsea/'
-    BASEDIR = BASEDIR+'/'
-  else:
-    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/airsea/'
-    BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
+  if ODIR_TYPE == 1: #Matt 5/3/2026 - adding ENSID logic for ODIR1 too
+    if ENSID == '':
+      ODIR = ODIR+'/airsea/'
+      BASEDIR = BASEDIR+'/'
+    else:
+      ODIR = ODIR+'/'+ENSID.strip()+'/airsea/'
+      BASEDIR = BASEDIR+'/'+ENSID.strip()+'/'
+  else: #### MATT NOTE 7/27/2025 - adding logic to account for ensembles - copying polar logic
+    if ENSID == '':
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/airsea/'
+      BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
+    else:
+      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENSID.strip()+'/airsea/'
+      BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENSID.strip()+'/'
 
   figext = '.png'
   try:
@@ -190,7 +202,14 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  #ENSID logic merged 5/3/2026
+  if ENSID == '':
+    LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  elif SID != '':
+    LONGSID = SID
+  else:
+    print(f'ERROR: NO VALID STORM IDENTIFIER: Exiting...')
+    sys.exit(1)
   #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
   TCNAME = LONGSID[::-1]
   TCNAME = TCNAME[3:]
@@ -202,6 +221,22 @@ def main():
   BASINID = BASINID[0]
   ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
   ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
+  # Lew.Gramer@noaa.gov: For Ensembles, also filter on ATCF_DATA for SID in ATCF_DATA[:,1:2]
+  #merged 5/3/2026
+  #MD Note 5/3/2026 - forcing uppercase for basin ID match
+  if ( ENSID != '' and SID != '' ):
+    if ( BASINID.upper() == 'L' ):
+      LONGBASINID = "AL"
+    elif ( BASINID.upper() == 'E' ):
+      LONGBASINID = "EP"
+    elif ( BASINID.upper() == 'C' ):
+      LONGBASINID = "CP"
+    elif ( BASINID.upper() == 'W' ):
+      LONGBASINID = "WP"
+    else:
+      print(f'ERROR: BASINID "{BASINID}" not recognized! Exiting...')
+      sys.exit(1)
+    ATCF_DATA = ATCF_DATA[(ATCF_DATA[:,0] == LONGBASINID) & (ATCF_DATA[:,1] == SNUM),:]
   
   
   # Get the list of unplotted files
@@ -259,7 +294,14 @@ def main():
     forecastinit = ATCF_DATA[list(FHRIND),2][0]
     maxwind = ATCF_DATA[list(FHRIND),8][0]
     minpressure = ATCF_DATA[list(FHRIND),9][0]
-    rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    #rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    #Try/Accept added in different branch, merged here 5/3/2026
+    try:
+      rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    except IndexError:
+      print(f'WARNING: RMW not found in the ATCF file. Setting to NaN.')
+      rmwnmi = np.nan
+    print(f'MSG: centerlat,centerlon = {centerlat},{centerlon}')
 
     # HACK: This should be revisited.
     #if centerlat > 50.0:

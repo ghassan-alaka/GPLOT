@@ -110,7 +110,9 @@ HOME = systemfunc("echo $HOME")
 
 ; 3. Check for ensemble member from command line
 if(isvar("ENSID"))then	print("MSG: Found this ensemble ID: "+ENSID)
-else			ENSID = ""
+else
+        print("MSG: Found no ensemble ID (ENSID='')")
+	ENSID = ""
 end if
 
 
@@ -201,9 +203,11 @@ if(.not.isvar("DO_FHRLABELS"))then	DO_FHRLABELS = NML@DO_FHRLABELS		end if
 if(.not.isvar("FORCE"))then             FORCE = NML@FORCE
 else                                    FORCE := where(FORCE.eq."True",True,False)
 end if
-
-if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/guidance/","//","/")
-else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/guidance/","//","/")
+; Matt 4/28 - add ensemble num to ODIR whether in ODIR1 or ODIR0;
+if(ODIR_TYPE.eq.1)then      ODIR = str_sub_str(ODIR+"/"+ENSID+"/guidance/","//","/")
+; MATT CHANGE 7/27/2025 - ensemble odir should be idate/"E"+ensid
+else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+IDATE+"/"+ENSID+"/guidance/","//","/")
+; else                        ODIR = str_sub_str(ODIR+"/"+EXPT+"/"+ENSID+"/"+IDATE+"/guidance/","//","/")
 end if
 ODIR_ADECK = ODIR+"/adeck/"
 print("MSG: I will place graphics in this location --> "+ODIR)
@@ -646,9 +650,13 @@ if(fileexists(ODIR+"ATCF_FILES.dat"))then
 	; Read ATCF_FILES.dat, which is created by the shell wrapper.
 	; This file contains all ATCFs that match the cycle (IDATE)
 	ATCF_FILE := asciiread(ODIR+"ATCF_FILES.dat",-1,"string")
-	
+	;ens logic merged by Matt Donahue 4/29/2026
+	if (ENSID.ne."") then
+			val := 0
+	else
 	; Retain only the ATCF that matched the storm ID (SID)
-	val := ind(isStrSubset2(ATCF_FILE,str_lower(SID)))
+		val := ind(isStrSubset2(ATCF_FILE,str_lower(SID)))
+    end if
 	
 	; Check that 1 valid ATCF is found. If not, exit.
 	if(dimsizes(val).gt.1)then
@@ -667,20 +675,25 @@ else
 	;Add functionality to automatically search for ATCFs as a back up?
 	print("MSG: Could not find list of ATCF files. Searching based on namelist.")
 	
-	; Search for the ATCF
-	ATCF_FILE := systemfunc("find "+ATCF2_DIR+" -name "+str_get_dq()+"*"+str_lower(SID)+"*"+IDATE+"*"+ATCF2_TAG+str_get_dq());+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
-	if(ismissing(ATCF_FILE))then
-		ATCF_FILE := systemfunc("find "+ATCF2_DIR+" -name "+str_get_dq()+"*"+IDATE+"*"+str_lower(SID)+"*"+ATCF2_TAG);+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
-	end if
-	if(ismissing(ATCF_FILE))then
-		ATCF_FILE := systemfunc("find "+ATCF1_DIR+" -name "+str_get_dq()+"*"+str_lower(SID)+"*"+IDATE+"*"+ATCF1_TAG);+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
-	end if
-	if(ismissing(ATCF_FILE))then
-		ATCF_FILE := systemfunc("find "+ATCF1_DIR+" -name "+str_get_dq()+"*"+IDATE+"*"+str_lower(SID)+"*"+ATCF1_TAG);+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
-	end if
-	if(ismissing(ATCF_FILE))then	print("ERROR: Could not find matching ATCF at locations specified in namelist.")
-					exit
-	end if
+	; Search for the ATCF ens logic merged by Matt Donahue 4/29/2026
+        if (ENSID.ne."") then
+                ATCFSID = "00l"
+        else
+                ATCFSID = "${SID}"
+        end if
+        ATCF_FILE := systemfunc("find "+ATCF2_DIR+" -name "+str_get_dq()+"*"+str_lower(ATCFSID)+"*"+IDATE+"*"+ATCF2_TAG+str_get_dq());+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
+        if(ismissing(ATCF_FILE))then
+                ATCF_FILE := systemfunc("find "+ATCF2_DIR+" -name "+str_get_dq()+"*"+IDATE+"*"+str_lower(ATCFSID)+"*"+ATCF2_TAG);+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
+        end if
+        if(ismissing(ATCF_FILE))then
+                ATCF_FILE := systemfunc("find "+ATCF1_DIR+" -name "+str_get_dq()+"*"+str_lower(ATCFSID)+"*"+IDATE+"*"+ATCF1_TAG);+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
+        end if
+        if(ismissing(ATCF_FILE))then
+                ATCF_FILE := systemfunc("find "+ATCF1_DIR+" -name "+str_get_dq()+"*"+IDATE+"*"+str_lower(ATCFSID)+"*"+ATCF1_TAG);+" 2>/dev/null | xargs -n 1 basename 2>/dev/null")
+        end if
+        if(ismissing(ATCF_FILE))then    print("ERROR: Could not find matching ATCF at locations specified in namelist.")
+                                        exit
+        end if
 end if
 print("MSG: Found this ATCF file --> "+ATCF_FILE)
 ATCF_BASE = systemfunc("basename "+ATCF_FILE)
@@ -701,9 +714,13 @@ else						print("MSG: This is not the final ATCF.")
 end if  end if
 
 
-; Parse important info from the file name
-fSplit	:= str_split(ATCF_BASE,".")
-LONGSID	:= fSplit(0)
+; Parse important info from the file name - ens logic merged by MD 4/29/2026
+if (ENSID.ne."") then
+        LONGSID := str_lower(SID)
+else
+        fSplit	:= str_split(ATCF_BASE,".")
+        LONGSID	:= fSplit(0)
+end if
 tmp	:= tochar(LONGSID)
 if(dimsizes(tmp).ge.4)then
 	TC_NAME	:= str_upper(tostring(tmp(0:dimsizes(tmp)-4)))

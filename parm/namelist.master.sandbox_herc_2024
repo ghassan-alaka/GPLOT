@@ -15,14 +15,14 @@
 EXPT = HERC
 
 ; 1B. WHAT TYPES OF GRAPHICS DO YOU WANT?
-DO_MAPS = True
-DO_STATS = True
-DO_SHIPS = True
-DO_POLAR = True
-DO_AIRSEA = True
+DO_MAPS = False
+DO_STATS = False
+DO_SHIPS = False
+DO_POLAR = False
+DO_AIRSEA = False
 ; Ocean not available from HERC bit bucket for 2025...
 DO_OCEAN_MAPS = False
-DO_OCEAN_OBS = False
+DO_OCEAN_OBS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -31,43 +31,28 @@ DSOURCE = HAFS
 IS_MSTORM = True
 
 ; 1E. ENSEMBLE MEMBER NUMBER
-;ENSMEM; = 0
-; Testing
-;EID; = 00
-;EID; = 07
-; HERC 2024
-;EID; = 00-30
-; HERC 2025
-EID = 00-20
+; spawn_xxx.sh checks for both EID and ENSMEM in namelist - could probably consolidate (Matt Donahue 4/2/2026)
+; in 2024, ensemble members 00-05, 11-20 have mom6, 06-10 and 21-30 have hycom
+EID = 07-08
 
 ; 1E. SYSTEM ENVIRONMENT
 SYS_ENV = ORION
 
 ; 1F. FORECAST CYCLE
-;IDATE; = 2025081512 2025081600 2025081612 2025081800 2025081812
-;IDATE; = 2025081600
-;IDATE; = 2025081612
-;IDATE; = 2025081512
-;IDATE; = 2025081500
-;IDATE; = 2025081412 2025081500 2025081512
-;IDATE; = 2025081500
-;IDATE; = 2025092800 2025100700 2025100712 2025100800
-;IDATE; = 2025092700 2025092800 2025092812 2025100100 2025100112 2025100200 2025100700 2025100712 2025100800 2025100812
-;IDATE; = 2025100700 2025100712 2025100800 2025100812 2025101000 2025101012 2025101100 2025101112 2025101312 2025101400 2025101412 2025101500 2025102300
-;IDATE; = 2025102300 2025102600 2025102612 2025102700
-IDATE = 
+IDATE = 2024100600
 
 ; 1G. STORM ID
 SID = 
 
 ; 1H. INPUT PATH
-IDIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble/
+IDIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble
 ITAG = .hfsa.parent.atm
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /work/noaa/aoml-hafs1/lgramer/GPOUT
-ODIR_TYPE = 0
+;might have an issue here with ODIR_TYPE
+ODIR = /work2/noaa/aoml-hafs1/donahue/GPLOT_Merge_changes/GPOUT_Merge_Testing/HERC_2024_OCEAN_OBS_Only
+ODIR_TYPE = 1
 
 ; 1J. ATCF PATH
 ATCF1_DIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble/
@@ -78,12 +63,12 @@ ATCF2_TAG = trak.hafs.atcfunix
 ; 1K. ADECK & BDECK PATHS
 ;ADECK_DIR; = /work/noaa/aoml-hafs1/galaka/adeck
 ;BDECK_DIR; = /work/noaa/aoml-hafs1/galaka/bdeck
-ADECK_DIR = /work/noaa/aoml-hafs1/lgramer/staging/Verification/Statistics/real-time-2025_tmp
-BDECK_DIR = /work/noaa/aoml-hafs1/lgramer/staging/Verification/Statistics/real-time-2025_tmp
+ADECK_DIR = /work/noaa/hwrf/noscrub/input/abdeck/aid
+BDECK_DIR = /work/noaa/hwrf/noscrub/input/abdeck/btk
 
 ; 1L. FORECAST HOUR INFORMATION
 INIT_HR = 0
-FNL_HR = 126
+FNL_HR = 24
 FMT_HR = 3
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
@@ -124,6 +109,7 @@ MAX_CYCLES = 150
 ; 2A. MAP GRAPHICS DOMAIN NAME
 DOMAIN = hwrf d03
 ;DOMAIN; = d01
+;DOMAIN; = hwrf
 
 ; 2B. MAP GRAPHICS TIER
 TIER = Tier1 Tier2
@@ -131,8 +117,11 @@ TIER = Tier1 Tier2
 ; 2C. MAP ATCF REQUIREMENT
 ATCF_REQD = False
 
-; 2D. MAXIMUM NUMBER OF FILES TO PROCESS
-NMAX_MAPS = 21
+; 2D. MAP PIVOT LONGITUDE
+PIV = 20clear
+
+; 2E. MAXIMUM NUMBER OF FILES TO PROCESS
+NMAX_MAPS = 31
 
 
 
@@ -182,9 +171,9 @@ DO_INTERP = True
 ;================================================================
 
 PYTHONFILE = polar_cylindrical_structure.py
-RESOLUTION = 4.0
+RESOLUTION = 6.0
 RMAX = 600
-LEVS = 45
+LEVS = 46
 
 ;================================================================
 ; SECTION 6: GPLOT_Airsea variables
@@ -197,18 +186,21 @@ AIRSEA_PYTHONFILE = plot_airsea_pbl.py
 ; Script to produce ocean map graphics
 OCEAN_MAPS_PYTHONFILE = plot_ocean_maps.py
 ; Ocean data input directory
-OCEAN_DIR = /work2/noaa/aoml-hafs1/lgramer/ocean/data/ensemble/
+OCEAN_DIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble
 ; Base coupled model config
 OCEAN_DSOURCE = HAFS
 ; Ocean model (codes)
-;OCEAN_SOURCE; = HYCOM
-OCEAN_SOURCE = MOM6
+OCEAN_SOURCE = HYCOM
+;OCEAN_SOURCE; = MOM6
 ; Ocean graphical regions to plot (LJG: 2025-04-30)
 OCEAN_DOMAIN = domain d03
 ; LJG 2024-09-02
 ;OCEAN_DOMAIN; = d03
+OCEAN_OBS_DOMAIN = d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
-FIX_DIR = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20250205-fix/fix/fix_mom6/
+;FIX_DIR; = /work/noaa/hwrf/noscrub/hafs-fix-files/hafs-20240703-fix/fix/fix_mom6/
+FIX_DIR = /work/noaa/hwrf/noscrub/hafs-fix-files/hafs-20240703-fix/fix/fix_hycom/
 ; Does ocean model longitude need to be wrapped (-180-180 => 0-360)?
-OCEAN_WRAP_LON = True
+; Needs to be False for HYCOM, True for MOM6
+OCEAN_WRAP_LON = False
