@@ -2518,28 +2518,54 @@ def main():
                                    and global_max < fhr
                                    and not nest_outlines)
 
-                    if missing_grb2 or missing_center or race_global:
-                        reason = []
-                        if missing_grb2:
-                            reason.append(
-                                f"missing grb2 for "
-                                f"{sorted(missing_grb2)}")
-                        if missing_center:
-                            reason.append(
-                                f"missing ATCF row for "
-                                f"{sorted(missing_center)}")
-                        if race_global:
-                            reason.append(
-                                f"global tracker behind this FHR "
-                                f"(max={global_max}) and no nests "
-                                f"on disk yet")
+                    # Skip-and-retry is gated on `fresh`: past the 30-
+                    # min cutoff the model is no longer expected to
+                    # produce additional nest grb2s / ATCF rows for
+                    # this FHR, so waiting any longer is pointless --
+                    # render the parent panel with whatever nest
+                    # overlays we have (possibly zero) and move on.
+                    # Without this guard, a multistorm hwrf / d01
+                    # panel at a late FHR where one storm's tracker
+                    # has ended but another storm still has a row
+                    # would loop forever on `missing_grb2`, since
+                    # `rows_here_sids` for the still-active storm
+                    # keeps that storm in `expected_sids` even past
+                    # the cutoff. The user-visible symptom is "spawn
+                    # keeps retrying f126 even past the 30-min
+                    # cutoff" on a workflow where the tracker stopped
+                    # at f123.
+                    skip_reasons = []
+                    if missing_grb2:
+                        skip_reasons.append(
+                            f"missing grb2 for "
+                            f"{sorted(missing_grb2)}")
+                    if missing_center:
+                        skip_reasons.append(
+                            f"missing ATCF row for "
+                            f"{sorted(missing_center)}")
+                    if race_global:
+                        skip_reasons.append(
+                            f"global tracker behind this FHR "
+                            f"(max={global_max}) and no nests "
+                            f"on disk yet")
+                    if skip_reasons and fresh:
                         logger.warning(
                             f"FHR {fhr:03d}: incomplete nest data on "
-                            f"{domain} ({'; '.join(reason)}). Skipping "
-                            f"FHR + won't mark plotted; will retry on "
-                            f"next spawn iteration when storm grb2 / "
-                            f"ATCF rows have caught up.")
+                            f"{domain} ({'; '.join(skip_reasons)}). "
+                            f"Parent grb2 fresh ({parent_age/60:.1f} "
+                            f"min old); skipping FHR + won't mark "
+                            f"plotted; will retry on next spawn "
+                            f"iteration when storm grb2 / ATCF rows "
+                            f"have caught up.")
                         continue
+                    elif skip_reasons:
+                        logger.warning(
+                            f"FHR {fhr:03d}: incomplete nest data on "
+                            f"{domain} ({'; '.join(skip_reasons)}). "
+                            f"Parent grb2 is {parent_age/60:.1f} min "
+                            f"old (past 30-min race window); "
+                            f"rendering panel with available nest "
+                            f"overlay(s) and marking plotted.")
             else:
                 nest_outlines = None
 
