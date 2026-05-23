@@ -759,19 +759,23 @@ def _azimuthal_means(vt_p, ur_p, w_p, dbz_p, temp_p, q_p, rh_p, pressure_p,
 
 
 ##############################
-def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta):
+def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, vort_p, XI, r, theta):
   """Azimuthal Fourier decomposition (wavenumbers 0, 1, 2, >2) for:
     * dbz5_p   (reflectivity at level index 10, ~5 km)
     * rh5_p    (RH at level index 10, ~5 km)
     * w5_p     (vertical velocity at level index 10, ~5 km)
     * vt10_p   (10-m tangential wind)
     * ur10_p   (10-m radial wind)
+    * vort2_p  (relative vorticity at level index 4, ~2 km)
 
   Returns dict of per-field w0/w1/w2/whigher arrays shaped (ntheta, nr).
   """
   dbz5_p = dbz_p[:, :, 10]
   rh5_p  = rh_p[:, :, 10]
   w5_p   = w_p[:, :, 10]
+  # 2 km altitude: heightlevs = np.linspace(0, 18000, 37) -> step = 500 m,
+  # so 2000 m sits at index 4. Reuse the same Fourier loop below.
+  vort2_p = vort_p[:, :, 4]
 
   dbz5_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   dbz5_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
@@ -793,6 +797,11 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta):
   ur10_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   ur10_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   ur10_p_w2      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+
+  vort2_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  vort2_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  vort2_p_w2      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  vort2_p_whigher = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
 
   for j in range(np.shape(r)[0]):
     dbzdata = dbz5_p[:, j]
@@ -848,6 +857,19 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta):
     ur10_p_w1[:, j] = A1_ur10*np.cos(theta)   + B1_ur10*np.sin(theta)
     ur10_p_w2[:, j] = A2_ur10*np.cos(2*theta) + B2_ur10*np.sin(2*theta)
 
+    vortdata = vort2_p[:, j]
+    fourier_vort = np.fft.fft(vortdata) / len(vortdata)
+    amp0_vort = np.real(fourier_vort[0])
+    A1_vort = 2*np.real(fourier_vort[1]); B1_vort = -2*np.imag(fourier_vort[1])
+    A2_vort = 2*np.real(fourier_vort[2]); B2_vort = -2*np.imag(fourier_vort[2])
+    vort2_p_w0[:, j] = amp0_vort
+    vort2_p_w1[:, j] = A1_vort*np.cos(theta)   + B1_vort*np.sin(theta)
+    vort2_p_w2[:, j] = A2_vort*np.cos(2*theta) + B2_vort*np.sin(2*theta)
+    vort2_p_whigher[:, j] = 0
+    for h in range(2, int((np.shape(theta)[0]+1)/2)):
+      A = 2*np.real(fourier_vort[h]); B = -2*np.imag(fourier_vort[h])
+      vort2_p_whigher[:, j] = vort2_p_whigher[:, j] + A*np.cos(h*theta) + B*np.sin(h*theta)
+
   return {
     'dbz5_p': dbz5_p, 'rh5_p': rh5_p, 'w5_p': w5_p,
     'dbz5_p_w0': dbz5_p_w0, 'dbz5_p_w1': dbz5_p_w1,
@@ -857,6 +879,9 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta):
     'vt10_p_w0': vt10_p_w0, 'vt10_p_w1': vt10_p_w1,
     'vt10_p_w2': vt10_p_w2, 'vt10_p_whigher': vt10_p_whigher,
     'ur10_p_w0': ur10_p_w0, 'ur10_p_w1': ur10_p_w1, 'ur10_p_w2': ur10_p_w2,
+    'vort2_p': vort2_p,
+    'vort2_p_w0': vort2_p_w0, 'vort2_p_w1': vort2_p_w1,
+    'vort2_p_w2': vort2_p_w2, 'vort2_p_whigher': vort2_p_whigher,
   }
 
 
@@ -2167,29 +2192,6 @@ def main():
     dbz_p_rightshear_mean = means['dbz_p_rightshear_mean']
     rh_p_rightshear_mean  = means['rh_p_rightshear_mean']
 
-    # F-1.6: Azimuthal Fourier decomposition (w0/w1/w2/whigher)
-    waves = _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, XI, r, theta)
-    dbz5_p          = waves['dbz5_p']
-    rh5_p           = waves['rh5_p']
-    w5_p            = waves['w5_p']
-    dbz5_p_w0       = waves['dbz5_p_w0']
-    dbz5_p_w1       = waves['dbz5_p_w1']
-    dbz5_p_w2       = waves['dbz5_p_w2']
-    dbz5_p_whigher  = waves['dbz5_p_whigher']
-    rh5_p_w0        = waves['rh5_p_w0']
-    rh5_p_w1        = waves['rh5_p_w1']
-    rh5_p_w2        = waves['rh5_p_w2']
-    w5_p_w0         = waves['w5_p_w0']
-    w5_p_w1         = waves['w5_p_w1']
-    w5_p_w2         = waves['w5_p_w2']
-    vt10_p_w0       = waves['vt10_p_w0']
-    vt10_p_w1       = waves['vt10_p_w1']
-    vt10_p_w2       = waves['vt10_p_w2']
-    vt10_p_whigher  = waves['vt10_p_whigher']
-    ur10_p_w0       = waves['ur10_p_w0']
-    ur10_p_w1       = waves['ur10_p_w1']
-    ur10_p_w2       = waves['ur10_p_w2']
-
     # F-1.7: 2-km RMW / Vmax + rnorm renormalization (NaN guards -> skip)
     rmw = _find_rmw_vmax(vt_p_mean, vt_pbl_p_mean, ur_p_mean, r, theta,
                          rnorm, Rnorm, THETAnorm, XInorm, YInorm,
@@ -2242,6 +2244,9 @@ def main():
       'do_vt_tendency', 'do_vort_tendency',
       'do_ur_pbl_p_mean', 'do_radar_plots', 'do_soundings', 'do_shear_and_rh_plots',
       'do_write_netcdf', 'do_tdr_recentering',
+      # Vorticity figures (appended at the end so existing positional
+      # indices into namelist_structure_vars stay stable).
+      'do_vort_mean', 'do_vort2km_wavenumber',
     ]
     namelist_structure_vars = np.array(
       [[k, 'Y' if polar_flags.get(k, False) else 'N'] for k in _polar_flag_order],
@@ -2273,6 +2278,40 @@ def main():
     term3_vt_tendency_eddy_flux              = vt_tend['term3_vt_tendency_eddy_flux']
     term4_vt_tendency_vertical_eddy_advection = vt_tend['term4_vt_tendency_vertical_eddy_advection']
     terms_vt_tendency_sum                    = vt_tend['terms_vt_tendency_sum']
+
+    # F-1.6: Azimuthal Fourier decomposition (w0/w1/w2/whigher).
+    # This call moved to *after* _compute_vort_tendency so it can also
+    # decompose vort_p at the 2-km level (vort2_p_w0/w1/w2). The
+    # previously-computed wavenumber outputs (dbz5_p_w*, rh5_p_w*,
+    # w5_p_w*, vt10_p_w*, ur10_p_w*) aren't consumed by the F-1.7 RMW
+    # search or F-1.8 vt-tendency block, so moving down is safe.
+    waves = _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, vort_p,
+                               XI, r, theta)
+    dbz5_p          = waves['dbz5_p']
+    rh5_p           = waves['rh5_p']
+    w5_p            = waves['w5_p']
+    dbz5_p_w0       = waves['dbz5_p_w0']
+    dbz5_p_w1       = waves['dbz5_p_w1']
+    dbz5_p_w2       = waves['dbz5_p_w2']
+    dbz5_p_whigher  = waves['dbz5_p_whigher']
+    rh5_p_w0        = waves['rh5_p_w0']
+    rh5_p_w1        = waves['rh5_p_w1']
+    rh5_p_w2        = waves['rh5_p_w2']
+    w5_p_w0         = waves['w5_p_w0']
+    w5_p_w1         = waves['w5_p_w1']
+    w5_p_w2         = waves['w5_p_w2']
+    vt10_p_w0       = waves['vt10_p_w0']
+    vt10_p_w1       = waves['vt10_p_w1']
+    vt10_p_w2       = waves['vt10_p_w2']
+    vt10_p_whigher  = waves['vt10_p_whigher']
+    ur10_p_w0       = waves['ur10_p_w0']
+    ur10_p_w1       = waves['ur10_p_w1']
+    ur10_p_w2       = waves['ur10_p_w2']
+    vort2_p         = waves['vort2_p']
+    vort2_p_w0      = waves['vort2_p_w0']
+    vort2_p_w1      = waves['vort2_p_w1']
+    vort2_p_w2      = waves['vort2_p_w2']
+    vort2_p_whigher = waves['vort2_p_whigher']
 
     ##################################################################################################################
 
@@ -2966,6 +3005,12 @@ def main():
     do_radar_plots = namelist_structure_vars[20,1]
     do_soundings = namelist_structure_vars[21,1]
     do_shear_and_rh_plots = namelist_structure_vars[22,1]
+    # Vorticity figures (indices 25 and 26 in _polar_flag_order; the
+    # 23/24 slots hold do_write_netcdf / do_tdr_recentering which are
+    # checked elsewhere via the polar_flags dict, not these positional
+    # variables, so we skip straight to 25/26 here).
+    do_vort_mean         = namelist_structure_vars[25,1]
+    do_vort2km_wavenumber = namelist_structure_vars[26,1]
 
     if not DO_DBZ:
       do_dbz_mean = 'N'
@@ -3138,6 +3183,43 @@ def main():
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig4.clf()
       plt.close(fig4)
+
+
+    # FIGURE 4b: Azimuthal Mean Relative Vorticity (radial-height)
+    # Displays vorticity in units of 10^-4 s^-1 (typical TC eyewall peaks
+    # at 50-200 in these units). Pure white->red Reds palette since
+    # cyclonic relative vorticity in TCs is overwhelmingly positive --
+    # the diagnostic value is in the magnitude of the inner-core spinup
+    # column, not in sign distinctions, and the same Reds palette is
+    # used by the wavenumber Full Field / W0 panels (FIGURE 14b) so the
+    # mean column and the 2-km plan view stay visually paired.
+    if do_vort_mean == 'Y':
+      fig4b = plt.figure(figsize=(20.5, 10.5))
+      ax4b = fig4b.add_subplot(1, 1, 1)
+      # 0-80 covers a Cat-4 / Cat-5 eyewall column without forcing the
+      # palette to wash out the diagnostic eyewall ring on a typical
+      # Cat-2 / Cat-3 cyclone. Values above 80 saturate via extend='max'.
+      levs_vort_mean = np.arange(0, 85, 5)
+      norm_vort_mean = colors.BoundaryNorm(levs_vort_mean, 256)
+      co4b = ax4b.contourf(r, heightlevs/1000,
+                           np.flipud(np.rot90(vort_p_mean * 1e4, 1)),
+                           levs_vort_mean,
+                           cmap=plt.cm.Reds, norm=norm_vort_mean,
+                           extend='max')
+      ax4b = plotting.axes_radhgt(ax4b, xmax=rmax_plot, nx=9)
+      cbar4b = plt.colorbar(co4b, ticks=np.arange(0, 90, 10))
+      cbar4b.ax.tick_params(labelsize=24)
+      ax4b.set_title(f'{EXPT_TITLE.strip()}\n' +
+              r'Azimuthal Mean Relative Vorticity ($10^{-4}\ s^{-1}$, Shading)' +
+              f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]',
+              fontsize=24, weight='bold', loc='left')
+      ax4b.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort_mean.{forecastinit}.polar.f{FHR:03}'
+      fig4b.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+      fig4b.clf()
+      plt.close(fig4b)
 
 
     # FIGURE 5: Azimuthal Mean Relative Humidity
@@ -3431,6 +3513,91 @@ def main():
       fig14.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
       fig14.clf()
       plt.close(fig14)
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+
+
+    # FIGURE 14b: Wavenumber 0,1,2 components of 2-km Relative Vorticity.
+    # Full field and W0 use the pure white->red Reds palette on a 0..80
+    # (10^-4 s^-1) scale -- a cleaner symmetric-field look than the
+    # white->yellow->red YlOrRd ramp because the eyewall ring stands
+    # out as a single red band against a white background instead of
+    # competing with a yellow shoulder. W1 / W2 anomaly panels use
+    # seismic on +/-25 -- the same diverging blue->white->red treatment
+    # we use for Vt W1/W2 (FIGURE 16), tightened to +/-25 so the small
+    # inner-core asymmetries on near-axisymmetric storms still register
+    # visibly while strongly sheared storms saturate cleanly at the
+    # ends. Shear vector is drawn on every panel for orientation,
+    # mirroring the dbz5km / rh5km wavenumber figures.
+    if do_vort2km_wavenumber == 'Y':
+      fig14b = plt.figure(figsize=(15,15))
+      levs_vort_pos  = np.arange(0, 85, 5)
+      norm_vort_pos  = colors.BoundaryNorm(levs_vort_pos, 256)
+      ticks14b_pos   = [0, 20, 40, 60, 80]
+      levs_vort_sym  = np.arange(-25, 26, 1)
+      norm_vort_sym  = colors.BoundaryNorm(levs_vort_sym, 256)
+      ticks14b_sym   = [-25, -15, -5, 5, 15, 25]
+
+      vort2_p_disp     = vort2_p * 1e4
+      vort2_p_w0_disp  = vort2_p_w0 * 1e4
+      vort2_p_w1_disp  = vort2_p_w1 * 1e4
+      vort2_p_w2_disp  = vort2_p_w2 * 1e4
+
+      # Panel A: Full Field
+      ax14ba = fig14b.add_subplot(2, 2, 1)
+      co14ba = ax14ba.contourf(XI, YI, vort2_p_disp, levs_vort_pos,
+            cmap=plt.cm.Reds, norm=norm_vort_pos, extend='max')
+      ax14ba = plotting.axes_wavenumber(ax14ba, rmax_plot, -rmax_plot, nx=9)
+      cbar14ba = plt.colorbar(co14ba, ticks=ticks14b_pos)
+      cbar14ba.ax.tick_params(labelsize=18)
+      ax14ba.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2),
+          linewidth=3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax14ba.set_title(f'{EXPT_TITLE.strip()}\n' +
+          r'WV#0,1,2 2-km Relative Vorticity ($10^{-4}\ s^{-1}$, Shading)' +
+          f'\nShear Vector in Black\nInit: {forecastinit}\nForecast Hour:[{FHR:03}]',
+          fontsize=20, weight='bold', loc='left')
+      ax14ba.text(0,rmax_plot-25,'Full Field',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Panel B: Wavenumber 0
+      ax14bb = fig14b.add_subplot(2, 2, 2)
+      co14bb = ax14bb.contourf(XI, YI, vort2_p_w0_disp, levs_vort_pos,
+            cmap=plt.cm.Reds, norm=norm_vort_pos, extend='max')
+      ax14bb = plotting.axes_wavenumber(ax14bb, rmax_plot, -rmax_plot, nx=9)
+      cbar14bb = plt.colorbar(co14bb, ticks=ticks14b_pos)
+      cbar14bb.ax.tick_params(labelsize=18)
+      ax14bb.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2),
+          linewidth=3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax14bb.set_title(f'{LONGSID.upper()}\nVMAX= {maxwind} kt\nPMIN= {minpressure} hPa' +
+          f'\nShear Magnitude= {str(int(np.round(shearmag*1.94,0)))}kts\nShear Direction= {str(int(np.round(sheardir_met,0)))}$^\\circ$',
+          fontsize=20, color='brown', loc='right')
+      ax14bb.text(0,rmax_plot-25,'Wavenumber 0',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Panel C: Wavenumber 1 anomaly (+/- 50 on seismic)
+      ax14bc = fig14b.add_subplot(2, 2, 3)
+      co14bc = ax14bc.contourf(XI, YI, vort2_p_w1_disp, levs_vort_sym,
+            cmap=plt.cm.seismic, norm=norm_vort_sym, extend='both')
+      ax14bc = plotting.axes_wavenumber(ax14bc, rmax_plot, -rmax_plot, nx=9)
+      cbar14bc = plt.colorbar(co14bc, ticks=ticks14b_sym)
+      cbar14bc.ax.tick_params(labelsize=18)
+      ax14bc.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2),
+          linewidth=3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax14bc.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
+
+      # Panel D: Wavenumber 2 anomaly (+/- 50 on seismic)
+      ax14bd = fig14b.add_subplot(2, 2, 4)
+      co14bd = ax14bd.contourf(XI, YI, vort2_p_w2_disp, levs_vort_sym,
+            cmap=plt.cm.seismic, norm=norm_vort_sym, extend='both')
+      ax14bd = plotting.axes_wavenumber(ax14bd, rmax_plot, -rmax_plot, nx=9)
+      cbar14bd = plt.colorbar(co14bd, ticks=ticks14b_sym)
+      cbar14bd.ax.tick_params(labelsize=18)
+      ax14bd.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2),
+          linewidth=3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
+      ax14bd.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+
+      figfname = f'{ODIR}/{LONGSID.lower()}.vort2km_wavenumber.{forecastinit}.polar.f{FHR:03}'
+      fig14b.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      fig14b.clf()
+      plt.close(fig14b)
       if DO_CONVERTGIF:
         plot_utils.convert_to_gif(f'{figfname}{figext}')
 
