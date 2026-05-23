@@ -25,3 +25,6 @@ do_write_netcdf,Y
 do_tdr_recentering,Y
 do_vort_mean,Y
 do_vort2km_wavenumber,Y
+do_divergence_mean,Y
+do_divergence_pbl_mean,Y
+do_fgr_imbalance_pbl_mean,Y

@@ -386,7 +386,8 @@ def _interp_to_height(uwind, vwind, wwind, dbz, hgt, temp, q, rh, rho, levs,
 
 
 def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
-                     uwind_pbl, vwind_pbl, u10, v10, u200, v200, u850, v850,
+                     uwind_pbl, vwind_pbl, rho_pbl, pressure_pbl,
+                     u10, v10, u200, v200, u850, v850,
                      x_sr, y_sr, XI, YI, theta, heightlevs, heightlevs_pbl,
                      zsize, zsize_pbl, centerlat):
   """Interpolate Cartesian storm-relative fields onto polar (r, theta, z) grid.
@@ -461,8 +462,14 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
   ur_p =                       u_p * np.cos(theta_3d) + v_p * np.sin(theta_3d)
 
   # PBL column: per-level RegularGridInterpolator on finer 0-3 km grid.
-  u_pbl_p = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
-  v_pbl_p = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
+  # Includes rho_pbl + pressure_pbl alongside u/v -- needed for the
+  # gradient-wind imbalance (term_b) diagnostic, which combines a
+  # radial pressure gradient (-1/rho * dp/dr) with the centripetal
+  # and Coriolis terms from the PBL tangential wind.
+  u_pbl_p   = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
+  v_pbl_p   = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
+  rho_pbl_p      = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
+  pressure_pbl_p = np.ones((np.shape(XI)[0], np.shape(XI)[1], zsize_pbl))*np.nan
 
   for k in range(zsize_pbl):
     # bounds_error=False + NaN fill: polar grid points outside the
@@ -471,8 +478,12 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
     # polar_interp.interp_to_polarcylindrical() for the rationale.
     f_uwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), uwind_pbl[:,:,k], bounds_error=False, fill_value=np.nan)
     f_vwind_pbl = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), vwind_pbl[:,:,k], bounds_error=False, fill_value=np.nan)
-    u_pbl_p[:,:,k] = f_uwind_pbl((YI, XI), method='linear')
-    v_pbl_p[:,:,k] = f_vwind_pbl((YI, XI), method='linear')
+    f_rho_pbl   = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), rho_pbl[:,:,k],   bounds_error=False, fill_value=np.nan)
+    f_p_pbl     = scipy.interpolate.RegularGridInterpolator((y_sr, x_sr), pressure_pbl[:,:,k], bounds_error=False, fill_value=np.nan)
+    u_pbl_p[:,:,k]        = f_uwind_pbl((YI, XI), method='linear')
+    v_pbl_p[:,:,k]        = f_vwind_pbl((YI, XI), method='linear')
+    rho_pbl_p[:,:,k]      = f_rho_pbl((YI, XI),   method='linear')
+    pressure_pbl_p[:,:,k] = f_p_pbl((YI, XI),     method='linear')
 
   # F-3 vectorization: broadcast theta across (nr, nz_pbl) in one multiply.
   vt_pbl_p = np.sign(centerlat) * (-u_pbl_p * np.sin(theta_3d) + v_pbl_p * np.cos(theta_3d))
@@ -522,6 +533,7 @@ def _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
       'vt_p': vt_p, 'ur_p': ur_p,
       'u_pbl_p': u_pbl_p, 'v_pbl_p': v_pbl_p,
       'vt_pbl_p': vt_pbl_p, 'ur_pbl_p': ur_pbl_p,
+      'rho_pbl_p': rho_pbl_p, 'pressure_pbl_p': pressure_pbl_p,
       'pblz_vt_max': pblz_vt_max,
       'u10_p': u10_p, 'v10_p': v10_p,
       'u200_p': u200_p, 'v200_p': v200_p,
@@ -668,7 +680,7 @@ def _compute_shear(u200_p, v200_p, u850_p, v850_p,
 
 ##############################
 def _azimuthal_means(vt_p, ur_p, w_p, dbz_p, temp_p, q_p, rh_p, pressure_p,
-                     vt_pbl_p, ur_pbl_p,
+                     vt_pbl_p, ur_pbl_p, rho_pbl_p, pressure_pbl_p,
                      ur_p_rot, w_p_rot, dbz_p_rot, rh_p_rot):
   """Compute total-azimuthal means + shear-relative quadrant means.
 
@@ -688,8 +700,10 @@ def _azimuthal_means(vt_p, ur_p, w_p, dbz_p, temp_p, q_p, rh_p, pressure_p,
     q_p_mean        = np.nanmean(q_p, 0)
     rh_p_mean       = np.nanmean(rh_p, 0)
     pressure_p_mean = np.nanmean(pressure_p, 0)
-    vt_pbl_p_mean   = np.nanmean(vt_pbl_p, 0)
-    ur_pbl_p_mean   = np.nanmean(ur_pbl_p, 0)
+    vt_pbl_p_mean        = np.nanmean(vt_pbl_p, 0)
+    ur_pbl_p_mean        = np.nanmean(ur_pbl_p, 0)
+    rho_pbl_p_mean       = np.nanmean(rho_pbl_p, 0)
+    pressure_pbl_p_mean  = np.nanmean(pressure_pbl_p, 0)
 
   # Shear-relative quadrant slabs
   ur_p_downshear  = np.concatenate((ur_p_rot[1:9, :, :],  ur_p_rot[63:72, :, :]),  axis=0)
@@ -739,6 +753,8 @@ def _azimuthal_means(vt_p, ur_p, w_p, dbz_p, temp_p, q_p, rh_p, pressure_p,
     'dbz_p_mean': dbz_p_mean, 'temp_p_mean': temp_p_mean,
     'q_p_mean': q_p_mean, 'rh_p_mean': rh_p_mean, 'pressure_p_mean': pressure_p_mean,
     'vt_pbl_p_mean': vt_pbl_p_mean, 'ur_pbl_p_mean': ur_pbl_p_mean,
+    'rho_pbl_p_mean': rho_pbl_p_mean,
+    'pressure_pbl_p_mean': pressure_pbl_p_mean,
     'ur_p_downshear': ur_p_downshear, 'w_p_downshear': w_p_downshear,
     'dbz_p_downshear': dbz_p_downshear, 'rh_p_downshear': rh_p_downshear,
     'ur_p_upshear': ur_p_upshear, 'w_p_upshear': w_p_upshear,
@@ -2035,7 +2051,8 @@ def main():
     # + vt/ur rotations. Commented-out legacy per-level scalar-loop code
     # is retained inside _interp_to_polar() for traceability.
     pgrid = _interp_to_polar(uwind, vwind, wwind, dbz, temp, q, rh, pressure,
-                             uwind_pbl, vwind_pbl, u10, v10, u200, v200,
+                             uwind_pbl, vwind_pbl, rho_pbl, pressure_pbl,
+                             u10, v10, u200, v200,
                              u850, v850, x_sr, y_sr, XI, YI, theta,
                              heightlevs, heightlevs_pbl, zsize, zsize_pbl,
                              centerlat)
@@ -2073,11 +2090,13 @@ def main():
     pressure_p  = pgrid['pressure_p']
     vt_p        = pgrid['vt_p']
     ur_p        = pgrid['ur_p']
-    u_pbl_p     = pgrid['u_pbl_p']
-    v_pbl_p     = pgrid['v_pbl_p']
-    vt_pbl_p    = pgrid['vt_pbl_p']
-    ur_pbl_p    = pgrid['ur_pbl_p']
-    pblz_vt_max = pgrid['pblz_vt_max']
+    u_pbl_p         = pgrid['u_pbl_p']
+    v_pbl_p         = pgrid['v_pbl_p']
+    vt_pbl_p        = pgrid['vt_pbl_p']
+    ur_pbl_p        = pgrid['ur_pbl_p']
+    rho_pbl_p       = pgrid['rho_pbl_p']
+    pressure_pbl_p  = pgrid['pressure_pbl_p']
+    pblz_vt_max     = pgrid['pblz_vt_max']
     u10_p       = pgrid['u10_p']
     v10_p       = pgrid['v10_p']
     u200_p      = pgrid['u200_p']
@@ -2147,7 +2166,7 @@ def main():
 
     # F-1.5: azimuthal (total) means + shear-relative quadrant means
     means = _azimuthal_means(vt_p, ur_p, w_p, dbz_p, temp_p, q_p, rh_p, pressure_p,
-                             vt_pbl_p, ur_pbl_p,
+                             vt_pbl_p, ur_pbl_p, rho_pbl_p, pressure_pbl_p,
                              ur_p_rot, w_p_rot, dbz_p_rot, rh_p_rot)
     vt_p_mean       = means['vt_p_mean']
     ur_p_mean       = means['ur_p_mean']
@@ -2157,8 +2176,10 @@ def main():
     q_p_mean        = means['q_p_mean']
     rh_p_mean       = means['rh_p_mean']
     pressure_p_mean = means['pressure_p_mean']
-    vt_pbl_p_mean   = means['vt_pbl_p_mean']
-    ur_pbl_p_mean   = means['ur_pbl_p_mean']
+    vt_pbl_p_mean        = means['vt_pbl_p_mean']
+    ur_pbl_p_mean        = means['ur_pbl_p_mean']
+    rho_pbl_p_mean       = means['rho_pbl_p_mean']
+    pressure_pbl_p_mean  = means['pressure_pbl_p_mean']
     ur_p_downshear   = means['ur_p_downshear']
     w_p_downshear    = means['w_p_downshear']
     dbz_p_downshear  = means['dbz_p_downshear']
@@ -2247,6 +2268,10 @@ def main():
       # Vorticity figures (appended at the end so existing positional
       # indices into namelist_structure_vars stay stable).
       'do_vort_mean', 'do_vort2km_wavenumber',
+      # Radial divergence (full column + PBL) and PBL gradient-wind
+      # imbalance ("term_b").
+      'do_divergence_mean', 'do_divergence_pbl_mean',
+      'do_fgr_imbalance_pbl_mean',
     ]
     namelist_structure_vars = np.array(
       [[k, 'Y' if polar_flags.get(k, False) else 'N'] for k in _polar_flag_order],
@@ -2278,6 +2303,37 @@ def main():
     term3_vt_tendency_eddy_flux              = vt_tend['term3_vt_tendency_eddy_flux']
     term4_vt_tendency_vertical_eddy_advection = vt_tend['term4_vt_tendency_vertical_eddy_advection']
     terms_vt_tendency_sum                    = vt_tend['terms_vt_tendency_sum']
+
+    # F-1.9: derived radial-momentum diagnostics needed for the
+    # divergence + gradient-wind imbalance ("term_b") figures.
+    #
+    #   dur_dr      = d(ur_p_mean)/dr           [s^-1]
+    #   dur_dr_pbl  = d(ur_pbl_p_mean)/dr       [s^-1]
+    #   term_b      = -(1/rho) dp/dr + Vt^2/r + f*Vt   [m s^-2]
+    #
+    # term_b is the radial momentum residual: gradient wind balance
+    # would have it sum to zero. Positive => net outward force
+    # (sub-gradient flow, surface inflow accelerates inward); negative
+    # => super-gradient flow (flow overshoots the gradient-wind level,
+    # decelerates outward). Plotted multiplied by 3600 so the units
+    # read as m s^-1 h^-1, the inflow-tendency rate.
+    rgrad = np.nanmean(np.gradient(r * 1e3))   # radial spacing (m)
+    radius_2d_pbl  = np.broadcast_to(r[:, None] * 1e3,
+                                     vt_pbl_p_mean.shape)
+
+    dur_dr     = np.array(metpy.calc.first_derivative(
+        ur_p_mean,     axis=0, delta=rgrad))
+    dur_dr_pbl = np.array(metpy.calc.first_derivative(
+        ur_pbl_p_mean, axis=0, delta=rgrad))
+    d_p_dr     = np.array(metpy.calc.first_derivative(
+        pressure_pbl_p_mean, axis=0, delta=rgrad))
+
+    # Suppress the 1/r blowup at r=0 by masking the innermost row to NaN;
+    # the contour fill renders the rest of the panel cleanly.
+    with np.errstate(divide='ignore', invalid='ignore'):
+      term_b = ((-1.0 / rho_pbl_p_mean) * d_p_dr
+                + (vt_pbl_p_mean * vt_pbl_p_mean) / radius_2d_pbl
+                + f * vt_pbl_p_mean)
 
     # F-1.6: Azimuthal Fourier decomposition (w0/w1/w2/whigher).
     # This call moved to *after* _compute_vort_tendency so it can also
@@ -3009,8 +3065,11 @@ def main():
     # 23/24 slots hold do_write_netcdf / do_tdr_recentering which are
     # checked elsewhere via the polar_flags dict, not these positional
     # variables, so we skip straight to 25/26 here).
-    do_vort_mean         = namelist_structure_vars[25,1]
-    do_vort2km_wavenumber = namelist_structure_vars[26,1]
+    do_vort_mean              = namelist_structure_vars[25,1]
+    do_vort2km_wavenumber     = namelist_structure_vars[26,1]
+    do_divergence_mean        = namelist_structure_vars[27,1]
+    do_divergence_pbl_mean    = namelist_structure_vars[28,1]
+    do_fgr_imbalance_pbl_mean = namelist_structure_vars[29,1]
 
     if not DO_DBZ:
       do_dbz_mean = 'N'
@@ -3220,6 +3279,152 @@ def main():
         plot_utils.convert_to_gif(f'{figfname}{figext}')
       fig4b.clf()
       plt.close(fig4b)
+
+
+    # FIGURE 4c: Azimuthal Mean Radial Divergence (radial-height, 0-18 km)
+    # Plots d(ur)/dr in units of 10^-3 s^-1. Positive = divergence
+    # (outflow accelerating), negative = convergence (inflow
+    # accelerating); the eyewall convergence signature is the
+    # diagnostic of interest, hence the diverging bluewhitered palette.
+    # Note this is the radial-derivative term only, not the full
+    # cylindrical divergence (1/r * d(r*ur)/dr = dur/dr + ur/r); the
+    # ur/r term peaks near the storm center where the polar grid is
+    # noisy anyway, and the historical NCL/legacy GPLOT convention
+    # here was the same dur/dr form.
+    if do_divergence_mean == 'Y':
+      color_data_divergence = np.genfromtxt(
+          f'{PYTHONDIR}/colormaps/bluewhitered.txt')
+      colormap_divergence = matplotlib.colors.ListedColormap(
+          color_data_divergence)
+      levs_divergence = np.linspace(-3, 3, 61)
+      norm_divergence = colors.BoundaryNorm(levs_divergence, 256)
+      fig4c = plt.figure(figsize=(20.5, 10.5))
+      ax4c = fig4c.add_subplot(1, 1, 1)
+      co4c = ax4c.contourf(r, heightlevs/1000,
+                           np.flipud(np.rot90(dur_dr * 1e3, 1)),
+                           levs_divergence,
+                           cmap=colormap_divergence, norm=norm_divergence,
+                           extend='both')
+      ax4c = plotting.axes_radhgt(ax4c, xmax=rmax_plot, nx=9)
+      cbar4c = plt.colorbar(co4c, ticks=[-3.0, -2.5, -2.0, -1.5, -1.0,
+                                          -0.5, 0, 0.5, 1.0, 1.5,
+                                          2.0, 2.5, 3.0])
+      cbar4c.ax.tick_params(labelsize=24)
+      ax4c.set_title(f'{EXPT_TITLE.strip()}\n' +
+              r'Radial Divergence ($10^{-3}\ s^{-1}$, Shading)' +
+              f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]',
+              fontsize=24, weight='bold', loc='left')
+      ax4c.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
+      figfname = f'{ODIR}/{LONGSID.lower()}.divergence_mean.{forecastinit}.polar.f{FHR:03}'
+      fig4c.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+      fig4c.clf()
+      plt.close(fig4c)
+
+
+    # FIGURE 4d: Azimuthal Mean Radial Divergence (PBL, 0-3 km)
+    # Same field as FIGURE 4c but on the finer PBL height grid so the
+    # boundary-layer convergence is resolved. RMW track overlaid as
+    # black dots at each PBL level.
+    if do_divergence_pbl_mean == 'Y':
+      color_data_divergence = np.genfromtxt(
+          f'{PYTHONDIR}/colormaps/bluewhitered.txt')
+      colormap_divergence = matplotlib.colors.ListedColormap(
+          color_data_divergence)
+      levs_divergence = np.linspace(-3, 3, 61)
+      norm_divergence = colors.BoundaryNorm(levs_divergence, 256)
+      fig4d = plt.figure(figsize=(20.5, 10.5))
+      ax4d = fig4d.add_subplot(1, 1, 1)
+      co4d = ax4d.contourf(r, heightlevs_pbl,
+                           np.flipud(np.rot90(dur_dr_pbl * 1e3, 1)),
+                           levs_divergence,
+                           cmap=colormap_divergence, norm=norm_divergence,
+                           extend='both')
+      ax4d = plotting.axes_radhgt(ax4d, xmax=rmax_plot, nx=9,
+                                  ymax=3000, ny=7, yunit='m',
+                                  formatters=True)
+      cbar4d = plt.colorbar(co4d, ticks=[-3.0, -2.5, -2.0, -1.5, -1.0,
+                                          -0.5, 0, 0.5, 1.0, 1.5,
+                                          2.0, 2.5, 3.0])
+      cbar4d.ax.tick_params(labelsize=24)
+      ax4d.scatter(rmw_pbl_mean, heightlevs_pbl, 70, 'k')
+      ax4d.set_title(f'{EXPT_TITLE.strip()}\n' +
+              r'Radial Divergence ($10^{-3}\ s^{-1}$, Shading; PBL)' +
+              f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]',
+              fontsize=24, weight='bold', loc='left')
+      ax4d.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
+      figfname = f'{ODIR}/{LONGSID.lower()}.divergence_pbl_mean.{forecastinit}.polar.f{FHR:03}'
+      fig4d.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+      fig4d.clf()
+      plt.close(fig4d)
+
+
+    # FIGURE 4e: PBL Gradient-Wind Imbalance ("term_b")
+    # Radial momentum residual -1/rho * dp/dr + Vt^2/r + f*Vt plotted
+    # in m s^-1 h^-1 (multiplied by 3600). In gradient-wind balance
+    # the three terms sum to zero; positive => sub-gradient flow
+    # (the pressure gradient over-powers the centripetal + Coriolis
+    # forces, surface inflow accelerates inward); negative =>
+    # super-gradient (centripetal dominates, outward acceleration).
+    # The classic TC eyewall signature is a super-gradient core
+    # surrounded by a sub-gradient annulus where the surface inflow
+    # is decelerating into the eyewall updraft. Black RMW track
+    # overlaid; Vt contoured in cyan; Ur contoured in black (outflow
+    # dashed, inflow solid).
+    if do_fgr_imbalance_pbl_mean == 'Y':
+      color_data_term_b = np.genfromtxt(
+          f'{PYTHONDIR}/colormaps/bluewhitered.txt')
+      colormap_term_b = matplotlib.colors.ListedColormap(color_data_term_b)
+      levs_term_b = np.linspace(-250, 250, 51)
+      norm_term_b = colors.BoundaryNorm(levs_term_b, 256)
+      fig4e = plt.figure(figsize=(20.5, 10.5))
+      ax4e = fig4e.add_subplot(1, 1, 1)
+      co4e = ax4e.contourf(r, heightlevs_pbl,
+                           np.flipud(np.rot90(3600 * term_b, 1)),
+                           levs_term_b, cmap=colormap_term_b,
+                           norm=norm_term_b, extend='both')
+      ax4e = plotting.axes_radhgt(ax4e, xmax=rmax_plot, nx=9,
+                                  ymax=3000, ny=7, yunit='m',
+                                  formatters=True)
+      cbar4e = plt.colorbar(co4e, ticks=[-250, -200, -150, -100, -50,
+                                          0, 50, 100, 150, 200, 250])
+      cbar4e.ax.tick_params(labelsize=24)
+      co4e_vt = ax4e.contour(r, heightlevs_pbl,
+              np.flipud(np.rot90(vt_pbl_p_mean)),
+              levels=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
+              linestyles='solid', colors='xkcd:cyan', linewidths=4)
+      ax4e.clabel(co4e_vt, co4e_vt.levels, inline=True,
+                  fmt='%2.0f', fontsize=20)
+      co4e_ur_in = ax4e.contour(r, heightlevs_pbl,
+              np.flipud(np.rot90(ur_pbl_p_mean)),
+              levels=[-25, -20, -15, -10, -5],
+              linestyles='solid', colors='black',
+              linewidths=[5, 4, 3, 2, 1])
+      ax4e.clabel(co4e_ur_in, co4e_ur_in.levels, inline=True,
+                  fmt='%2.0f', fontsize=20)
+      co4e_ur_out = ax4e.contour(r, heightlevs_pbl,
+              np.flipud(np.rot90(ur_pbl_p_mean)),
+              levels=[1, 2, 3, 4, 5],
+              linestyles='dashed', colors='black',
+              linewidths=[1, 2, 3, 4, 5])
+      ax4e.clabel(co4e_ur_out, co4e_ur_out.levels, inline=True,
+                  fmt='%2.0f', fontsize=20)
+      ax4e.scatter(rmw_pbl_mean, heightlevs_pbl, 70, 'k')
+      ax4e.set_title(f'{EXPT_TITLE.strip()}\n' +
+              r'$F_{gr}$ Imbalance ($m\ s^{-1}\ h^{-1}$, Shading)' +
+              '\n' + r'$V_{t}$ and $U_{r}$ (Contours)' +
+              f'\nInit: {forecastinit} Forecast Hour:[{FHR:03}]',
+              fontsize=24, weight='bold', loc='left')
+      ax4e.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', fontsize=24, color='brown', loc='right')
+      figfname = f'{ODIR}/{LONGSID.lower()}.fgr_imbalance_pbl_mean.{forecastinit}.polar.f{FHR:03}'
+      fig4e.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
+      if DO_CONVERTGIF:
+        plot_utils.convert_to_gif(f'{figfname}{figext}')
+      fig4e.clf()
+      plt.close(fig4e)
 
 
     # FIGURE 5: Azimuthal Mean Relative Humidity

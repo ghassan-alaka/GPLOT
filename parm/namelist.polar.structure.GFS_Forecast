@@ -23,3 +23,6 @@ do_soundings,Y
 do_shear_and_rh_plots,Y
 do_vort_mean,Y
 do_vort2km_wavenumber,Y
+do_divergence_mean,Y
+do_divergence_pbl_mean,Y
+do_fgr_imbalance_pbl_mean,Y
