@@ -798,13 +798,15 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, vort_p, XI, r, theta):
   dbz5_p_w2      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   dbz5_p_whigher = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
 
-  rh5_p_w0 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
-  rh5_p_w1 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
-  rh5_p_w2 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  rh5_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  rh5_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  rh5_p_w2      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  rh5_p_whigher = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
 
-  w5_p_w0 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
-  w5_p_w1 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
-  w5_p_w2 = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  w5_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  w5_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  w5_p_w2      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
+  w5_p_whigher = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
 
   vt10_p_w0      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
   vt10_p_w1      = np.ones((np.shape(XI)[0], np.shape(XI)[1])) * np.nan
@@ -841,6 +843,10 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, vort_p, XI, r, theta):
     rh5_p_w0[:, j] = amp0_rh
     rh5_p_w1[:, j] = A1_rh*np.cos(theta)   + B1_rh*np.sin(theta)
     rh5_p_w2[:, j] = A2_rh*np.cos(2*theta) + B2_rh*np.sin(2*theta)
+    rh5_p_whigher[:, j] = 0
+    for h in range(2, int((np.shape(theta)[0]+1)/2)):
+      A = 2*np.real(fourier_rh[h]); B = -2*np.imag(fourier_rh[h])
+      rh5_p_whigher[:, j] = rh5_p_whigher[:, j] + A*np.cos(h*theta) + B*np.sin(h*theta)
 
     wdata = w5_p[:, j]
     fourier_w = np.fft.fft(wdata) / len(wdata)
@@ -850,6 +856,10 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, vort_p, XI, r, theta):
     w5_p_w0[:, j] = amp0_w
     w5_p_w1[:, j] = A1_w*np.cos(theta)   + B1_w*np.sin(theta)
     w5_p_w2[:, j] = A2_w*np.cos(2*theta) + B2_w*np.sin(2*theta)
+    w5_p_whigher[:, j] = 0
+    for h in range(2, int((np.shape(theta)[0]+1)/2)):
+      A = 2*np.real(fourier_w[h]); B = -2*np.imag(fourier_w[h])
+      w5_p_whigher[:, j] = w5_p_whigher[:, j] + A*np.cos(h*theta) + B*np.sin(h*theta)
 
     vt10data = vt10_p[:, j]
     fourier_vt10 = np.fft.fft(vt10data) / len(vt10data)
@@ -891,7 +901,9 @@ def _wavenumber_decomp(dbz_p, rh_p, w_p, vt10_p, ur10_p, vort_p, XI, r, theta):
     'dbz5_p_w0': dbz5_p_w0, 'dbz5_p_w1': dbz5_p_w1,
     'dbz5_p_w2': dbz5_p_w2, 'dbz5_p_whigher': dbz5_p_whigher,
     'rh5_p_w0': rh5_p_w0, 'rh5_p_w1': rh5_p_w1, 'rh5_p_w2': rh5_p_w2,
+    'rh5_p_whigher': rh5_p_whigher,
     'w5_p_w0': w5_p_w0, 'w5_p_w1': w5_p_w1, 'w5_p_w2': w5_p_w2,
+    'w5_p_whigher': w5_p_whigher,
     'vt10_p_w0': vt10_p_w0, 'vt10_p_w1': vt10_p_w1,
     'vt10_p_w2': vt10_p_w2, 'vt10_p_whigher': vt10_p_whigher,
     'ur10_p_w0': ur10_p_w0, 'ur10_p_w1': ur10_p_w1, 'ur10_p_w2': ur10_p_w2,
@@ -2353,9 +2365,11 @@ def main():
     rh5_p_w0        = waves['rh5_p_w0']
     rh5_p_w1        = waves['rh5_p_w1']
     rh5_p_w2        = waves['rh5_p_w2']
+    rh5_p_whigher   = waves['rh5_p_whigher']
     w5_p_w0         = waves['w5_p_w0']
     w5_p_w1         = waves['w5_p_w1']
     w5_p_w2         = waves['w5_p_w2']
+    w5_p_whigher    = waves['w5_p_whigher']
     vt10_p_w0       = waves['vt10_p_w0']
     vt10_p_w1       = waves['vt10_p_w1']
     vt10_p_w2       = waves['vt10_p_w2']
@@ -3701,16 +3715,23 @@ def main():
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax14c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D
+      # Panel D: Wavenumber 2 + all higher wavenumbers, summed.
+      # whigher already includes h=2 (the FFT loop in _wavenumber_decomp
+      # iterates `for h in range(2, ...)` -- not range(3, ...) -- so
+      # the variable name "whigher" is a bit of a misnomer; it really
+      # is "W2 and higher" = W2 + W3 + ... + W(N/2-1)). Showing W2+ in
+      # this panel captures the eyewall-mode asymmetries together with
+      # the small-scale wavenumber chatter inside the eyewall that the
+      # bare W2 panel misses.
       ax14d = fig14.add_subplot(2, 2, 4)
-      co14d = ax14d.contourf(XI, YI, dbz5_p_w2[:,:], levs_dbz, \
+      co14d = ax14d.contourf(XI, YI, dbz5_p_whigher[:,:], levs_dbz, \
             cmap=colormap_dbz, norm=norm_dbz, extend='max')
       ax14d = plotting.axes_wavenumber(ax14d, rmax_plot, -rmax_plot, nx=9)
       cbar14d = plt.colorbar(co14d, ticks=ticks14)
       cbar14d.ax.tick_params(labelsize=18)
       ax14d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
-      ax14d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+      ax14d.text(0,rmax_plot-25,'Wavenumber 2+',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.dbz5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
@@ -3743,10 +3764,10 @@ def main():
       norm_vort_sym  = colors.BoundaryNorm(levs_vort_sym, 256)
       ticks14b_sym   = [-25, -15, -5, 5, 15, 25]
 
-      vort2_p_disp     = vort2_p * 1e4
-      vort2_p_w0_disp  = vort2_p_w0 * 1e4
-      vort2_p_w1_disp  = vort2_p_w1 * 1e4
-      vort2_p_w2_disp  = vort2_p_w2 * 1e4
+      vort2_p_disp         = vort2_p * 1e4
+      vort2_p_w0_disp      = vort2_p_w0 * 1e4
+      vort2_p_w1_disp      = vort2_p_w1 * 1e4
+      vort2_p_whigher_disp = vort2_p_whigher * 1e4
 
       # Panel A: Full Field
       ax14ba = fig14b.add_subplot(2, 2, 1)
@@ -3788,16 +3809,16 @@ def main():
           linewidth=3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax14bc.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D: Wavenumber 2 anomaly (+/- 50 on seismic)
+      # Panel D: Wavenumber 2+ (W2 plus all higher modes summed)
       ax14bd = fig14b.add_subplot(2, 2, 4)
-      co14bd = ax14bd.contourf(XI, YI, vort2_p_w2_disp, levs_vort_sym,
+      co14bd = ax14bd.contourf(XI, YI, vort2_p_whigher_disp, levs_vort_sym,
             cmap=plt.cm.seismic, norm=norm_vort_sym, extend='both')
       ax14bd = plotting.axes_wavenumber(ax14bd, rmax_plot, -rmax_plot, nx=9)
       cbar14bd = plt.colorbar(co14bd, ticks=ticks14b_sym)
       cbar14bd.ax.tick_params(labelsize=18)
       ax14bd.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2),
           linewidth=3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
-      ax14bd.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+      ax14bd.text(0,rmax_plot-25,'Wavenumber 2+',fontsize=20,style='italic',horizontalalignment='center')
 
       figfname = f'{ODIR}/{LONGSID.lower()}.vort2km_wavenumber.{forecastinit}.polar.f{FHR:03}'
       fig14b.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
@@ -3855,16 +3876,19 @@ def main():
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax15c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D: W2 anomaly -- +/-30 % RH on the brown/green palette
+      # Panel D: W2+ (W2 plus all higher modes summed) -- +/-30 % RH
+      # on the brown/green palette. Captures the eyewall mesoscale RH
+      # asymmetries together with the small-scale wavenumber chatter
+      # the bare W2 panel misses.
       ax15d = fig15.add_subplot(2, 2, 4)
-      co15d = ax15d.contourf(XI, YI, rh5_p_w2[:,:], levs_rh_sym, \
+      co15d = ax15d.contourf(XI, YI, rh5_p_whigher[:,:], levs_rh_sym, \
             cmap=colormap_rh, norm=norm_rh_sym, extend='both')
       ax15d = plotting.axes_wavenumber(ax15d, rmax_plot, -rmax_plot, nx=9)
       cbar15d = plt.colorbar(co15d, ticks=ticks15_sym)
       cbar15d.ax.tick_params(labelsize=18)
       ax15d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
-      ax15d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+      ax15d.text(0,rmax_plot-25,'Wavenumber 2+',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.rh5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
@@ -3923,16 +3947,17 @@ def main():
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax16c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D: W2 anomaly -- diverging seismic, +/-20 m/s
+      # Panel D: W2+ (W2 plus all higher modes summed) -- diverging
+      # seismic, +/-20 m/s
       ax16d = fig16.add_subplot(2, 2, 4)
-      co16d = ax16d.contourf(XI, YI, vt10_p_w2[:,:], levs_vt_sym, \
+      co16d = ax16d.contourf(XI, YI, vt10_p_whigher[:,:], levs_vt_sym, \
             cmap=colormap_vt_sym, norm=norm_vt_sym, extend='both')
       ax16d = plotting.axes_wavenumber(ax16d, rmax_plot, -rmax_plot, nx=9)
       cbar16d = plt.colorbar(co16d, ticks=ticks16_sym)
       cbar16d.ax.tick_params(labelsize=18)
       ax16d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
-      ax16d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+      ax16d.text(0,rmax_plot-25,'Wavenumber 2+',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.vt10_wavenumber.{forecastinit}.polar.f{FHR:03}'
@@ -3989,16 +4014,16 @@ def main():
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
       ax17c.text(0,rmax_plot-25,'Wavenumber 1',fontsize=20,style='italic',horizontalalignment='center')
 
-      # Panel D
+      # Panel D: W2+ (W2 plus all higher modes summed)
       ax17d = fig17.add_subplot(2, 2, 4)
-      co17d = ax17d.contourf(XI, YI, w5_p_w2[:,:], levs_w_sym, \
+      co17d = ax17d.contourf(XI, YI, w5_p_whigher[:,:], levs_w_sym, \
             cmap=colormap_w_sym, norm=norm_w_sym, extend='both')
       ax17d = plotting.axes_wavenumber(ax17d, rmax_plot, -rmax_plot, nx=9)
       cbar17d = plt.colorbar(co17d, ticks=ticks17_sym)
       cbar17d.ax.tick_params(labelsize=18)
       ax17d.arrow(0, 0, (ushear1/25)*np.max(XI/2), (vshear1/25)*np.max(YI/2), \
           linewidth = 3, head_width=rmax_plot/20, head_length=rmax_plot/10, fc='k', ec='k')
-      ax17d.text(0,rmax_plot-25,'Wavenumber 2',fontsize=20,style='italic',horizontalalignment='center')
+      ax17d.text(0,rmax_plot-25,'Wavenumber 2+',fontsize=20,style='italic',horizontalalignment='center')
 
       # Finalize figure
       figfname = f'{ODIR}/{LONGSID.lower()}.w5km_wavenumber.{forecastinit}.polar.f{FHR:03}'
