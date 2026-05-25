@@ -334,10 +334,18 @@ def skewplot(sounding_p, sounding_t, sounding_td, sounding_u, sounding_v, locati
 	skew.plot_mixing_lines()
 	skew.ax.set_xlabel('degC',weight='bold',fontsize=24)
 	skew.ax.set_ylabel('Pressure (hPa)',weight='bold',fontsize=24)
+	# Title fontsize is 18 (vs. 24 on the landscape radial-height
+	# figures) because the SkewT axes are noticeably narrower than the
+	# 20.5x10.5 radhgt panels and a long EXPT name (e.g. a multistorm
+	# experiment tag like 'hafs_v2p2b_final_multistorm_atlantic',
+	# 36 chars) at 24pt would overflow from the left title into the
+	# right title. 18pt gives ~55 chars per side at this figure width,
+	# comfortable headroom even for verbose experiment names, while the
+	# weight='bold' styling keeps the title reading as a header.
 	skew.ax.set_title(f'{EXPT.strip()}\nSounding {location}\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
-		     fontsize=24, weight='bold', loc='left')
+		     fontsize=18, weight='bold', loc='left')
 	skew.ax.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', \
-		     fontsize=24, color='brown', loc='right')
+		     fontsize=18, color='brown', loc='right')
 
 	# MetPy logo + reflectivity inset are anchored to the SkewT axes
 	# bbox so they always sit inside the plot box regardless of the
@@ -375,10 +383,13 @@ def skewplot_blank(location, GPLOT_DIR, EXPT, FHR, maxwind, minpressure, LONGSID
 	             transform=skew.ax.transAxes,
 	             ha='center', va='center',
 	             fontsize=28, weight='bold')
+	# 18pt to match skewplot() above so the blank placeholders keep
+	# a consistent title size with their non-blank siblings; see the
+	# comment in skewplot() for the long-EXPT overflow rationale.
 	skew.ax.set_title(f'{EXPT.strip()}\nSounding {location}\nInit: {forecastinit} Forecast Hour:[{FHR:03}]', \
-			  fontsize=24, weight='bold', loc='left')
+			  fontsize=18, weight='bold', loc='left')
 	skew.ax.set_title(f'VMAX= {maxwind} kt\nPMIN= {minpressure} hPa\n{LONGSID.upper()}', \
-			  fontsize=24, color='brown', loc='right')
+			  fontsize=18, color='brown', loc='right')
 
 	_add_metpy_logo_inside_skewt(fig, skew.ax)
 	_draw_reflectivity_inset(fig, skew.ax, GPLOT_DIR, inset, region)
