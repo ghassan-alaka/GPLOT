@@ -106,6 +106,11 @@ _STORM_BOX_HALFWIDTH = {
     'd03': 6.0,
     'alld03': 10.0,
     'core': 4.0,
+    # HWRF outer parent: ~80 deg wide TC-centered panel, matching the
+    # legacy NCL "Oper. HWRF" outer-domain plot (see e.g.
+    # https://storm.aoml.noaa.gov/hwrfx/.../HWRF-2020/Hwrf/Sea%20Level%20Pressure/).
+    # Triggered via is_storm_named_filename branch in get_domain_bounds.
+    'hwrf': 40.0,
     'storm': 6.0,
 }
 _STORM_BOX_DEFAULT = 6.0
@@ -142,19 +147,41 @@ def get_domain_bounds(domain, tc_lat=None, tc_lon=None, box_degrees=None):
     """
     domain_lower = domain.lower()
 
-    if is_storm_centered(domain_lower):
+    # Storm-centered bounds are computed when either:
+    #   * The domain is in the NEST=3 registry (d03/core/storm/alld03)
+    #   * OR it's a storm-named-filename domain that *also* has an entry
+    #     in _STORM_BOX_HALFWIDTH (currently just 'hwrf'). This second
+    #     case is the legacy operational-HWRF outer panel -- declared
+    #     NEST=1 because the model's d01 IS technically the parent, but
+    #     plotted as a TC-centered ~80 deg box because that's what the
+    #     legacy NCL hwrf plots looked like.
+    is_sc = is_storm_centered(domain_lower)
+    is_hwrf_panel = (is_storm_named_filename(domain_lower)
+                     and domain_lower in _STORM_BOX_HALFWIDTH
+                     and not is_sc)
+    if is_sc or is_hwrf_panel:
         if tc_lat is None or tc_lon is None:
             logger.warning(f"Storm-centered domain '{domain}' requires TC position")
             return None
         if box_degrees is None:
             box_degrees = _STORM_BOX_HALFWIDTH.get(
                 domain_lower, _STORM_BOX_DEFAULT)
-        return (
-            tc_lat + box_degrees,
-            tc_lat - box_degrees,
-            tc_lon - box_degrees,
-            tc_lon + box_degrees,
-        )
+        lat_n = tc_lat + box_degrees
+        lat_s = tc_lat - box_degrees
+        lon_w = tc_lon - box_degrees
+        lon_e = tc_lon + box_degrees
+        # Keep the box contiguous when a wide hwrf-style halfwidth
+        # around a Pacific storm spills past +/-180. Shift the whole
+        # box by 360 so it lives in [-180, 360] without splitting at
+        # the dateline. Downstream cartopy + data-lon-alignment
+        # handle the resulting lon_e > 180 just fine.
+        if lon_w < -180:
+            lon_w += 360
+            lon_e += 360
+        elif lon_e > 360:
+            lon_w -= 360
+            lon_e -= 360
+        return (lat_n, lat_s, lon_w, lon_e)
 
     bounds = _DOMAIN_BOUNDS.get(domain_lower)
     if bounds is None:

@@ -210,10 +210,83 @@ def _layer_mean_from_cube(cube_3d):
 # ---------------------------------------------------------------------------
 # Level code parsing
 def _normalize_lon(lon):
-    """Convert longitude from 0..360 to -180..180 if needed."""
+    """Convert longitude from 0..360 to -180..180 if needed.
+
+    Deprecated: prefer ``_align_lon_to_bounds`` everywhere in this
+    module. The unconditional ``> 180 -> subtract 360`` rule breaks
+    on dateline-crossing storm-centered panels (e.g., hwrf for a WP
+    invest) because it strips the 0..360 convention from the data
+    while the bounds may still be in 0..360. Kept temporarily so
+    other modules importing this name don't break.
+    """
     if lon is not None and np.any(lon > 180):
         return np.where(lon > 180, lon - 360, lon)
     return lon
+
+
+def _bounds_crosses_dateline(lon_w, lon_e):
+    """Whether the panel bounds extend past the cartopy default
+    [-180, 180] window. Such bounds require both
+    central_longitude=180 projection AND lon data wrapped into the
+    [0, 360] convention; everything else can use the default
+    central_longitude=0 + [-180, 180]."""
+    return lon_e > 180 or lon_w < -180
+
+
+def _align_lon_to_bounds(lon, lon_w, lon_e):
+    """Wrap longitude into the convention required by the panel bounds.
+
+    Bounds with an edge past +-180 (dateline-crossing, e.g. the hwrf
+    panel for a WP storm at ~145E with halfwidth 40 -> 105..185) must
+    be paired with cartopy's central_longitude=180 projection AND
+    data lons in [0, 360]. Everything else uses the default
+    central_longitude=0 projection + data lons in [-180, 180].
+
+    The element-wise wrap can produce a non-monotonic array with one
+    360-deg discontinuity in the middle. ``_align_field_lon`` rolls
+    the field arrays so the discontinuity sits at the array edge,
+    restoring monotonicity for contourf. Use that helper for full
+    field dicts; this helper just wraps the lon coordinate.
+    """
+    if lon is None:
+        return lon
+    arr = np.asarray(lon, dtype=float)
+    if _bounds_crosses_dateline(lon_w, lon_e):
+        return arr % 360                          # wrap into [0, 360]
+    return ((arr + 180) % 360) - 180             # wrap into [-180, 180]
+
+
+def _align_field_lon(field, lon_w, lon_e, data_keys=('data', 'u', 'v')):
+    """Wrap lon convention to match bounds AND roll the 2D arrays so
+    the lon coordinate stays monotonic.
+
+    matplotlib's contourf treats consecutive lon entries as adjacent
+    geometrically. If the lon array has a 360-deg discontinuity in
+    the middle (the natural result of element-wise wrapping a 0..360
+    global file into a -180..180 window), the cell straddling the
+    discontinuity gets drawn as if it spanned the whole world, which
+    produces phantom bands of color far from the actual data and
+    eats most of the panel.
+
+    Fix: detect the wrap index, roll the lon array AND every 2D data
+    array along their last axis so the wrap migrates to the array
+    edge, where the no-longer-adjacent-after-roll endpoints don't
+    bridge a real grid cell.
+    """
+    if field is None or field.get('lon') is None:
+        return field
+    field['lon'] = _align_lon_to_bounds(field['lon'], lon_w, lon_e)
+    lon = field['lon']
+    if len(lon) > 1:
+        diffs = np.diff(lon)
+        wrap_idx = np.where(np.abs(diffs) > 180)[0]
+        if len(wrap_idx) > 0:
+            roll_by = -(int(wrap_idx[0]) + 1)
+            field['lon'] = np.roll(lon, roll_by)
+            for key in data_keys:
+                if field.get(key) is not None:
+                    field[key] = np.roll(field[key], roll_by, axis=-1)
+    return field
 
 
 # ---------------------------------------------------------------------------
@@ -717,11 +790,13 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
                        f"(lev={base_lev}) not found")
         return None
 
-    # Normalize longitude to -180..180 for cartopy PlateCarree
-    if base_field['lon'] is not None and np.any(base_field['lon'] > 180):
-        base_field['lon'] = np.where(base_field['lon'] > 180,
-                                     base_field['lon'] - 360,
-                                     base_field['lon'])
+    # Align longitude convention to bounds (see _align_field_lon).
+    # Handles Atlantic (0..360 data -> signed bounds) and Pacific hwrf
+    # (data + 0..360 box past 180) in one branch, and rolls the lon
+    # + data arrays so the wrap migrates to the array edge -- contourf
+    # needs a monotonic lon coord and gets one only after the roll.
+    req_latn, req_lats, req_lonw, req_lone = bounds
+    _align_field_lon(base_field, req_lonw, req_lone)
 
     # Derive map extent from the actual data coverage after subsetting.
     # The requested 'bounds' may be larger than the GRIB2 file's extent
@@ -730,11 +805,6 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     # bounds with what's actually present to avoid this.
     lat_arr = base_field['lat']
     lon_arr = base_field['lon']
-    req_latn, req_lats, req_lonw, req_lone = bounds
-    if req_lonw > 180:
-        req_lonw -= 360
-    if req_lone > 180:
-        req_lone -= 360
     if lat_arr is not None and len(lat_arr) > 0:
         data_latn = float(np.max(lat_arr))
         data_lats = float(np.min(lat_arr))
@@ -753,8 +823,17 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     )
 
     # --- 2. Create the figure ---
-    fig, ax = create_figure(figsize=(12, 9))
-    setup_map_axes(ax, plot_bounds)
+    # Dateline-crossing bounds (e.g. the hwrf panel for a WP storm at
+    # ~145E with a 40-deg halfwidth yields lon_e=185) need cartopy's
+    # central_longitude=180 projection or set_extent silently falls
+    # back to the global default. _align_lon_to_bounds above wraps
+    # the data lons to match, so both pieces stay coherent.
+    proj = ccrs.PlateCarree(
+        central_longitude=180
+        if _bounds_crosses_dateline(plot_bounds[2], plot_bounds[3]) else 0
+    )
+    fig, ax = create_figure(figsize=(12, 9), projection=proj)
+    setup_map_axes(ax, plot_bounds, projection=proj)
 
     # --- 3. Draw filled contours (base variable) ---
     # Determine which variable name to use for colormap/level lookup.
@@ -991,7 +1070,10 @@ def _draw_contour_overlay(ax, datasets, dsource, var, level_str, bounds,
     if field is None:
         return
 
-    field['lon'] = _normalize_lon(field['lon'])
+    # Align lon convention to the panel bounds and roll data + lon
+    # so the lon coord stays monotonic for contour (see
+    # _align_field_lon).
+    _align_field_lon(field, bounds[2], bounds[3])
 
     # Get contour levels for this variable
     lc = parse_level_code(level_str)
@@ -1125,7 +1207,7 @@ def _draw_wind_overlay(ax, datasets, dsource, level_str, bounds, gplot_dir,
     if wind is None:
         return
 
-    wind['lon'] = _normalize_lon(wind['lon'])
+    _align_field_lon(wind, bounds[2], bounds[3])
 
     # Adaptive thinning: target ~25-30 barbs along the longer axis so
     # the field is readable on both coarse parent grids and high-res
@@ -1164,7 +1246,7 @@ def _draw_streamline_overlay(ax, datasets, dsource, level_str, bounds,
     if wind is None:
         return
 
-    wind['lon'] = _normalize_lon(wind['lon'])
+    _align_field_lon(wind, bounds[2], bounds[3])
 
     if smooth_target_km > 0:
         from scipy.ndimage import gaussian_filter
@@ -2262,8 +2344,16 @@ def main():
                     f"the tracker has caught up.")
                 continue
 
-            # Compute domain bounds
-            if is_storm_centered(domain):
+            # Compute domain bounds.
+            # Storm-centric panels: d03 / core / storm / alld03 (NEST=3)
+            # AND hwrf (declared NEST=1 in DomainInfo but plotted as a
+            # large TC-centered outer panel, matching the legacy
+            # operational HWRF outer-domain product). Both get a
+            # storm-centered box from get_domain_bounds, with hwrf
+            # using a 40 deg halfwidth (~80 deg wide panel).
+            domain_is_storm_centric = (is_storm_centered(domain)
+                                       or is_storm_named_filename(domain))
+            if domain_is_storm_centric:
                 if tc_lat is None:
                     logger.warning(f"FHR {fhr:03d}: No TC position, skipping "
                                    "storm-centered domain")
@@ -2271,9 +2361,9 @@ def main():
                 bounds = get_domain_bounds(domain, tc_lat, tc_lon)
             else:
                 bounds = get_domain_bounds(domain)
-                # d01/hwrf parent domains return None from the registry because
-                # their geographic extent varies per run (moving-nest parent grid
-                # is recentered on the cyclone). Resolve them below from the
+                # d01 parent domain returns None from the registry because
+                # its geographic extent varies per run (moving-nest parent
+                # grid is recentered on the cyclone). Resolve below from the
                 # actual GRIB2 file after it's been opened.
 
             # PlottedFiles log path (used by both the fast-path on-disk gate
@@ -2355,12 +2445,26 @@ def main():
                 if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
                     logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
                     continue
-                # Convert 0..360 longitudes to -180..180 for cartopy-friendly bounds.
+                # Convert 0..360 longitudes to a cartopy-friendly extent.
+                # Two cases:
+                #   1. Global data (lon spans ~360 deg). The previous logic
+                #      only shifted lon_max past 180, leaving lon_min=0 +
+                #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
+                #      collapsed the panel to a single vertical line. Use
+                #      a true global extent (-180, 180) instead.
+                #   2. Regional 0..360 data. Shift values > 180 down by
+                #      360 if both ends would otherwise stay above 180.
                 lon_min = float(np.min(lon_arr))
                 lon_max = float(np.max(lon_arr))
-                if lon_max > 180:
-                    lon_min = lon_min - 360 if lon_min > 180 else lon_min
-                    lon_max = lon_max - 360 if lon_max > 180 else lon_max
+                if lon_max - lon_min > 350.0:
+                    # Global data -> full -180..180 extent.
+                    lon_min, lon_max = -180.0, 180.0
+                elif lon_max > 180 and lon_min > 180:
+                    # Whole window past 180 -> shift both down.
+                    lon_min -= 360
+                    lon_max -= 360
+                # else: leave as-is; downstream _align_lon_to_bounds
+                # rewraps the data to match these bounds.
                 bounds = (
                     float(np.max(lat_arr)),
                     float(np.min(lat_arr)),
