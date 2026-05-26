@@ -1633,6 +1633,26 @@ def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
                 logger.warning(
                     f"nest outline: <100 valid points in {fn}; skipping")
                 continue
+
+            # HAFS rotated d03 nests come wrapped in an axis-aligned
+            # rectangle with a NaN halo (~44% of cells are halo), so
+            # the inner halo->data transition gives contour([0.5]) a
+            # natural boundary to trace. HWRF storm-nest files
+            # (e.g. invest99w.<idate>.hwrfprs.storm.0p015.f<NNN>.grb2)
+            # are on a regular lat/lon grid -- every cell is valid,
+            # the mask is uniformly 1, no 0->1 transitions exist, and
+            # the contour produces no visible polyline.
+            #
+            # Force a 1-cell border of 0s along all four edges so the
+            # 0.5 isoline always traces the array's rectangular
+            # boundary regardless of grid type. Idempotent for the
+            # HAFS case (the outer halo cells are already 0/NaN, the
+            # inner-halo boundary contour is still produced as before),
+            # and adds the missing outer rectangle for HWRF.
+            mask[0, :] = 0
+            mask[-1, :] = 0
+            mask[:, 0] = 0
+            mask[:, -1] = 0
             m = _NEST_TOKEN_RE.search(os.path.basename(fn))
             label = m.group(1).lower() if m else 'nest'
             # Per-storm position lookup so callers can drop an L
