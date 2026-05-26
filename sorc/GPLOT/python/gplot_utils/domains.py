@@ -106,11 +106,15 @@ _STORM_BOX_HALFWIDTH = {
     'd03': 6.0,
     'alld03': 10.0,
     'core': 4.0,
-    # HWRF outer parent: ~80 deg wide TC-centered panel, matching the
+    # HWRF outer parent: ~100 deg wide TC-centered panel, matching the
     # legacy NCL "Oper. HWRF" outer-domain plot (see e.g.
     # https://storm.aoml.noaa.gov/hwrfx/.../HWRF-2020/Hwrf/Sea%20Level%20Pressure/).
     # Triggered via is_storm_named_filename branch in get_domain_bounds.
-    'hwrf': 40.0,
+    # 50 deg halfwidth captures the full operational HWRF d01 footprint
+    # (the visible data extent in the operational post output is
+    # typically ~95-100 deg wide); the earlier 40 deg crop was lopping
+    # off real data on the eastern / western edges.
+    'hwrf': 50.0,
     'storm': 6.0,
 }
 _STORM_BOX_DEFAULT = 6.0
