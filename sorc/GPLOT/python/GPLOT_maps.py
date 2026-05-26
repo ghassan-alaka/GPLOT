@@ -2345,15 +2345,15 @@ def main():
                 continue
 
             # Compute domain bounds.
-            # Storm-centric panels: d03 / core / storm / alld03 (NEST=3)
-            # AND hwrf (declared NEST=1 in DomainInfo but plotted as a
-            # large TC-centered outer panel, matching the legacy
-            # operational HWRF outer-domain product). Both get a
-            # storm-centered box from get_domain_bounds, with hwrf
-            # using a 40 deg halfwidth (~80 deg wide panel).
-            domain_is_storm_centric = (is_storm_centered(domain)
-                                       or is_storm_named_filename(domain))
-            if domain_is_storm_centric:
+            # NEST=3 storm-centric panels (d03 / core / storm / alld03)
+            # resolve immediately from the ATCF position. hwrf is
+            # deferred to the post-open block below because its target
+            # extent depends on whether the input is global HWRF post
+            # output (~360 deg span -> use storm-centered +/-40 box,
+            # matching the legacy NCL "Oper. HWRF" outer plot) or a
+            # regional HAFS parent (~160 deg span -> show full data
+            # extent, matching the existing HAFS behavior).
+            if is_storm_centered(domain):
                 if tc_lat is None:
                     logger.warning(f"FHR {fhr:03d}: No TC position, skipping "
                                    "storm-centered domain")
@@ -2361,10 +2361,11 @@ def main():
                 bounds = get_domain_bounds(domain, tc_lat, tc_lon)
             else:
                 bounds = get_domain_bounds(domain)
-                # d01 parent domain returns None from the registry because
-                # its geographic extent varies per run (moving-nest parent
-                # grid is recentered on the cyclone). Resolve below from the
-                # actual GRIB2 file after it's been opened.
+                # d01 / hwrf parent domains return None from the registry
+                # because their geographic extent varies per run (moving-
+                # nest parent grid is recentered on the cyclone; hwrf may
+                # also be either global or regional input). Resolved below
+                # from the actual GRIB2 grid after it's been opened.
 
             # PlottedFiles log path (used by both the fast-path on-disk gate
             # below and the per-recipe gate inside the recipe loop).
@@ -2445,32 +2446,53 @@ def main():
                 if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
                     logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
                     continue
-                # Convert 0..360 longitudes to a cartopy-friendly extent.
-                # Two cases:
-                #   1. Global data (lon spans ~360 deg). The previous logic
-                #      only shifted lon_max past 180, leaving lon_min=0 +
-                #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
-                #      collapsed the panel to a single vertical line. Use
-                #      a true global extent (-180, 180) instead.
-                #   2. Regional 0..360 data. Shift values > 180 down by
-                #      360 if both ends would otherwise stay above 180.
                 lon_min = float(np.min(lon_arr))
                 lon_max = float(np.max(lon_arr))
-                if lon_max - lon_min > 350.0:
-                    # Global data -> full -180..180 extent.
-                    lon_min, lon_max = -180.0, 180.0
-                elif lon_max > 180 and lon_min > 180:
-                    # Whole window past 180 -> shift both down.
-                    lon_min -= 360
-                    lon_max -= 360
-                # else: leave as-is; downstream _align_lon_to_bounds
-                # rewraps the data to match these bounds.
-                bounds = (
-                    float(np.max(lat_arr)),
-                    float(np.min(lat_arr)),
-                    lon_min,
-                    lon_max,
-                )
+                lon_span = lon_max - lon_min
+                is_global_input = lon_span > 350.0
+
+                # hwrf branch: pick storm-centered +/-40 only when the
+                # input is global HWRF (~360 deg span). For regional
+                # HAFS parent (~160 deg span) the existing "full data
+                # extent" behavior is preserved so the synoptic-scale
+                # context HAFS gave doesn't get cropped away. The
+                # is_storm_named_filename predicate is the right filter
+                # here: we only reach this block for parent-style
+                # domains (d01 / hwrf -- the registry returned None),
+                # and only hwrf is storm-named, so the gate uniquely
+                # selects hwrf without naming it explicitly.
+                if (is_storm_named_filename(domain)
+                        and is_global_input
+                        and tc_lat is not None
+                        and tc_lon is not None):
+                    bounds = get_domain_bounds(domain, tc_lat, tc_lon)
+                    logger.info(f"{domain} bounds (global input -> storm-"
+                                f"centered): {bounds}")
+                else:
+                    # Convert 0..360 longitudes to a cartopy-friendly extent.
+                    # Two cases:
+                    #   1. Global data (lon spans ~360 deg). The previous logic
+                    #      only shifted lon_max past 180, leaving lon_min=0 +
+                    #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
+                    #      collapsed the panel to a single vertical line. Use
+                    #      a true global extent (-180, 180) instead.
+                    #   2. Regional 0..360 data. Shift values > 180 down by
+                    #      360 if both ends would otherwise stay above 180.
+                    if is_global_input:
+                        # Global data -> full -180..180 extent.
+                        lon_min, lon_max = -180.0, 180.0
+                    elif lon_max > 180 and lon_min > 180:
+                        # Whole window past 180 -> shift both down.
+                        lon_min -= 360
+                        lon_max -= 360
+                    # else: leave as-is; downstream _align_lon_to_bounds
+                    # rewraps the data to match these bounds.
+                    bounds = (
+                        float(np.max(lat_arr)),
+                        float(np.min(lat_arr)),
+                        lon_min,
+                        lon_max,
+                    )
                 logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
 
             # Reset the vortex-filter cache so we don't accidentally reuse a
