@@ -279,6 +279,35 @@ def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
   # later comparison against the storm-relative/re-interpolated version.
   wwind_store = wwind
 
+  # Normalize lat to ascending order. HWRF storm-nest grb2s store lat
+  # top-to-bottom (descending: ~+18 -> ~-2 for a tropical WP storm)
+  # while HAFS storm-nest grb2s store lat ascending. Every downstream
+  # consumer of this dict assumes ascending lat: x_sr/y_sr are derived
+  # with `y_sr = (lat - centerlat) * km`, so descending lat produces
+  # descending y_sr, which then breaks the (a) RegularGridInterpolator
+  # construction at line ~479 (requires strictly increasing axes) and
+  # (b) the `argmin(|y_sr+-200|)` bounding-box derivation in the TDR
+  # recentering loop (where ymin ends up > ymax, slicing produces an
+  # empty array, and find_nearest's nanmin trips
+  # "zero-size array to reduction operation fmin which has no identity").
+  # Flip lat + every lat-indexed array once, here, so the entire
+  # polar pipeline downstream sees a single canonical convention.
+  if len(lat) >= 2 and lat[0] > lat[-1]:
+    lat = lat[::-1].copy()
+    # 3D arrays: shape (ny, nx, nz) -> flip axis 0 (lat).
+    for _arr in (uwind, vwind, omega, hgt, temp, dbz, q, rh,
+                 mixr, temp_v, rho, wwind, wwind_store, levs):
+      _arr[:] = _arr[::-1, :, :]
+    # 2D arrays: shape (ny, nx) -> flip axis 0 (lat).
+    for _arr in (sst, pblz_upp, lhtflx, shtflx, u10, v10, mslp,
+                 tmp2m, q2m, rh2m, mixr2m, temp_v_2m, rho2m,
+                 u850, v850, z850, u200, v200, z200):
+      _arr[:] = _arr[::-1, :]
+    # 2D meshgrid built from the (now ascending) lat -- rebuild.
+    lon_full, lat_full = np.meshgrid(lon, lat)
+    print('MSG: Normalized descending lat -> ascending '
+          f'({float(lat[0]):.3f} -> {float(lat[-1]):.3f})')
+
   return {
       'uwind': uwind, 'vwind': vwind, 'omega': omega, 'hgt': hgt,
       'temp': temp, 'dbz': dbz, 'q': q, 'rh': rh,
