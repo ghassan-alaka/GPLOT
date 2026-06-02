@@ -43,7 +43,7 @@ fi
 
 # 2. Submit the Python job
 echo "python3 ${PYFILE} ${PY_ARGS[@]}"
-python3 ${PYFILE} "${PY_ARGS[@]}" > ${LOGFILE}
+python3 ${PYFILE} "${PY_ARGS[@]}" > ${LOGFILE} 2>&1
 
 wait
 

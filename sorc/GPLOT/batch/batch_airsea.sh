@@ -52,7 +52,7 @@ PYTHON_ARGS+=("--master-nml" "${NMLIST:-MISSING}")
 
 # 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-python ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE}
+python ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE} 2>&1
 
 wait
 
