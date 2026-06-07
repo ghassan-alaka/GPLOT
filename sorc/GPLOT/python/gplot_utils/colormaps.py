@@ -137,6 +137,13 @@ _CMAP_REGISTRY = {
     ('RVO', ''): 'hot_r',
     ('AVO', ''): 'RdBu_r',
 
+    # Liutex (rigid-rotation strength, 10^-5 s^-1). Horizontal component is
+    # a non-negative magnitude -> reuse the RVO sequential 'hot_r' scale.
+    # Vertical component is signed (cyclonic +, anticyclonic -) -> diverging
+    # 'RdBu_r' about zero.
+    ('LIUTEXH', ''): 'hot_r',
+    ('LIUTEXZ', ''): 'RdBu_r',
+
     # Temperature
     ('T', ''): 'RdBu_r',
     ('T', '2'): 'jet',
@@ -291,6 +298,13 @@ _LEVEL_REGISTRY = {
     ('RVO', '500'): np.arange(5, 75, 5),
     ('RVO', '200'): np.arange(5, 75, 5),
     ('AVO', ''): np.arange(-20, 52, 2),
+
+    # Liutex (10^-5 s^-1). Horizontal magnitude uses the same 5..70 floor as
+    # RVO so the ambient noise falls into set_under (white). Vertical
+    # component is signed and symmetric about zero. Level-less fallbacks
+    # cover all four pressure levels (850/700/500/200).
+    ('LIUTEXH', ''): np.arange(5, 155, 10),
+    ('LIUTEXZ', ''): np.arange(-60, 65, 5),
 
     # Temperature (K)
     ('T', '850'): np.arange(240, 312, 2),

@@ -2,3 +2,11 @@ PLOT_ON   BASE_CN_FILL   LEV1          OV_CN_LINE   LEV2    OV_CN_LINE2  LEV3   
 True      UV             02500850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          02500850m     SFDL
 True      UV             05000850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          05000850m     SFML
 True      UV             07000850m     N/A          N/A     N/A          N/A         N/A          N/A         MSLP         N/A     UV          07000850m     SFSL
+True      LIUTEXH        850           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          850           LIUTEXH850_UV850
+True      LIUTEXH        700           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          700           LIUTEXH700_UV700
+True      LIUTEXH        500           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          500           LIUTEXH500_UV500
+True      LIUTEXH        200           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          200           LIUTEXH200_UV200
+True      LIUTEXZ        850           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          850           LIUTEXZ850_UV850
+True      LIUTEXZ        700           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          700           LIUTEXZ700_UV700
+True      LIUTEXZ        500           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          500           LIUTEXZ500_UV500
+True      LIUTEXZ        200           N/A          N/A     N/A          N/A         N/A          N/A         N/A          N/A     UV          200           LIUTEXZ200_UV200

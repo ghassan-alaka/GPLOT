@@ -71,6 +71,11 @@ _CFGRIB_VAR_MAP = {
     # Omega (pressure vertical velocity, Pa/s)
     'OMEGA': ['w'],
 
+    # Geometric vertical velocity (dz/dt, m/s). HAFS archives this as 'wz'
+    # alongside the pressure-velocity 'w'. Needed by the Liutex computation,
+    # which works in physical (x, y, z) space rather than pressure coords.
+    'WZ': ['wz', 'dzdt'],
+
     # Specific humidity (synonym of 'Q' for scripts that spell it out)
     'SPF': ['q'],
 
@@ -626,6 +631,30 @@ def get_var_2d(datasets, dsource, var, level='', bounds=None,
         return _compute_pv_at_level(datasets, dsource, level, bounds,
                                     gplot_dir)
 
+    # Liutex -- a rigorous rotational-strength vortex identifier derived
+    # from the 3-D velocity-gradient tensor (eigendecomposition -> local
+    # rotation axis -> rigid-rotation magnitude). Unlike vorticity, it
+    # excludes pure shear. LIUTEXH is the horizontal component of the
+    # Liutex vector (sqrt(lx^2 + ly^2)); LIUTEXZ is the vertical (lz).
+    # Both presented in 10^-5 s^-1, matching the RVO vorticity scale.
+    if var in ('LIUTEXH', 'LIUTEXZ'):
+        liu = _compute_liutex_level(datasets, dsource, level, bounds,
+                                    gplot_dir)
+        if liu is None:
+            return None
+        if var == 'LIUTEXH':
+            data = np.hypot(liu['lx'], liu['ly']) * 1e5
+        else:
+            data = liu['lz'] * 1e5
+        return {
+            'data': data,
+            'lat': liu['lat'],
+            'lon': liu['lon'],
+            'units': '10^-5 s^-1',
+            'var': var,
+            'level': level,
+        }
+
     # 2-m dewpoint is typically archived directly (d2m); if it's missing,
     # fall back to deriving it from 2-m temperature and 2-m RH via metpy
     # so the plot still renders on outputs that omit d2m.
@@ -1102,6 +1131,241 @@ def _compute_pv_at_level(datasets, dsource, level, bounds, gplot_dir):
         'var': 'PV',
         'level': str(int(target)),
     }
+
+
+# ---------------------------------------------------------------------------
+# Liutex (rigorous rotational-strength vortex identifier)
+# ---------------------------------------------------------------------------
+# Ported from the user's calcliutex_grib2.py (Alvarez / UT-Arlington method)
+# and vectorized. The per-point eigen-loop in the reference is far too slow
+# for a maps domain, so the velocity-gradient tensors are stacked and fed to a
+# single batched np.linalg.eig call, and the Liutex extraction (real-eigenvector
+# axis, sign convention, rigid-rotation magnitude) is done with numpy ops.
+#
+# Liutex isolates the rigid-body rotation embedded in the flow: at each point,
+# eigendecompose the velocity-gradient tensor; the lone real eigenvector is the
+# local rotation axis r, and R = w.r - sqrt((w.r)^2 - 4*lambda_ci^2) is the
+# rotational strength (w = vorticity, lambda_ci = imaginary part of the complex
+# eigenvalue pair). The Liutex vector is R*r.
+
+# Memoize the full Liutex vector field per (datasets, bounds, level) so the
+# LIUTEXH and LIUTEXZ recipes at the same level share one (expensive) compute.
+_LIUTEX_CACHE = {}
+
+_R_EARTH_M = 6378.0e3
+_LIUTEX_VEL_TOL = 1.0e20
+
+
+def reset_liutex_cache():
+    """Clear the Liutex memo cache (call between forecast hours / files)."""
+    _LIUTEX_CACHE.clear()
+
+
+def _liutex_build_xy(lat_1d, lon_1d, nz):
+    """Physical arc-length (x, y) coordinate arrays, broadcast to (nz, ny, nx).
+
+    y is the cumulative meridional arc (independent of longitude); x is the
+    cumulative zonal arc along each latitude row using the local cosine(lat)
+    correction. Mirrors build_xy_coords() from the reference, vectorized.
+    """
+    ny = len(lat_1d)
+    nx = len(lon_1d)
+    deg2rad = np.pi / 180.0
+
+    y_1d = np.zeros(ny)
+    if ny > 1:
+        y_1d[1:] = np.cumsum(_R_EARTH_M * np.abs(np.diff(lat_1d)) * deg2rad)
+
+    x_2d = np.zeros((ny, nx))
+    if nx > 1:
+        dlon = np.abs(np.diff(lon_1d)) * deg2rad  # (nx-1,)
+        cos_lat = np.cos(lat_1d * deg2rad)        # (ny,)
+        x_2d[:, 1:] = np.cumsum(_R_EARTH_M * dlon[None, :] * cos_lat[:, None],
+                                axis=1)
+
+    x_3d = np.broadcast_to(x_2d[np.newaxis], (nz, ny, nx)).copy()
+    y_3d = np.broadcast_to(y_1d[np.newaxis, :, np.newaxis],
+                           (nz, ny, nx)).copy()
+    return x_3d, y_3d
+
+
+def _liutex_velocity_gradient(u, v, w, xp, yp, zp):
+    """Velocity-gradient tensor via Jacobian transform of curvilinear (xi, eta,
+    zeta) = (level, y-index, x-index) derivatives into physical (x, y, z).
+
+    Returns nabla_v with shape (nz, ny, nx, 3, 3), rows = (u, v, w) and
+    columns = (d/dx, d/dy, d/dz). Mirrors calc_velocity_gradient_tensor().
+    """
+    g = lambda a, ax: np.gradient(a, axis=ax)
+
+    u_xi, u_eta, u_ze = g(u, 0), g(u, 1), g(u, 2)
+    v_xi, v_eta, v_ze = g(v, 0), g(v, 1), g(v, 2)
+    w_xi, w_eta, w_ze = g(w, 0), g(w, 1), g(w, 2)
+    x_xi, x_eta, x_ze = g(xp, 0), g(xp, 1), g(xp, 2)
+    y_xi, y_eta, y_ze = g(yp, 0), g(yp, 1), g(yp, 2)
+    z_xi, z_eta, z_ze = g(zp, 0), g(zp, 1), g(zp, 2)
+
+    det = (x_xi * (y_eta * z_ze - y_ze * z_eta)
+           - x_eta * (y_xi * z_ze - y_ze * z_xi)
+           + x_ze * (y_xi * z_eta - y_eta * z_xi))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        di = np.where(np.abs(det) > 1e-30, 1.0 / det, np.nan)
+
+    xi_x = di * (y_eta * z_ze - y_ze * z_eta)
+    xi_y = di * (x_ze * z_eta - x_eta * z_ze)
+    xi_z = di * (x_eta * y_ze - x_ze * y_eta)
+    et_x = di * (y_ze * z_xi - y_xi * z_ze)
+    et_y = di * (x_xi * z_ze - x_ze * z_xi)
+    et_z = di * (x_ze * y_xi - x_xi * y_ze)
+    ze_x = di * (y_xi * z_eta - y_eta * z_xi)
+    ze_y = di * (x_eta * z_xi - x_xi * z_eta)
+    ze_z = di * (x_xi * y_eta - x_eta * y_xi)
+
+    nz, ny, nx = u.shape
+    a = np.zeros((nz, ny, nx, 3, 3))
+    a[..., 0, 0] = u_xi * xi_x + u_eta * et_x + u_ze * ze_x
+    a[..., 0, 1] = u_xi * xi_y + u_eta * et_y + u_ze * ze_y
+    a[..., 0, 2] = u_xi * xi_z + u_eta * et_z + u_ze * ze_z
+    a[..., 1, 0] = v_xi * xi_x + v_eta * et_x + v_ze * ze_x
+    a[..., 1, 1] = v_xi * xi_y + v_eta * et_y + v_ze * ze_y
+    a[..., 1, 2] = v_xi * xi_z + v_eta * et_z + v_ze * ze_z
+    a[..., 2, 0] = w_xi * xi_x + w_eta * et_x + w_ze * ze_x
+    a[..., 2, 1] = w_xi * xi_y + w_eta * et_y + w_ze * ze_y
+    a[..., 2, 2] = w_xi * xi_z + w_eta * et_z + w_ze * ze_z
+    return a
+
+
+def _compute_liutex_level(datasets, dsource, level, bounds, gplot_dir):
+    """Compute the Liutex vector field at a single pressure level.
+
+    Returns a dict {'lx','ly','lz','lat','lon'} (components in s^-1) for the
+    requested level, or None if inputs are missing. Memoized per
+    (datasets, bounds, level).
+    """
+    try:
+        target = float(level)
+    except (TypeError, ValueError):
+        target = 850.0
+
+    bkey = tuple(round(float(b), 4) for b in bounds) if bounds else None
+    key = (id(datasets), bkey, round(target, 2))
+    cached = _LIUTEX_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    # Locate a pressure-level dataset to choose bracketing levels that exist.
+    ds, _ = _resolve_cfgrib_var(datasets, 'U', '500')
+    if ds is None:
+        logger.warning("No pressure-level dataset available for Liutex")
+        return None
+    coord_names = _detect_coord_names(ds)
+    lev_coord = coord_names['lev']
+    if lev_coord is None or lev_coord not in ds.dims:
+        logger.warning("Pressure-level coord not found for Liutex")
+        return None
+
+    all_levs = ds.coords[lev_coord].values
+    in_pa = np.max(all_levs) > 1100
+    target_native = target * 100.0 if in_pa else target
+
+    # Three nearest levels bracketing the target -> central vertical difference.
+    order = np.argsort(np.abs(all_levs - target_native))
+    bracket = sorted(all_levs[order[:3]])
+    if len(bracket) < 2:
+        logger.warning("Not enough pressure levels to derive Liutex")
+        return None
+    lev_top_hpa = (min(bracket) / 100.0) if in_pa else min(bracket)
+    lev_bot_hpa = (max(bracket) / 100.0) if in_pa else max(bracket)
+
+    u_res = get_var_3d(datasets, dsource, 'U', lev_top_hpa, lev_bot_hpa,
+                       bounds, gplot_dir)
+    v_res = get_var_3d(datasets, dsource, 'V', lev_top_hpa, lev_bot_hpa,
+                       bounds, gplot_dir)
+    w_res = get_var_3d(datasets, dsource, 'WZ', lev_top_hpa, lev_bot_hpa,
+                       bounds, gplot_dir)
+    z_res = get_var_3d(datasets, dsource, 'HGT', lev_top_hpa, lev_bot_hpa,
+                       bounds, gplot_dir)
+    if any(r is None for r in (u_res, v_res, w_res, z_res)):
+        logger.warning("Missing u/v/wz/gh levels for Liutex derivation")
+        return None
+
+    levs_hpa = np.asarray(u_res['lev'], dtype=float)
+    if np.max(levs_hpa) > 1100:
+        levs_hpa = levs_hpa / 100.0
+
+    # get_var_3d converted u/v to knots; Liutex needs m/s.
+    u = (u_res['data'] / C.ms2kts).astype(np.float64)
+    v = (v_res['data'] / C.ms2kts).astype(np.float64)
+    w = w_res['data'].astype(np.float64)   # wz already m/s
+    z = z_res['data'].astype(np.float64)   # geopotential height (m)
+    lat = u_res['lat']
+    lon = u_res['lon']
+    nz, ny, nx = u.shape
+
+    # Bad points (model halo NaNs / fill values). Zero them so finite
+    # differences at valid neighbors aren't contaminated, then restore NaN
+    # in the output.
+    bad = (~np.isfinite(u) | ~np.isfinite(v) | ~np.isfinite(w)
+           | ~np.isfinite(z)
+           | (np.abs(u) > _LIUTEX_VEL_TOL) | (np.abs(v) > _LIUTEX_VEL_TOL)
+           | (np.abs(w) > _LIUTEX_VEL_TOL) | (z > _LIUTEX_VEL_TOL))
+    uu = np.where(bad, 0.0, u)
+    vv = np.where(bad, 0.0, v)
+    ww = np.where(bad, 0.0, w)
+    zz = np.where(bad, 0.0, z)
+
+    xp, yp = _liutex_build_xy(np.asarray(lat, float), np.asarray(lon, float),
+                              nz)
+    nabla_v = _liutex_velocity_gradient(uu, vv, ww, xp, yp, zz)
+
+    vor = np.stack([
+        nabla_v[..., 2, 1] - nabla_v[..., 1, 2],   # dw/dy - dv/dz
+        nabla_v[..., 0, 2] - nabla_v[..., 2, 0],   # du/dz - dw/dx
+        nabla_v[..., 1, 0] - nabla_v[..., 0, 1],   # dv/dx - du/dy
+    ], axis=-1)
+
+    # Batched eigendecomposition over all (3,3) tensors at once.
+    af = nabla_v.reshape(-1, 3, 3)
+    fin = np.all(np.isfinite(af), axis=(1, 2))
+    npts = af.shape[0]
+    ev = np.full((npts, 3), np.nan, dtype=complex)
+    evec = np.full((npts, 3, 3), np.nan, dtype=complex)
+    if np.any(fin):
+        ev[fin], evec[fin] = np.linalg.eig(af[fin])
+
+    imag = np.abs(ev.imag)
+    real_idx = np.nanargmin(np.where(np.isfinite(imag), imag, np.inf), axis=1)
+    rows = np.arange(npts)
+    # Real eigenvector = column real_idx of the per-point eigenvector matrix.
+    rvec = np.real(evec[rows, :, real_idx])              # (npts, 3)
+    lam_ci = np.nanmax(np.where(np.isfinite(imag), imag, -np.inf), axis=1)
+
+    vorf = vor.reshape(-1, 3)
+    sign = np.where(np.sum(vorf * rvec, axis=1) < 0, -1.0, 1.0)
+    r = rvec * sign[:, None]
+    wr = np.sum(vorf * r, axis=1)
+    disc = wr * wr - 4.0 * lam_ci * lam_ci
+    rmag = wr - np.sqrt(np.clip(disc, 0.0, None))
+
+    has_complex = np.isfinite(lam_ci) & (lam_ci > 1e-12) & fin
+    rmag = np.where(has_complex, rmag, 0.0)
+    lvec = rmag[:, None] * r                              # (npts, 3)
+    lvec[~fin] = np.nan
+    lvec = lvec.reshape(nz, ny, nx, 3)
+
+    # Restore NaN at originally-bad points.
+    lvec[bad] = np.nan
+
+    k = int(np.argmin(np.abs(levs_hpa - target)))
+    out = {
+        'lx': lvec[k, :, :, 0],
+        'ly': lvec[k, :, :, 1],
+        'lz': lvec[k, :, :, 2],
+        'lat': lat,
+        'lon': lon,
+    }
+    _LIUTEX_CACHE[key] = out
+    return out
 
 
 def _try_direct_dpt(datasets, level, bounds):
