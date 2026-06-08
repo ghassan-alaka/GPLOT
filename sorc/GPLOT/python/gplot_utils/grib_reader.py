@@ -634,16 +634,16 @@ def get_var_2d(datasets, dsource, var, level='', bounds=None,
     # Liutex -- a rigorous rotational-strength vortex identifier derived
     # from the 3-D velocity-gradient tensor (eigendecomposition -> local
     # rotation axis -> rigid-rotation magnitude). Unlike vorticity, it
-    # excludes pure shear. LIUTEXH is the horizontal component of the
-    # Liutex vector (sqrt(lx^2 + ly^2)); LIUTEXZ is the vertical (lz).
-    # Both presented in 10^-5 s^-1, matching the RVO vorticity scale.
-    if var in ('LIUTEXH', 'LIUTEXZ'):
+    # excludes pure shear. LIUTEX is the total Liutex magnitude
+    # (sqrt(lx^2 + ly^2 + lz^2) = |R|); LIUTEXZ is the vertical component
+    # (lz). Both presented in 10^-5 s^-1, matching the RVO vorticity scale.
+    if var in ('LIUTEX', 'LIUTEXZ'):
         liu = _compute_liutex_level(datasets, dsource, level, bounds,
                                     gplot_dir)
         if liu is None:
             return None
-        if var == 'LIUTEXH':
-            data = np.hypot(liu['lx'], liu['ly']) * 1e5
+        if var == 'LIUTEX':
+            data = np.sqrt(liu['lx']**2 + liu['ly']**2 + liu['lz']**2) * 1e5
         else:
             data = liu['lz'] * 1e5
         return {
