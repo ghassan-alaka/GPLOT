@@ -1297,7 +1297,15 @@ def _compute_liutex_level(datasets, dsource, level, bounds, gplot_dir):
     u = (u_res['data'] / C.ms2kts).astype(np.float64)
     v = (v_res['data'] / C.ms2kts).astype(np.float64)
     w = w_res['data'].astype(np.float64)   # wz already m/s
-    z = z_res['data'].astype(np.float64)   # geopotential height (m)
+    # get_var_3d returns geopotential height in decameters (the standard
+    # height-contour unit). Liutex works in physical (x, y, z) space and
+    # needs z in TRUE METERS -- otherwise dz between levels is 10x too small
+    # and du/dz, dv/dz are inflated 10x, swamping the real vorticity and
+    # tilting the rotation axis off-vertical. Convert dam -> m.
+    z = z_res['data'].astype(np.float64)
+    if str(z_res.get('units', '')).lower() in ('dam', 'decameter',
+                                               'decametre', 'dm'):
+        z = z * 10.0
     lat = u_res['lat']
     lon = u_res['lon']
     nz, ny, nx = u.shape
