@@ -279,7 +279,9 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+# NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
+# a bare "0" or an empty list marks a deterministic run.
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -294,7 +296,12 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+# Ensembles submit one job per (member x storm x domain x tier).
+if [ "${IS_ENS}" == "True" ]; then
+    MAX_JOBS=525
+else
+    MAX_JOBS=25
+fi
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -388,9 +395,17 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                if [ "${IS_ENS}" == "False" ]; then
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    # Ensemble member ATCFs are 00L-named, so derive the real
+                    # storms from the ATCF *contents* (basin + storm number).
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} | sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/' | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -412,8 +427,11 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+            # were found, i.e., STORMS != NONE. Skip for ensembles (member files
+            # are already 00L-named for the real storm).
+            if [ "${IS_ENS}" == "True" ]; then
+                :
+            elif [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
                 STORMS+=("00L")
             fi
 
@@ -438,7 +456,13 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                 ((NSTORM=NSTORM+1))
     
                 # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                # Ensemble member ATCFs are 00L-named; the per-member ATCF is
+                # narrowed by ENSID inside the ID loop below.
+                if [ "${IS_ENS}" == "False" ]; then
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                else
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                fi
                 if [ -z "${STORM_ATCF[*]}" ]; then
                     echo "WARNING: No ATCF found for ${STORM}. This might be OK."
                 else
@@ -581,20 +605,35 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                             ENSIDTAG=""
                             MODEL="${MID}"
                         else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                            # %02s (string) not %02d so member ids "08"/"09" don't
+                            # parse as invalid octal. No "E" prefix; single model.
+                            ENSID=$(printf "%02s\n" "${ID}")
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
+
+                        # For ensembles, narrow the ATCF to this member's per-member
+                        # path .../${CYCLE}/${ENSID}.
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
 
                         # Reset FORCE
                         FORCE="${FORCE_ORIG}"
 
-                        # Create full output path
+                        # Create full output path. Member id (empty for
+                        # deterministic) sits between cycle and domain.
+                        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/ocean_${DMN}_obs/"
+                            ODIR_FULL="${ODIR}/${ENSID_DIR}/ocean_${DMN}_obs/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/ocean_${DMN}_obs/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${ENSID_DIR}/ocean_${DMN}_obs/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -773,7 +812,12 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${OCEAN_DIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${OCEAN_DIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${OCEAN_DIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                # Ensemble ocean files are 00L-named.
+                                if [ "${IS_ENS}" == "False" ]; then
+                                    FILE_SEARCH3="${OCEAN_DIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${OCEAN_DIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -1184,11 +1228,14 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
+                        # Advance member index at the END of the ID loop.
+                        ((NID++))
+
                     done #end of ID loop
-                done #end of TR loop
-            done #end of DMN loop
-        done #end of STORM loop
-    done #end of CYCLE loop
+                done #end of DMN loop
+            done #end of STORM loop
+        done #end of CYCLE loop
+    done #end of TR loop
 fi #end of DO_OCEAN_OBS
 
 wait

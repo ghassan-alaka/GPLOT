@@ -20,6 +20,7 @@ from matplotlib.axes import Axes
 
 from gplot_utils import namelist as nml_utils
 from gplot_utils import atcf as atcf_utils
+from gplot_utils import ensemble as ens_utils
 from gplot_utils import plot_utils
 from gplot_utils import colormaps as cmap_utils
 from gplot_utils import ocean_reader
@@ -108,6 +109,7 @@ def main():
     args = _parse_args()
 
     IDATE = args.idate
+    ENSID = ens_utils.normalize_ensid(args.ensid)
     SID = args.sid
     OCEAN_DOMAIN = args.ocean_domain
     TIER = args.tier
@@ -140,10 +142,13 @@ def main():
     NMLDIR = os.path.join(GPLOT_DIR, 'parm')
     FIX_DIR = args.fix_dir.strip() if args.fix_dir else os.path.join(GPLOT_DIR, 'fix')
 
+    # Ensemble member sub-directory ('' for deterministic -> unchanged path).
+    ENS_SUB = (ens_utils.member_segment(ENSID) + '/') \
+        if ens_utils.member_segment(ENSID) else ''
     if ODIR_TYPE == 1:
-        ODIR = ODIR_base + '/ocean_' + OCEAN_DOMAIN + '/'
+        ODIR = ODIR_base + '/' + ENS_SUB + 'ocean_' + OCEAN_DOMAIN + '/'
     else:
-        ODIR = ODIR_base + '/' + EXPT + '/' + IDATE.strip() + '/ocean_' + OCEAN_DOMAIN + '/'
+        ODIR = ODIR_base + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB + 'ocean_' + OCEAN_DOMAIN + '/'
 
     print(f'DEBUG: OCEAN_SOURCE {OCEAN_SOURCE}')
     print(f'DEBUG: OCEAN_DSOURCE {OCEAN_DSOURCE}')
@@ -211,6 +216,10 @@ def main():
 
     if str(ATCF) == 'NONE':
         LONGSID = '00L'
+    elif ENSID and SID:
+        # Ensemble member ATCF is 00L-named, so the filename can't identify
+        # the storm; use the requested SID.
+        LONGSID = SID
     else:
         LONGSID = str(ATCF).split('/')[-1].split('.')[0]
     TCNAME  = LONGSID[::-1][3:][::-1]
@@ -221,6 +230,9 @@ def main():
     atcf_df = None
     if OCEAN_DOMAIN == 'd03' and str(ATCF) != 'NONE':
         atcf_df = atcf_utils.read_atcf(str(ATCF))
+        # Ensemble member ATCFs are multi-storm; keep only this storm.
+        if atcf_df is not None and ENSID and SID:
+            atcf_df = ens_utils.filter_atcf_df(atcf_df, SID[-1], SID[:-1])
 
     # Forecast hour / file lists
     UNPLOTTED_LIST = np.array(np.genfromtxt(UNPLOTTED_FILE, dtype='str'))

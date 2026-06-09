@@ -47,6 +47,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # GPLOT utility package (Sessions 1-7 infrastructure)
 from gplot_utils import namelist as nml_utils
 from gplot_utils import atcf as atcf_utils
+from gplot_utils import ensemble as ens_utils
 from gplot_utils import plot_utils
 from gplot_utils import ocean_reader
 from gplot_utils import constants as gplot_const
@@ -892,7 +893,7 @@ def main():
   SID          = args.sid
   OCEAN_DOMAIN = args.ocean_domain
   TIER         = args.tier
-  ENSID        = args.ensid
+  ENSID        = ens_utils.normalize_ensid(args.ensid)
   FORCE        = args.force
   OCEAN_SOURCE = args.ocean_source or 'HYCOM'
   OCEAN_CFG    = args.ocean_cfg or 'NHC'
@@ -927,10 +928,13 @@ def main():
     ODIR_TYPE = 0
   DO_CONVERTGIF = bool(nml.get('DO_CONVERTGIF', False))
 
+  # Ensemble member sub-directory ('' for deterministic -> unchanged path).
+  ENS_SUB = (ens_utils.member_segment(ENSID) + '/') \
+      if ens_utils.member_segment(ENSID) else ''
   if ODIR_TYPE == 1:
-    ODIR = ODIR_base + '/ocean_' + OCEAN_DOMAIN + '_obs' + '/'
+    ODIR = ODIR_base + '/' + ENS_SUB + 'ocean_' + OCEAN_DOMAIN + '_obs' + '/'
   else:
-    ODIR = ODIR_base + '/' + EXPT + '/' + IDATE.strip() + '/ocean_' + OCEAN_DOMAIN + '_obs' + '/'
+    ODIR = ODIR_base + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB + 'ocean_' + OCEAN_DOMAIN + '_obs' + '/'
 
   figext  = '.png'
   figext2 = '.gif' if DO_CONVERTGIF else '.png'
@@ -984,7 +988,12 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  # Ensemble member ATCF is 00L-named, so use the requested SID instead of the
+  # filename to identify the storm.
+  if ENSID and SID:
+    LONGSID = SID
+  else:
+    LONGSID = str(ATCF).split('/')[-1].split('.')[0]
   #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
   TCNAME = LONGSID[::-1]
   TCNAME = TCNAME[3:]
@@ -998,6 +1007,10 @@ def main():
   # read_atcf() already filters to the 34-kt wind radii rows, matching the
   # legacy "ATCF_DATA[:,11] contains '34'" filter.
   atcf_df = atcf_utils.read_atcf(str(ATCF))
+
+  # Ensemble member ATCFs are multi-storm; keep only this storm.
+  if ENSID and SID:
+    atcf_df = ens_utils.filter_atcf_df(atcf_df, SID[-1], SID[:-1])
 
 
   # Get the list of unplotted files

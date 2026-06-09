@@ -372,7 +372,7 @@ def parse_storm_info(longsid):
 
 
 def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None,
-                   adeck_df=None):
+                   adeck_df=None, ensid=''):
     """
     Derive the long storm identifier (e.g. 'melissa13l') for output
     filenames and plot titles, with the priority chain:
@@ -426,8 +426,17 @@ def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None,
     """
     sid_lc = (sid or '').lower()
 
+    # Treat the deterministic sentinels as "no member" (callers normally pass
+    # a normalized ensid, but guard here too). "00" stays a real member.
+    _ens = str(ensid or '').strip()
+    if _ens.upper() in ('XX', 'MISSING', '0'):
+        _ens = ''
+
     # 1. ATCF filename first segment, if richer than the sid alone.
-    if atcf_file:
+    # Skipped for ensemble members: their ATCF files are 00L-named, so the
+    # filename can't identify the real storm -- fall through to the b-deck /
+    # a-deck storm name (or the bare sid) instead.
+    if atcf_file and not _ens:
         first_seg = os.path.basename(atcf_file).split('.')[0]
         if first_seg and first_seg.lower() != sid_lc \
                 and first_seg.lower().endswith(sid_lc) \

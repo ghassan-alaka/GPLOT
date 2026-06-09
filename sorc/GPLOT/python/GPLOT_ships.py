@@ -45,6 +45,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gplot_utils.namelist import read_master_namelist, read_ships_namelist
 from gplot_utils.atcf import read_atcf, read_bdeck, derive_longsid
+from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, get_var_2d, get_var_3d,
                                       get_layer_mean, get_wind_components,
                                       get_grid_info)
@@ -1150,6 +1151,7 @@ def main():
     sid = args.sid
     domain = args.domain
     tier = args.tier
+    ensid = ens_utils.normalize_ensid(getattr(args, 'ensid', ''))
 
     # ---- Read master namelist ----
     nml = read_master_namelist(args.master_nml)
@@ -1208,10 +1210,12 @@ def main():
     # all tiers' figures live under <domain>/ together (tier still
     # selects the right namelist via resolve_namelist_path).
     odir_type = int(nml.get('ODIR_TYPE', 0))
+    # Ensemble member sub-directory ('' for deterministic -> unchanged path).
+    ens_seg = ens_utils.member_segment(ensid)
     if odir_type == 1:
-        odir_ships = os.path.join(odir, domain)
+        odir_ships = os.path.join(odir, ens_seg, domain)
     else:
-        odir_ships = os.path.join(odir, expt, idate, domain)
+        odir_ships = os.path.join(odir, expt, idate, ens_seg, domain)
     os.makedirs(odir_ships, exist_ok=True)
     status_file = os.path.join(odir_ships, f'status.{domain}.{tier}.{sid}.log')
     _write_status(status_file, 'working')
@@ -1257,6 +1261,10 @@ def main():
 
     logger.info(f"  ATCF: {atcf_file}")
     atcf_df = read_atcf(atcf_file)
+
+    # Ensemble member ATCFs are 00L-named multi-storm; keep only this storm.
+    if atcf_df is not None and ensid and len(sid) >= 3:
+        atcf_df = ens_utils.filter_atcf_df(atcf_df, sid[2], sid[:2])
     if atcf_df.empty:
         logger.error("ATCF file is empty")
         _write_status(status_file, 'failed')
@@ -1288,7 +1296,7 @@ def main():
     # b-deck has no row at idate (e.g., retrospective at pre-genesis
     # cycles where the post-season b-deck doesn't go back that far).
     longsid = derive_longsid(atcf_file, sid, bdeck_df_for_name,
-                             idate=idate, adeck_df=atcf_df)
+                             idate=idate, adeck_df=atcf_df, ensid=ensid)
     logger.info(f"  LONGSID: {longsid}")
 
     # Filter to this cycle

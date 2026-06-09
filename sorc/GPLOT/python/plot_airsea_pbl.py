@@ -40,6 +40,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # GPLOT utility package (Sessions 1-7 infrastructure)
 from gplot_utils import namelist as nml_utils
 from gplot_utils import atcf as atcf_utils
+from gplot_utils import ensemble as ens_utils
 from gplot_utils import plot_utils
 from gplot_utils import grib_reader
 from gplot_utils import constants as gplot_const
@@ -91,7 +92,7 @@ def main():
   SID        = args.sid        if args.sid   != 'MISSING' else ''
   DOMAIN     = args.domain     if args.domain!= 'MISSING' else ''
   TIER       = args.tier       if args.tier  != 'MISSING' else ''
-  ENSID      = args.ensid      if args.ensid != 'MISSING' else ''
+  ENSID      = ens_utils.normalize_ensid(args.ensid)
   FORCE      = args.force      if args.force != 'MISSING' else ''
   resolution = args.resolution
   rmax       = args.rmax
@@ -121,12 +122,15 @@ def main():
     ODIR_TYPE = int(nml.get('ODIR_TYPE', 0) or 0)
   except (TypeError, ValueError):
     ODIR_TYPE = 0
+  # Ensemble member sub-directory ('' for deterministic -> unchanged path).
+  ENS_SEG = ens_utils.member_segment(ENSID)
+  ENS_SUB = (ENS_SEG + '/') if ENS_SEG else ''
   if ODIR_TYPE == 1:
-    ODIR = ODIR + '/airsea/'
-    BASEDIR = BASEDIR + '/'
+    ODIR = ODIR + '/' + ENS_SUB + 'airsea/'
+    BASEDIR = BASEDIR + '/' + ENS_SUB
   else:
-    ODIR = ODIR + '/' + EXPT + '/' + IDATE.strip() + '/airsea/'
-    BASEDIR = BASEDIR + '/' + EXPT + '/' + IDATE.strip() + '/'
+    ODIR = ODIR + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB + 'airsea/'
+    BASEDIR = BASEDIR + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB
 
   DO_CONVERTGIF = bool(nml.get('DO_CONVERTGIF', False))
   figext  = '.png'
@@ -171,6 +175,10 @@ def main():
   # legacy ATCF_DATA[:,11]=='34' filter.
   atcf_df = atcf_utils.read_atcf(str(ATCF))
 
+  # Ensemble member ATCFs are 00L-named multi-storm; keep only this storm.
+  if ENSID and SID:
+    atcf_df = ens_utils.filter_atcf_df(atcf_df, SID[-1], SID[:-1])
+
   # LONGSID priority: ATCF filename's name+sid prefix (legacy NCL
   # convention) -> B-deck column-28 storm_name -> A-deck storm_name
   # -> bare SID. B-deck path is built from SID + IDATE year when
@@ -196,7 +204,8 @@ def main():
   LONGSID = atcf_utils.derive_longsid(str(ATCF), SID,
                                       bdeck_df_for_name,
                                       idate=IDATE,
-                                      adeck_df=atcf_df)
+                                      adeck_df=atcf_df,
+                                      ensid=ENSID)
   TCNAME  = LONGSID[:-3].upper()
   SNUM    = LONGSID[-3:-1]
   BASINID = LONGSID[-1]

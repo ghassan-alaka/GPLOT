@@ -38,6 +38,7 @@ from gplot_utils import constants as C
 from gplot_utils.namelist import (read_master_namelist, read_maps_namelist,
                                    resolve_namelist_path)
 from gplot_utils.atcf import read_atcf, read_bdeck, derive_longsid
+from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, open_sat_file, get_var_2d,
                                       get_var_3d, get_layer_mean,
                                       get_wind_components, get_grid_info)
@@ -2129,6 +2130,7 @@ def main():
     sid = args.sid.upper()
     domain = args.domain
     tier = args.tier
+    ensid = ens_utils.normalize_ensid(args.ensid)
 
     logger.info(f"GPLOT Maps: idate={idate}, sid={sid}, domain={domain}, "
                 f"tier={tier}")
@@ -2162,10 +2164,14 @@ def main():
     # tier-specific namelist via resolve_namelist_path below).
     odir = args.odir or nml.get('ODIR', '.')
     odir_type = nml.get('ODIR_TYPE', 0)
+    # Ensemble member sub-directory. member_segment is '' for deterministic
+    # runs and os.path.join drops the empty component, so non-ensemble output
+    # paths are unchanged. Matches spawn_maps.sh's ODIR/EXPT/CYCLE/ENSID/DOMAIN.
+    ens_seg = ens_utils.member_segment(ensid)
     if odir_type == 1:
-        odir_full = os.path.join(odir, domain)
+        odir_full = os.path.join(odir, ens_seg, domain)
     else:
-        odir_full = os.path.join(odir, expt, idate, domain)
+        odir_full = os.path.join(odir, expt, idate, ens_seg, domain)
     os.makedirs(odir_full, exist_ok=True)
     # Match spawn_maps naming: only hwrf/d03 carry a storm tag.
     storm_tag = f'.{sid}' if is_storm_named_filename(domain) else ''
@@ -2204,6 +2210,9 @@ def main():
         if atcf_df is None or atcf_df.empty:
             logger.info(f"No rows for model={mcode}, trying without filter")
             atcf_df = read_atcf(atcf_file)
+        # Ensemble member ATCFs are 00L-named multi-storm; keep only this storm.
+        if atcf_df is not None and ensid and len(sid) >= 3:
+            atcf_df = ens_utils.filter_atcf_df(atcf_df, sid[2], sid[:2])
     else:
         logger.warning("No ATCF file found")
 
@@ -2230,7 +2239,7 @@ def main():
     # to the operational a-deck's per-cycle storm_name when the
     # b-deck has no row at idate (pre-genesis retrospective case).
     longsid = derive_longsid(atcf_file, sid, bdeck_df_for_name,
-                             idate=idate, adeck_df=atcf_df)
+                             idate=idate, adeck_df=atcf_df, ensid=ensid)
     logger.info(f"LONGSID resolved to: {longsid}")
 
     # ---- 4. Get StreamlineThin factor ----
@@ -2739,7 +2748,7 @@ def main():
                 try:
                     ofile = draw_map(
                         recipe, datasets, dsource, bounds, fhr, idate, expt,
-                        tc_lat, tc_lon, vmax, mslp_val, longsid, args.ensid,
+                        tc_lat, tc_lon, vmax, mslp_val, longsid, ensid,
                         gplot_dir, odir_full, domain, thin_factor, atcf_df,
                         nest_outlines=nest_outlines,
                     )

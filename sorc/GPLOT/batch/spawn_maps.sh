@@ -229,7 +229,10 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+# NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
+# a bare "0" or an empty list marks a deterministic run. Deterministic runs
+# must use ENSMEM=0 (not 00).
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -244,7 +247,13 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=20
+# Ensembles submit one job per (member x storm x domain x tier), so they
+# need a much higher ceiling than a deterministic run.
+if [ "${IS_ENS}" == "True" ]; then
+    MAX_JOBS=525
+else
+    MAX_JOBS=20
+fi
 
 # Get file hour format information from table or namelist
 if [ -z "${FHRFMT}" ]; then
@@ -348,9 +357,18 @@ if [ "${DO_MAPS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                if [ "${IS_ENS}" == "False" ]; then
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    # Ensemble member ATCFs are 00L-named, so the storm id can't
+                    # come from the filename. Derive the real storms from the
+                    # ATCF *contents* (basin + storm number on the AL/EP rows).
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} | sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/' | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -371,10 +389,14 @@ if [ "${DO_MAPS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                # STORMS=(`echo "${STORMS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
-                STORMS+=("00L")
+            # were found, i.e., STORMS != NONE. Skip this for ensembles: the
+            # member files are already 00L-named for the real storm, so a fake
+            # 00L would be ambiguous.
+            if [ "${IS_ENS}" == "False" ]; then
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    # STORMS=(`echo "${STORMS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
+                    STORMS+=("00L")
+                fi
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -397,8 +419,15 @@ if [ "${DO_MAPS}" = "True" ]; then
                 # Increase the storm counter
                 ((NSTORM=NSTORM+1))
     
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                # Find the forecast hours from the ATCF for this particular storm.
+                # Ensemble member ATCFs are 00L-named (one per member, holding all
+                # storms), so match on 00l rather than the real storm id; the
+                # per-member ATCF is narrowed by ENSID inside the ID loop below.
+                if [ "${IS_ENS}" == "False" ]; then
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                else
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                fi
                 if [ -z "${STORM_ATCF[*]}" ]; then
                     echo "WARNING: No ATCF found for ${STORM}. This might be OK."
                 else
@@ -579,17 +608,35 @@ if [ "${DO_MAPS}" = "True" ]; then
                             ENSIDTAG=""
                             MODEL="${MID}"
                         else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                            # %02s (string) not %02d: a member id like "08"/"09"
+                            # would be parsed as invalid octal by %d. No "E"
+                            # prefix on the tag. One model tag for the whole
+                            # ensemble, so MODEL is not indexed by member.
+                            ENSID=$(printf "%02s\n" "${ID}")
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
 
-                        # Create full output path
+                        # For ensembles, narrow the ATCF to this member: member
+                        # ATCFs live under a per-member path .../${CYCLE}/${ENSID}.
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
+
+                        # Create full output path. The ensemble member id (empty
+                        # for deterministic) sits between the cycle and the
+                        # domain; sed collapses the resulting // when empty.
+                        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${ENSID_DIR}/${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${ENSID_DIR}/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -744,7 +791,13 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                # Ensemble GRIB2 files are 00L-named, so match on
+                                # 00l rather than the real storm id.
+                                if [ "${IS_ENS}" == "False" ]; then
+                                    FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -1044,27 +1097,30 @@ if [ "${DO_MAPS}" = "True" ]; then
                         echo "MSG: Using this file of unplotted lead times --> ${FHR_FILE}"
 
 
-                        # Choose a proper wallclock time for this job based on the number of files.
+                        # Choose a proper wallclock time for this job based on the
+                        # number of files. Bumped +1h per rung (from support/HAFS):
+                        # maps jobs were timing out near completion, especially for
+                        # ensembles with many files per member.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
                             RUNTIME="04:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
                             RUNTIME="04:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="05:29:59"
+                        else
+                            RUNTIME="05:59:59"
                         fi
 
 
@@ -1137,7 +1193,10 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
-    
+                        # Advance the member index at the END of the ID loop so
+                        # ENSID/ENSIDTAG above use the current member's value.
+                        ((NID++))
+
                     done #end of ID loop
     
                     # If input files were not found in the ID loop, then also skip all remaining domains

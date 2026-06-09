@@ -1037,6 +1037,13 @@ def main():
     sid = args.sid or nml.get('SID', '')
     force = args.force or nml.get('FORCE', False)
     ensid = args.ensid or nml.get('ENSID', '')
+    # Normalize the deterministic sentinels to an empty member tag so the
+    # output path has no member subdir for non-ensemble runs (batch_stats.sh
+    # passes "XX" for deterministic). "00" remains a valid ensemble member.
+    if ensid.strip().upper() in ('XX', 'MISSING', '0', ''):
+        ensid = ''
+    else:
+        ensid = ensid.strip()
 
     expt = nml.get('EXPT', 'GPLOT')
     dsource = nml.get('DSOURCE', 'HAFS')
@@ -1084,11 +1091,14 @@ def main():
         atcf2_dir = args.atcf_dir
         atcf1_dir = args.atcf_dir
 
-    # Output directory
+    # Output directory. The ensemble member tag (empty for deterministic) sits
+    # between the cycle (idate) and 'guidance', matching the member subdir that
+    # spawn_stats.sh creates (ODIR/EXPT/CYCLE/ENSID/guidance). os.path.join
+    # drops the empty component, so deterministic paths are unchanged.
     if odir_type == 0:
-        odir = os.path.join(odir_base, expt, ensid, idate, 'guidance')
+        odir = os.path.join(odir_base, expt, idate, ensid, 'guidance')
     else:
-        odir = os.path.join(odir_base, 'guidance')
+        odir = os.path.join(odir_base, ensid, 'guidance')
     os.makedirs(odir, exist_ok=True)
     status_sidlong = sid.lower()
     status_file = _status_path(odir, status_sidlong)

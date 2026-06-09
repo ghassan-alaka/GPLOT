@@ -23,6 +23,9 @@ NMLIST="${4:-namelist.master.default}"
 IDATE="${5}"
 SID="${6:-00L}"
 FORCE="${7:-False}"
+# Ensemble member id (8th arg from spawn_stats.sh). "XX"/empty => deterministic;
+# GPLOT_stats.py normalizes those to no member and the output path is unchanged.
+ENSID="${8:-XX}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
@@ -37,6 +40,7 @@ PY_ARGS=()
 PY_ARGS+=("--idate" "${IDATE}")
 PY_ARGS+=("--sid" "${SID}")
 PY_ARGS+=("--master-nml" "${NMLIST}")
+PY_ARGS+=("--ensid" "${ENSID}")
 if [ "${FORCE}" == "True" ]; then
     PY_ARGS+=("--force")
 fi

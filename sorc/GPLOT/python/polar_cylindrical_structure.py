@@ -67,6 +67,7 @@ from netCDF4 import Dataset
 # GPLOT utility package (Sessions 1-7 infrastructure; Session E port).
 from gplot_utils import namelist as nml_utils
 from gplot_utils import atcf as atcf_utils
+from gplot_utils import ensemble as ens_utils
 from gplot_utils import plot_utils
 from gplot_utils import grib_reader
 from gplot_utils import constants as gplot_const
@@ -1707,7 +1708,7 @@ def main():
   SID        = args.sid        if args.sid    != 'MISSING' else ''
   DOMAIN     = args.domain     if args.domain != 'MISSING' else ''
   TIER       = args.tier       if args.tier   != 'MISSING' else ''
-  ENSID      = args.ensid      if args.ensid  != 'MISSING' else ''
+  ENSID      = ens_utils.normalize_ensid(args.ensid)
   FORCE      = args.force      if args.force  != 'MISSING' else ''
   RESOLUTION = args.resolution if args.resolution != 'MISSING' else ''
   RMAX       = args.rmax       if args.rmax       != 'MISSING' else ''
@@ -1738,12 +1739,17 @@ def main():
     ODIR_TYPE = int(nml.get('ODIR_TYPE', 0) or 0)
   except (TypeError, ValueError):
     ODIR_TYPE = 0
+  # Ensemble member sub-directory ('' for deterministic runs -> no extra
+  # level, byte-identical to before). Mirrors spawn_polar.sh's
+  # ODIR/EXPT/CYCLE/ENSID/polar layout.
+  ENS_SEG = ens_utils.member_segment(ENSID)
+  ENS_SUB = (ENS_SEG + '/') if ENS_SEG else ''
   if ODIR_TYPE == 1:
-    ODIR = ODIR+'/polar/'
-    BASEDIR = BASEDIR+'/'
+    ODIR = ODIR+'/'+ENS_SUB+'polar/'
+    BASEDIR = BASEDIR+'/'+ENS_SUB
   else:
-    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/polar/'
-    BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
+    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENS_SUB+'polar/'
+    BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'+ENS_SUB
 
   DO_CONVERTGIF = bool(nml.get('DO_CONVERTGIF', False))
   figext  = '.png'
@@ -1805,6 +1811,12 @@ def main():
   # lat/lon, vmax (kt), mslp (hPa), rmw (nmi), and 34-kt quadrant radii.
   atcf_df = atcf_utils.read_atcf(str(ATCF), wind_radii=34)
 
+  # Ensemble member ATCFs are 00L-named and hold every storm in the cycle,
+  # so keep only the requested storm's rows (by basin + number from SID).
+  # No-op for deterministic runs (ENSID empty).
+  if ENSID and SID:
+    atcf_df = ens_utils.filter_atcf_df(atcf_df, SID[-1], SID[:-1])
+
   # LONGSID priority: ATCF filename's name+sid prefix (legacy NCL
   # convention) -> ATCF column-28 storm_name -> bare SID. Read the
   # B-deck if BDECK_DIR is configured and a matching b-deck file
@@ -1831,10 +1843,13 @@ def main():
   # has post-genesis records). The a-deck's per-cycle storm_name
   # then wins, giving 'invest13l' for those pre-genesis runs
   # instead of leaking the eventual 'melissa13l' name.
+  # For ensemble members the ATCF is 00L-named, so pass ENSID to skip the
+  # filename branch and resolve the name from the b-deck/a-deck (or bare sid).
   LONGSID = atcf_utils.derive_longsid(str(ATCF), SID,
                                       bdeck_df_for_name,
                                       idate=IDATE,
-                                      adeck_df=atcf_df)
+                                      adeck_df=atcf_df,
+                                      ensid=ENSID)
   TCNAME  = LONGSID[:-3].upper()
   SNUM    = LONGSID[-3:-1]
   BASINID = LONGSID[-1]

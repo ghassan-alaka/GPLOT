@@ -160,9 +160,40 @@ if [ -z "${FORCE}" ]; then
 fi
 
 
+# Determine whether this experiment is an ensemble and build the list of
+# member ids (ENSIDS). Mirrors the detection in the other spawn_*.sh scripts.
+# Deterministic runs (ENSMEM=0 or empty) get ENSIDS=("XX"); the stats
+# submission loop below then runs exactly once with an empty member tag, so
+# deterministic output is byte-for-byte identical to before this change.
+EID=( `sed -n -e 's/^EID =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+if [ -z "${EID[*]}" ]; then
+    EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+fi
+echo "MSG: Found these ensemble members --> ${EID[*]}"
+# NOTE (from support/HAFS): "00" is now a valid member id; only a bare "0" or
+# an empty list marks a deterministic run.
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
+    IS_ENS="False"
+    ENSIDS=( "XX" )
+elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+    IS_ENS="True"
+    E1=$(echo "${EID[0]}" | cut -d'-' -f1)
+    E2=$(echo "${EID[0]}" | cut -d'-' -f2)
+    ENSIDS=( `seq -f "%02g" ${E1} ${E2}` )
+else
+    IS_ENS="True"
+    ENSIDS=( `printf "%02d\n" ${EID[*]}` )
+fi
+echo "MSG: IS_ENS=${IS_ENS}; member ids --> ${ENSIDS[*]}"
+
+
 # Set the maximum number of job submissions
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+if [ "${IS_ENS}" == "True" ]; then
+    MAX_JOBS=525
+else
+    MAX_JOBS=25
+fi
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -429,12 +460,48 @@ if [ "${DO_STATS}" = "True" ]; then
         echo "MSG: CYCLE = ${CYCLE}, DATE_NOW = ${DATE_NOW}, DATE_CUT = ${DATE_CUT}"
 
 
-        # Create full output path.
-        # Make the directory in case it doesn't already exist.
-        if [ "${ODIR_TYPE}" == "1" ]; then
-            ODIR_FULL="${ODIR}/guidance/"
+        ##########################
+        # LOOP OVER ENSEMBLE IDS #
+        ##########################
+        # Deterministic runs iterate exactly once with ENSID="XX" /
+        # ENSID_DIR="" so everything below is identical to the pre-ensemble
+        # behavior. Members get a per-member output subdir + their own ATCF.
+        # The body is intentionally not re-indented (bash ignores it) to keep
+        # this a minimal, reviewable diff.
+        for ID in ${ENSIDS[@]}; do
+
+        # Set the 2-digit member id + path tag.
+        if [ "${IS_ENS}" == "False" ]; then
+            ENSID="XX"
+            ENSIDTAG=""
         else
-            ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/guidance/"
+            # %02s (string) not %02d so member ids "08"/"09" don't parse as
+            # invalid octal. No "E" prefix.
+            ENSID=$(printf "%02s\n" "${ID}")
+            ENSIDTAG=".${ENSID}"
+        fi
+        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
+
+        # For ensembles, narrow the ATCF to this member's per-member path
+        # .../${CYCLE}/${ENSID}. The real storm id stays whatever was parsed
+        # from the namelist SID; member ATCF files are 00L-named.
+        if [ "${IS_ENS}" == "True" ]; then
+            for ATCF_M in "${ATCF_TMP[@]}"; do
+                if [[ "${ATCF_M}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                    ATCF="${ATCF_M}"
+                    break
+                fi
+            done
+        fi
+
+        # Create full output path.
+        # Make the directory in case it doesn't already exist. ENSID_DIR is
+        # empty for deterministic runs, so the sed below collapses the double
+        # slash and the path is unchanged from before.
+        if [ "${ODIR_TYPE}" == "1" ]; then
+            ODIR_FULL="${ODIR}/${ENSID_DIR}/guidance/"
+        else
+            ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${ENSID_DIR}/guidance/"
         fi
         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
         echo "MSG: Output directory --> ${ODIR_FULL}"
@@ -601,7 +668,7 @@ if [ "${DO_STATS}" = "True" ]; then
             # Call the batch job
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
             FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST}"
-            FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE}"
+            FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE} ${ENSID}"
             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                 echo "MSG: Executing this command [${FULL_CMD}]."
                 ${FULL_CMD}
@@ -619,14 +686,18 @@ if [ "${DO_STATS}" = "True" ]; then
             # If the job was submitted, then increase the counter.
             N=$((N+1))
 
-            # Limit the number of jobs to now overwhelm the batch scheduler
+            # Limit the number of jobs to now overwhelm the batch scheduler.
+            # break 2: exit BOTH the member (ID) loop and the ATCF loop, matching
+            # the pre-ensemble behavior where this break stopped the ATCF loop.
             if [[ N -ge MAX_JOBS ]]; then
                 echo "WARNING: Maximum number of jobs reached (${MAX_JOBS})."
-                break
+                break 2
             fi
         else
             echo "MSG: Found matching GPLOT batch job. Skipping submission."
         fi
+
+        done #end of ID (ensemble member) loop
 
 
     done
