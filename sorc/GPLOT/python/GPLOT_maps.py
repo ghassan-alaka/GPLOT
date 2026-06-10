@@ -38,7 +38,7 @@ from gplot_utils import constants as C
 from gplot_utils.namelist import (read_master_namelist, read_maps_namelist,
                                    resolve_namelist_path)
 from gplot_utils.atcf import (read_atcf, read_bdeck, derive_longsid,
-                              atcf_from_listfile)
+                              atcf_from_listfile, walk_files_depth_limited)
 from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, open_sat_file, get_var_2d,
                                       get_var_3d, get_layer_mean,
@@ -2060,23 +2060,33 @@ def find_atcf_file(atcf_dir, idate, sid, atcf_tag=''):
 
     _FHR_RE = re.compile(r'\.f\d{3,4}$')
 
+    def _accept(full, bn):
+        return (not full.endswith(('.grb2', '.grb', '.idx', '.grib2', '.orig'))
+                and not bn.endswith('.all')
+                and not _FHR_RE.search(bn)
+                and sid_re.search(bn))
+
     for adir in dirs:
         if not adir or not os.path.isdir(adir):
             continue
         for pat in broad_patterns:
             matches = glob.glob(os.path.join(adir, pat))
             matches = [m for m in matches
-                       if not m.endswith(('.grb2', '.grb', '.idx',
-                                          '.grib2', '.orig'))]
-            matches = [m for m in matches
-                       if not os.path.basename(m).endswith('.all')
-                       and not _FHR_RE.search(os.path.basename(m))]
-            # Case-insensitive SID filter on basename.
-            matches = [m for m in matches
-                       if sid_re.search(os.path.basename(m))]
+                       if _accept(m, os.path.basename(m))]
             if matches:
                 matches.sort(key=_rank)
                 return matches[0]
+
+    # Bounded recursive fallback: the flat globs above are non-recursive, so a
+    # track nested under e.g. com/<cycle>/<storm>/ is missed when ATCF*_DIR
+    # points higher. Walk up to 4 levels below each dir (depth-capped so a big
+    # ATCF*_DIR can't trigger an unbounded walk) and apply the same filters.
+    walked = [full for full, bn in walk_files_depth_limited(dirs, max_depth=4)
+              if (idate in bn and ('trak' in bn.lower() or 'atcf' in bn.lower())
+                  and _accept(full, bn))]
+    if walked:
+        walked.sort(key=_rank)
+        return walked[0]
 
     return None
 

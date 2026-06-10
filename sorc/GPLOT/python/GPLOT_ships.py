@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gplot_utils.namelist import read_master_namelist, read_ships_namelist
 from gplot_utils.atcf import (read_atcf, read_bdeck, derive_longsid,
-                              atcf_from_listfile)
+                              atcf_from_listfile, walk_files_depth_limited)
 from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, get_var_2d, get_var_3d,
                                       get_layer_mean, get_wind_components,
@@ -1115,6 +1115,20 @@ def find_atcf_file(atcf_dir, atcf_tag, idate, sid):
             if matches:
                 matches.sort(key=_rank)
                 return matches[0]
+
+    # Bounded recursive fallback: the flat globs above are non-recursive, so a
+    # track nested under e.g. com/<cycle>/<storm>/ is missed when ATCF*_DIR
+    # points higher. Walk up to 4 levels below each dir (depth-capped so a big
+    # ATCF*_DIR can't trigger an unbounded walk) and match basename on
+    # sid + idate + 'atcf'.
+    sid_lc = sid.lower()
+    walked = [full for full, bn in walk_files_depth_limited(dirs, max_depth=4)
+              if sid_lc in bn.lower() and idate in bn
+              and 'atcf' in bn.lower()]
+    walked = _filter(walked)
+    if walked:
+        walked.sort(key=_rank)
+        return walked[0]
 
     return None
 

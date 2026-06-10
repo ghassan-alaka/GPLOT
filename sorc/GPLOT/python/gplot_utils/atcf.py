@@ -534,6 +534,29 @@ def atcf_from_listfile(odir, sid=''):
     return None
 
 
+def walk_files_depth_limited(dirs, max_depth=4):
+    """Yield (fullpath, basename) for files within ``max_depth`` levels below
+    each directory in ``dirs``.
+
+    Used as a *bounded* recursive ATCF search: it lets find_atcf_file descend
+    into nested layouts (e.g. ``com/<cycle>/<storm>/``) when the flat glob over
+    ATCF*_DIR misses, while the depth cap guarantees a large ATCF*_DIR (an
+    experiment / scrub root) never triggers an unbounded filesystem walk. The
+    walk is pruned -- it does not merely filter -- so subtrees below the cap are
+    never descended into.
+    """
+    for top in dirs:
+        if not top or not os.path.isdir(top):
+            continue
+        base_depth = top.rstrip(os.sep).count(os.sep)
+        for root, subdirs, files in os.walk(top):
+            for fn in files:
+                yield os.path.join(root, fn), fn
+            # Prune: stop descending once we're max_depth levels below `top`.
+            if root.rstrip(os.sep).count(os.sep) - base_depth >= max_depth:
+                subdirs[:] = []
+
+
 def find_atcf_file(search_dirs, sid, idate, tags=None):
     """
     Search for an ATCF file matching the storm ID and cycle.
