@@ -44,17 +44,16 @@ ITAG =
 EXT = .grb2
 
 ; 1I. OUTPUT PATH
-ODIR = /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/GPOUT/
+ODIR = /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/GPOUT_python_test/
 
 ; 1J. ATCF PATH
-;ATCF1_DIR; = /scratch4/AOML/aoml-hafs1/Ghassan.Alaka/noscrub/GFS_Forecast_2025/
-ATCF1_DIR = /scratch4/AOML/aoml-hafs1/Ghassan.Alaka/DATA/MODEL_OUTPUT/GFS/oper/
+ATCF1_DIR = /scratch4/AOML/aoml-hafs1/role.aoml-hafs1/noscrub/GFS_Forecast_2026/
 ATCF1_TAG = trak.avno.atcfunix
-ATCF2_DIR = /scratch4/AOML/aoml-hafs1/Ghassan.Alaka/DATA/MODEL_OUTPUT/GFS/tracker_2025/
+ATCF2_DIR = /scratch4/AOML/aoml-hafs1/role.aoml-hafs1/DATA/MODEL_OUTPUT/GFS/tracker_2026/
 ATCF2_TAG = trak.avno.atcfunix
 
 ; 1K. ADECK & BDECK PATHS
-ADECK_DIR = /scratch4/AOML/aoml-hafs1/Ghassan.Alaka/adeck/NHC_2025/
+ADECK_DIR = /scratch4/AOML/aoml-hafs1/role.aoml-hafs1/adeck/NHC_2026/
 BDECK_DIR = /scratch4/AOML/aoml-hafs1/Ghassan.Alaka/bdeck/
 
 ; 1L. FORECAST HOUR INFORMATION
@@ -158,7 +157,6 @@ RESOLUTION = 25
 RMAX = 600
 LEVS = 57
 DO_DBZ = False
-
 
 ; CARTOPY OFFLINE DATA CACHE
 ;     If running on a host without outbound internet (typical HPC),
