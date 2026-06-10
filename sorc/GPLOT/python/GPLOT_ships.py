@@ -44,7 +44,8 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gplot_utils.namelist import read_master_namelist, read_ships_namelist
-from gplot_utils.atcf import read_atcf, read_bdeck, derive_longsid
+from gplot_utils.atcf import (read_atcf, read_bdeck, derive_longsid,
+                              atcf_from_listfile)
 from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, get_var_2d, get_var_3d,
                                       get_layer_mean, get_wind_components,
@@ -1254,6 +1255,16 @@ def main():
 
     # ---- Find ATCF file ----
     atcf_file = find_atcf_file(atcf_dirs, atcf_tag, idate, sid)
+    if atcf_file is None:
+        # find_atcf_file globs ATCF*_DIR non-recursively; if those namelist
+        # dirs sit above the actual file (e.g. ATCF under com/<cycle>/<storm>/)
+        # it misses it. Fall back to the spawn's recursively-resolved path in
+        # ATCF_FILES.dat -- the same source polar/airsea use.
+        fallback = atcf_from_listfile(odir_ships, sid)
+        if fallback is not None:
+            logger.warning(f"find_atcf_file found nothing under {atcf_dirs}; "
+                           f"using ATCF_FILES.dat fallback -> {fallback}")
+            atcf_file = fallback
     if atcf_file is None:
         logger.error("No ATCF file found; SHIPS requires ATCF data")
         _write_status(status_file, 'failed')

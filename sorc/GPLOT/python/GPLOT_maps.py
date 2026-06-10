@@ -37,7 +37,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gplot_utils import constants as C
 from gplot_utils.namelist import (read_master_namelist, read_maps_namelist,
                                    resolve_namelist_path)
-from gplot_utils.atcf import read_atcf, read_bdeck, derive_longsid
+from gplot_utils.atcf import (read_atcf, read_bdeck, derive_longsid,
+                              atcf_from_listfile)
 from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, open_sat_file, get_var_2d,
                                       get_var_3d, get_layer_mean,
@@ -2203,6 +2204,15 @@ def main():
 
     # ---- 3. Read ATCF data ----
     atcf_file = find_atcf_file(atcf_dirs, idate, sid, atcf_tag=atcf_tag)
+    if atcf_file is None:
+        # find_atcf_file globs ATCF*_DIR non-recursively; fall back to the
+        # spawn's recursively-resolved path in ATCF_FILES.dat (the source
+        # polar/airsea use) when the namelist dirs sit above the actual file.
+        fallback = atcf_from_listfile(odir_full, sid)
+        if fallback is not None:
+            logger.warning(f"find_atcf_file found nothing under {atcf_dirs}; "
+                           f"using ATCF_FILES.dat fallback -> {fallback}")
+            atcf_file = fallback
     atcf_df = None
     if atcf_file:
         logger.info(f"ATCF file: {atcf_file}")

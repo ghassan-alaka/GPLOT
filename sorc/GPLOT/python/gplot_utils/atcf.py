@@ -495,6 +495,45 @@ def derive_longsid(atcf_file, sid, bdeck_df=None, idate=None,
     return sid_lc
 
 
+def atcf_from_listfile(odir, sid=''):
+    """Fallback ATCF lookup: read the spawn-written ``ATCF_FILES.dat``.
+
+    The spawn scripts locate the ATCF with a recursive ``find`` and write the
+    resolved full path(s) to ``<odir>/ATCF_FILES.dat`` (this is what polar and
+    airsea consume). The maps and ships modules instead run their own
+    non-recursive ``find_atcf_file`` glob over ``ATCF*_DIR``; when those
+    namelist dirs point above the actual file (e.g. the ATCF lives under
+    ``com/<cycle>/<storm>/``) that glob misses it. This helper lets maps/ships
+    fall back to the spawn's already-resolved path.
+
+    Returns an existing ATCF path -- preferring a basename containing ``sid``
+    when multiple are listed -- or ``None`` if the file is absent/empty/only
+    contains paths that no longer exist.
+    """
+    path = os.path.join(odir, 'ATCF_FILES.dat')
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path) as fh:
+            lines = [ln.strip() for ln in fh
+                     if ln.strip() and ln.strip().upper() != 'NONE']
+    except OSError as exc:
+        logger.warning(f"atcf_from_listfile: could not read {path}: {exc}")
+        return None
+    if not lines:
+        return None
+    # Prefer a listed ATCF whose basename matches the requested storm.
+    if sid:
+        sid_lc = sid.lower()
+        for ln in lines:
+            if sid_lc in os.path.basename(ln).lower() and os.path.isfile(ln):
+                return ln
+    for ln in lines:
+        if os.path.isfile(ln):
+            return ln
+    return None
+
+
 def find_atcf_file(search_dirs, sid, idate, tags=None):
     """
     Search for an ATCF file matching the storm ID and cycle.
