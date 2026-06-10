@@ -238,11 +238,22 @@ DATE_NOW="`date +'%Y%m%d%H'`"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
+# Storm token used in the ATCF filename glob. Ensemble member ATCF files are
+# 00L-named (one per member, under per-member subdirs), so the deterministic
+# SID glob (e.g. *13l*) would miss them entirely. For ensembles search on
+# "00l" instead -- find recurses, so this sweeps every member's ATCF; the
+# per-member ENSID loop below then selects the right member by /CYCLE/ENSID
+# path. Deterministic / multistorm runs keep the SID glob (unchanged).
+if [ "${IS_ENS}" == "True" ]; then
+    ATCFSID="00l"
+else
+    ATCFSID="${SID,,}"
+fi
 ATCF_TMP=()
-ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${ATCFSID}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
-    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
-    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${ATCFSID}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${ATCFSID}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
 fi
 ATCF_ALL=()
 for ATCF in "${ATCF_TMP[@]}"; do
@@ -328,6 +339,18 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "WARNING: To process it, please add the storm ID to the ATCF file name."
             echo "WARNING: Skipping this ATCF because storm ID not found."
             continue
+        fi
+
+        # Ensemble member ATCFs are 00L-named, so the filename parse above yields
+        # STORM=00L. Use the namelist SID as the real storm instead, so the
+        # status file, B-deck path, and job name all key off the same storm the
+        # per-member Python job uses (it keys off SID). Without this the spawn
+        # would write status.00l.log while Python writes status.<sid>.log and the
+        # workflow's completion check would never converge. Deterministic /
+        # multistorm runs (IS_ENS=False) keep the filename-derived storm.
+        if [ "${IS_ENS}" == "True" ] && [ ! -z "${SID}" ]; then
+            STORM="${SID^^}"
+            SIDLONG="${SID,,}"
         fi
 
         # Parse important information from $STORM and $CYCLE
