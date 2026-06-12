@@ -557,6 +557,62 @@ def walk_files_depth_limited(dirs, max_depth=4):
                 subdirs[:] = []
 
 
+def resolve_atcf_fallback(atcf_dirs, sid, idate, tags=None, max_depth=4):
+    """Locate an ATCF for ``(sid, idate)`` under ``atcf_dirs``.
+
+    Flat non-recursive glob first, then a depth-capped recursive walk (so a
+    nested ``com/<cycle>/<storm>/`` layout is found without risking an
+    unbounded walk of a large ATCF*_DIR). Returns a path or None.
+
+    This is a standalone-run safety net for polar/airsea, which normally read
+    the spawn-written ``ATCF_FILES.dat``; if that file is absent (e.g. the
+    module is run by hand), they fall back to this. maps/ships have the
+    equivalent logic inline in their own ``find_atcf_file``.
+    """
+    import glob
+    import re as _re
+
+    dirs = [d for d in (atcf_dirs or []) if d and str(d).strip()]
+    if not dirs:
+        return None
+    sid_lc = (sid or '').lower()
+    tags = [t for t in (tags or []) if t and str(t).strip()]
+    _BAD = ('.grb2', '.grb', '.idx', '.grib2', '.orig', '.nc')
+    _FHR = _re.compile(r'\.f\d{3,4}$')
+
+    def _ok(full, bn):
+        bl = bn.lower()
+        return (idate in bn and sid_lc in bl and 'atcf' in bl
+                and not full.endswith(_BAD)
+                and not bn.endswith('.all')
+                and not _FHR.search(bn))
+
+    def _rank(path):
+        bn = os.path.basename(path)
+        tag_match = 0 if any(t in bn for t in tags) else 1
+        parent_penalty = 1 if '.parent.' in bn else 0
+        return (tag_match, parent_penalty, bn)
+
+    # Tier 1: flat, non-recursive glob (fast, the common case).
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        cand = [f for f in glob.glob(os.path.join(d, f'*{idate}*'))
+                if _ok(f, os.path.basename(f))]
+        if cand:
+            cand.sort(key=_rank)
+            return cand[0]
+
+    # Tier 2: bounded recursive walk (handles nested layouts).
+    walked = [full for full, bn in walk_files_depth_limited(dirs, max_depth)
+              if _ok(full, bn)]
+    if walked:
+        walked.sort(key=_rank)
+        return walked[0]
+
+    return None
+
+
 def find_atcf_file(search_dirs, sid, idate, tags=None):
     """
     Search for an ATCF file matching the storm ID and cycle.

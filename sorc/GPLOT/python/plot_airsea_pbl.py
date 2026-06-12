@@ -162,6 +162,19 @@ def main():
   print(f'EXPT_TITLE --> {EXPT_TITLE}');
   
   # Get the ATCF file.
+  # Standalone-run safety net: the spawn normally writes ATCF_FILES.dat; if it
+  # is missing/empty (e.g. airsea run by hand), resolve the ATCF directly from
+  # the namelist ATCF dirs (flat glob + bounded recursive walk) and write it so
+  # the read below is unchanged. No-op whenever ATCF_FILES.dat already exists.
+  if not os.path.isfile(ATCF_FILE) or os.path.getsize(ATCF_FILE) == 0:
+    _adirs = [nml.get('ATCF2_DIR', '') or '', nml.get('ATCF1_DIR', '') or '']
+    _atags = [nml.get('ATCF2_TAG', '') or '', nml.get('ATCF1_TAG', '') or '']
+    _found = atcf_utils.resolve_atcf_fallback(_adirs, SID, IDATE, tags=_atags)
+    if _found:
+      print(f'WARNING: ATCF_FILES.dat missing/empty; resolved ATCF from '
+            f'namelist dirs --> {_found}')
+      with open(ATCF_FILE, 'w') as _fh:
+        _fh.write(_found + '\n')
   ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
   if ATCF_LIST.size > 1:
     print('Found multiple ATCFs')
