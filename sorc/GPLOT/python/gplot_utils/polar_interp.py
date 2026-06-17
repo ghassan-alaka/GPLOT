@@ -129,11 +129,60 @@ def height_interp_vars_fast(hgt, varList, levels):
     raise ValueError('List of variables to be processed must be provided.')
   if levels is None:
     raise ValueError('List of height levels (m) must be provided.')
+
+  # The pressure->height bracket (which two pressure levels straddle each
+  # target height, and the linear weight between them) depends ONLY on hgt and
+  # the target levels -- not on the variable being interpolated. So compute it
+  # once here and reuse it for every variable, instead of redoing the argmax /
+  # mask / weight work inside interp_to_isosurface_fast on all N variables.
+  # Numerically identical: same indices, same weight, same v_lo + w*(v_hi-v_lo).
+  lower_all, upper_all, w_all, bad_all = _height_bracket(hgt, levels)
+
   out_list = []
   for var in varList:
-    cube = interp_to_isosurface_fast(hgt, var, levels)   # (nz_h, ny, nx)
-    out_list.append(np.transpose(cube, (1, 2, 0)))       # (ny, nx, nz_h)
-  return np.stack(out_list, axis=0)                      # (n_vars, ny, nx, nz_h)
+    # Gather both bracketing values for every target level in one pass each.
+    v_lo = np.take_along_axis(var, lower_all, axis=0)     # (nz_h, ny, nx)
+    v_hi = np.take_along_axis(var, upper_all, axis=0)     # (nz_h, ny, nx)
+    cube = v_lo + w_all * (v_hi - v_lo)                   # (nz_h, ny, nx)
+    cube[bad_all] = np.nan
+    out_list.append(np.transpose(cube, (1, 2, 0)))        # (ny, nx, nz_h)
+  return np.stack(out_list, axis=0)                       # (n_vars, ny, nx, nz_h)
+
+
+def _height_bracket(hgt, levels):
+  """Precompute the pressure->height interpolation bracket for all target
+  levels at once, from the height field alone.
+
+  Returns ``(lower_all, upper_all, w_all, bad_all)``, each shaped
+  ``(nz_h, ny, nx)``: the lower/upper bracketing pressure-level indices per
+  column, the linear weight ``w = (lev - h_lo) / (h_hi - h_lo)``, and a mask of
+  out-of-range columns. The per-level logic mirrors
+  :func:`interp_to_isosurface_fast` exactly so results stay bit-for-bit
+  identical -- this just factors the variable-independent part out of the
+  per-variable loop in ``height_interp_vars_fast``.
+  """
+  nz_p, ny, nx = hgt.shape
+  nz_h = len(levels)
+  lower_all = np.empty((nz_h, ny, nx), dtype=np.intp)
+  upper_all = np.empty((nz_h, ny, nx), dtype=np.intp)
+  w_all = np.empty((nz_h, ny, nx), dtype=np.float64)
+  bad_all = np.empty((nz_h, ny, nx), dtype=bool)
+  for li, lev in enumerate(levels):
+    mask = hgt > lev                                   # (nz_p, ny, nx)
+    upper = mask.argmax(axis=0)                        # first True k per column
+    lower = np.clip(upper - 1, 0, nz_p - 1)
+    no_true = ~mask.any(axis=0)
+    all_true = mask.all(axis=0)
+    bad = no_true | all_true
+    h_lo = np.take_along_axis(hgt, lower[None], axis=0)[0]
+    h_hi = np.take_along_axis(hgt, upper[None], axis=0)[0]
+    denom = h_hi - h_lo
+    safe = np.where(denom != 0.0, denom, 1.0)
+    w_all[li] = (lev - h_lo) / safe
+    lower_all[li] = lower
+    upper_all[li] = upper
+    bad_all[li] = bad
+  return lower_all, upper_all, w_all, bad_all
 
 
 def interp_to_polarcylindrical(varIn, lev, x, y, xi, yi, idx, ivar, verbose=False):
