@@ -37,7 +37,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from gplot_utils.namelist import read_master_namelist, read_stats_namelist
 from gplot_utils.atcf import (read_atcf, read_bdeck, parse_storm_info,
-                                derive_longsid)
+                                derive_longsid, walk_files_depth_limited,
+                                atcf_from_listfile)
 from gplot_utils.plot_utils import (save_figure, add_disclaimer,
                                     add_storm_marker, configure_cartopy,
                                     sweep_orphan_pngs)
@@ -1194,6 +1195,34 @@ def main():
                 break
         if atcf_file:
             break
+
+    # Tier 2: bounded recursive walk over the same ATCF dirs. The flat globs
+    # above are non-recursive, so a track nested under e.g.
+    # com/<cycle>/<storm>/ is missed when ATCF*_DIR points higher. Depth-capped
+    # at 4 so a large ATCF*_DIR can't trigger an unbounded walk. Mirrors the
+    # robustness in maps/ships find_atcf_file.
+    if atcf_file is None:
+        walked = [full for full, bn in
+                  walk_files_depth_limited(atcf_dirs, max_depth=4)
+                  if sid.lower() in bn.lower() and idate in bn
+                  and ('trak' in bn.lower() or 'atcf' in bn.lower()
+                       or bn.endswith('.dat'))
+                  and not full.endswith(('.grb2', '.grb', '.idx',
+                                         '.grib2', '.orig'))
+                  and not bn.endswith('.all')
+                  and not re.search(r'\.f\d{3,4}$', bn)]
+        if walked:
+            walked.sort(key=_rank_match)
+            atcf_file = walked[0]
+
+    # Tier 3: fall back to the spawn-written ATCF_FILES.dat in the output dir
+    # (the spawn already resolved the path via a recursive find), matching what
+    # polar/airsea/maps/ships do.
+    if atcf_file is None:
+        atcf_file = atcf_from_listfile(odir, sid)
+        if atcf_file:
+            logger.warning(f"ATCF not found under namelist dirs; using spawn's "
+                           f"ATCF_FILES.dat --> {atcf_file}")
 
     if atcf_file is None:
         logger.error(f"No ATCF file found for SID={sid}, IDATE={idate}")
