@@ -1102,25 +1102,25 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # maps jobs were timing out near completion, especially for
                         # ensembles with many files per member.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
-                            RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="04:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="04:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="05:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="05:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="06:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="06:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="07:29:59"
+                        else
+                            RUNTIME="07:59:59"
                         fi
 
 
