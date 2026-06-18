@@ -52,7 +52,6 @@ import modules.shearandrhplot as shearandrhplot
 import modules.plotting as plotting
 # F-4: modules.interp + modules.multiprocess merged into gplot_utils.polar_interp.
 from gplot_utils import polar_interp
-import modules.tdr_tc_centering_with_example as tdrcenter
 # Session E: replaces the legacy centroid.cpython-*.so Fortran extension. The
 # Fischer (2023) / 2025 optimized weighted-circulation center finder lives in
 # modules/tc_center_finding_speed_up.py and handles per-level vort-center
@@ -106,9 +105,15 @@ def _parse_args():
 
 
 def MP_centers_function(u,v,lon,lat,centerlon,centerlat,level):
-  print(np.shape(u))
-  centers = tdrcenter.recenter_tc(u,v,lon,lat,1,10,150,centerlon,centerlat)
-  return centers,level
+  # Use the optimized Fischer (2023) weighted-circulation finder
+  # (tc_center_finding_speed_up) for ALL recentering, replacing the slower
+  # sector/bearing finder in tdr_tc_centering_with_example. Its return is
+  # (lon, lat, vt_max, rmw_km, coverage, sv) -- positions 0-4 match the old
+  # finder's (lon, lat, vt_azi_max, tc_rmw, data_cov), so the caller's
+  # [:,0:5] unpacking is unchanged. Params are Fischer's tuned (num_sectors,
+  # spad, num_iter) = (8, 4, 20), the same as the vort-center cascade.
+  centers = fischer_recenter_tc(u, v, lon, lat, 8, 4, 20, centerlon, centerlat)
+  return centers, level
 
 
 def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
@@ -2985,7 +2990,6 @@ def main():
       with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
         results = [executor.submit(MP_centers_function, uwind[ymin:ymax,xmin:xmax,level]-umotion,vwind[ymin:ymax,xmin:xmax,level]-vmotion,LON[ymin:ymax,xmin:xmax],LAT[ymin:ymax,xmin:xmax],center_lon_pressure[level],center_lat_pressure[level], level) for level in list_of_levels]
         for job in concurrent.futures.as_completed(results):
-          print(np.shape(job.result))
           (vals,ix) = job.result()
           allstacks.append(vals) #put all these arrays into a big list
           indices.append(ix)
