@@ -104,16 +104,78 @@ def _parse_args():
     return p.parse_args()
 
 
-def MP_centers_function(u,v,lon,lat,centerlon,centerlat,level):
-  # Use the optimized Fischer (2023) weighted-circulation finder
-  # (tc_center_finding_speed_up) for ALL recentering, replacing the slower
-  # sector/bearing finder in tdr_tc_centering_with_example. Its return is
-  # (lon, lat, vt_max, rmw_km, coverage, sv) -- positions 0-4 match the old
-  # finder's (lon, lat, vt_azi_max, tc_rmw, data_cov), so the caller's
-  # [:,0:5] unpacking is unchanged. Params are Fischer's tuned (num_sectors,
-  # spad, num_iter) = (8, 4, 20), the same as the vort-center cascade.
-  centers = fischer_recenter_tc(u, v, lon, lat, 8, 4, 20, centerlon, centerlat)
-  return centers, level
+def _window_indices_around_guess(guess_lon, guess_lat, centerlon, centerlat,
+                                 x_sr, y_sr, win_km=200.0):
+  """Index bounds (ylo, yhi, xlo, xhi) of a +/- win_km box centered on the
+  running-guess (lon, lat), expressed on the storm-relative km axes x_sr / y_sr.
+
+  Using x_sr / y_sr (km from the storm center) keeps this convention-safe: the
+  guess is mapped into the same storm-relative frame those axes already use
+  (lon-wrap resolved via the (.. + 180) % 360 - 180 reduction), so it works for
+  0..360 and -180..180 grids alike. Bounds are returned lo<=hi regardless of
+  axis orientation; both are inclusive.
+  """
+  dlon = ((guess_lon - centerlon + 180.0) % 360.0) - 180.0
+  gx = dlon * 111.1 * np.cos(centerlat * np.pi / 180.0)
+  gy = (guess_lat - centerlat) * 111.1
+  xa = int(np.argmin(np.abs(x_sr - (gx - win_km))))
+  xb = int(np.argmin(np.abs(x_sr - (gx + win_km))))
+  ya = int(np.argmin(np.abs(y_sr - (gy - win_km))))
+  yb = int(np.argmin(np.abs(y_sr - (gy + win_km))))
+  return min(ya, yb), max(ya, yb), min(xa, xb), max(xa, xb)
+
+
+def _seeded_center_cascade(uwind, vwind, lon_full, lat_full, x_sr, y_sr,
+                           centerlon, centerlat, levels, guess_lon0, guess_lat0,
+                           num_sectors, spad, num_iter, win_km=200.0,
+                           umotion=0.0, vmotion=0.0):
+  """Sequential, vertically-seeded TC-center cascade with a moving search
+  window, using the optimized Fischer (2023) finder.
+
+  For each level k in ``levels`` (in vertical order), cut a +/- win_km box
+  around the *running* guess (so the window walks up with the tilting vortex),
+  run the finder seeded at that guess, and carry the found center up to the
+  next level. This restores true vertical tilt-tracking (the level-below center
+  seeds the level-above search) and keeps the finder fast by handing it only a
+  local window instead of the full domain.
+
+  Returns five per-level arrays aligned to ``levels``:
+  ``(lon, lat, vt_max, rmw_km, coverage)`` -- NaN where a level can't be solved;
+  the running guess only advances on a finite fix.
+  """
+  n = len(levels)
+  out_lon = np.full(n, np.nan); out_lat = np.full(n, np.nan)
+  out_vt  = np.full(n, np.nan); out_rmw = np.full(n, np.nan)
+  out_cov = np.full(n, np.nan)
+  glon, glat = float(guess_lon0), float(guess_lat0)
+  for i, k in enumerate(levels):
+    u2d = uwind[:, :, k]
+    v2d = vwind[:, :, k]
+    if not (np.isfinite(u2d).any() and np.isfinite(v2d).any()):
+      continue
+    ylo, yhi, xlo, xhi = _window_indices_around_guess(
+        glon, glat, centerlon, centerlat, x_sr, y_sr, win_km)
+    # Subtract storm motion (if any) on the small window only -- avoids a
+    # full-domain copy of uwind/vwind on big grids. umotion/vmotion default 0.
+    uw = u2d[ylo:yhi + 1, xlo:xhi + 1] - umotion
+    vw = v2d[ylo:yhi + 1, xlo:xhi + 1] - vmotion
+    if uw.size == 0 or not np.isfinite(uw).any():
+      continue
+    lonw = lon_full[ylo:yhi + 1, xlo:xhi + 1]
+    latw = lat_full[ylo:yhi + 1, xlo:xhi + 1]
+    try:
+      tlon, tlat, vt, rmw, cov, _sv = fischer_recenter_tc(
+          uw, vw, lonw, latw, num_sectors, spad, num_iter, glon, glat)
+    except Exception as _exc:
+      print(f'WARNING: recenter_tc failed at level k={k}: {_exc}')
+      continue
+    if tlon is None or tlat is None \
+       or not (np.isfinite(tlon) and np.isfinite(tlat)):
+      continue
+    out_lon[i] = tlon; out_lat[i] = tlat
+    out_vt[i] = vt; out_rmw[i] = rmw; out_cov[i] = cov
+    glon, glat = float(tlon), float(tlat)
+  return out_lon, out_lat, out_vt, out_rmw, out_cov
 
 
 def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
@@ -1147,34 +1209,23 @@ def _compute_tilt(pressure, vort, pressure_p_mean, vort_p_mean,
     vort_num_sectors = 8
     vort_spad        = 4
     vort_num_iter    = 20
-    guess_lon, guess_lat = float(centerlon), float(centerlat)
     _rec_start = time.perf_counter()
+    # Sequential, vertically-seeded cascade on raw winds: each level seeds the
+    # next, and the +/-200 km search window walks up with the running guess so
+    # the finder only ever sees a local box (fast on big grids like HWRF).
+    _clon, _clat, _cvt, _crmw, _ccov = _seeded_center_cascade(
+        uwind, vwind, lon_full, lat_full, x_sr, y_sr,
+        centerlon, centerlat, range(nz_pc), centerlon, centerlat,
+        vort_num_sectors, vort_spad, vort_num_iter, win_km=200.0)
     for k in range(nz_pc):
-      u2d = uwind[:, :, k]
-      v2d = vwind[:, :, k]
-      if not np.isfinite(u2d).any() or not np.isfinite(v2d).any():
+      if not (np.isfinite(_clon[k]) and np.isfinite(_clat[k])):
         continue
-      try:
-        tc_lon, tc_lat, _vt_max, _rmw_km, _cov, _sv = fischer_recenter_tc(
-          u2d, v2d, lon_full, lat_full,
-          vort_num_sectors, vort_spad, vort_num_iter,
-          guess_lon, guess_lat)
-      except Exception as _exc:
-        print(f'WARNING: recenter_tc failed at level k={k}: {_exc}')
-        continue
-      if tc_lon is None or tc_lat is None:
-        continue
-      if not (np.isfinite(tc_lon) and np.isfinite(tc_lat)):
-        continue
-      yy = int(np.argmin(np.abs(lat - tc_lat)))
-      xx = int(np.argmin(np.abs(lon - tc_lon)))
-      center_indices_vort[k, 0] = yy
-      center_indices_vort[k, 1] = xx
-      # Save the actual (unsnapped) Fischer center lon/lat for downstream
-      # analysis — finer than the index-snapped value at line above.
-      center_lon_vort[k] = float(tc_lon)
-      center_lat_vort[k] = float(tc_lat)
-      guess_lon, guess_lat = float(tc_lon), float(tc_lat)
+      # Snap to the nearest grid index for the index-based consumers; keep the
+      # unsnapped Fischer lon/lat for the finer downstream tilt analysis.
+      center_indices_vort[k, 0] = int(np.argmin(np.abs(lat - _clat[k])))
+      center_indices_vort[k, 1] = int(np.argmin(np.abs(lon - _clon[k])))
+      center_lon_vort[k] = float(_clon[k])
+      center_lat_vort[k] = float(_clat[k])
     _rec_finish = time.perf_counter()
     print(f'MSG: recenter_tc vortex center cascade ({nz_pc} levels): {_rec_finish-_rec_start:.2f} s')
 
@@ -2972,36 +3023,24 @@ def main():
 
       LON,LAT=np.meshgrid(lon,lat)
 
-      allstacks=[]
-      indices=[]
       # Center finder runs from 1 km up to the diagnosed vortex top.
       # Plot thinning at line ~2751 keeps every-other entry → markers at
       # 1, 2, 3, ... km on the vort_tilt_aircraft figure.
       index1km = np.argmin(np.abs(heightlevs-1000))
       list_of_levels=np.arange(index1km,ivd+1,1)
 
-      xmin = np.argmin(np.abs(x_sr+200))
-      xmax = np.argmin(np.abs(x_sr-200))
-      ymin = np.argmin(np.abs(y_sr+200))
-      ymax = np.argmin(np.abs(y_sr-200))
-
-      ### MP section (see: https://www.youtube.com/watch?v=fKl2JW_qrso)
-      #with concurrent.futures.ProcessPoolExecutor() as executor:
-      with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-        results = [executor.submit(MP_centers_function, uwind[ymin:ymax,xmin:xmax,level]-umotion,vwind[ymin:ymax,xmin:xmax,level]-vmotion,LON[ymin:ymax,xmin:xmax],LAT[ymin:ymax,xmin:xmax],center_lon_pressure[level],center_lat_pressure[level], level) for level in list_of_levels]
-        for job in concurrent.futures.as_completed(results):
-          (vals,ix) = job.result()
-          allstacks.append(vals) #put all these arrays into a big list
-          indices.append(ix)
-
-      indices_sorted = np.argsort(np.array(indices))
-      allstacks_array = np.array(allstacks)
-      allstacks_sorted = allstacks_array[indices_sorted,:]
-      newcenter_lat = allstacks_sorted[:,1]
-      newcenter_lon = allstacks_sorted[:,0]
-      newcenter_vtmax = allstacks_sorted[:,2]
-      newcenter_vmax = allstacks_sorted[:,3]
-      newcenter_coverage = allstacks_sorted[:,4]
+      # Sequential, vertically-seeded cascade on storm-motion-removed winds.
+      # Replaces the old parallel pass, which seeded every level independently
+      # from that level's pressure-min center (no vertical continuity) inside a
+      # fixed storm-centered box. Now each level seeds the next and the +/-200km
+      # window walks up with the running guess, so the tilt is tracked
+      # continuously. Storm motion is removed inside the helper on the window
+      # only (no full-domain copy). Seed the base level from the storm center.
+      newcenter_lon, newcenter_lat, newcenter_vtmax, newcenter_vmax, \
+          newcenter_coverage = _seeded_center_cascade(
+              uwind, vwind, LON, LAT, x_sr, y_sr,
+              centerlon, centerlat, list_of_levels, centerlon, centerlat,
+              8, 4, 20, win_km=200.0, umotion=umotion, vmotion=vmotion)
 
       tiltmag_mid_tdr = tiltdir_mid_tdr = tiltmag_deep_tdr = tiltdir_deep_tdr = np.nan
       index2km = np.argmin(np.abs(heightlevs[list_of_levels]-2000))
