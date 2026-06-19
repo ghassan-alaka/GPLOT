@@ -2657,7 +2657,13 @@ def main():
 
     if ( np.nanmin(vt_rmw_mean) < 8 and np.nanmax(vt_rmw_mean) >=8):
       vortex_depth_vt_temp = np.nanmax(heightlevs[vt_rmw_mean > 8.0])/1000
-      index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_static))
+      # Index the 8 m/s tangential-wind depth (vortex_depth_vt_temp), which is
+      # what this variable is named for. Previously this line used
+      # vortex_depth_vt_static (the 24 m/s depth) by copy-paste, so ivd was
+      # driven by the 24 m/s criterion -- and collapsed to the floor of 11 for
+      # any storm whose mean Vt never reaches 24 m/s at the RMW (NaN static
+      # depth). The 8 m/s criterion captures the true (deeper) vortex top.
+      index_vortex_depth_vt_temp = np.argmin(abs(heightlevs/1000-vortex_depth_vt_temp))
       ivd = index_vortex_depth_vt_temp+1
     else:
       ivd=11
