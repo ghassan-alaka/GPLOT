@@ -2190,9 +2190,16 @@ def main():
     # physical meaning, so stop the FHR loop here; the post-loop
     # block still runs to paste the per-FHR text files, build the
     # time-series products with the FHRs already processed, and
-    # mark the status complete. The broken FHR is intentionally NOT
-    # marked plotted, so on the next spawn pass STATUS=complete
-    # short-circuits the case rather than re-trying.
+    # mark the status complete.
+    #
+    # The skipped FHRs (this one + every later one the break abandons)
+    # MUST be recorded in PlottedFiles. The spawn only short-circuits a
+    # 'complete' case when its IFILES list is empty, and it empties IFILES
+    # by matching input files against PlottedFiles. If we leave these FHRs
+    # out, IFILES stays non-empty and the spawn rewrites STATUS=complete ->
+    # 'start' and re-runs the module forever. (An earlier version left them
+    # out *on purpose*, on the mistaken assumption that STATUS=complete alone
+    # short-circuits -- it does not.)
     nan_frac = pgrid.get('nan_frac', 0.0)
     if nan_frac > 0.25:
         print(f"WARNING: FHR {FHR:03d}: polar grid is {nan_frac:.1%} NaN "
@@ -2200,6 +2207,9 @@ def main():
               f"relative GRIB extent < rmax={rmax} km). Stopping the "
               f"polar module here and finalizing time-series products "
               f"with the {fff} FHRs already processed.")
+        for _skip_file in np.atleast_1d(UNPLOTTED_LIST)[fff:]:
+            if str(_skip_file) not in ('MISSING', ''):
+                plot_utils.update_plotted_file(PLOTTED_FILE, str(_skip_file))
         break
     elif nan_frac > 0.01:
         print(f"WARNING: FHR {FHR:03d}: polar grid is {nan_frac:.1%} NaN "
