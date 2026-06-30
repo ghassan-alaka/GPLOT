@@ -35,11 +35,15 @@ def configure_cartopy(cartopy_dir=None):
     every subsequent ``cfeature.<X>`` /
     ``shapereader.natural_earth(...)`` call without further plumbing.
 
-    Resolution order:
+    Resolution order (first candidate that is an *existing directory* wins;
+    a non-empty but nonexistent path -- e.g. the
+    ``/PLEASE/SET/THE/CARTOPY/DIR`` placeholder -- is skipped, NOT treated
+    as a hard stop, so the fallback still applies):
       1. Explicit ``cartopy_dir`` argument (typically from
          ``nml.get('CARTOPY_DIR')``).
-      2. ``CARTOPY_DATA_DIR`` environment variable (lets a modulefile
-         set a host-wide fallback when the namelist hasn't been
+      2. ``CARTOPY_DATA_DIR`` environment variable (lets the per-machine
+         batch script export a host-wide fallback from
+         ``batch.defaults.${MACHINE}`` when the namelist hasn't been
          updated).
       3. No-op -- cartopy keeps its default download-then-cache flow
          (works fine on dev hosts with internet access).
@@ -55,32 +59,57 @@ def configure_cartopy(cartopy_dir=None):
     Args:
         cartopy_dir: Path to a directory holding a pre-populated cartopy
             shapefile cache (typically a sysadmin-managed location like
-            ``/home/role.aoml-hafs1/.local/share/cartopy``). If empty
-            or None, the env var is consulted; if that's also empty,
-            the function is a no-op.
+            ``/home/role.aoml-hafs1/.local/share/cartopy``). If empty,
+            None, or not an existing directory, the env var is consulted;
+            if that's also missing/invalid, the function is a no-op.
     """
-    source = 'CARTOPY_DIR namelist entry'
-    chosen = cartopy_dir
-    if not chosen:
-        chosen = os.environ.get('CARTOPY_DATA_DIR', '')
-        source = 'CARTOPY_DATA_DIR env var'
+    # Walk the candidates in priority order and pick the FIRST one that is an
+    # existing directory. Critically, a non-empty but invalid path (e.g. the
+    # 'CARTOPY_DIR = /PLEASE/SET/THE/CARTOPY/DIR' placeholder in
+    # namelist.master.HAFS_Default) must NOT short-circuit the env-var
+    # fallback -- otherwise cartopy gets no offline cache and freezes trying
+    # to download Natural Earth data on an offline compute node.
+    candidates = [
+        (cartopy_dir, 'CARTOPY_DIR namelist entry'),
+        (os.environ.get('CARTOPY_DATA_DIR', ''), 'CARTOPY_DATA_DIR env var'),
+    ]
 
-    if not chosen:
-        # Diagnostic so the HPC log shows exactly why the offline
-        # cache wasn't wired up. Use print() in addition to the
-        # logger so it lands in stdout regardless of logging config.
-        msg = ('MSG: configure_cartopy: no CARTOPY_DIR (namelist) and no '
-               'CARTOPY_DATA_DIR (env) -- cartopy will attempt downloads')
-        print(msg)
-        logger.info(msg)
+    chosen = None
+    source = None
+    skipped = []
+    for path, src in candidates:
+        if not path:
+            continue
+        if os.path.isdir(path):
+            chosen = path
+            source = src
+            break
+        # Non-empty but not a real directory: note it and keep falling through.
+        skipped.append(f'{path!r} (from {src})')
+
+    if chosen is None:
+        # Diagnostic so the HPC log shows exactly why the offline cache wasn't
+        # wired up. Use print() in addition to the logger so it lands in stdout
+        # regardless of logging config.
+        if skipped:
+            msg = ('MSG: configure_cartopy: no valid cartopy cache -- tried '
+                   + ', '.join(skipped)
+                   + ' -- cartopy will attempt downloads')
+            print(msg)
+            logger.warning(msg)
+        else:
+            msg = ('MSG: configure_cartopy: no CARTOPY_DIR (namelist) and no '
+                   'CARTOPY_DATA_DIR (env) -- cartopy will attempt downloads')
+            print(msg)
+            logger.info(msg)
         return
 
-    if not os.path.isdir(chosen):
-        msg = (f'MSG: configure_cartopy: path {chosen!r} (from {source}) '
-               f'does not exist -- cartopy will attempt downloads')
+    if skipped:
+        # Surface that we fell past an invalid higher-priority entry.
+        msg = ('MSG: configure_cartopy: skipped invalid '
+               + ', '.join(skipped))
         print(msg)
         logger.warning(msg)
-        return
 
     import cartopy
     cartopy.config['pre_existing_data_dir'] = chosen

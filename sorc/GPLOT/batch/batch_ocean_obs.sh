@@ -45,6 +45,18 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
+# Export the per-machine offline cartopy cache so plot_utils.configure_cartopy()
+# can fall back to it (as CARTOPY_DATA_DIR) when a namelist lacks a valid
+# CARTOPY_DIR -- e.g. namelist.master.HAFS_Default's placeholder. Without this,
+# cartopy tries to download Natural Earth data on an offline compute node and hangs.
+BATCH_DFLTS="${GPLOT_DIR}/parm/batch.defaults.${MACHINE,,}"
+if [ -f "${BATCH_DFLTS}" ]; then
+    CARTOPY_DIR_DFLT="`sed -n -e 's/^cartopy_dir =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+    if [ -n "${CARTOPY_DIR_DFLT}" ]; then
+        export CARTOPY_DATA_DIR="${CARTOPY_DIR_DFLT}"
+    fi
+fi
+
 # 2. Build list of named input arguments for Python.
 # plot_ocean_obs.py uses argparse (--idate, --sid, --ocean-domain, ...);
 # the legacy positional invocation that lived here was a leftover from
