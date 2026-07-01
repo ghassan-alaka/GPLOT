@@ -160,6 +160,7 @@ echo "MSG: Found these cycles --> ${CYCLES[*]}"
 echo ""
 
 # Build forecast hour list
+#MD 20260701 - FHOUR_LIST is unused! this is only for output notes. FHR iteration happens in the py file
 FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
 echo "MSG: Forecast hours --> ${FHOUR_LIST}"
 
@@ -269,10 +270,30 @@ for DATE in ${CYCLES[@]}; do
         echo "MSG: Submitting ens_compare job --> ${JOBNAME}"
         echo "working" > "${STATUS_FILE}"
 
+        # MD 20260630 - need to add a runtime argument - job times out at 2hr having completed only 15 fhrs
+        N_FHOURS=$(wc -w <<< "$FHOUR_LIST")
+        if [[ $N_FHOURS -le 5 ]]; then
+            RUNTIME="00:59:59"
+        elif [[ $N_FHOURS -le 10 ]]; then
+            RUNTIME="01:59:59"
+        elif [[ $N_FHOURS -le 15 ]]; then
+            RUNTIME="02:59:59"
+        elif [[ $N_FHOURS -le 20 ]]; then
+            RUNTIME="03:59:59"
+        elif [[ $N_FHOURS -le 25 ]]; then
+            RUNTIME="04:59:59"
+        elif [[ $N_FHOURS -le 30 ]]; then
+            RUNTIME="05:59:59"
+        elif [[ $N_FHOURS -le 35 ]]; then
+            RUNTIME="06:59:59"
+        else
+            RUNTIME="07:59:59"
+        fi
+
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
             SLRM_OPTS="--job-name=${JOBNAME} --output=${LOGFILE} --error=${LOGFILE}"
             SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
-            SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=16G"
+            SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=16G --time=${RUNTIME}"
             sbatch ${SLRM_OPTS} ${BATCHFILE} ${ARGS}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHFILE} ${ARGS} > ${LOGFILE} 2>&1
