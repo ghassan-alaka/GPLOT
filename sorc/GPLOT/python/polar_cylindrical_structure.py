@@ -195,7 +195,7 @@ def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
       ``rh`` (%)
     Derived 3D:
       ``mixr``, ``temp_v``, ``rho`` (kg/m^3), ``wwind`` (m/s),
-      ``wwind_store`` (alias of ``wwind``, preserved for legacy reference)
+      ``wwind_store`` (independent copy of ``wwind``, preserved for legacy reference)
     2D surface / near-surface:
       ``sst`` (degC), ``pblz_upp`` (m), ``lhtflx`` (W/m^2),
       ``shtflx`` (W/m^2), ``u10`` (m/s), ``v10`` (m/s), ``mslp`` (Pa),
@@ -345,7 +345,13 @@ def _read_grib_fields(file_path, dsource, bounds, do_dbz, zsize_pressure):
   wwind  = -omega/(rho*9.81)
   # 12/23 edit retained: wwind_store preserves the initial wwind for any
   # later comparison against the storm-relative/re-interpolated version.
-  wwind_store = wwind
+  # MUST be an independent copy, not an alias: the descending-lat flip below
+  # reverses `wwind` and `wwind_store` in place as separate loop items. If they
+  # share a buffer, that buffer is flipped twice (net no-op) and w ends up
+  # mirrored N<->S relative to every other field -- the "clockwise vertical
+  # velocity" seen on HWRF storm-nest grids (descending lat), while HAFS
+  # (ascending lat, flip skipped) looked fine.
+  wwind_store = wwind.copy()
 
   # Normalize lat to ascending order. HWRF storm-nest grb2s store lat
   # top-to-bottom (descending: ~+18 -> ~-2 for a tropical WP storm)
