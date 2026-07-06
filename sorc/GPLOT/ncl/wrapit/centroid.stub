@@ -1,7 +1,0 @@
-C NCLFORTSTART
-	subroutine centroid(INPUT,ICTR,A,B,NI,NJ,NK)
-	implicit none
-	integer B,NI,NJ,NK
-	integer ICTR(NK,2)
-	real INPUT(NI,NJ,NK),A(NK)
-C NCLEND

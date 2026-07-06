@@ -26,12 +26,10 @@ from datetime import datetime, timedelta
 import os
 import subprocess
 import glob
+import warnings
 
-#note - Matt's process_atcf_files function relies on gplot_tools - could remove this reliance or bring in gplot_tools to this module
-#add path to gp_tools for reading atcf file function and adeck
-import sys
-sys.path.append('/work2/noaa/aoml-hafs1/lgramer/ocean/HEP')
-import gp_tools as gpt
+#this script relies on GPLOT_DIR existing in the environment
+GPLOT_DIR = os.environ['GPLOT_DIR']
 
 # dictionaries for conversions
 keysDict = {"mslp": {'typeOfLevel': 'meanSea', "shortName": "prmsl"}, 
@@ -111,7 +109,7 @@ def getGribData(basePath, bounds, members=range(0, 21),
     """
 
     # External shell script that runs the wgrib2 command
-    script_path = "./extract_box.sh"
+    script_path = GPLOT_DIR + "/ush/extract_box.sh"
     
     # Build the regex string to pass to wgrib2 later
     match_str = _build_match_string(variable, level)
@@ -300,7 +298,7 @@ def getStormName(storm, initDate):
     returns:
         str formatted as: {NAME}-{number}L
     """
-    bTrack = pd.read_csv(f'/work/noaa/hwrf/noscrub/input/abdeck/btk/b{storm}.dat', usecols=range(35), header=None)
+    bTrack = pd.read_csv(f'/work/noaa/hwrf/noscrub/input/abdeck/btk/b{storm.lower()}.dat', usecols=range(35), header=None)
     bTrack = bTrack[bTrack[2] == initDate]
     name = f"{bTrack.iloc[0, 27].strip()}-{bTrack.iloc[0, 1]:02d}L"
     return name
@@ -330,13 +328,90 @@ Matt's added functions
 4. combine_polar_and_atcf - put together polar shear and tilt data with atcf data (used for tilt plots) NOTE - WILL PROBABLY NEED TO MAKE SUBSTANTIAL CHANGES AFTER COMBINING ATCF PROCESSING FUNCTIONS
 """
 
+# CREDIT: TAKEN FROM /work2/noaa/aoml-hafs1/lgramer/ocean/HEP/gp_tools.py
+def str2latlon(s,div=1.0):
+    if ( isinstance(s,str) ):
+        s = s.strip();
+        if ( s[:1].isdigit() or (s[:1]=='-' and s[1:2].isdigit()) ):
+            if ( s.endswith('S') or s.endswith('W') ):
+                s = '-' + s;
+            try:
+                s = np.double(s.strip('NSEW'))/div;
+            except:
+                pass;
+    return(s);
 
-def process_atcf_files(cycle_path,
-                       timestamp,
-                       storm_id,
-                       begin_hour = 0,
-                       end_hour=126,
-                       benchmark = 'best',):
+
+# CREDIT: TAKEN FROM /work2/noaa/aoml-hafs1/lgramer/ocean/HEP/gp_tools.py
+def read_atcf(fname):
+    '''Read ATCF file for an individual TC forecast model block, and return it as a pandas DataFrame. Merges all records for a given IDate and FHr into a single record, adding Series "r50_rad[1234]" and "r64_rad[1234]". NOTE: Currently assumes there are seven (7) User Defined Data columns in the ATCF file.'''
+# BASIN, CY, YYYYMMDDHH, TECHNUM/MIN, TECH, TAU, LatN/S, LonE/W, VMAX, MSLP, TY, RAD, WINDCODE, RAD1, RAD2, RAD3, RAD4, POUTER, ROUTER, RMW, GUSTS, EYE, SUBREGION, MAXSEAS, INITIALS, DIR, SPEED, STORMNAME, DEPTH, SEAS, SEASCODE, SEAS1, SEAS2, SEAS3, SEAS4, USERDEFINED, userdata
+# BA, CY, YYYYMMDDHH, TN, TECH, TAU, LATI,  LONG, VMX, MSLP, TY, RAD, WCD, RAD1, RAD2, RAD3, RAD4, POCI, ROCI, RMW,GUST, EYE,SUBR,MXSE,INIS, DIR, SPD, STORM NAME,DP,SEA,SCOD,SEA1,SEA2,SEA3,SEA4,         USERDEFINED,userdat1,userdat2,userdat3,u4,ud5,ud6,udat7
+# AL, 06, 2018091206, 03, HWRF, 000, 285N,  695W, 120,  945, XX,  34, NEQ, 0228, 0196, 0077, 0137, 1013,  199,  19,   0,   0,    ,   0,    ,   0,   0,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,      11,    2336,    4584, Y, 10, DT, -999
+# AL, 06, 2018091206, 03, HWRF, 000, 285N,  695W, 120,  945, XX,  50, NEQ, 0072, 0067, 0036, 0058, 1013,  199,  19,   0,   0,    ,   0,    ,   0,   0,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,      11,    2336,    4584, Y, 10, DT, -999
+# AL, 06, 2018091206, 03, HWRF, 000, 285N,  695W, 120,  945, XX,  64, NEQ, 0044, 0036, 0028, 0037, 1013,  199,  19,   0,   0,    ,   0,    ,   0,   0,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,      11,    2336,    4584, Y, 10, DT, -999
+# AL, 06, 2018091206, 03, HWRF, 003, 290N,  701W, 116,  943, XX,  34, NEQ, 0144, 0142, 0094, 0116, 1011,  154,  20,   0,   0,    ,   0,    ,   0,   0,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,     -15,    2162,    4115, Y, 10, DT, -999
+# AL, 06, 2018091206, 03, HWRF, 003, 290N,  701W, 116,  943, XX,  50, NEQ, 0066, 0062, 0043, 0052, 1011,  154,  20,   0,   0,    ,   0,    ,   0,   0,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,     -15,    2162,    4115, Y, 10, DT, -999
+# AL, 06, 2018091206, 03, HWRF, 003, 290N,  701W, 116,  943, XX,  64, NEQ, 0045, 0034, 0032, 0038, 1011,  154,  20,   0,   0,    ,   0,    ,   0,   0,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,     -15,    2162,    4115, Y, 10, DT, -999
+# ADDITIONAL (NEW?) FORMAT:
+# AL, 15, 2021091818, 03, HAFS, 000, 387N,  657W,  45,  998, XX,  34, NEQ, 0185, 0170, 0000, 0100,  -99,  -99,  53,   0,   0,    ,   0,    , ,  71, 142,           ,  ,   ,    ,   0,   0,   0,   0,       THERMO PARAMS,     297,     963,    -776, N, 10, DT, -999, SHR82,  -99,   0, SST,  -99, ARMW,  55,  28
+    
+    data = pd.read_csv(fname,header=None);
+    #data = data.applymap(lambda x: str2latlon(x,10));
+    data = data.map(lambda x: str2latlon(x,10));
+    if ( data.shape[1] == 52 ):
+        # NOTE: TDIR and TSPEED appear to be shifted one field to the right vs. documentation
+        data.columns = ['basin','stno','idtstr','mdlno','mdl','fhr','lat','lon','vmax','mslp','typ','rad','windcode','rad1','rad2','rad3','rad4','poci','roci','rmw','gusts','eye','subregion','maxseas','initials','userdata16','tdir','tspeed','stnm','depth','seas','seascode','seas1','seas2','seas3','seas4','userdef','userdata1','userdata2','userdata3','userdata4','userdata5','userdata6','userdata7','userdata8','userdata9','userdata10','userdata11','userdata12','userdata13','userdata14','userdata15'];
+    elif ( data.shape[1] == 51 ):
+        # Annoying: 2023 real-time experiments (HAFS v1.1.0) randomly dropped the extra field for short ATCF records...
+        data.columns = ['basin','stno','idtstr','mdlno','mdl','fhr','lat','lon','vmax','mslp','typ','rad','windcode','rad1','rad2','rad3','rad4','poci','roci','rmw','gusts','eye','subregion','maxseas','initials','tdir','tspeed','stnm','depth','seas','seascode','seas1','seas2','seas3','seas4','userdef','userdata1','userdata2','userdata3','userdata4','userdata5','userdata6','userdata7','userdata8','userdata9','userdata10','userdata11','userdata12','userdata13','userdata14','userdata15'];
+    ######################################################### Matt 10/21/2025 - HERC atcf dump from 2023 - ensemble mean has 17 columns and control has 20 ##########################################
+    elif ( data.shape[1] == 17 ):
+        data.columns = ['basin','stno','idtstr','mdlno','mdl','fhr','lat','lon','vmax','mslp','typ','rad','windcode','rad1','rad2','rad3','rad4']
+    elif ( data.shape[1] == 20 ):
+        data.columns = ['basin','stno','idtstr','mdlno','mdl','fhr','lat','lon','vmax','mslp','typ','rad','windcode','rad1','rad2','rad3','rad4','unknown_to_matt_1','unknown_to_matt_2','unknown_to_matt_3']
+    else:
+        data.columns = ['basin','stno','idtstr','mdlno','mdl','fhr','lat','lon','vmax','mslp','typ','rad','windcode','rad1','rad2','rad3','rad4','poci','roci','rmw','gusts','eye','subregion','maxseas','initials','tdir','tspeed','stnm','depth','seas','seascode','seas1','seas2','seas3','seas4','userdef','userdata1','userdata2','userdata3','userdata4','userdata5','userdata6','userdata7'];
+    data['idt'] = pd.to_datetime(data['idtstr'],format='%Y%m%d%H');
+    data['vdt'] = data['idt'] + pd.to_timedelta(data['fhr'],'hours');
+    data['vdtstr'] = data['vdt'].dt.strftime('%Y%m%d%H');
+    # Process ugliness with wind radii...
+    data64 = data.loc[data.rad == 64].copy();
+    #data64 = data64.rename(columns={'rad1':'r64_rad1','rad2':'r64_rad2','rad3':'r64_rad3','rad4':'r64_rad4',});
+    data50 = data.loc[data.rad == 50].copy();
+    #data50 = data50.rename(columns={'rad1':'r50_rad1','rad2':'r50_rad2','rad3':'r50_rad3','rad4':'r50_rad4',});
+    #orgdata = data.copy();
+    data = data.loc[data.rad == 34].copy();
+    for fx,f in data50.iterrows(): 
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r50_rad1'] = f['rad1'];
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r50_rad2'] = f['rad2'];
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r50_rad3'] = f['rad3'];
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r50_rad4'] = f['rad4'];
+    for fx,f in data64.iterrows(): 
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r64_rad1'] = f['rad1'];
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r64_rad2'] = f['rad2'];
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r64_rad3'] = f['rad3'];
+        data.loc[(data.basin==f.basin)&(data.stno==f.stno)&(data.mdl==f.mdl)&(data.fhr==f.fhr),'r64_rad4'] = f['rad4'];
+    warnings.filterwarnings('ignore');
+    data['r34'] = np.nanmax(data[['rad1','rad2','rad3','rad4']],axis=1);
+    if ( 'r50_rad1' not in data.keys() ):
+        data['r50_rad1'] = np.nan;
+        data['r50_rad2'] = np.nan;
+        data['r50_rad3'] = np.nan;
+        data['r50_rad4'] = np.nan;
+    if ( 'r64_rad1' not in data.keys() ):
+        data['r64_rad1'] = np.nan;
+        data['r64_rad2'] = np.nan;
+        data['r64_rad3'] = np.nan;
+        data['r64_rad4'] = np.nan;
+    data['r50'] = np.nanmax(data[['r50_rad1','r50_rad2','r50_rad3','r50_rad4']],axis=1);
+    data['r64'] = np.nanmax(data[['r64_rad1','r64_rad2','r64_rad3','r64_rad4']],axis=1);
+    warnings.resetwarnings();
+    return(data);
+
+
+def process_atcf_files(cycle_path, timestamp, storm_id, begin_hour = 0, end_hour=126, 
+                       members_start=0, members_end=21):
     """
     read in ensemble atcf files, combine, and save. Optionally, add error information (from best track or official forecast)
     args:
@@ -348,113 +423,47 @@ def process_atcf_files(cycle_path,
         end_hour: int, end of atcf window. Should probably be greater than begin_hour, but I am not going to add
             input validation because if you put an end hour that is less than your begin hour, you deserve to
             stack trace your error.
-        benchmark: str or None, compare forecasts to 'best', 'ofcl', or None
     returns:
         combined dataframe with all atcf files, and optionally benchmark dataframe if benchmark != None
     """
     #get num of members depending on year
     year = timestamp[:4]
-    n_mems = 31 if year == '2024' else 21
+    n_mems = 31 if year == '2024' else 21  # NOTE: PROBABLY SHOULD PASS IN MEMBERS AS AN EXPLICIT ARGUMENT INSTEAD
     
     #turn timestamp into datetime type
-    idt = datetime.strptime(timestamp,'%Y%m%d%H');
+    idt = datetime.strptime(timestamp,'%Y%m%d%H')
 
     #same with begin and end hours
     bdt = idt+timedelta(hours=begin_hour)
     edt = idt+timedelta(hours=end_hour)
 
-    if benchmark != None:
-        #not sure why we need this - maybe subsetting the best track data with only relevant data to current cycle?
-        best_edt = idt+timedelta(hours=end_hour+9)
-
-    
-        #read in bdeck (REQUIRES GPLOT_TOOLS)
-        bestdict = gpt.read_bdeck(year=year, stid=storm_id);
-    
-        #put benchmark info in pandas, make some calculations
-        bfhr = [((pd.Timestamp(vdt)-idt).total_seconds()/3600) for vdt in bestdict['dts']]
-        best = pd.DataFrame(bestdict);
-        best.index = bfhr;
-        best['r34'] = best.r34k; best['r50'] = best.r50k; best['r64'] = best.r64k;
-        best['vdt'] = [((pd.Timestamp(vdt))) for vdt in bestdict['dts']]
-        lon0 = np.tile(best.lon[0],best.lon.shape);
-        lat0 = np.tile(best.lat[0],best.lat.shape);
-        az,dst = gpt.azimuth_distance_wgs84(lon0,lat0,best.lon,best.lat);
-        best['endang'] = az;
-        best['enddst'] = dst;
-    
-        #artifact from labeling best vs. benchmark
-        bench = best.copy()
-        del best
-
     #read ensemble member TC data
     processed_atcf_list = []
     for emem in range(0,n_mems):
-        atcfall = gpt.read_atcf(f'{cycle_path}/{emem:02}/00l.{timestamp}.hfsa.trak.atcfunix.all');
-        atcfall = atcfall[(begin_hour <= atcfall.fhr) & (atcfall.fhr <= end_hour)];
+        atcfall = read_atcf(f'{cycle_path}/{emem:02}/00l.{timestamp}.hfsa.trak.atcfunix.all')
+        atcfall = atcfall[(begin_hour <= atcfall.fhr) & (atcfall.fhr <= end_hour)]
         
         #add stid to full df and filter on that
         atcfall['stid'] = list(map(lambda x,y: f'{x}{y:02}', atcfall['basin'], atcfall['stno']))
-        atcf = atcfall[atcfall['stid']==storm_id].copy()
+        atcf = atcfall[atcfall['stid']==storm_id].copy()   
         
+        atcf['emem'] = emem
         
-        atcf['emem'] = emem;
-
-        
-        #if using a benchmark, Calculate track, intensity, wind field errors
-        if benchmark != None:
-            atcf.set_index('fhr',inplace=True);
-            lonstretch = np.cos(np.deg2rad(atcf.lat.mean()));
-            atcf['trkerr'] = (np.sqrt( (((atcf.lon-bench.lon)**2)*lonstretch) + ((atcf.lat-bench.lat)**2)) * 111e3);
-            atcf['vmaxerr'] = np.abs(atcf.vmax-bench.vmax);
-            atcf['r34err'] = np.abs(atcf.r34-bench.r34);
-            atcf['r50err'] = np.abs(atcf.r50-bench.r50);
-            atcf['r64err'] = np.abs(atcf.r64-bench.r64);
-            try:
-              atcf['rmwerr'] = np.abs(atcf.rmw-bench.rmw);
-            except:
-              atcf['rmwerr'] = atcf['r64err']
-              atcf.loc[:,'rmwerr'] = np.nan
-            
-            #atcf['vmaxrms'] = np.sqrt( np.sum( (atcf.loc[fhr].vmax-bench.loc[fhr].vmax)**2 ) / len(atcf.vmax) );
-            atcf['trkrms'] = atcf['trkerr'];
-            atcf['vmaxrms'] = atcf['vmaxerr'];
-            atcf['r34rms'] = atcf['r34err'];
-            atcf['r50rms'] = atcf['r50err'];
-            atcf['r64rms'] = atcf['r64err'];
-            for fhrix,fhr in enumerate(atcf.index):
-              atcf.loc[fhr,'trkrms'] = np.sqrt( np.sum( ((((atcf.lon.where(atcf.index<=fhr)-bench.lon.where(bench.index<=fhr))**2)*lonstretch) + ((atcf.lat.where(atcf.index<=fhr)-bench.lat.where(bench.index<=fhr))**2)) * 111e3) / (fhrix+1) );
-              atcf.loc[fhr,'vmaxrms'] = np.sqrt( np.sum( (atcf.vmax.where(atcf.index<=fhr) - bench.vmax.where(bench.index<=fhr))**2 ) / (fhrix+1) );
-              atcf.loc[fhr,'r34rms'] = np.sqrt( np.sum( (atcf.r34.where(atcf.index<=fhr) - bench.r34.where(bench.index<=fhr))**2 ) / (fhrix+1) );
-              atcf.loc[fhr,'r50rms'] = np.sqrt( np.sum( (atcf.r50.where(atcf.index<=fhr) - bench.r50.where(bench.index<=fhr))**2 ) / (fhrix+1) );
-              atcf.loc[fhr,'r64rms'] = np.sqrt( np.sum( (atcf.r64.where(atcf.index<=fhr) - bench.r64.where(bench.index<=fhr))**2 ) / (fhrix+1) );
-        
-            lon0 = np.tile(atcf.lon[0],atcf.lon.shape);
-            lat0 = np.tile(atcf.lat[0],atcf.lat.shape);
-            az,dst = gpt.azimuth_distance_wgs84(lon0,lat0,atcf.lon,atcf.lat);
-            atcf['endang'] = az;
-            atcf['enddst'] = dst;
-            atcf['angerr'] = np.sin(np.deg2rad(atcf.endang-bench.endang));
-            #DEBUG:    breakpoint();
-        
-        atcf.reset_index(inplace=True);
+        atcf.reset_index(inplace=True)
         #atcf.set_index(['basin','stno','emem','idtstr','fhr'],drop=False,inplace=True);
         
-        atcf.set_index(['basin','stno','emem','idtstr','fhr'],inplace=True);
+        atcf.set_index(['basin','stno','emem','idtstr','fhr'],inplace=True)
         #put current atcf at the end of the list
         processed_atcf_list.append(atcf)
     
     
     #concat them all at once in the end
-    atcfs2 = pd.concat(processed_atcf_list);
+    atcfs2 = pd.concat(processed_atcf_list)
     del processed_atcf_list
 
     atcf_reset = atcfs2.copy().reset_index()
 
-    if benchmark != None:
-        return atcf_reset, bench
-    else:
-        return atcf_reset
+    return atcf_reset
 
 # def gather_structure_data(gpout_path='/work/noaa/aoml-hafs1/lgramer/GPOUT/HERC', cycle='2025081600'):
 #     """
@@ -620,10 +629,12 @@ def combine_polar_and_atcf(polar_data, atcf_data):
 
     return all_data
 
-def get_tilt_from_ships_data(gpout_path, cycle, storm_id, levs = [1000,500,350]):
+def get_tilt_from_ships_data(gpout_path, cycle, storm_id, levs = [1000,500,350], pass_data = None, fhr = None):
+    ######################## DEPRECATED ######################################################################
     """
     Get vortex tilts from SHIPS output
     args:
+        #NEED TO ACCOUNT FOR WHETHER IT ALREADY INCLUDES CYCLE
         gpout_path: str, GPLOT output directory + forecast cycle
             example: /work/noaa/aoml-hafs1/lgramer/GPOUT/HERC
         cycle: str, forecast cycle datetime
@@ -631,33 +642,59 @@ def get_tilt_from_ships_data(gpout_path, cycle, storm_id, levs = [1000,500,350])
         levs: list, 3 pressure levels for calculating tilts. Default is 1000, 500, 350
     returns:
         tilt_data: combined dataframe with 3 level tilts
+    
+    #MD 6/18/2026 - trying to remove SHIPS dependency!!!!!
     """
 
     if len(levs)!=3:
         print('{} pressure levels passed! 3 pressure levels needed.'.format(len(levs)))
         return False
-
-
+        
     #empty list for dataframes
     centers_data_list = []
     tilt_cols = ['fhr','lev','lat','lon','vtx']
 
     #loop through gpout cycle subdirectories!
-    for emem in os.listdir(f'{gpout_path}/{cycle}'):
+    yr = cycle[:4]
+    memlist = [f'{x:02}' for x in range(21)] if yr == '2025' or yr == '2023' else [f'{x:02}' for x in range(31)]
+
+    # for emem in os.listdir(f'{gpout_path}/{cycle}'):
+
+    #     #skip cmp directory and other problem ones
+    #     if emem == "cmp" or emem == '00-20' or emem == 'guidance' or emem == 'ensembleComparison':
+    #         continue
+
+    #     storm_tag = storm_id[2:] + 'l'
+        
+    #     #path to ships data file - CURRENTLY ONLY PROGRAMMED FOR ATLANTIC STORMS
+    #     ships_centers_path = f'{gpout_path}/{cycle}/{emem}/ships/{storm_tag}.TCCEN.{cycle}.ships.dat'
+    
+    #     #read in file, it looks tab-separated, but I think it's actually just multiple whitespaces
+    #     try:
+    #         ships_centers = pd.read_csv(ships_centers_path, sep='\\s+',header=None,names=tilt_cols)
+    #         ships_centers['emem']=emem
+        
+    #         centers_data_list.append(ships_centers)
+    #     except:
+    #         print("Something went wrong trying to read in the following file:")
+    #         print(ships_centers_path)
+    #         print('Skipping for now')
+    #         print()
+
+    for emem in memlist:
 
         #skip cmp directory and other problem ones
-        if emem == "cmp" or emem == '00-20' or emem == 'guidance':
+        if emem == "cmp" or emem == '00-20' or emem == 'guidance' or emem == 'ensembleComparison':
             continue
 
         storm_tag = storm_id[2:] + 'l'
-        
-        #path to ships data file - CURRENTLY ONLY PROGRAMMED FOR ATLANTIC STORMS
-        ships_centers_path = f'{gpout_path}/{cycle}/{emem}/ships/{storm_tag}.TCCEN.{cycle}.ships.dat'
     
         #read in file, it looks tab-separated, but I think it's actually just multiple whitespaces
         try:
             ships_centers = pd.read_csv(ships_centers_path, sep='\\s+',header=None,names=tilt_cols)
+            ships_centers = pd.DataFrame(pass_data, columns = ['lev'])
             ships_centers['emem']=emem
+
         
             centers_data_list.append(ships_centers)
         except:
@@ -665,6 +702,7 @@ def get_tilt_from_ships_data(gpout_path, cycle, storm_id, levs = [1000,500,350])
             print(ships_centers_path)
             print('Skipping for now')
             print()
+
 
     #probably poor practice - re-using this variable name to overwrite previous and combine all data
     ships_centers = pd.concat(centers_data_list)
@@ -700,6 +738,7 @@ def get_shear_from_ships_data(gpout_path, cycle, storm_id):
     """
     Get shear from SHIPS output
     args:
+    NEED TO ACCOUNT FOR WHETHER IT ALREADY INCLUDES CYCLE
         gpout_path: str, GPLOT output directory + forecast cycle
             example: /work/noaa/aoml-hafs1/lgramer/GPOUT/HERC
         cycle: str, forecast cycle datetime
@@ -713,12 +752,11 @@ def get_shear_from_ships_data(gpout_path, cycle, storm_id):
     #STORM TAG - only works for atlantic right now
     storm_tag = storm_id[2:] + 'l'
 
-
     #loop through GPOUT subdirectores
     for emem in os.listdir(f'{gpout_path}/{cycle}'):
 
         #skip cmp directory and other problem ones
-        if emem == "cmp" or emem == '00-20' or emem == 'guidance':
+        if emem == "cmp" or emem == '00-20' or emem == 'guidance' or emem == 'ensembleComparison':
             continue
 
         #four different paths - 

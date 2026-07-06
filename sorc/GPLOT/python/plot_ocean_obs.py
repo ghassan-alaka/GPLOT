@@ -37,17 +37,20 @@ import struct;
 import sys #To change the path 
 import xarray as xr
 
-#import modules.skewTmodelTCpolar as skewTmodelTCpolar
-#import modules.shearandrhplot as shearandrhplot
-#import modules.interp as interp
-import modules.io_extra as io
-#import modules.plotting as plotting
-#import modules.multiprocess as mproc
+import argparse
 import glob
 import math
 import cmath
-import subprocess
+import re
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+# GPLOT utility package (Sessions 1-7 infrastructure)
+from gplot_utils import namelist as nml_utils
+from gplot_utils import atcf as atcf_utils
+from gplot_utils import ensemble as ens_utils
+from gplot_utils import plot_utils
+from gplot_utils import ocean_reader
+from gplot_utils import constants as gplot_const
 
 
 default_ddir='/scratch4/AOML/aoml-hafs1/Lew.Gramer/ocean/data'
@@ -56,12 +59,16 @@ if ( not os.path.exists(default_ddir) ):
 if ( not os.path.exists(default_ddir) ):
   default_ddir='/lfs5/HFIP/hur-aoml/Lew.Gramer/ocean'
 if ( not os.path.exists(default_ddir) ):
-  raise ValueError(f'NO OCEAN DATA PATH FOUND');
+  # Deferred error: some HPC-only obs paths may not exist on dev machines.
+  # Emit a warning here so the module can still be imported for smoke tests;
+  # the obs data loaders below will fail loudly if actually invoked.
+  warnings.warn(f'NO OCEAN DATA PATH FOUND (using {default_ddir}); obs loaders '
+                f'will fail if invoked.')
 
-# Physical constants
-cp = 4178;                  # Specific heat capacity of seawater [J kg^-1 K^-1]
-rho = 1026;                 # Mean water density [kg m^-3]
-kJcm2_per_Jm2 = 1e-7;       # Unit conversion kJ/cm^2 == 10^7 J/m^2
+# Physical constants (imported from gplot_utils/constants.py)
+cp = gplot_const.cp_sw                  # Specific heat capacity of seawater [J kg^-1 K^-1]
+rho = gplot_const.rho_sw                # Mean water density [kg m^-3]
+kJcm2_per_Jm2 = gplot_const.kJcm2_per_Jm2  # Unit conversion kJ/cm^2 == 10^7 J/m^2
 
 # Maximum distance away from other platforms (buoy, Argo, etc.) to plot NGE-OHC profiles
 #max_nge_dist = 78
@@ -90,29 +97,8 @@ def add_center_label(ax1,centerlon,centerlat,minpressure):
   ax1.axvline(centerlon,color='k',linestyle='--',linewidth=1.0);
   ax1.axhline(centerlat,color='k',linestyle='--',linewidth=1.0);
 
-#def read_fix_hycom_depth(domnm='htrop',idm=None,jdm=None,hafs_fix_idir=default_fix_idir,ddir=default_ddir):
-def read_fix_hycom_depth(basefname):
-  '''Read HYCOM DEPTH (model bathymetry) fix file.'''
-  #lines=[line.rstrip() for line in open(basefname+'.b')]
-  with open(basefname+'.b') as fh:
-    lines=[line.rstrip() for line in fh]
-  rangelines = [line.split() for line in lines if 'i/jdm = ' in line];
-  idm = int(rangelines[0][2])
-  jdm = int(rangelines[0][3].split(';')[0])
-  fname = basefname+'.a';
-  ijdm=idm*jdm
-  #DEBUG:    print(f'Loading {fname} at {datetime.now()}');
-  res = ma.array([],fill_value=1e30);
-  fid=open(fname,'rb')
-  fld=fid.read(ijdm*4)
-  fid.close()
-  fld=struct.unpack('>'+str(ijdm)+'f',fld)
-  fld=np.array(fld)
-  fld=ma.reshape(fld,(jdm,idm))
-  res=fld.copy()
-  res=ma.masked_greater(res,1e5)
-  return(res)
-#read_fix_hycom_depth
+# HYCOM bathymetry reader now lives in gplot_utils.ocean_reader.read_hycom_depth
+# (see Phase 0c of the NCL→Python migration plan). Local copy removed.
 
 def str2latlon(s,div=1.0,unwrap=False):
   if ( isinstance(s,str) ):
@@ -877,102 +863,82 @@ def kts2mps(kts):
 
 
 ##############################
+def _parse_args():
+  parser = argparse.ArgumentParser(description='GPLOT Ocean Obs plotter')
+  parser.add_argument('--idate', required=True, help='Forecast init date YYYYMMDDHH')
+  parser.add_argument('--sid', required=True, help='Storm ID (e.g. 13L)')
+  parser.add_argument('--ocean-domain', required=True, dest='ocean_domain')
+  parser.add_argument('--tier', required=True)
+  parser.add_argument('--ensid', default='')
+  parser.add_argument('--force', default='')
+  parser.add_argument('--resolution', type=float, required=True)
+  parser.add_argument('--rmax', type=float, required=True)
+  parser.add_argument('--levs', type=int, required=True)
+  parser.add_argument('--master-nml', required=True, dest='master_nml')
+  parser.add_argument('--ocean-source', default='HYCOM', dest='ocean_source',
+                      choices=['HYCOM', 'MOM6'])
+  parser.add_argument('--ocean-cfg', default='NHC', dest='ocean_cfg')
+  parser.add_argument('--fix-dir', default='', dest='fix_dir')
+  parser.add_argument('--wrap-lon', action='store_true', default=False, dest='wrap_lon')
+  return parser.parse_args()
+
+
 def main():
 
   global global_profile_num;
   global label1, label2, label3, label4, label5
-  
-  #Get command lines arguments
-  if len(sys.argv) < 11:
-    print("ERROR: Expected 11 command line arguments. Got "+str(len(sys.argv)))
-    sys.exit()
-  IDATE = sys.argv[1]
-  if IDATE == 'MISSING':
-    IDATE = ''
-  SID = sys.argv[2]
-  if SID == 'MISSING':
-    SID = ''
-  # DOMAIN = sys.argv[3]
-  # if DOMAIN == 'MISSING':
-  #   DOMAIN = ''
-  OCEAN_DOMAIN = sys.argv[3]
-  if OCEAN_DOMAIN == 'MISSING':
-    OCEAN_DOMAIN = ''
-  TIER = sys.argv[4]
-  if TIER == 'MISSING':
-    TIER = ''
-  ENSID = sys.argv[5]
-  if ENSID == 'XX':            ENSID = ''
-  if ENSID == 'MISSING':       ENSID = ''
-  if ENSID == '0':             ENSID = ''
-  FORCE = sys.argv[6]
-  if FORCE == 'MISSING':
-    FORCE = ''
-  RESOLUTION = sys.argv[7]
-  if RESOLUTION == 'MISSING':
-    RESOLUTION = ''
-  RMAX = sys.argv[8]
-  if RMAX == 'MISSING':
-    RMAX = ''
-  LEVS = sys.argv[9]
-  if LEVS == 'MISSING':
-    LEVS = ''
-  NMLIST = sys.argv[10]
-  if NMLIST == 'MISSING':
-    print("ERROR: Master Namelist can't be MISSING.")
-    sys.exit()
-  NMLDIR = GPLOT_DIR+'/parm'
+
+  args = _parse_args()
+  IDATE        = args.idate
+  SID          = args.sid
+  OCEAN_DOMAIN = args.ocean_domain
+  TIER         = args.tier
+  ENSID        = ens_utils.normalize_ensid(args.ensid)
+  FORCE        = args.force
+  OCEAN_SOURCE = args.ocean_source or 'HYCOM'
+  OCEAN_CFG    = args.ocean_cfg or 'NHC'
+  OCEAN_WRAP_LON = 'True' if args.wrap_lon else 'False'  # keep string form for existing compares
+  resolution = args.resolution
+  rmax = args.rmax
+  zsize_pressure = args.levs
+
+  # Locate master namelist
+  NMLIST = args.master_nml
   if os.path.exists(NMLIST):
     MASTER_NML_IN = NMLIST
-  elif os.path.exists(GPLOT_DIR+'/parm/'+NMLIST):
-    MASTER_NML_IN = NML_DIR+'/'+NMLIST
+  elif os.path.exists(os.path.join(GPLOT_DIR, 'parm', NMLIST)):
+    MASTER_NML_IN = os.path.join(GPLOT_DIR, 'parm', NMLIST)
   else:
     print("ERROR: I couldn't find the Master Namelist.")
-    sys.exit()
-  PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
-  OCEAN_SOURCE = sys.argv[11]
-  if OCEAN_SOURCE == 'MISSING' or OCEAN_SOURCE == '':
-    OCEAN_SOURCE = 'HYCOM'
-  OCEAN_CFG = sys.argv[12]
-  if OCEAN_CFG == 'MISSING' or OCEAN_CFG == '':
-    OCEAN_CFG = 'NHC'
-  FIX_DIR = sys.argv[13]
-  if FIX_DIR == 'MISSING' or FIX_DIR == '':
-    FIX_DIR = GPLOT_DIR+'/fix'
-  OCEAN_WRAP_LON = sys.argv[14]
-  if OCEAN_WRAP_LON == 'MISSING' or OCEAN_WRAP_LON == '':
-    OCEAN_WRAP_LON = 'False'
-  
-  
-  # Read the master namelist
-  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
-  #OCEAN_DSOURCE = subprocess.run(['grep','^OCEAN_DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
-  ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
-  try:
-    ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
-  except:
-    ODIR_TYPE = 0
-  if ODIR_TYPE == 1:
-    if ENSID == '':
-      ODIR = ODIR+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
-    else:
-      ODIR = ODIR+'/'+ENSID.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
-  else:
-    if ENSID == '':
-      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
-    else:
-      ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+ENSID.strip()+'/ocean_'+OCEAN_DOMAIN+'_obs'+'/'
+    sys.exit(1)
 
-  figext = '.png'
+  PYTHONDIR = GPLOT_DIR + '/sorc/GPLOT/python'
+  FIX_DIR = args.fix_dir.strip() if args.fix_dir else os.path.join(GPLOT_DIR, 'fix')
+
+  # Read the master namelist (replaces subprocess grep calls)
+  nml = nml_utils.read_master_namelist(MASTER_NML_IN)
+  plot_utils.configure_cartopy(nml.get('CARTOPY_DIR'))
+  DSOURCE       = nml.get('DSOURCE', 'HAFS')
+  OCEAN_DSOURCE = (nml.get('OCEAN_DSOURCE') or DSOURCE).strip()
+  EXPT          = nml.get('EXPT', '').strip()
+  ODIR_base     = nml.get('ODIR', '').strip()
   try:
-    DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
-    DO_CONVERTGIF = (DO_CONVERTGIF == 'True')
-    figext2 = '.gif'
-  except:
-    DO_CONVERTGIF = False
-    figext2 = '.png'
-  
+    ODIR_TYPE = int(nml.get('ODIR_TYPE', 0) or 0)
+  except (TypeError, ValueError):
+    ODIR_TYPE = 0
+  DO_CONVERTGIF = bool(nml.get('DO_CONVERTGIF', False))
+
+  # Ensemble member sub-directory ('' for deterministic -> unchanged path).
+  ENS_SUB = (ens_utils.member_segment(ENSID) + '/') \
+      if ens_utils.member_segment(ENSID) else ''
+  if ODIR_TYPE == 1:
+    ODIR = ODIR_base + '/' + ENS_SUB + 'ocean_' + OCEAN_DOMAIN + '_obs' + '/'
+  else:
+    ODIR = ODIR_base + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB + 'ocean_' + OCEAN_DOMAIN + '_obs' + '/'
+
+  figext  = '.png'
+  figext2 = '.gif' if DO_CONVERTGIF else '.png'
+
   # Define some important file names
   UNPLOTTED_FILE = ODIR.strip()+'UnplottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
   PLOTTED_FILE = ODIR.strip()+'PlottedOceanFiles.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
@@ -980,12 +946,16 @@ def main():
   STATUS_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
   ST_LOCK_FILE = ODIR.strip()+'status.'+OCEAN_DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
   ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
-  
+
   print(f'DEBUG: OCEAN_SOURCE {OCEAN_SOURCE}')
   # Get ocean depths (for some reason, generally left out of OCN_POST output files)
   if ( OCEAN_SOURCE == 'HYCOM' ):
-    DEPTH_FILE = FIX_DIR.strip()+DSOURCE.strip().lower()+'_'+OCEAN_SOURCE.strip().lower()+'_'+OCEAN_CFG.strip().lower()+'.basin.regional.depth'
-    depths = read_fix_hycom_depth(DEPTH_FILE);
+    depths_arr = ocean_reader.read_hycom_depth(FIX_DIR, OCEAN_DSOURCE.lower(), OCEAN_CFG.lower())
+    # Wrap in masked array so downstream ``depths.mask`` checks keep working.
+    depths = ma.masked_invalid(depths_arr)
+    DEPTH_FILE = os.path.join(
+        FIX_DIR,
+        f'{OCEAN_DSOURCE.lower()}_hycom_{OCEAN_CFG.lower()}.basin.regional.depth')
   else:
     DEPTH_FILE = f'{FIX_DIR.strip()}/{OCEAN_CFG.strip().lower()}/ocean_topog.nc';
     depths_ds = xr.open_dataset(DEPTH_FILE);
@@ -993,21 +963,23 @@ def main():
     depths_ds.close();
   #DEBUG:
   print(f'DEBUG:: DEPTH_FILE={DEPTH_FILE}, shape={depths.shape}');
-  
-  #Get parameters from input file
-  resolution = float(RESOLUTION)
-  rmax = float(RMAX)
-  zsize_pressure = int(LEVS)
-  
+
   # Read the plot title
   TBLDIR = GPLOT_DIR+'/tbl'
   print(f'EXPT --> {EXPT}');
-  try:
-    EXPT_TITLE = subprocess.run(['grep',f'^  *{EXPT} *,',f'{TBLDIR}/ExptInfo.dat'], stdout=subprocess.PIPE).stdout.decode('utf-8').split(",")[1].strip()
-  except:
-    EXPT_TITLE = EXPT
+  EXPT_TITLE = EXPT
+  tbl_path = os.path.join(TBLDIR, 'ExptInfo.dat')
+  if os.path.isfile(tbl_path):
+    pat = re.compile(r'^\s+' + re.escape(EXPT) + r'\s*,')
+    with open(tbl_path) as fh:
+      for line in fh:
+        if pat.match(line):
+          parts = line.split(',')
+          if len(parts) > 1:
+            EXPT_TITLE = parts[1].strip()
+          break
   print(f'EXPT_TITLE --> {EXPT_TITLE}');
-  
+
   # Get the ATCF file.
   ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
   if ATCF_LIST.size > 1:
@@ -1016,7 +988,12 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
+  # Ensemble member ATCF is 00L-named, so use the requested SID instead of the
+  # filename to identify the storm.
+  if ENSID and SID:
+    LONGSID = SID
+  else:
+    LONGSID = str(ATCF).split('/')[-1].split('.')[0]
   #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
   TCNAME = LONGSID[::-1]
   TCNAME = TCNAME[3:]
@@ -1026,10 +1003,16 @@ def main():
   SNUM = SNUM[::-1]
   BASINID = LONGSID[::-1]
   BASINID = BASINID[0]
-  ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
-  ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
-  
-  
+  # Parse ATCF into DataFrame (replaces manual genfromtxt + string reversal).
+  # read_atcf() already filters to the 34-kt wind radii rows, matching the
+  # legacy "ATCF_DATA[:,11] contains '34'" filter.
+  atcf_df = atcf_utils.read_atcf(str(ATCF))
+
+  # Ensemble member ATCFs are multi-storm; keep only this storm.
+  if ENSID and SID:
+    atcf_df = ens_utils.filter_atcf_df(atcf_df, SID[-1], SID[:-1])
+
+
   # Get the list of unplotted files
   UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
   
@@ -1059,57 +1042,51 @@ def main():
     FILE_BASE = os.path.basename(FILE)
     FILE_DIR = os.path.dirname(FILE)
     
-    # Find the index of the forecast lead time in the ATCF file.
+    # Find this forecast hour in the ATCF DataFrame.
     FHR = int(FHR_LIST[fff])
-    FHRIND = [i for i, s in enumerate(ATCF_DATA[:,5]) if int(s)==FHR]
-    
-    # Get coordinate information from ATCF
-    lonstr = ATCF_DATA[list(FHRIND),7][0]
-    print('lonstr = ',lonstr)
-    lonstr1 = lonstr[::-1]
-    lonstr1 = lonstr1[1:]
-    lonstr1 = lonstr1[::-1]
-    lonstr2 = lonstr[::-1]
-    lonstr2 = lonstr2[0]
-    if (lonstr2 == 'W'):
-      centerlon = 360-float(lonstr1)/10
-    else:
-      centerlon = float(lonstr1)/10
-    latstr = ATCF_DATA[list(FHRIND),6][0]
-    latstr1 = latstr[::-1]
-    latstr1 = latstr1[1:]
-    latstr1 = latstr1[::-1]
-    latstr2 = latstr[::-1]
-    latstr2 = latstr2[0]
-    if (latstr2 == 'N'):
-      centerlat = float(latstr1)/10
-    else:
-      centerlat = -1*float(latstr1)/10
-    tracklats = str2latlon(ATCF_DATA[slice(0,FHRIND[0]+1),6],10)
-    tracklons = str2latlon(ATCF_DATA[slice(0,FHRIND[0]+1),7],10,unwrap=True)
+    row_mask = atcf_df['fhr'] == FHR
+    if not row_mask.any():
+      print(f'WARNING: fhr={FHR} not present in ATCF. Skipping.')
+      plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
+      continue
+    row = atcf_df[row_mask].iloc[0]
+    hist = atcf_df[atcf_df['fhr'] <= FHR].sort_values('fhr')
+
+    # Get coordinate information from ATCF DataFrame (lat/lon already
+    # decimal degrees, signed).
+    centerlon = float(row['lon'])
+    if centerlon < 0:
+      centerlon = centerlon + 360
+    centerlat = float(row['lat'])
+    print('centerlon, centerlat = ', centerlon, centerlat)
+    tracklats = list(hist['lat'].astype(float).values)
+    tracklons = list(hist['lon'].astype(float).values)
+    # Unwrap longitudes to match the old unwrap=True behaviour used for the
+    # 6-hour projection below.
+    tracklons = [ln + 360 if ln < 0 else ln for ln in tracklons]
 
     # Where do we forecast the storm will be in 6 h?
-    tspeedkts = np.double(ATCF_DATA[list(FHRIND),26][0])/10
-    tdir = np.double(ATCF_DATA[list(FHRIND),25][0])
-    [projlon,projlat,backaz] = translate_wgs84(tracklons[-1],tracklats[-1],
-                                               kts2mps(tspeedkts)*3600*6,
-                                               tdir);
-    
-    forecastinit = ATCF_DATA[list(FHRIND),2][0]
-    maxwind = ATCF_DATA[list(FHRIND),8][0]
-    minpressure = ATCF_DATA[list(FHRIND),9][0]
-    rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    tspeedkts = float(row['storm_speed']) / 10 if row['storm_speed'] != -99 else 0.0
+    tdir      = float(row['storm_dir'])        if row['storm_dir']   != -99 else 0.0
+    [projlon, projlat, backaz] = translate_wgs84(tracklons[-1], tracklats[-1],
+                                                 kts2mps(tspeedkts) * 3600 * 6,
+                                                 tdir)
+
+    forecastinit = str(row['cycle'])
+    maxwind      = str(int(row['vmax']))
+    minpressure  = str(int(row['mslp']))
+    rmwnmi       = str(int(row['rmw']))
     #trey additions start
-    neq34 = float(ATCF_DATA[list(FHRIND),13][0]) 
-    seq34 = float(ATCF_DATA[list(FHRIND),14][0]) 
-    swq34 = float(ATCF_DATA[list(FHRIND),15][0]) 
-    nwq34 = float(ATCF_DATA[list(FHRIND),16][0])
+    neq34 = float(row['rad_ne'])
+    seq34 = float(row['rad_se'])
+    swq34 = float(row['rad_sw'])
+    nwq34 = float(row['rad_nw'])
     #treyend
     # HACK: This should be revisited.
     if centerlat > 50.0:
       print('WARNING: The latitude is poleward of +/- 50. Skipping.')
       # Write the input file to a log to mark that it has ben processed
-      io.update_plottedfile(PLOTTED_FILE, FILE)
+      plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
       continue
 
     print(f'MSG: Searching for graphics products that match --> {ODIR}/*{LONGSID.lower()}*f{FHR:03}{figext2}')
@@ -1119,7 +1096,7 @@ def main():
       print(f'MSG: Please delete all {figext2} files for this lead time to reproduce graphics. Skipping.')
 
       # Write the input file to a log to mark that it has ben processed
-      io.update_plottedfile(PLOTTED_FILE, FILE)
+      plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
       continue
 
     print(f'MSG: I can\'t find the graphical products for this lead time (figuretest={figuretest}). Proceeding.')
@@ -1684,10 +1661,7 @@ def main():
       figfname = ODIR+'/'+LONGSID.lower()+'.sst_ohc_profs.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'_obs'+'.f'+format(FHR,'03d')
       #DEBUB:
       print(figfname+figext);
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      plt.close(fig1)
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
 
     if do_sst_mlt_profiles == 'Y':
@@ -1783,10 +1757,7 @@ def main():
       figfname = ODIR+'/'+LONGSID.lower()+'.sst_mlt_profs.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'_obs'+'.f'+format(FHR,'03d')
       #DEBUB:
       print(figfname+figext);
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      plt.close(fig1)
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     
     
     if do_iso_26_mlt_profiles == 'Y':
@@ -1882,10 +1853,7 @@ def main():
       figfname = ODIR+'/'+LONGSID.lower()+'.iso_26_mlt_profs.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'_obs'+'.f'+format(FHR,'03d')
       #DEBUB:
       print(figfname+figext);
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      plt.close(fig1)
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
 
     if do_mlt_mld_profiles == 'Y':
@@ -1982,10 +1950,7 @@ def main():
       figfname = ODIR+'/'+LONGSID.lower()+'.mlt_mld_profs.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'_obs'+'.f'+format(FHR,'03d')
       #DEBUB:
       print(figfname+figext);
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      plt.close(fig1)
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
 
     if do_sss_mls_profiles == 'Y':
@@ -2080,19 +2045,25 @@ def main():
       figfname = ODIR+'/'+LONGSID.lower()+'.sss_mls_profs.'+forecastinit+'.ocean_'+OCEAN_DOMAIN+'_obs'+'.f'+format(FHR,'03d')
       #DEBUB:
       print(figfname+figext);
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      plt.close(fig1)
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
 
     # Write the name of the input file to a log to mark that it has ben processed
-    update_plottedfile(PLOTTED_FILE, FILE)
+    plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
     print(f'MSG: Done with Plots {datetime.now()}')
   
+  # Retry-convert any orphan .png left behind by transient ImageMagick
+  # failures. If the retry also fails, write status='incomplete' so
+  # the workflow re-invokes us next iteration.
+  _sweep = plot_utils.sweep_orphan_pngs(ODIR)
+  _status_value = 'incomplete' if _sweep.get('still_failed', 0) > 0 else 'complete'
+  if _status_value == 'incomplete':
+      print(f"WARNING: ocean_obs: {_sweep['still_failed']} PNG(s) still "
+            f"unconverted after sweep; writing status='incomplete'.")
+
   print('MSG: COMPLETING')
   os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
-  os.system('echo "complete" > '+STATUS_FILE)
+  os.system('echo "'+_status_value+'" > '+STATUS_FILE)
   os.system('rm -f '+ST_LOCK_FILE)
 
 
@@ -2175,16 +2146,9 @@ def axes_radhgt(ax, xmax, xmin, ymax=18, ymin=0):
   return ax
 
 
-def update_plottedfile(OFILE, IFILE):
-  """Update the GPLOT PlottedFiles file to mark a file as processed.
-  @param OFILE: the plotted file path as a string
-  @param IFILE: the model output file that was processed
-  """
-  os.system("sed -i '/"+str(os.path.basename(IFILE))+"/d' "+OFILE)
-  os.system('echo "'+str(IFILE)+' 1" >> '+OFILE)
-  os.system('sort -u '+OFILE+' > '+OFILE+'.TMP')
-  os.system('mv '+OFILE+'.TMP '+OFILE)
-
+# NOTE: The legacy update_plottedfile() has been replaced by
+# gplot_utils.plot_utils.update_plotted_file(); see Session C of the
+# legacy-Python refactor in memory/ncl_to_python_migration.md.
 
 
 ##############################

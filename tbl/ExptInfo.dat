@@ -63,3 +63,7 @@
                                 hafsv2.1.1c_rt,   Experimental HAFS V2.1.1C
                                  AIFS_Forecast,   Experimental AIFS
                                  GDMO_Forecast,   Experimental Google Deepmind
+              hafsv2p2_final_multistorm_merged,   Experimental HAFSV2.2Multistorm
+                              hafs_v2p2b_final,  HAFSV2.2B Final
+     hafsv2p2_final_multistorm_merged_atlantic,  Experimental HAFSV2.2Multistorm Atlantic
+      hafsv2p2_final_multistorm_merged_pacific,  Experimental HAFSV2.2Multistorm Pacific

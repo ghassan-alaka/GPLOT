@@ -128,6 +128,10 @@ for NML in "${NML_LIST[@]}"; do
     if [ "${DO_OCEAN_OBS}" = "True" ]; then
         GPMODLIST+=("ocean_obs")
     fi
+    DO_ENS_COMPARE="`sed -n -e 's/^DO_COMPARISON =\s//p' ${NML} | sed 's/^\t*//'`"
+    if [ "${DO_ENS_COMPARE}" = "True" ]; then
+        GPMODLIST+=("ens_compare")
+    fi
     echo "MSG: Working on these GPLOT modules --> ${GPMODLIST[*]}"
 
     # Get the experiment name

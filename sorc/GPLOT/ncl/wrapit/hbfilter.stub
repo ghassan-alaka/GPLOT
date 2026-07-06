@@ -1,6 +1,0 @@
-C NCLFORTSTART
-	subroutine hbfilter(INPUT,OUTPUT,NMAX,NI,NJ,NK)
-	implicit none
-	integer NMAX,NI,NJ,NK
-	real INPUT(NI,NJ,NK),OUTPUT(NI,NJ,NK)
-C NCLEND

@@ -28,7 +28,7 @@ fi
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -115,7 +115,7 @@ fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
         CPU_ACCT="aoml-hafs1"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ]; then
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ] || [ "${MACHINE}" == "HERCULES" ]; then
         CPU_ACCT="aoml-hafs1"
     else
         CPU_ACCT="aoml-hafs1"
@@ -137,6 +137,8 @@ if [ -z "${PARTITION}" ]; then
         PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
+    elif [ "${MACHINE^^}" == "HERCULES" ]; then
+        PARTITION="hercules"
     else
         PARTITION="u1-compute"
     fi
@@ -218,7 +220,8 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-### Matt Donahue 04/02/2026 - removed EID == 00 -> deterministic behavior
+# NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
+# a bare "0" or an empty list marks a deterministic run.
 if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
@@ -234,10 +237,11 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-if [ "${IS_ENS}" == "False" ]; then
-    MAX_JOBS=25
-else
+# Ensembles submit one job per (member x storm x domain x tier).
+if [ "${IS_ENS}" == "True" ]; then
     MAX_JOBS=525
+else
+    MAX_JOBS=25
 fi
 
 # Get the 'sbatch' executable
@@ -273,7 +277,7 @@ fi
 #    on SHIPS fields and other relevant predictors.         #
 #############################################################
 if [ "${DO_SHIPS}" = "True" ]; then
-    NCLFILE="GPLOT_ships.ncl"
+    PYFILE="GPLOT_ships.py"
     BATCHFILE="batch_ships.sh"
     DOMAIN="ships"
     TIER="Tier1"
@@ -330,18 +334,17 @@ if [ "${DO_SHIPS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                # Lew.Gramer@noaa.gov 2025-09-04 (merged by Matt Donahue 2026-04-02)
-                if [ "${IS_ENS}" == "False" ]; then 
+                if [ "${IS_ENS}" == "False" ]; then
                     for ATCF in ${CYCLE_ATCF[@]}; do
                         STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
                     done
                 else
+                    # Ensemble member ATCFs are 00L-named, so derive the real
+                    # storms from the ATCF *contents* (basin + storm number).
                     for ATCF in ${CYCLE_ATCF[@]}; do
-                        # Find storms based on contents of ATCF file(s)...
-                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} |sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/'  | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} | sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/' | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
                     done
                 fi
-                # end Lew + Matt changes from 2025-09-04 and 2026-04-02
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -363,8 +366,9 @@ if [ "${DO_SHIPS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE, 2026-04-02 M.D. - only if not ENS!
-            if [ "${IS_ENS}" == "False" ]; then 
+            # were found, i.e., STORMS != NONE. Skip for ensembles (member files
+            # are already 00L-named for the real storm).
+            if [ "${IS_ENS}" == "False" ]; then
                 if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
                     STORMS+=("00L")
                 fi
@@ -384,29 +388,23 @@ if [ "${DO_SHIPS}" = "True" ]; then
             # LOOP OVER STORMS #
             ####################
             for STORM in ${STORMS[@]}; do
-
-                ### MATT CHANGE 7/26/2025 - only skip fake storm in deterministic
-                ### Merged 04/02/2026
-                if [ "${IS_ENS}" == "False" ]; then 
-                    # Never process the fake storm (00L)
-                    if [ "${STORM^^}" == "00L" ]; then
-                        echo "MSG: Fake storm detected ${STORM}. Skipping."
-                        continue
-                    fi
+    
+                # Never process the fake storm (00L)
+                if [ "${STORM^^}" == "00L" ]; then
+                    echo "MSG: Fake storm detected ${STORM}. Skipping."
+                    continue
                 fi
     
-		        if [ "${IS_ENS}" == "False" ]; then 
-                    # Find the forecast hours from the ATCF for this particular storm
-                    # only in deterministic - Matt Donahue 04/02/2026
+                # Find the forecast hours from the ATCF for this particular storm.
+                # Ensemble member ATCFs are 00L-named; the per-member ATCF is
+                # narrowed by ENSID inside the ID loop below.
+                if [ "${IS_ENS}" == "False" ]; then
                     STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-                    if [ ! -z "${STORM_ATCF[*]}" ]; then
-                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                    fi
                 else
                     STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
-                    if [ ! -z "${STORM_ATCF[*]}" ]; then
-                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                    fi
+                fi
+                if [ ! -z "${STORM_ATCF[*]}" ]; then
+                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
                 fi
     
                 #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -532,26 +530,19 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             ENSID="XX"
                             ENSIDTAG=""
                             MODEL="${MID}"
-                        else ### MATT CHANGE 7/26/2025 - don't index MID, one model
-                            ### merged 04/02/2026
-                            ENSID=$(printf "%02s\n" "$ID")
-                            
-                            # LJG no "E" 
+                        else
+                            # %02s (string) not %02d so member ids "08"/"09" don't
+                            # parse as invalid octal. No "E" prefix; single model.
+                            ENSID=$(printf "%02s\n" "${ID}")
                             ENSIDTAG=".${ENSID}"
                             MODEL="${MID}"
                         fi
-			            ### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
-                        #((NID++))
 
-                        # Reset FORCE
-                        FORCE="${FORCE_ORIG}"
-
-                        #### MATT CHANGE 7/27/2025 - search for ensemble member ATCF file:
-                        #### note - can put this above in ELSE part of ensemble check, was just working on this at other time
-                        #### Merged 04/02/2026
+                        # For ensembles, narrow the ATCF to this member's per-member
+                        # path .../${CYCLE}/${ENSID}.
                         if [ "${IS_ENS}" == "True" ]; then
                             for ATCF in "${ATCF_TMP[@]}"; do
-                                if [[ "$ATCF" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
                                     STORM_ATCF="${ATCF}"
                                     CYCLE_ATCF="${ATCF}"
                                     break
@@ -559,14 +550,16 @@ if [ "${DO_SHIPS}" = "True" ]; then
                             done
                         fi
 
-                        # Create full output path
+                        # Reset FORCE
+                        FORCE="${FORCE_ORIG}"
+
+                        # Create full output path. Member id (empty for
+                        # deterministic) sits between cycle and domain.
+                        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
+                            ODIR_FULL="${ODIR}/${ENSID_DIR}/${DMN}/"
                         else
-                            #### MATT CHANGE 7/27/2025 - switch order of cycle and ensidtag
-                            #### Merged 04/02/2026
-                            #ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
-                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/$(echo ${ENSIDTAG} | cut -c2-)/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${ENSID_DIR}/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -718,8 +711,8 @@ if [ "${DO_SHIPS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                #### ensemble change merged 04/02/2026
-                                if [ "${IS_ENS}" == "False" ]; then 
+                                # Ensemble GRIB2 files are 00L-named.
+                                if [ "${IS_ENS}" == "False" ]; then
                                     FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 else
                                     FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
@@ -757,13 +750,32 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                             # Break the loop if all input directory options have been searched
                             if [ ${F} -gt ${#IDIR_OPTS[@]} ]; then
-                                echo "ERROR: No files were found. Try fixing IDIR in the namelist."
+                                echo "MSG: Searched all known IDIR_OPTS subdirectory layouts for ${STORM} ${CYCLE} under IDIR=${IDIR}; nothing matched."
                                 break
                                 #exit
                             fi
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "WARNING: Nothing to do here. Moving on to the next case."
+                            echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
+                            echo "WARNING: Skipping ships for this case; check that model output exists for this cycle."
+                            # Mark the case as 'incomplete' so the workflow's status
+                            # check (find -name 'status.*') sees a non-complete entry
+                            # and keeps retrying. Only fill the gap if no status file
+                            # exists yet -- never overwrite an active state
+                            # (working/update request/...) or a prior terminal state
+                            # (complete/failed/broken).
+                            mkdir -p "${ODIR_FULL}" 2>/dev/null
+                            STATUS_FILE_NOINPUT="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
+                            LOCK_FILE_NOINPUT="${STATUS_FILE_NOINPUT}.lock"
+                            lockfile -r-1 -l 180 "${LOCK_FILE_NOINPUT}"
+                            EXISTING_STATUS=$(cat "${STATUS_FILE_NOINPUT}" 2>/dev/null)
+                            if [ -z "${EXISTING_STATUS}" ]; then
+                                echo "MSG: No prior status; writing 'incomplete' so the workflow knows this case is outstanding."
+                                echo "incomplete" > "${STATUS_FILE_NOINPUT}"
+                            else
+                                echo "MSG: Status exists (${EXISTING_STATUS}); leaving it alone."
+                            fi
+                            rm -f "${LOCK_FILE_NOINPUT}"
                             echo ""
                             continue
                         fi
@@ -840,7 +852,17 @@ if [ "${DO_SHIPS}" = "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename ${CFILE}`" -mmin +15 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        # Python's update_plotted_file writes a 2-column
+                                        # "<file> <status>" row. Legacy NCL wrote 3
+                                        # columns "<file> <NATCF> <ATCFDONE>". Accept
+                                        # both: empty ATCFDONE means Python wrote the
+                                        # row, so the entry's mere presence is the
+                                        # "done" signal -- works under multistorm
+                                        # where ATCF_EXP=N wouldn't equal Python's
+                                        # NATCF=1. See spawn_maps.sh for full rationale.
+                                        if [ -z "${ATCFDONE}" ] \
+                                           || [ "${ATCF_EXP}" -eq "${NATCF}" ] \
+                                           || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi
@@ -992,25 +1014,25 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
-                            RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="04:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="04:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="05:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="05:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="06:29:59"
+                        else
+                            RUNTIME="06:59:59"
                         fi
 
 
@@ -1051,7 +1073,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
 
                             # Submit the child batch job.
                             echo "MSG: Submitting GPLOT child batch job. BATCH_MODE = ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST}"
                             FULL_CMD="${FULL_CMD} ${ENSID} ${CYCLE} ${STORM} ${FORCE} ${DMN} ${TR}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
@@ -1083,14 +1105,14 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
-			            ### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
-			            ((NID++))
+                        # Advance member index at the END of the ID loop.
+                        ((NID++))
 
                     done #end of ID loop
-                done #end of TR loop
-            done #end of DMN loop
-        done #end of STORM loop
-    done #end of CYCLE loop
+                done #end of DMN loop
+            done #end of STORM loop
+        done #end of CYCLE loop
+    done #end of TR loop
 fi #end of DO_SHIPS
 
 wait

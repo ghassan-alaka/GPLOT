@@ -9,7 +9,7 @@ HWFI,       HWFI: Interp. HWRF,  9,              purple,                      Op
 AVNO,          AVNO: Oper. GFS,  6,                blue,                        Global Forecast System
 AVNI,        AVNI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
 GFSO,          GFSO: Oper. GFS,  6,                blue,                        Global Forecast System
-GFSI,        GFSI: Interp. GFS,  6,                blue.                Global Forecast System (Early)
+GFSI,        GFSI: Interp. GFS,  6,                blue,                Global Forecast System (Early)
 HMON,         HMON: Oper. HMON,  4,               green,                              Operational HMON
 HMNI,       HMNI: Interp. HMON,  4,               green,                      Operational HMON (Early)
 NVGM,       NVGM: Oper. NAVGEM, 15,               brown,                            Operational NAVGEM
@@ -48,8 +48,8 @@ HFXA,        HFXA: HAFSV2.1.1A,  7,              orange,                Experime
 HFXB,        HFXB: HAFSV2.1.1B,  8,             magenta,                Experimental HAFS V2.1.1B
 HXAI,  HXAI: Early HAFSV2.1.1A,  7,              orange,                Experimental HAFS V2.1.1A (Early)
 HXBI,  HXBI: Early HAFSV2.1.1B,  8,             magenta,                Experimental HAFS V2.1.1B (Early)
-HFXM,          HFXM: HAFSV2.1M,  8,           deeppink4,                Experimental HAFS V2.1M
-HXMI,    HXMI: Early HAFSV2.1M,  8,           deeppink4,                Experimental HAFS V2.1M (Early)
+HFXM,          HFXM: HAFSV2.2M,  8,           deeppink4,                Experimental HAFS V2.2M
+HXMI,    HXMI: Early HAFSV2.2M,  8,           deeppink4,                Experimental HAFS V2.2M (Early)
 HFXC,        HFXC: HAFSV2.1.1C,  5,           lightpink,                Experimental HAFS V2.1.1C
 HXCI,  HXCI: Early HAFSV2.1.1C,  5,           lightpink,                Experimental HAFS V2.1.1C (Early)
 HFXO,        HFXM: HAFSV2.1.1M,  4,                navy,                Experimental HAFS V2.1.1O

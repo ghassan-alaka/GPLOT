@@ -11,13 +11,13 @@
 #SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
 #SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
-#SBATCH --mem=48G
+#SBATCH --mem=96G
 
 set -x
 
 # 1. Get command line arguments
 MACHINE="${1:-${MACHINE}}"
-NCLFILE="${2}"
+PYFILE="${2}"
 LOGFILE="${3}"
 NMLIST="${4:-namelist.master.default}"
 ENSID="${5:-XX}"
@@ -32,38 +32,38 @@ if [ -z "${GPLOT_DIR}" ]; then
     export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f4- | rev )"
 fi
 
-# Source the .profile to optimize the environment
-source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 0
+# Source GPLOT_mods to optimize the environment
+source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 2. Build list in input arguments for NCL
-NCL_ARGS=()
-if [ ! -z "${IDATE}" ]; then
-    NCL_ARGS+=('IDATE="'"${IDATE}"'"')
-fi
-if [ ! -z "${SID}" ]; then
-    NCL_ARGS+=('SID="'"${SID}"'"')
-fi
-if [ ! -z "${DOMAIN}" ]; then
-    NCL_ARGS+=('DOMAIN="'"${DOMAIN}"'"')
-fi
-if [ ! -z "${TIER}" ]; then
-    NCL_ARGS+=('TIER="'"${TIER}"'"')
-fi
-if [ "${ENSID}" == "XX" ]; then
-    NCL_ARGS+=('ENSID=""')
-elif [ ! -z "${ENSID}" ]; then
-    NCL_ARGS+=('ENSID="'"${ENSID}"'"')
-fi
-if [ ! -z "${FORCE}" ]; then
-    NCL_ARGS+=('FORCE="'"${FORCE}"'"')
-fi
-if [ ! -z "${NMLIST}" ]; then
-    NCL_ARGS+=('MASTER_NML_IN="'"${NMLIST}"'"')
+# Export the per-machine offline cartopy cache so plot_utils.configure_cartopy()
+# can fall back to it (as CARTOPY_DATA_DIR) when a namelist lacks a valid
+# CARTOPY_DIR -- e.g. namelist.master.HAFS_Default's placeholder. Without this,
+# cartopy tries to download Natural Earth data on an offline compute node and hangs.
+BATCH_DFLTS="${GPLOT_DIR}/parm/batch.defaults.${MACHINE,,}"
+if [ -f "${BATCH_DFLTS}" ]; then
+    CARTOPY_DIR_DFLT="`sed -n -e 's/^cartopy_dir =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+    if [ -n "${CARTOPY_DIR_DFLT}" ]; then
+        export CARTOPY_DATA_DIR="${CARTOPY_DIR_DFLT}"
+    fi
 fi
 
-# 2. Submit the NCL job
-echo "${NCL_ARGS[*]}"
-ncl "${NCL_ARGS[@]}" ${NCLFILE} > ${LOGFILE}
+# 2. Build list of input arguments for Python
+PY_ARGS=()
+PY_ARGS+=("--idate" "${IDATE}")
+PY_ARGS+=("--sid" "${SID}")
+PY_ARGS+=("--domain" "${DOMAIN}")
+PY_ARGS+=("--tier" "${TIER}")
+PY_ARGS+=("--master-nml" "${NMLIST}")
+if [ "${ENSID}" != "XX" ] && [ ! -z "${ENSID}" ]; then
+    PY_ARGS+=("--ensid" "${ENSID}")
+fi
+if [ "${FORCE}" == "True" ]; then
+    PY_ARGS+=("--force")
+fi
+
+# 2. Submit the Python job
+echo "python3 ${PYFILE} ${PY_ARGS[@]}"
+python3 ${PYFILE} "${PY_ARGS[@]}" > ${LOGFILE} 2>&1
 
 wait
 

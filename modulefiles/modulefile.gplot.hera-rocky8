@@ -49,7 +49,7 @@ fi
 
 # NCAR Command Language (NCL)
 if [ "${A}" -eq 0 ]; then
-    export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+    export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/python/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 fi
 
 # Model Evaluation Tools (MET)

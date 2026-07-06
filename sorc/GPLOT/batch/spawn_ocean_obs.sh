@@ -162,7 +162,7 @@ fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
         CPU_ACCT="aoml-hafs1"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ]; then
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ] || [ "${MACHINE}" == "HERCULES" ]; then
         CPU_ACCT="aoml-hafs1"
     else
         CPU_ACCT="aoml-hafs1"
@@ -184,6 +184,8 @@ if [ -z "${PARTITION}" ]; then
         PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
+    elif [ "${MACHINE^^}" == "HERCULES" ]; then
+        PARTITION="hercules"
     else
         PARTITION="tjet,ujet,u1-compute"
     fi
@@ -277,6 +279,8 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
+# NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
+# a bare "0" or an empty list marks a deterministic run.
 if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
@@ -292,10 +296,11 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-if [ "${IS_ENS}" == "False" ]; then
-    MAX_JOBS=25
-else
+# Ensembles submit one job per (member x storm x domain x tier).
+if [ "${IS_ENS}" == "True" ]; then
     MAX_JOBS=525
+else
+    MAX_JOBS=25
 fi
 
 # Get the 'sbatch' executable
@@ -390,14 +395,15 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                if [ "${IS_ENS}" == "False" ]; then 
+                if [ "${IS_ENS}" == "False" ]; then
                     for ATCF in ${CYCLE_ATCF[@]}; do
                         STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
                     done
                 else
+                    # Ensemble member ATCFs are 00L-named, so derive the real
+                    # storms from the ATCF *contents* (basin + storm number).
                     for ATCF in ${CYCLE_ATCF[@]}; do
-                        # Find storms based on contents of ATCF file(s)...
-                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} |sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/'  | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} | sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/' | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
                     done
                 fi
             fi
@@ -421,11 +427,12 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_ENS}" == "False" ]; then 
-                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                    STORMS+=("00L")
-                fi
+            # were found, i.e., STORMS != NONE. Skip for ensembles (member files
+            # are already 00L-named for the real storm).
+            if [ "${IS_ENS}" == "True" ]; then
+                :
+            elif [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                STORMS+=("00L")
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -448,20 +455,19 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                 # Increase the storm counter
                 ((NSTORM=NSTORM+1))
     
-		if [ "${IS_ENS}" == "False" ]; then 
-                    # Find the forecast hours from the ATCF for this particular storm
+                # Find the forecast hours from the ATCF for this particular storm
+                # Ensemble member ATCFs are 00L-named; the per-member ATCF is
+                # narrowed by ENSID inside the ID loop below.
+                if [ "${IS_ENS}" == "False" ]; then
                     STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
-                    if [ -z "${STORM_ATCF[*]}" ]; then
-                        echo "WARNING: No ATCF found for ${STORM}. This might be OK."
-                    else
-                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                        #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
-                    fi
                 else
                     STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
-                    if [ ! -z "${STORM_ATCF[*]}" ]; then
-                        echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
-                    fi
+                fi
+                if [ -z "${STORM_ATCF[*]}" ]; then
+                    echo "WARNING: No ATCF found for ${STORM}. This might be OK."
+                else
+                    echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
+                    #ATCF_FHRS=( `awk -F',' '{print $6}' ${STORM_ATCF[0]} | sort -u | sort -k1,1n | sed 's/^0*//' | sed -e 's/^[[:space:]]*//'` )
                 fi
     
                 #Keep only the ATCF forecast hours that match namelist options: INIT_HR,FNL_HR,DT
@@ -481,7 +487,6 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                 #########################
                 # LOOP OVER MAP DOMAINS #
                 #########################
-                # note - spawn_ocean_maps has many more domain checks here- is this missing something?
                 for DMN in ${OCEAN_OBS_DOMAIN[@]}; do
                     echo ""
     
@@ -600,22 +605,18 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                             ENSIDTAG=""
                             MODEL="${MID}"
                         else
-                            #Matt change 2/18/2026 - reading ID=XX as a number treats it as octal type, fails for 08 and 09
-                            ENSID=$(printf "%02s\n" "$ID")
-                            #ENSID=$(printf "%02d\n" ${ID})
-                            # LJG no "E" 
+                            # %02s (string) not %02d so member ids "08"/"09" don't
+                            # parse as invalid octal. No "E" prefix; single model.
+                            ENSID=$(printf "%02s\n" "${ID}")
                             ENSIDTAG=".${ENSID}"
                             MODEL="${MID}"
                         fi
 
-                        # Reset FORCE
-                        FORCE="${FORCE_ORIG}"
-
-                        #### MATT CHANGE 5/4/2026 - search for ensemble member ATCF file:
-                        #### note - need to do this within ensemble loop
+                        # For ensembles, narrow the ATCF to this member's per-member
+                        # path .../${CYCLE}/${ENSID}.
                         if [ "${IS_ENS}" == "True" ]; then
                             for ATCF in "${ATCF_TMP[@]}"; do
-                                if [[ "$ATCF" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
                                     STORM_ATCF="${ATCF}"
                                     CYCLE_ATCF="${ATCF}"
                                     break
@@ -623,12 +624,16 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                             done
                         fi
 
-                        # Create full output path
-                        #MD 5/4/2026 - CYCLE before ENSID, and include ENSID for ODIR1 and ODIR2
+                        # Reset FORCE
+                        FORCE="${FORCE_ORIG}"
+
+                        # Create full output path. Member id (empty for
+                        # deterministic) sits between cycle and domain.
+                        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/$(echo ${ENSIDTAG} | cut -c2-)/ocean_${DMN}_obs/"
+                            ODIR_FULL="${ODIR}/${ENSID_DIR}/ocean_${DMN}_obs/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/$(echo ${ENSIDTAG} | cut -c2-)/ocean_${DMN}_obs/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${ENSID_DIR}/ocean_${DMN}_obs/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -754,7 +759,29 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" "${YYYY}${MM}${DD}/${HH}/" "${EXPT}_${ENSID}/com/${CYCLE_STR}/${STORM}/" \
                                    "${EXPT}_${ENSID}/com/${CYCLE_STR}/00L/" "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/" \
                                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
-    
+
+                        # Multistorm: HAFS workflow points OCEAN_DIR at COMhafs/<STORM>/,
+                        # so the shared ocean output (model side) is a *sibling* of
+                        # OCEAN_DIR rather than a subdir. The existing 00L entries above
+                        # all stay below OCEAN_DIR, so they never resolve to
+                        # <root>/com/<cycle>/00L/. Add an explicit sibling-00L variant
+                        # here when it makes sense:
+                        #   * IS_MSTORM=True (don't perturb single-storm runs)
+                        #   * The parent of OCEAN_DIR contains a 00L/ subdir
+                        #   * That subdir is genuinely different from OCEAN_DIR itself
+                        #     (so the 00L pass, whose OCEAN_DIR already ends in 00L/,
+                        #     gets no additional variant)
+                        # Same pattern as the spawn_ocean_maps.sh fix in 8431fee.
+                        if [ "${IS_MSTORM}" == "True" ]; then
+                            OCEAN_DIR_PARENT="$(dirname "${OCEAN_DIR%/}")"
+                            SIBLING_00L="${OCEAN_DIR_PARENT}/00L"
+                            if [ -d "${SIBLING_00L}" ] \
+                               && [ "$(cd "${SIBLING_00L}" && pwd -P)" != "$(cd "${OCEAN_DIR%/}" && pwd -P)" ]; then
+                                OCEAN_DIR_OPTS+=("../00L/")
+                                echo "MSG: IS_MSTORM=True; appended sibling-00L variant (resolved: ${SIBLING_00L}) to OCEAN_DIR_OPTS."
+                            fi
+                        fi
+
                         # Get the right list of lead times
                         if [ "${SC}" == "True" ] && [ "${ATCF_REQD}" == "True" ]; then
                             FILE_FHRS=( ${ATCF_FHRS[@]} )
@@ -785,7 +812,8 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${OCEAN_DIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${OCEAN_DIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                if [ "${IS_ENS}" == "False" ]; then 
+                                # Ensemble ocean files are 00L-named.
+                                if [ "${IS_ENS}" == "False" ]; then
                                     FILE_SEARCH3="${OCEAN_DIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 else
                                     FILE_SEARCH3="${OCEAN_DIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
@@ -815,7 +843,22 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                         IFILES+=("${FILE_LS[*]}")
                                         IFHRS+=( ${FHR} )
                                     else
-                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]]; then
+                                        # Strict gate: operational dsources (HAFS/HWRF/HMON)
+                                        # skip the tagless search in normal per-storm dirs
+                                        # to avoid grabbing the wrong storm's file. In
+                                        # IS_MSTORM mode the 00L subdir holds shared
+                                        # output that's never per-storm-tagged, so the
+                                        # per-storm passes (12L, 13L, 14L) need the
+                                        # tagless search exactly there to pick it up.
+                                        # Path-match */00L/* covers every operational
+                                        # variant in OCEAN_DIR_OPTS that targets the 00L
+                                        # subdir -- including the new sibling ../00L/
+                                        # entry (whose resolved path also contains the
+                                        # literal '/00L/' substring). Same pattern as
+                                        # the spawn_ocean_maps.sh fix in b06cbda.
+                                        if [[ "HWRF HMON HAFS" != *"${DSOURCE}"* ]] \
+                                           || ( [[ "${IS_MSTORM}" == "True" ]] \
+                                                && [[ "${OCEAN_DIR_FULL}" == */00L/* ]] ); then
                                             FILE_LS=( `ls ${FILE_SEARCH} 2>/dev/null` )
                                             #DEBUG:                                            echo "DEBUG:: FILE_SEARCH: ${FILE_LS}"
                                             if [ "${#FILE_LS[@]}" -eq "1" ]; then
@@ -840,7 +883,26 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                             fi
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "WARNING: Nothing to do here. Moving on to the next case."
+                            echo "WARNING: No ocean input files found for ${STORM} ${CYCLE} under OCEAN_DIR=${OCEAN_DIR}."
+                            echo "WARNING: Skipping ocean_obs for this case; check that ocean output exists for this cycle."
+                            # Mark the case as 'incomplete' so the workflow's status
+                            # check (find -name 'status.*') sees a non-complete entry
+                            # and keeps retrying. Only fill the gap if no status file
+                            # exists yet -- never overwrite an active state
+                            # (working/update request/...) or a prior terminal state
+                            # (complete/failed/broken).
+                            mkdir -p "${ODIR_FULL}" 2>/dev/null
+                            STATUS_FILE_NOINPUT="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
+                            LOCK_FILE_NOINPUT="${STATUS_FILE_NOINPUT}.lock"
+                            lockfile -r-1 -l 180 "${LOCK_FILE_NOINPUT}"
+                            EXISTING_STATUS=$(cat "${STATUS_FILE_NOINPUT}" 2>/dev/null)
+                            if [ -z "${EXISTING_STATUS}" ]; then
+                                echo "MSG: No prior status; writing 'incomplete' so the workflow knows this case is outstanding."
+                                echo "incomplete" > "${STATUS_FILE_NOINPUT}"
+                            else
+                                echo "MSG: Status exists (${EXISTING_STATUS}); leaving it alone."
+                            fi
+                            rm -f "${LOCK_FILE_NOINPUT}"
                             echo ""
                             continue
                         fi
@@ -917,7 +979,15 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${OCEAN_DIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        # Accept Python's 2-column "<file> <status>"
+                                        # format (empty ATCFDONE = mere presence is
+                                        # "done"). Legacy NCL 3-column form still
+                                        # uses the ATCF_EXP/NATCF match. Old gate
+                                        # broke multistorm dedup (see spawn_ocean_maps.sh
+                                        # commit message for details).
+                                        if [ -z "${ATCFDONE}" ] \
+                                           || [ "${ATCF_EXP}" -eq "${NATCF}" ] \
+                                           || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi
@@ -1069,25 +1139,25 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
-                            RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="04:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="04:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="05:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="05:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="06:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="06:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="07:29:59"
+                        else
+                            RUNTIME="07:59:59"
                         fi
 
                         # Check if a similar job is already submitted
@@ -1158,14 +1228,14 @@ if [ "${DO_OCEAN_OBS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
-                        #### MATT CHANGE 7/26/2025 - moved increment from start of ensemble loop
+                        # Advance member index at the END of the ID loop.
                         ((NID++))
 
                     done #end of ID loop
-                done #end of TR loop
-            done #end of DMN loop
-        done #end of STORM loop
-    done #end of CYCLE loop
+                done #end of DMN loop
+            done #end of STORM loop
+        done #end of CYCLE loop
+    done #end of TR loop
 fi #end of DO_OCEAN_OBS
 
 wait

@@ -1,7 +1,0 @@
-C NCLFORTSTART
-	subroutine filter121(V1,V2,ISZ,JSZ,KSZ,N,CYC)
-	implicit none
-	integer ISZ,JSZ,KSZ,N
-	logical CYC
-	real    V1(ISZ,JSZ,KSZ),V2(ISZ,JSZ,KSZ)
-C NCLEND

@@ -194,3 +194,12 @@ OCEAN_CFG = NHC
 FIX_DIR = /scratch3/HFIP/hwrfv3/noscrub/hafs-fix-files/hafs-20250205-fix/fix/fix_mom6/
 ; Does ocean model longitude need to be wrapped (-180-180 => 0-360)?
 OCEAN_WRAP_LON = True
+
+; CARTOPY OFFLINE DATA CACHE
+;     If running on a host without outbound internet (typical HPC),
+;     point cartopy at a pre-populated Natural Earth shapefile cache
+;     so cfeature.LAND / COASTLINE / etc. don't try to download. The
+;     path should be the parent of "shapefiles/" -- cartopy resolves
+;     <CARTOPY_DIR>/shapefiles/natural_earth/<...> on its own.
+;     Leave blank to preserve default behavior (network download).
+CARTOPY_DIR = /home/role.aoml-hafs1/.local/share/cartopy

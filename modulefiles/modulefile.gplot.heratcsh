@@ -67,7 +67,7 @@ endif
 
 # NCL
 if ( "${A}" == "0" ) then
-    setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+    setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/python/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 endif
 
 # Python 3 Anaconda

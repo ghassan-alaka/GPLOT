@@ -14,7 +14,6 @@
 
 #set -x
 
-
 # 1. Get command line variables
 MACHINE="${1:-${MACHINE}}"
 PYTHONFILE="${2}"
@@ -38,62 +37,34 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 4. Build list in input arguments for Python
-PYTHON_ARGS=()
-if [ ! -z "$IDATE" ]; then
-    PYTHON_ARGS+=("${IDATE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$SID" ]; then
-    PYTHON_ARGS+=("${SID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$DOMAIN" ]; then
-    PYTHON_ARGS+=("${DOMAIN}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$TIER" ]; then
-    PYTHON_ARGS+=("${TIER}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$ENSID" ]; then
-    PYTHON_ARGS+=("${ENSID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$FORCE" ]; then
-    PYTHON_ARGS+=("${FORCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RESOLUTION" ]; then
-    PYTHON_ARGS+=("${RESOLUTION}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RMAX" ]; then
-    PYTHON_ARGS+=("${RMAX}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$LEVS" ]; then
-    PYTHON_ARGS+=("${LEVS}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$NMLIST" ]; then
-    PYTHON_ARGS+=("${NMLIST}")
-else
-    PYTHON_ARGS+=("MISSING")
+# Export the per-machine offline cartopy cache so plot_utils.configure_cartopy()
+# can fall back to it (as CARTOPY_DATA_DIR) when a namelist lacks a valid
+# CARTOPY_DIR -- e.g. namelist.master.HAFS_Default's placeholder. Without this,
+# cartopy tries to download Natural Earth data on an offline compute node and hangs.
+BATCH_DFLTS="${GPLOT_DIR}/parm/batch.defaults.${MACHINE,,}"
+if [ -f "${BATCH_DFLTS}" ]; then
+    CARTOPY_DIR_DFLT="`sed -n -e 's/^cartopy_dir =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+    if [ -n "${CARTOPY_DIR_DFLT}" ]; then
+        export CARTOPY_DATA_DIR="${CARTOPY_DIR_DFLT}"
+    fi
 fi
 
-# 5. Submit the Python job
+# 2. Build list of input arguments for Python (argparse-style --flags)
+PYTHON_ARGS=()
+PYTHON_ARGS+=("--idate"      "${IDATE:-MISSING}")
+PYTHON_ARGS+=("--sid"        "${SID:-MISSING}")
+PYTHON_ARGS+=("--domain"     "${DOMAIN:-MISSING}")
+PYTHON_ARGS+=("--tier"       "${TIER:-MISSING}")
+PYTHON_ARGS+=("--ensid"      "${ENSID:-MISSING}")
+PYTHON_ARGS+=("--force"      "${FORCE:-MISSING}")
+PYTHON_ARGS+=("--resolution" "${RESOLUTION:-MISSING}")
+PYTHON_ARGS+=("--rmax"       "${RMAX:-MISSING}")
+PYTHON_ARGS+=("--levs"       "${LEVS:-MISSING}")
+PYTHON_ARGS+=("--master-nml" "${NMLIST:-MISSING}")
+
+# 2. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
+python ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE} 2>&1
 
 wait
 
