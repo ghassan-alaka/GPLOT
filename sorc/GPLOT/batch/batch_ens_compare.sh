@@ -1,6 +1,7 @@
 #!/bin/sh
 #SBATCH --account=aoml-hafs1
 #SBATCH --ntasks=1
+#SBATCH --cpus-per-task=10
 #SBATCH --time=01:59:00
 #SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
@@ -58,6 +59,17 @@ if [ ! -f ${PYFILE} ]; then
     echo "ERROR: Python script not found --> ${PYFILE}"
     exit 2
 fi
+
+# 6b. Thread budget for wgrib2 (OpenMP-built in v3.x).
+#     plot_ens_compare.py runs the two cluster extractions concurrently
+#     (ThreadPoolExecutor, 2 workers), and each worker shells out to wgrib2.
+#     Give each wgrib2 half of the allocated cores so the two concurrent
+#     instances don't oversubscribe the cgroup. Falls back to 1 if the
+#     allocation is tiny or SLURM_CPUS_PER_TASK is unset.
+OMP_N=$(( ${SLURM_CPUS_PER_TASK:-2} / 2 ))
+if [ "${OMP_N}" -lt 1 ]; then OMP_N=1; fi
+export OMP_NUM_THREADS=${OMP_N}
+echo "Allocated CPUs: ${SLURM_CPUS_PER_TASK:-unset} (nproc reports $(nproc)); OMP_NUM_THREADS=${OMP_NUM_THREADS}"
 
 # 7. Clean up any leftover RAM disk files from crashed runs
 echo "Cleaning up stale RAM disk files..."

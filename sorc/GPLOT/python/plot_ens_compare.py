@@ -78,7 +78,8 @@ import modules.HepTools as uf
 # initialize data ----------------------------------------------------------------------------------------
 
 
-def modifyAdeckData(radius, members):
+def modifyAdeckData(radius, members, baseDataPath, initDate, 
+                    storm, membersStart, membersEnd, clusterMembers):
     """
     Read ATCF data using HepTools.process_atcf_files, get specified radius data,
     and change the DataFrame into expected format for plotting functions. 
@@ -86,14 +87,6 @@ def modifyAdeckData(radius, members):
     Also - should we switch from "print" to logger.info??????
 
     args: radius: int, wind radii to plot (34, 50, or 64)
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        baseDataPath
-        initDate
-        storm
-        membersStart
-        membersEnd
-        clusterMembers
 
     dependencies: 
         HepTools.process_atcf_files()
@@ -183,15 +176,12 @@ def modifyAdeckData(radius, members):
     return adeckData, members
 
 
-def getHourData(fHour):
+def getHourData(fHour, adeckData):
     """ 
     get ATCF data for specific forecastHour with mean-relative along/across track data
     Also - should we switch from "print" to logger.info??????
 
     args: fHour: int, forecast hour to extract from adeckData
-
-    suggested args because they are used but assumed to exist in namespace:
-        adeckData
 
     dependencies: HepTools.getTrackSpeedData()
 
@@ -203,15 +193,11 @@ def getHourData(fHour):
     return hourData
 
 
-def getClusterMems(clusterType):
+def getClusterMems(clusterType, hourData, clusterMembers):
     """ 
     get members in each cluster
 
     args: clusterType: str, the type of cluster to extract
-
-    suggested args because they are used but assumed to exist in namespace:
-        hourData
-        clusterMembers
 
     returns: allClusterMems, list of 2 lists, each sublist contains the members in a cluster
         allClusterMems[0] = list of members in cluster with lowest values for clusterType
@@ -226,14 +212,11 @@ def getClusterMems(clusterType):
 # calculate graphic-specific data -----------------------------------------------------------------------
 
 
-def sortedColoringData(clusterType):
+def sortedColoringData(clusterType, hourData):
     """ 
     get sorted attribute data specified by clusterType
 
     args: clusterType: str, the type of cluster to extract
-
-    suggested args because they are used but assumed to exist in namespace:
-        hourData
 
     returns: avgVarTypes, DataFrame with columns ['member', clusterType, 'rank'], 
         where rank is the rank of the member for the specified clusterType
@@ -245,15 +228,12 @@ def sortedColoringData(clusterType):
     return avgVarTypes
 
 
-def windRadiiData():
+def windRadiiData(hourData):
     """ 
     get a difference matrix between every member in hourData and every quartile member
     Also - should we switch from "print" to logger.info??????
 
     args: None
-
-    suggested args because they are used but assumed to exist in namespace:
-        hourData
 
     dependencies:
         numpy as np
@@ -301,7 +281,8 @@ def windRadiiData():
     return quartileData, radData
 
 
-def trackClusteringData(clusterType, variable, level, fHour):
+def trackClusteringData(clusterType, variable, level, fHour, adeckData, 
+                        allClusterMems, baseDataPath, initDate, storm, hourData):
     """ 
     Description??????????????????????????????????????????????
 
@@ -310,14 +291,6 @@ def trackClusteringData(clusterType, variable, level, fHour):
         - variable: str, the variable to extract from GRIB data
         - level: str, the GH to extract from GRIB data
         - fHour: int, the forecast hour
-
-    suggested args because they are used but assumed to exist in namespace:
-        adeckData
-        allClusterMems
-        baseDataPath
-        initDate
-        storm
-        hourData
 
     dependencies:
         pandas as pd
@@ -417,20 +390,13 @@ def trackClusteringData(clusterType, variable, level, fHour):
     return atcfClusters, gribClusters, clusterAvgs
     
 
-def vortexAvgSteerData(fHour):
+def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm, 
+                       adeckData, allClusterMems):
     """ 
     Description??????????????????????????????????????????????
     Also - should we switch from "print" to logger.info??????
 
     args: fHour
-
-    suggested args because they are used but assumed to exist in namespace:
-        baseDataPath,  
-        initDate,      
-        hourData,      
-        storm,          
-        adeckData,
-        allClusterMems 
 
     dependencies:
         numpy as np
@@ -634,7 +600,9 @@ def plotCartopyFigure(ax, plotLand=True):
     return ax
 
 
-def plotSortedLines(ax, avgVar, plotType, members):
+def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict, 
+                    clusterType, fHour, hour, monthsDict, year, day, month):
+
     """
     Description?
 
@@ -643,15 +611,6 @@ def plotSortedLines(ax, avgVar, plotType, members):
         - avgVar: DataFrame, the data to plot, must contain columns ['member', clusterType, 'rank']
         - plotType: str, either "line" or "track", determines what to plot
         - members: list of ints, the member IDs to plot
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        adeckData
-        typeDict
-        clusterType
-        fHour
-        hour
-        monthsDict
-        year
 
     dependencies: 
         matplotlib.pyplot as plt
@@ -709,7 +668,7 @@ def plotSortedLines(ax, avgVar, plotType, members):
     return ax
             
 
-def plotLinePlots(avgVarTypes, members,savePath):
+def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
     """
     Description?
 
@@ -717,13 +676,6 @@ def plotLinePlots(avgVarTypes, members,savePath):
         - avgVarTypes: DataFrame, the data to plot
         - members: list of ints, the member IDs to plot
         - savePath: str, the path to save the plot
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        clusterType
-        fHour
-        storm
-        radius
-        initDate
 
     dependencies: 
         matplotlib.pyplot as plt
@@ -736,7 +688,8 @@ def plotLinePlots(avgVarTypes, members,savePath):
     ax = plt.gca()
     
     # plot lines based on property of interest
-    ax = plotSortedLines(ax, avgVarTypes, 'line', members)
+    ax = plotSortedLines(ax, avgVarTypes, 'line', members, adeckData, typeDict, 
+                         clusterType, fHour, hour, monthsDict, year, day, month)
     
     ax.set_xlabel('Time in Hours', fontsize=9, weight='bold')
     ax.set_ylabel('MSLP', fontsize=9, weight='bold')
@@ -745,7 +698,7 @@ def plotLinePlots(avgVarTypes, members,savePath):
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{sortSave}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
-def plotTracksColored(avgVarTypes, members,savePath):
+def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
     """
     Description?
 
@@ -753,13 +706,6 @@ def plotTracksColored(avgVarTypes, members,savePath):
         - avgVarTypes: DataFrame, the data to plot
         - members: list of ints, the member IDs to plot
         - savePath: str, the path to save the plot
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        clusterType
-        fHour
-        storm
-        radius
-        initDate
 
     dependencies: 
         matplotlib.pyplot as plt
@@ -773,13 +719,15 @@ def plotTracksColored(avgVarTypes, members,savePath):
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
     
     ax = plotCartopyFigure(ax)
-    ax = plotSortedLines(ax, avgVarTypes, 'track', members)
+    ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, typeDict, 
+                         clusterType, fHour, hour, monthsDict, year, day, month)
 
     sortSave = f"R{radius}" if clusterType == 'RadMean' else clusterType
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{sortSave}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
-def plotWindRadii(quartileData, radData,savePath):
+def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius, 
+                  initDate, adeckData, year, month, day, hour):
     """
     Description?
 
@@ -787,14 +735,6 @@ def plotWindRadii(quartileData, radData,savePath):
         - quartileData: DataFrame, atcf data for the quartile members
         - radData: DataFrame with coordinates for wind radii arcs for each quartile member
         - savePath: str, the path to save the plot
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        fHour
-        storm
-        radius
-        initDate
-        adeckData
-        year, month, day, hour
 
     dependencies: 
         matplotlib.pyplot as plt
@@ -849,7 +789,8 @@ def plotWindRadii(quartileData, radData,savePath):
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.wind_radii.R{radius}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
     
-def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs,savePath):
+def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allClusterMems, clusterType, 
+                        clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour):
     """
     Description?
 
@@ -858,16 +799,6 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs,savePath):
         - gribClusters: List of DataFrames, GRIB data for each cluster
         - clusterAvgs: List of floats, average values for each cluster
         - savePath: str, the path to save the plot
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        allClusterMems
-        clusterType
-        clusterTypeDict
-        fHour
-        storm
-        variable
-        radius
-        year, month, day, hour
 
     dependencies: 
         cartopy.crs as ccrs
@@ -948,7 +879,8 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs,savePath):
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
-def plotVortexAvgSteer(clusterDicts,savePath):
+def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHour, 
+                       clusterTypeDict, radius, year, month, day, hour):
     """
     Description?
 
@@ -956,15 +888,6 @@ def plotVortexAvgSteer(clusterDicts,savePath):
         - clusterDicts: list of dicts with keys: 'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
                                 'vortexWidth', 'vortexDepth', 'presLevData'}
         - savePath: str, the path to save the plot
-
-    args that we shoud probably add because they are used but assumed to exist in namespace: 
-        storm
-        initDate
-        clusterType
-        fHour
-        clusterTypeDict
-        radius
-        year, month, day, hour
 
     dependencies: 
         matplotlib.pyplot as plt
@@ -1100,6 +1023,7 @@ def plotVortexAvgSteer(clusterDicts,savePath):
     cbar.ax.legend(linesList, labelsList, loc="lower center", bbox_to_anchor=(0.5, -3), ncol=3, frameon=False, fontsize=8)
 
     plt.savefig(f"{savePath}/{storm[2:4]}l.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+
 
 def call_iqr_calculation(df, metric='shear'):
     """
@@ -2340,7 +2264,7 @@ if sid[2].lower() == 'l':
 elif sid[2].lower() == 'e':
     basin='EP'
 else:
-    basin = ''
+    raise ValueError(f"Unsupported basin in SID: {sid}")
 
 storm = f'{basin}{sid[:2]}{year}'
 
@@ -2376,7 +2300,23 @@ logger.info(f"  IDIR={idir}")
 logger.info(f"  ODIR={ODIR_full}")
 
 # Load ATCF data once for all forecast hours
-adeckData, members = modifyAdeckData(radius, members)
+adeckData, members = modifyAdeckData(radius, members, baseDataPath, initDate, 
+                                     storm, membersStart, membersEnd, clusterMembers)
+
+# Cumulative timing accumulators, summed across all forecast hours
+timing_totals = {
+    'ensembleLinePlots': 0.0,
+    'ensembleTracksColored': 0.0,
+    'ensembleWindRadii': 0.0,
+    'ensembleClustering': 0.0,
+    'vortexAvgSteer': 0.0,
+    'tiltPlots': 0.0,
+}
+
+# Number of forecast hours each plot type actually ran for. Counted separately
+# from len(fHours) so that a plot type toggled off (or skipped for some hours)
+# still reports a correct average rather than being diluted by hours it never ran.
+timing_counts = {_k: 0 for _k in timing_totals}
 
 # Loop over all requested forecast hours
 for fHour in fHours:
@@ -2386,32 +2326,61 @@ for fHour in fHours:
 
     t_hour_start = time.perf_counter()
 
-    hourData = getHourData(fHour)
+    hourData = getHourData(fHour, adeckData)
 
     if ensembleClustering or vortexAvgSteer:
-        allClusterMems = getClusterMems(clusterType)
+        allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
 
     if ensembleLinePlots:
-        avgVarTypes = sortedColoringData(clusterType)
-        plotLinePlots(avgVarTypes, members,ODIR_full)
+        t_step_start = time.perf_counter()
+        avgVarTypes = sortedColoringData(clusterType, hourData)
+        plotLinePlots(avgVarTypes, members, ODIR_full, clusterType, 
+                      fHour, storm, radius, initDate)
+        t_elapsed = time.perf_counter() - t_step_start
+        timing_totals['ensembleLinePlots'] += t_elapsed
+        timing_counts['ensembleLinePlots'] += 1
 
     if ensembleTracksColored:
-        avgVarTypes = sortedColoringData(clusterType)
-        plotTracksColored(avgVarTypes, members,ODIR_full)
+        t_step_start = time.perf_counter()
+        avgVarTypes = sortedColoringData(clusterType, hourData)
+        plotTracksColored(avgVarTypes, members, ODIR_full, clusterType, 
+                          fHour, storm, radius, initDate)
+        t_elapsed = time.perf_counter() - t_step_start
+        timing_totals['ensembleTracksColored'] += t_elapsed
+        timing_counts['ensembleTracksColored'] += 1
 
     if ensembleWindRadii:
-        adeckRadiiData, radData = windRadiiData()
-        plotWindRadii(adeckRadiiData, radData,ODIR_full)
+        t_step_start = time.perf_counter()
+        adeckRadiiData, radData = windRadiiData(hourData)
+        plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
+                      radius, initDate, adeckData, year, month, day, hour)
+        t_elapsed = time.perf_counter() - t_step_start
+        timing_totals['ensembleWindRadii'] += t_elapsed
+        timing_counts['ensembleWindRadii'] += 1
 
     if ensembleClustering:
-        atcfClusters, gribClusters, clusterAvgs = trackClusteringData(clusterType, variable, level, fHour)
-        plotTrackClustering(atcfClusters, gribClusters, clusterAvgs,ODIR_full)
+        t_step_start = time.perf_counter()
+        atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
+            clusterType, variable, level, fHour, adeckData, allClusterMems, 
+            baseDataPath, initDate, storm, hourData)
+        plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
+                            clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour)
+        t_elapsed = time.perf_counter() - t_step_start
+        timing_totals['ensembleClustering'] += t_elapsed
+        timing_counts['ensembleClustering'] += 1
 
     if vortexAvgSteer:
-        clusterDicts = vortexAvgSteerData(fHour)
-        plotVortexAvgSteer(clusterDicts,ODIR_full)
+        t_step_start = time.perf_counter()
+        clusterDicts = vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, 
+                                          storm, adeckData, allClusterMems)
+        plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
+                           clusterTypeDict, radius, year, month, day, hour)
+        t_elapsed = time.perf_counter() - t_step_start
+        timing_totals['vortexAvgSteer'] += t_elapsed
+        timing_counts['vortexAvgSteer'] += 1
 
     if tiltPlots:
+        t_step_start = time.perf_counter()
         plot_tilts(adeckData,atcf_dirs,atcf_tag,idir,dsource,
         gpout_path = ODIR, 
         cycle = date_str, 
@@ -2420,10 +2389,18 @@ for fHour in fHours:
         members_to_plot = 'all',
         out_path = ODIR_full,
         show=False)
+        t_elapsed = time.perf_counter() - t_step_start
+        timing_totals['tiltPlots'] += t_elapsed
+        timing_counts['tiltPlots'] += 1
 
-    print(f"[TIMING] Total time for forecast hour {fHour}: {time.perf_counter() - t_hour_start:.4f}s")
 
-print(f"\n[TIMING] Total Python time for all hours: {time.perf_counter() - t_script_start:.4f}s")
+print(f"\nTotal Python time for all hours: {time.perf_counter() - t_script_start:.4f}s")
+
+print("Average time per forecast hour, by plot type:")
+for _label, _seconds in timing_totals.items():
+    _n = timing_counts[_label]
+    if _n > 0:
+        print(f"  {_label:<25} {_seconds / _n:>10.4f}s  (n={_n})")
 
 # Mark this (cycle, storm) case complete so the HAFS workflow's status check
 # (find -name 'status.*') sees ens_compare finish. Must match the path/key the

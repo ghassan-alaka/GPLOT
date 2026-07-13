@@ -100,6 +100,14 @@ if [ -z "${DSOURCE}" ]; then DSOURCE="HAFS"; fi
 MAX_JOBS=$(get_var "MAX_JOBS" ${NMLIST})
 if [ -z "${MAX_JOBS}" ]; then MAX_JOBS=525; fi
 
+# CPU cores per ens_compare job. The module was tuned for multicore execution:
+# two cluster-fetch threads each drive an OpenMP-threaded wgrib2, plus
+# numpy/matplotlib work. --ntasks=1 alone allocates a single core under
+# Slurm's cgroup enforcement, which serializes all of that (~4x slowdown
+# observed). Override with ENS_COMPARE_CPUS in the namelist if desired.
+ENS_CPUS=$(get_var "ENS_COMPARE_CPUS" ${NMLIST})
+if [ -z "${ENS_CPUS}" ]; then ENS_CPUS=10; fi
+
 # Apply defaults where namelist didn't provide values
 if [ -z "${MACHINE}" ]; then
     MACHINE="ORION"
@@ -293,7 +301,7 @@ for DATE in ${CYCLES[@]}; do
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
             SLRM_OPTS="--job-name=${JOBNAME} --output=${LOGFILE} --error=${LOGFILE}"
             SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
-            SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --mem=16G --time=${RUNTIME}"
+            SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --cpus-per-task=${ENS_CPUS} --mem=16G --time=${RUNTIME}"
             sbatch ${SLRM_OPTS} ${BATCHFILE} ${ARGS}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
             ${BATCHFILE} ${ARGS} > ${LOGFILE} 2>&1
