@@ -411,7 +411,7 @@ def read_atcf(fname):
 
 
 def process_atcf_files(cycle_path, timestamp, storm_id, begin_hour = 0, end_hour=126, 
-                       members_start=0, members_end=21):
+                       members=np.arange(0,21)):
     """
     read in ensemble atcf files, combine, and save. Optionally, add error information (from best track or official forecast)
     args:
@@ -423,12 +423,14 @@ def process_atcf_files(cycle_path, timestamp, storm_id, begin_hour = 0, end_hour
         end_hour: int, end of atcf window. Should probably be greater than begin_hour, but I am not going to add
             input validation because if you put an end hour that is less than your begin hour, you deserve to
             stack trace your error.
+        members=iterable, integer ensemble member IDs
+
     returns:
         combined dataframe with all atcf files, and optionally benchmark dataframe if benchmark != None
     """
     #get num of members depending on year
     year = timestamp[:4]
-    n_mems = 31 if year == '2024' else 21  # NOTE: PROBABLY SHOULD PASS IN MEMBERS AS AN EXPLICIT ARGUMENT INSTEAD
+    n_mems = len(members)
     
     #turn timestamp into datetime type
     idt = datetime.strptime(timestamp,'%Y%m%d%H')
@@ -439,7 +441,7 @@ def process_atcf_files(cycle_path, timestamp, storm_id, begin_hour = 0, end_hour
 
     #read ensemble member TC data
     processed_atcf_list = []
-    for emem in range(0,n_mems):
+    for emem in members:
         atcfall = read_atcf(f'{cycle_path}/{emem:02}/00l.{timestamp}.hfsa.trak.atcfunix.all')
         atcfall = atcfall[(begin_hour <= atcfall.fhr) & (atcfall.fhr <= end_hour)]
         

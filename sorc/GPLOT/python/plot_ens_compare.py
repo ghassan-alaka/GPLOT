@@ -104,7 +104,7 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
     try:
         adeckData = uf.process_atcf_files(cycle_path=f'{baseDataPath}/{initDate}', timestamp=str(initDate),
                                           storm_id=f"{storm[:2].upper()}{storm[2:4]}",
-                                          members_start=membersStart, members_end=membersEnd)
+                                          members=members)
         if adeckData.empty:
             print(f"ATCF file exists but contains no data for storm {storm}")
             sys.exit(1)
