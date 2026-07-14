@@ -1971,6 +1971,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, idir, idate, odir,
         tccen_store = {}
 
         grib_files = None
+        #this part is just included in case we want other grb discovery later
         if grib_files is not None:
             logger.info(f"  Using spawn-prepared file list: "
                         f"{len(grib_files)} FHRs")
@@ -1981,7 +1982,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, idir, idate, odir,
                                         fhr, fhr, dt, ensid) #called with init_hr and fnl_hr = fhr because only want one grib here
         if not grib_files:
             logger.error(f"No GRIB2 files found in {idir}")
-            # _write_status(status_file, 'failed') #commenting out status writer because that does not exist in our current module MD 20260622
+            #_write_status(status_file, 'failed') #commenting out status writer because that does not exist in our current module MD 20260622
             return 1
 
         #in other modules, we iterate through grib_files because there are multiple forecast hours, but here, there should only be one!
@@ -2029,7 +2030,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, idir, idate, odir,
             _write_status(status_file, 'failed')
             return 1
 
-        logger.info(f"  ATCF: {atcf_file}")
+        print(f"  ATCF: {atcf_file}")
         atcf_df = read_atcf(atcf_file)
 
         # Check ATCF availability for this hour
@@ -2354,7 +2355,7 @@ for fHour in fHours:
         t_step_start = time.perf_counter()
         atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
             clusterType, variable, level, fHour, adeckData, allClusterMems, 
-            baseDataPath, initDate, storm, hourData)
+            baseDataPath, initDate, hourData)
         plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
                             clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour)
         t_elapsed = time.perf_counter() - t_step_start
@@ -2378,7 +2379,7 @@ for fHour in fHours:
         cycle = date_str, 
         fhr=int(fHour),
         storm_id = storm[:4].upper(),
-        members_to_plot = 'all',
+        members_to_plot = [f'{x:02}' for x in members[:-1]],
         out_path = ODIR_full,
         show=False)
         t_elapsed = time.perf_counter() - t_step_start
