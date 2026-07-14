@@ -2,17 +2,20 @@
 ####### SID FORMAT IS A PROBLEM - Nikhil's graphics currently rely on the SID being defined in the namelist as AL132025,
 ####### other modules rely on either empty or "13l"
 Name: HAFS Ensemble Plotting Script for GPLOT
-Author: Nikhil Trivedi
+Author: Nikhil Trivedi and Matt Donahue
 Description:
-This script reads HAFS ensemble ATCF data, computes member statistics and rankings, and generates 
-diagnostic plots for HAFS TC ensemble forecasts. All plot types and parameters are controlled via 
-command-line arguments, allowing the script to be called in a loop over forecast hours from a shell 
-script. Bad file paths and missing member data in the ATCF file is handled safely.
+This script reads HAFS ensemble ATCF data, computes member statistics and rankings, and generates a series of 
+diagnostic plots for HAFS TC ensemble forecasts.
 
 TO DO:
-Remove Forecast hour loop
+Remove Forecast hour loop (NIKHIL TO MATT: Are you sure we want to do this? All the other modules run serial from forecast hour
+    to forecast hour as far as I know. I think it may be better to optimize within each forecast hour rather the parallelize across
+    all hours, given that the bottleneck is grb2 file reading anyways.)
 Add logic to check "already plotted" forecast hours, skip function call if plot is already there
 Add logic to check if new ensemble members have been produced?
+Switch from using print to using logger.info, and generate a more useful set of print/debug statements. Still not
+    exactly sure how this works but I did a brief search and it seems more useful. I assume thats what the other parts
+    of GPLOT currently use?
 
 
 Plot types:
@@ -25,7 +28,7 @@ Plot types:
                              a 2-panel vortex structure plot with shear/motion diagnostics.
 6. Ensemble Tilt:            Overlays mid- and deep-layer vortex tilt, along with shear/motion rose
 
-Last modified May 21, 2026
+Last modified July 14, 2026
 """
 
 import time
@@ -84,7 +87,6 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
     Read ATCF data using HepTools.process_atcf_files, get specified radius data,
     and change the DataFrame into expected format for plotting functions. 
     Also calculates ensemble mean.
-    Also - should we switch from "print" to logger.info??????
 
     args: radius: int, wind radii to plot (34, 50, or 64)
 
@@ -93,7 +95,6 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
         sys
         logging
         pandas as pd
-
 
     Returns tuple: adeckData, members
         adeckData: formatted DataFrame with ATCF data for all members and ensemble mean
@@ -178,8 +179,7 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
 
 def getHourData(fHour, adeckData):
     """ 
-    get ATCF data for specific forecastHour with mean-relative along/across track data
-    Also - should we switch from "print" to logger.info??????
+    Get ATCF data for specific forecastHour with mean-relative along/across track data
 
     args: fHour: int, forecast hour to extract from adeckData
 
@@ -195,7 +195,7 @@ def getHourData(fHour, adeckData):
 
 def getClusterMems(clusterType, hourData, clusterMembers):
     """ 
-    get members in each cluster
+    Get members in each cluster (size of each cluster is CLUSTER_MEMBERS)
 
     args: clusterType: str, the type of cluster to extract
 
@@ -214,7 +214,7 @@ def getClusterMems(clusterType, hourData, clusterMembers):
 
 def sortedColoringData(clusterType, hourData):
     """ 
-    get sorted attribute data specified by clusterType
+    Get sorted attribute data specified by clusterType
 
     args: clusterType: str, the type of cluster to extract
 
@@ -230,10 +230,10 @@ def sortedColoringData(clusterType, hourData):
 
 def windRadiiData(hourData):
     """ 
-    get a difference matrix between every member in hourData and every quartile member
-    Also - should we switch from "print" to logger.info??????
+    Get the five members closest to the ensembles quartiles (min/25th/median/75th/max), then
+    build the wind radii distance arcs by quadrant.
 
-    args: None
+    args: hourData
 
     dependencies:
         numpy as np
@@ -243,7 +243,7 @@ def windRadiiData(hourData):
         quartileData: DataFrame with 5 rows (min, 25th, median, 75th, max) 
             and columns ['TECH', 'TAU', 'latitude', 'longitude', 'MSLP', 'RAD', 
                          'RadMean', 'RAD1', 'RAD2', 'RAD3', 'RAD4', 'DIR', 'SPEED', 'member']
-        radData: DataFrame with columns ['lat', 'lon', 'percentile', 'quadrant']
+        radData: DataFrame of arc coordinates with columns ['lat', 'lon', 'percentile', 'quadrant']
     """
     percentiles = hourData['RadMean'].quantile([0, 0.25, 0.5, 0.75, 1.0]).to_numpy()
     radiiArray = hourData['RadMean'].to_numpy()[:, None]
@@ -282,27 +282,32 @@ def windRadiiData(hourData):
 
 
 def trackClusteringData(clusterType, variable, level, fHour, adeckData, 
-                        allClusterMems, baseDataPath, initDate, storm, hourData):
+                        allClusterMems, baseDataPath, initDate, hourData):
     """ 
-    Description??????????????????????????????????????????????
+    Read in averaged background field (GRIB, only for the exact domain needed) and ATCF 
+    data for each cluster of extreme members. Also computes cluster-mean MSLP for the caption.
 
-    args: clusterType, variable, level, fHour
+    args: clusterType, variable, level, fHour, adeckData, allClusterMems, baseDataPath, initDate, hourData
         - clusterType: str, the type of cluster to extract
         - variable: str, the variable to extract from GRIB data
+        - fHour: int, forecast hour
         - level: str, the GH to extract from GRIB data
-        - fHour: int, the forecast hour
-
+        - adeckData: DataFrame, full multi-hour ATCF data for all members
+        - allClusterMems: list of 2 lists of ints, member IDs in each cluster
+        - baseDataPath: str, root path to GRIB input
+        - initDate: int, model init date (YYYYMMDDHH)
+        - hourData: DataFrame, single-fHour ATCF data for all members
+        
     dependencies:
         pandas as pd
         HepTools.getGribData()
         concurrent.futures.ThreadPoolExecutor()
         sys
 
-    NIKHIL: Is this return description accurate?
     returns: tuple: atcfClusters, gribClusters, clusterAvgs
-        atcfClusters: list of 2 DataFrames, each containing ATCF data for a cluster
-        gribClusters: list of 2 xarray Datasets, each containing GRIB data for a cluster
-        clusterAvgs: list of 2 floats, each containing the average value of clusterType for a cluster
+        atcfClusters: list of 2 DataFrames, each containing all ATCF data for a cluster
+        gribClusters: list of 2 xarray Datasets, each containing averaged GRIB data for a cluster
+        clusterAvgs: list of 2 floats, contains average MSLP for each cluster type
     """
     memberDataList = [adeckData[adeckData["member"].isin(mems)] for mems in allClusterMems]
     combinedMembersDf = pd.concat(memberDataList, ignore_index=True)
@@ -323,56 +328,46 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
 
     def _fetch_cluster(idx, clusterMems):
         """ 
-        Description??????????????????????????????????????????????
-        Also - should we switch from "print" to logger.info??????
+        Fetch and return all data for one cluster; wrapped in function so that it can
+        be invoked concurrently using multithreading. This speeds things up since the
+        bottleneck is the grb2 reads. 
 
         args: idx, clusterMems
-            - idx: list of ints, indices of the cluster members in atcf dataframe
-            - clusterMems: list of ints, the member IDs in the cluster
+            - idx: 0 or 1, which of the two clusters we are processing
+            - clusterMems: list of ints, the member IDs in this particular cluster
 
 
-        suggested args because they are used but assumed to exist in namespace:
-            baseDataPath   (assumed to exist in main namespace)
-            bounds         (exists in local namespace of trackClusteringData)
-            initDate       (assumed to exist in main namespace)
-            variable       (exists in local namespace of trackClusteringData)
-            fHour          (exists in local namespace of trackClusteringData)
-            level          (exists in local namespace of trackClusteringData)
-            hourData       (assumed to exist in main namespace)
-            clusterType    (exists in local namespace of trackClusteringData)
-            storm          (assumed to exist in main namespace)
-            memberDataList (exists in local namespace of trackClusteringData)
+        NOTE TO MATT: I don't think we need to add all the args in here since this function is within
+        a function which now already defines all those args. It's not like we're pulling from global args
+        and just hoping nothing breaks.
 
         dependencies:
             HepTools.getGribData()
             sys
 
         returns: tuple: memberDataList[idx], gribData, clusterAvg
-            memberDataList[idx]: list of DataFrames, ATCF data for the members in thecluster
-            gribData: list??? of xarray Datasets?, GRIB data for the members in the cluster
-            clusterAvg: float, the average value of radius or MSLP for the cluster
+            memberDataList[idx]: DataFrame, all ATCF data for the members in this particular cluster
+            gribData: xarray Dataset, averaged GRIB data for the members in the cluster for an fHour/level
+            clusterAvg: float, the average value of MSLP for the cluster
         """
         # get GRIB data for the members in the cluster, exit if this does not work
         try:
             gribData = uf.getGribData(f'{baseDataPath}', bounds, members=clusterMems, initDate=initDate, 
                                       variable=variable, fHour=fHour, level=level)
             if gribData is None or len(gribData.data_vars) == 0:
-                print(f"No GRIB data returned for cluster {idx}, storm {storm}")
+                print(f"No GRIB data returned for cluster {idx}, init {initDate}")
                 sys.exit(1)
 
         except FileNotFoundError as e:
-            print(f"GRIB file not found at {baseDataPath} for storm {storm}, init {initDate}: {e}")
+            print(f"GRIB file not found at {baseDataPath} for init {initDate}: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading GRIB data  at {baseDataPath} for storm {storm}, init {initDate}: {e}")
+            print(f"Error reading GRIB data  at {baseDataPath} for init {initDate}: {e}")
             sys.exit(1)
        
         # get cluster-averaged MSLP or radius at fHour
         clusterHourData = hourData[hourData["member"].isin(clusterMems)]
-        if clusterType in ["MSLP", "RadMean"]:
-            clusterAvg = clusterHourData[clusterType].mean()
-        else:
-            clusterAvg = clusterHourData['MSLP'].mean()
+        clusterAvg = clusterHourData['MSLP'].mean()
             
         return memberDataList[idx], gribData, clusterAvg
 
@@ -393,10 +388,13 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
 def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm, 
                        adeckData, allClusterMems):
     """ 
-    Description??????????????????????????????????????????????
-    Also - should we switch from "print" to logger.info??????
+    For each cluster of extreme members (allClusterMems), load storm-centered u/v data, 
+    project to radial/tangential components, dynamically estimate vortex depth and width (NOTE: STILL
+    WORKING ON THIS PART), then compute mass-weighted vortex-averaged steering flow, vertical shear,
+    and actual ATCF storm motion for each cluster. 
 
-    args: fHour
+    args: fHour, baseDataPath, initDate, hourData, storm, adeckData, allClusterMems
+        - All basically the same as described in trackClusteringData()
 
     dependencies:
         numpy as np
@@ -405,26 +403,20 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
         concurrent.futures.ThreadPoolExecutor()
         sys
 
-    returns: clusterDicts: list of dicts with keys: 'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
-                                'vortexWidth', 'vortexDepth', 'presLevData'}
+    returns: clusterDicts: list of 2 dicts with keys: 
+        {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion', 
+         'vortexWidth', 'vortexDepth', 'presLevData'}
     """
     
     def _process_single_vortex(cluster_idx, clusterMems):
         """ 
-        Description??????????????????????????????????????????????
-        Also - should we switch from "print" to logger.info??????
+        Fetch and return all data for one cluster; wrapped in function so that it can
+        be invoked concurrently using multithreading. This speeds things up since the
+        bottleneck is the grb2 reads. 
 
         args: cluster_idx, clusterMems
-            - cluster_idx: index of the cluster in allClusterMems
-            - clusterMems: list of ints, the member IDs in the cluster? NIKHIL can you clarify?
-                It seems like cluster_idx is just for one vortex, but clusterMems is multiple?
-
-        suggested args because they are used but assumed to exist in namespace:
-            baseDataPath,  (assumed to exist in main namespace)
-            initDate,      (assumed to exist in main namespace)
-            hourData,      (assumed to exist in main namespace)
-            storm,         (assumed to exist in main namespace)
-            adeckData      (assumed to exist in main namespace)
+            - cluster_idx: int, 0 or 1, which particular cluster is being processed
+            - clusterMems: list of ints, the member IDs belonging to this particular cluster
 
         dependencies:
             numpy as np
@@ -432,8 +424,8 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
             HepTools.getGribData()
             sys
 
-        returns: dict with keys: 'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
-                                'vortexWidth', 'vortexDepth', 'presLevData'}
+        returns: dict with keys: {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
+                                  'vortexWidth', 'vortexDepth', 'presLevData'}
         """
 
 
