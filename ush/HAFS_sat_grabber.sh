@@ -17,6 +17,15 @@
 # Files that already exist locally (non-empty) are skipped, so the script
 # is safe to run repeatedly (e.g. from cron).
 #
+# After downloading, a cleanup pass deletes previously-downloaded sat files
+# for cycles that have aged off NOMADS (~2-day retention), so emptied
+# <YYYYMMDDHH>/<SID> directories can be removed by a separate janitor
+# script. Only files matching this script's own pattern
+# (*.<model>.*.sat.fHHH.grb2*) are ever deleted -- other operational files
+# in those directories are untouched, and the directories themselves are
+# left in place. Cleanup is skipped for safety if any NOMADS directory
+# listing failed during the run.
+#
 # Usage:
 #   HAFS_sat_grabber.sh -m <hfsa|hfsb> -o <output_base> [-g] [-n]
 #
@@ -25,7 +34,7 @@
 #        e.g. /Users/andrew.hazelton/Code/test_data/DATA/MODEL_OUTPUT/HAFS/HFSB/v2/oper
 #        or   /scratch4/AOML/aoml-hafs1/role.aoml-hafs1/DATA/MODEL_OUTPUT/HAFS/HFSB/v2/oper
 #   -g   Also download the full .grb2 files (default: .grb2.idx only)
-#   -n   Dry run: list what would be downloaded without downloading
+#   -n   Dry run: list what would be downloaded/deleted without doing it
 #
 # Example (grab both models):
 #   HAFS_sat_grabber.sh -m hfsa -o .../HAFS/HFSA/v2/oper
@@ -95,14 +104,22 @@ fi
 
 # Extract href targets from a NOMADS autoindex page. Returns one name per
 # line; the parent-directory link (absolute path) is filtered out.
+# Returns nonzero (with no output) if the listing request itself failed,
+# so callers can distinguish "empty directory" from "NOMADS unreachable".
 list_hrefs() {
-    local url="$1"
-    ${CURL} "${url}" 2>/dev/null | grep -oE 'href="[^"?/][^"]*"' | sed 's/^href="//; s/"$//'
+    local url="$1" html
+    if ! html="$(${CURL} "${url}" 2>/dev/null)"; then
+        return 1
+    fi
+    echo "${html}" | grep -oE 'href="[^"?/][^"]*"' | sed 's/^href="//; s/"$//'
 }
 
 N_NEW=0
 N_SKIP=0
 N_FAIL=0
+N_DEL=0
+LIST_FAIL="NO"          # any failed NOMADS listing => skip the cleanup pass
+AVAIL_CYCLES=""         # space-separated YYYYMMDDHH cycles seen on NOMADS
 
 echo "=== HAFS_sat_grabber: model=${MODEL} output=${OUTPUT_BASE} grb2=${GET_GRB2} dry_run=${DRY_RUN}"
 
@@ -118,11 +135,17 @@ for DDIR in ${DATE_DIRS}; do
     YMD="${DDIR#${MODEL}.}"                # 20260715
 
     # 2) Find the cycle subdirectories (00/ 06/ 12/ 18/) for this date.
-    CYCLES="$(list_hrefs "${NOMADS_BASE}/${DDIR}/" | grep -E '^[0-9]{2}/$')"
+    if ! LISTING="$(list_hrefs "${NOMADS_BASE}/${DDIR}/")"; then
+        echo "WARNING: could not list ${NOMADS_BASE}/${DDIR}/; skipping (cleanup disabled this run)." >&2
+        LIST_FAIL="YES"
+        continue
+    fi
+    CYCLES="$(echo "${LISTING}" | grep -E '^[0-9]{2}/$')"
     for CYC in ${CYCLES}; do
         CYC="${CYC%/}"                     # 06
         CYCLE_URL="${NOMADS_BASE}/${DDIR}/${CYC}"
         YMDH="${YMD}${CYC}"                # 2026071506
+        AVAIL_CYCLES="${AVAIL_CYCLES} ${YMDH}"
 
         # 3) List the .sat. files in this cycle. Always take the .idx
         #    files; with -g take the .grb2 files too.
@@ -131,7 +154,11 @@ for DDIR in ${DATE_DIRS}; do
         else
             FILE_RE='\.sat\.f[0-9]{3}\.grb2\.idx$'
         fi
-        FILES="$(list_hrefs "${CYCLE_URL}/" | grep -E "${FILE_RE}")"
+        if ! LISTING="$(list_hrefs "${CYCLE_URL}/")"; then
+            echo "WARNING: could not list ${CYCLE_URL}/; skipping this cycle." >&2
+            continue
+        fi
+        FILES="$(echo "${LISTING}" | grep -E "${FILE_RE}")"
         [ -z "${FILES}" ] && continue
 
         echo "--- ${DDIR}/${CYC}: $(echo "${FILES}" | wc -l | tr -d ' ') matching file(s)"
@@ -180,6 +207,36 @@ for DDIR in ${DATE_DIRS}; do
     done
 done
 
-echo "=== Done. downloaded=${N_NEW} skipped(existing)=${N_SKIP} failed=${N_FAIL}"
+# 4) Cleanup: delete our sat files for local cycle directories whose cycle
+#    has aged off NOMADS (~2-day retention), so the emptied directories can
+#    be removed by a separate janitor script. Strictly limited to this
+#    model's *.sat.fHHH.grb2* files (incl. .idx and stray .tmp); other
+#    operational files and the directories themselves are never touched.
+if [ "${LIST_FAIL}" == "YES" ]; then
+    echo "WARNING: one or more NOMADS listings failed; skipping cleanup of aged-off cycles this run." >&2
+elif [ -z "${AVAIL_CYCLES}" ]; then
+    echo "WARNING: no cycles found on NOMADS; skipping cleanup of aged-off cycles this run." >&2
+else
+    for CYCDIR in "${OUTPUT_BASE}"/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]; do
+        [ -d "${CYCDIR}" ] || continue
+        CYCNAME="$(basename "${CYCDIR}")"
+        case " ${AVAIL_CYCLES} " in
+            *" ${CYCNAME} "*) continue ;;   # cycle still on NOMADS
+        esac
+        STALE="$(find "${CYCDIR}" -maxdepth 2 -type f -name "*.${MODEL}.*.sat.f[0-9][0-9][0-9].grb2*" 2>/dev/null)"
+        [ -z "${STALE}" ] && continue
+        for SFILE in ${STALE}; do
+            if [ "${DRY_RUN}" == "YES" ]; then
+                echo "    [dry-run] would delete aged-off ${SFILE}"
+                N_DEL=$((N_DEL + 1))
+            elif rm -f "${SFILE}"; then
+                N_DEL=$((N_DEL + 1))
+            fi
+        done
+        echo "--- cleaned ${CYCNAME}: cycle no longer on NOMADS"
+    done
+fi
+
+echo "=== Done. downloaded=${N_NEW} skipped(existing)=${N_SKIP} failed=${N_FAIL} deleted(aged-off)=${N_DEL}"
 [ "${N_FAIL}" -gt 0 ] && exit 2
 exit 0
