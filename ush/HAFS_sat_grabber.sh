@@ -55,8 +55,24 @@
 set -u
 
 NOMADS_BASE="https://nomads.ncep.noaa.gov/pub/data/nccf/com/hafs/prod"
-SLEEP_SECS=0.5
-CURL="curl -fsS --http1.1 --max-time 300 --retry 2 --retry-delay 5"
+SLEEP_SECS=1
+CURL="curl -fsS --http1.1 --max-time 300"
+MAX_ATTEMPTS=3   # attempts per request (see curl_retry)
+RETRY_WAIT=5     # seconds between attempts
+
+# Run curl with retries on ANY failure. curl's own --retry only treats
+# timeouts and HTTP 408/429/5xx as transient -- DNS resolution failures
+# (exit 6), which come in intermittent bursts on HPC resolvers, are not
+# retried by it. So handle retries ourselves.
+curl_retry() {
+    local attempt=1
+    while true; do
+        ${CURL} "$@" && return 0
+        [ "${attempt}" -ge "${MAX_ATTEMPTS}" ] && return 1
+        attempt=$((attempt + 1))
+        sleep "${RETRY_WAIT}"
+    done
+}
 
 MODEL=""
 OUTPUT_BASE=""
@@ -108,7 +124,7 @@ fi
 # so callers can distinguish "empty directory" from "NOMADS unreachable".
 list_hrefs() {
     local url="$1" html
-    if ! html="$(${CURL} "${url}" 2>/dev/null)"; then
+    if ! html="$(curl_retry "${url}" 2>/dev/null)"; then
         return 1
     fi
     echo "${html}" | grep -oE 'href="[^"?/][^"]*"' | sed 's/^href="//; s/"$//'
@@ -193,7 +209,7 @@ for DDIR in ${DATE_DIRS}; do
 
             # Download to a temp name, then move into place so a partial
             # transfer never masquerades as a completed file.
-            if ${CURL} -o "${DEST}.tmp" "${CYCLE_URL}/${FNAME}"; then
+            if curl_retry -o "${DEST}.tmp" "${CYCLE_URL}/${FNAME}"; then
                 mv "${DEST}.tmp" "${DEST}"
                 echo "    downloaded ${FNAME} -> ${DEST_DIR}/"
                 N_NEW=$((N_NEW + 1))
