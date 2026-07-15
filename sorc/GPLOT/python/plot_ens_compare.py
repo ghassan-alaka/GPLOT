@@ -1,6 +1,4 @@
 """
-####### SID FORMAT IS A PROBLEM - Nikhil's graphics currently rely on the SID being defined in the namelist as AL132025,
-####### other modules rely on either empty or "13l"
 Name: HAFS Ensemble Plotting Script for GPLOT
 Author: Nikhil Trivedi and Matt Donahue
 Description:
@@ -8,17 +6,29 @@ This script reads HAFS ensemble ATCF data, computes member statistics and rankin
 diagnostic plots for HAFS TC ensemble forecasts.
 
 TO DO:
-Remove Forecast hour loop (NIKHIL TO MATT: Are you sure we want to do this? All the other modules run serial from forecast hour
-    to forecast hour as far as I know. I think it may be better to optimize within each forecast hour rather the parallelize across
-    all hours, given that the bottleneck is grb2 file reading anyways.)
-Add logic to check "already plotted" forecast hours, skip function call if plot is already there
-Add logic to check if new ensemble members have been produced?
-Switch from using print to using logger.info, and generate a more useful set of print/debug statements. Still not
-    exactly sure how this works but I did a brief search and it seems more useful. I assume thats what the other parts
-    of GPLOT currently use?
+- Remove Forecast hour loop (NIKHIL TO MATT: Are you sure we want to do this? All the other modules run serial from forecast hour
+        to forecast hour as far as I know. I think it may be better to optimize within each forecast hour rather the parallelize across
+        all hours, given that the bottleneck is grb2 file reading anyways.)
+
+- Add logic to check "already plotted" forecast hours, skip function call if plot is already there
+
+- Add logic to check if new ensemble members have been produced?
+
+- Switch from using print to using logger.info, and generate a more useful set of print/debug statements. Still not
+        exactly sure how this works but I did a brief search and it seems more useful. I assume thats what the other parts
+        of GPLOT currently use?
+
+- Stop making all of Nikhil's functions rely on the storm variable (of format AL132025); instead make them build up from the
+        GPLOT SID format (13L) as needed
+
+ANSWERS TO MATTS QUESTIONS:
+"do we need borders and coastlines if land==False?", in function plotCartopyFigure(ax, plotLand=True):
+        Yes, the land=False is just there because shading the land in is unnecessary if we have a background field like 500mb height
+        because it is not seen anyways. Cartopy operations tend to be expensive which is why I have that toggle. We still need borders
+        and coastlines in that plot though, because those are still visible.
 
 
-Plot types:
+Plot types (more description within functions):
 1. Ensemble Line Plots:      MSLP vs. forecast hour for all members, colored by rank for a user-chosen metric.
 2. Ensemble Tracks Colored:  Storm tracks on a map for all members, colored by rank for a user-chosen metric.
 3. Ensemble Wind Radii:      Wind radii (R34/R50/R64) member quartiles plotted for the forecast hour.
@@ -27,6 +37,31 @@ Plot types:
 5. Vortex Average Steering:  Extreme members for a user-chosen metric grouped into clusters and averaged into
                              a 2-panel vortex structure plot with shear/motion diagnostics.
 6. Ensemble Tilt:            Overlays mid- and deep-layer vortex tilt, along with shear/motion rose
+
+COMMON ARGUMENT GLOSSARY:
+(Trying this out, I think it'll make the function docstrings less bloated but let me know if you don't like it)
+(Nikhil's functions only for now, will try to unify with Matt's functions)
+
+The arguments below recur across several functions with identical defintions. Thus,
+individual function docstrings will name them but not describe them; they will instead
+be described here. Only function-specific arguments or common arguments used in an unusual 
+way will be described in each function.
+
+    adeckData     : DataFrame, full multi-hour ATCF data for all members + mean
+    hourData      : DataFrame, adeckData sliced to a single forecast hours
+    members       : list of ints, member IDs to plot; members[-1] is the ensemble mean
+    
+    clusterType   : str, ranking metric, options are: MSLP, RadMean, ltrack, xtrack
+    clusterMembers : int, number of members in each extreme cluster
+    allClusterMems : list of 2 lists of ints, member IDs per cluster
+    
+    radius       : int, wind radius (34/50/64) baked into RadMean
+    fHour        : int, forecast hour
+    storm        : str, e.g. 'AL132025' (NOTE: might try to get rid of this since it doesn't align with SID)
+    initDate     : int, model initialization date, YYYYMMDDHH
+    savePath     : str, output directory for the figure
+    year, month, day, hour : ints, init-date components (used in titles)
+    monthsDict   : dict, maps month number to month abbreviation
 
 Last modified July 14, 2026
 """
@@ -82,13 +117,18 @@ import modules.HepTools as uf
 
 
 def modifyAdeckData(radius, members, baseDataPath, initDate, 
-                    storm, membersStart, membersEnd, clusterMembers):
+                    storm, clusterMembers):
     """
-    Read ATCF data using HepTools.process_atcf_files, get specified radius data,
-    and change the DataFrame into expected format for plotting functions. 
-    Also calculates ensemble mean.
+    Load ATCF data from all members once (via HepTools.process_atcf_files), 
+    get specified radius data, drop members with incomplete tracks, and append 
+    ensemble mean as the final "member".
+    
+    POTENTIAL CHANGE: Currently changes the DataFrame into expected format for plotting functions,
+    but I should probably keep as is and change the plotting function variable names for consistency.
 
-    args: radius: int, wind radii to plot (34, 50, or 64)
+    Common args (radius, members, baseDataPath, initDate, storm): see glossary
+    Function-specific:
+        clusterMembers : int, minimum members required to continue, otherwise the script exits
 
     dependencies: 
         HepTools.process_atcf_files()
@@ -96,9 +136,9 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
         logging
         pandas as pd
 
-    Returns tuple: adeckData, members
-        adeckData: formatted DataFrame with ATCF data for all members and ensemble mean
-        members: list of valid member IDs + ensemble mean member ID (len(members))
+    returns: tuple (adeckData, members)
+        adeckData: DataFrame, all members + ensemble mean, sorted by member/TAU
+        members: list of surviving member IDs, with the mean's ID appended last
     """
 
     #read data or exit if no data is found
@@ -179,13 +219,14 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
 
 def getHourData(fHour, adeckData):
     """ 
-    Get ATCF data for specific forecastHour with mean-relative along/across track data
+    Slice adeck data to a single forecast hour and attach mean-relative along/across
+    track deviation columns.
 
-    args: fHour: int, forecast hour to extract from adeckData
+    Common args (fHour, adeckData): see glossary
 
     dependencies: HepTools.getTrackSpeedData()
 
-    returns: hourData: DataFrame, subset of adeckData for the specified forecast hour
+    returns: hourData (see glossary)
     """
 
     hourData = uf.getTrackSpeedData(adeckData, fHour)
@@ -195,13 +236,12 @@ def getHourData(fHour, adeckData):
 
 def getClusterMems(clusterType, hourData, clusterMembers):
     """ 
-    Get members in each cluster (size of each cluster is CLUSTER_MEMBERS)
+    Split members into two extreme clusters by clusterType (clusterMembers lowest-valued
+    members and clusterMembers highest-valued members).
 
-    args: clusterType: str, the type of cluster to extract
+    Common args (clusterType, hourData, clusterMembers): see glossary
 
-    returns: allClusterMems, list of 2 lists, each sublist contains the members in a cluster
-        allClusterMems[0] = list of members in cluster with lowest values for clusterType
-        allClusterMems[1] = list of members in cluster with highest values for clusterType
+    returns: allClusterMems (see glossary), [0] is the low cluster and [1] is the high cluster
     """
     allClusterMems = []
     allClusterMems.append(hourData.nsmallest(clusterMembers, clusterType)["member"].tolist())
@@ -214,12 +254,13 @@ def getClusterMems(clusterType, hourData, clusterMembers):
 
 def sortedColoringData(clusterType, hourData):
     """ 
-    Get sorted attribute data specified by clusterType
+    Rank members by clusterType for the rank-colored line/track plots. MSLP is ranked
+    in ascending order (rank 1 = lowest), all other metrics are descending.
 
-    args: clusterType: str, the type of cluster to extract
+    Common args (clusterType, hourData): see glossary
 
     returns: avgVarTypes, DataFrame with columns ['member', clusterType, 'rank'], 
-        where rank is the rank of the member for the specified clusterType
+        where rank is from 1 to N in the ordering described above
     """
     avgVarTypes = hourData[['member', clusterType]].copy()
     ascendingOrder = True if clusterType == 'MSLP' else False
@@ -230,20 +271,21 @@ def sortedColoringData(clusterType, hourData):
 
 def windRadiiData(hourData):
     """ 
-    Get the five members closest to the ensembles quartiles (min/25th/median/75th/max), then
-    build the wind radii distance arcs by quadrant.
+    Select the five members closest to the ensembles quartiles (min/25th/median/75th/max), 
+    then build the per-quadrant wind radii arc coordinates for those five members.
 
-    args: hourData
+    Common args (hourData): see glossary, note that hourData must include RadMean and RAD1-4
 
-    dependencies:
-        numpy as np
-        pandas as pd
+    POTENTIAL CHANGE: RadMean is a somewhat problematic/confusing/vague variable, maybe find a
+    more readable way to do radius-related computations.
 
-    returns: tuple: quartileData, radData
-        quartileData: DataFrame with 5 rows (min, 25th, median, 75th, max) 
-            and columns ['TECH', 'TAU', 'latitude', 'longitude', 'MSLP', 'RAD', 
-                         'RadMean', 'RAD1', 'RAD2', 'RAD3', 'RAD4', 'DIR', 'SPEED', 'member']
-        radData: DataFrame of arc coordinates with columns ['lat', 'lon', 'percentile', 'quadrant']
+    dependencies: numpy as np, pandas as pd
+
+    returns: tuple (quartileData, radData)
+        quartileData: DataFrame with 5 rows (min, 25th, median, 75th, max), which is
+            each member closest to that percentile, and all ATCF columns
+        radData: DataFrame with columns ['lat', 'lon', 'percentile', 'quadrant']; one
+            row per point along each quadrant's radius arc, for all 5 members
     """
     percentiles = hourData['RadMean'].quantile([0, 0.25, 0.5, 0.75, 1.0]).to_numpy()
     radiiArray = hourData['RadMean'].to_numpy()[:, None]
@@ -284,29 +326,22 @@ def windRadiiData(hourData):
 def trackClusteringData(clusterType, variable, level, fHour, adeckData, 
                         allClusterMems, baseDataPath, initDate, hourData):
     """ 
-    Read in averaged background field (GRIB, only for the exact domain needed) and ATCF 
-    data for each cluster of extreme members. Also computes cluster-mean MSLP for the caption.
+    For each of the two clusters, reads in the cluster-averaged background GRIB field and
+    the cluster's full ATCF tracks. Map bounds are dynamically computed to fit the full ATCF
+    tracks. The two clusters are fetched concurrently via ThreadPoolExecutor.
 
-    args: clusterType, variable, level, fHour, adeckData, allClusterMems, baseDataPath, initDate, hourData
-        - clusterType: str, the type of cluster to extract
-        - variable: str, the variable to extract from GRIB data
-        - fHour: int, forecast hour
-        - level: str, the GH to extract from GRIB data
-        - adeckData: DataFrame, full multi-hour ATCF data for all members
-        - allClusterMems: list of 2 lists of ints, member IDs in each cluster
-        - baseDataPath: str, root path to GRIB input
-        - initDate: int, model init date (YYYYMMDDHH)
-        - hourData: DataFrame, single-fHour ATCF data for all members
+    Common args (clusterType, fHour, adeckData, allClusterMems, baseDataPath, 
+        initDate, storm, hourData): see glossary
+    Function specific:
+        variable : str, background GRIB field to plot under tracks (e.g. 'HGT')
+        level : int, pressure level (hPa) for the background field
         
-    dependencies:
-        pandas as pd
-        HepTools.getGribData()
+    dependencies: pandas as pd, sys, HepTools.getGribData(), 
         concurrent.futures.ThreadPoolExecutor()
-        sys
 
-    returns: tuple: atcfClusters, gribClusters, clusterAvgs
-        atcfClusters: list of 2 DataFrames, each containing all ATCF data for a cluster
-        gribClusters: list of 2 xarray Datasets, each containing averaged GRIB data for a cluster
+    returns: tuple (atcfClusters, gribClusters, clusterAvgs)
+        atcfClusters: list of 2 DataFrames, each containing one cluster's ATCF member tracks
+        gribClusters: list of 2 xarray Datasets, each containing cluster-averaged background field
         clusterAvgs: list of 2 floats, contains average MSLP for each cluster type
     """
     memberDataList = [adeckData[adeckData["member"].isin(mems)] for mems in allClusterMems]
@@ -330,24 +365,21 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         """ 
         Fetch and return all data for one cluster; wrapped in function so that it can
         be invoked concurrently using multithreading. This speeds things up since the
-        bottleneck is the grb2 reads. 
+        bottleneck is the grb2 reads.
+
+        Reads baseDataPath, bounds, initDate, variable, fHour, level, hourData, 
+        clusterType, storm, and memberDataList from enclosing function.
+        NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
 
         args: idx, clusterMems
-            - idx: 0 or 1, which of the two clusters we are processing
-            - clusterMems: list of ints, the member IDs in this particular cluster
+            idx: 0 or 1, which cluster we are processing (index into memberDataList)
+            clusterMems: list of ints, the member IDs in this particular cluster
 
+        dependencies: HepTools.getGribData(), sys
 
-        NOTE TO MATT: I don't think we need to add all the args in here since this function is within
-        a function which now already defines all those args. It's not like we're pulling from global args
-        and just hoping nothing breaks.
-
-        dependencies:
-            HepTools.getGribData()
-            sys
-
-        returns: tuple: memberDataList[idx], gribData, clusterAvg
-            memberDataList[idx]: DataFrame, all ATCF data for the members in this particular cluster
-            gribData: xarray Dataset, averaged GRIB data for the members in the cluster for an fHour/level
+        returns: tuple (memberDataList[idx], gribData, clusterAvg)
+            memberDataList[idx]: DataFrame, this cluster's member ATCF data across all hours
+            gribData: xarray Dataset, cluster-averaged background field
             clusterAvg: float, the average value of MSLP for the cluster
         """
         # get GRIB data for the members in the cluster, exit if this does not work
@@ -388,22 +420,19 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
 def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm, 
                        adeckData, allClusterMems):
     """ 
-    For each cluster of extreme members (allClusterMems), load storm-centered u/v data, 
-    project to radial/tangential components, dynamically estimate vortex depth and width (NOTE: STILL
-    WORKING ON THIS PART), then compute mass-weighted vortex-averaged steering flow, vertical shear,
-    and actual ATCF storm motion for each cluster. 
+    For of the two clusters, load storm-centered u/v data, project to radial/tangential components, 
+    dynamically estimate vortex depth and width (NOTE: STILL WORKING ON THIS PART), then compute 
+    mass-weighted vortex-averaged steering flow, vertical shear, and actual ATCF storm motion for 
+    each cluster.
 
-    args: fHour, baseDataPath, initDate, hourData, storm, adeckData, allClusterMems
-        - All basically the same as described in trackClusteringData()
+    Common args (fHour, baseDataPath, initDate, hourData, storm, adeckData,
+        allClusterMems): see glossary
+    Notes: hourData supplies ATCF centers, adeckData supplies speed/direction for storm motion
 
-    dependencies:
-        numpy as np
-        xarray as xr
-        HepTools.getGribData()
-        concurrent.futures.ThreadPoolExecutor()
-        sys
+    dependencies: numpy as np, xarray as xr, HepTools.getGribData()
+        concurrent.futures.ThreadPoolExecutor(), sys
 
-    returns: clusterDicts: list of 2 dicts with keys: 
+    returns: clusterDicts, list of 2 dicts (one per cluster), each with keys: 
         {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion', 
          'vortexWidth', 'vortexDepth', 'presLevData'}
     """
@@ -412,17 +441,16 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
         """ 
         Fetch and return all data for one cluster; wrapped in function so that it can
         be invoked concurrently using multithreading. This speeds things up since the
-        bottleneck is the grb2 reads. 
+        bottleneck is the grb2 reads.
 
-        args: cluster_idx, clusterMems
-            - cluster_idx: int, 0 or 1, which particular cluster is being processed
-            - clusterMems: list of ints, the member IDs belonging to this particular cluster
+        Reads baseDataPath, initDate, fHour, hourData, storm, and adeckData from enclosing function.
+        NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
 
-        dependencies:
-            numpy as np
-            xarray as xr
-            HepTools.getGribData()
-            sys
+        args: idx, clusterMems
+            idx: 0 or 1, which cluster we are processing (index into memberDataList)
+            clusterMems: list of ints, the member IDs in this particular cluster
+
+        dependencies: numpy as np, xarray as xr, HepTools.getGribData(), sys
 
         returns: dict with keys: {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
                                   'vortexWidth', 'vortexDepth', 'presLevData'}
@@ -556,7 +584,7 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
 
 def plotCartopyFigure(ax, plotLand=True):
     """
-    Description: plot the land, borders, and gridlines on a cartopy axes object.
+    Plot the land, borders, and gridlines on a cartopy axes object.
 
     args: ax, plotLand
         - ax: matplotlib axes object, the axes to plot on
@@ -573,7 +601,6 @@ def plotCartopyFigure(ax, plotLand=True):
     if plotLand:
         ax.add_feature(cf.LAND.with_scale('50m'), rasterized=True)
     # ax.add_feature(cf.STATES, linewidth=0.2, edgecolor="gray")
-    #do we need borders and coastlines if land==False?
     ax.add_feature(cf.BORDERS, linewidth=0.3)
     ax.coastlines(linewidth=0.5, resolution='50m')
 
@@ -596,9 +623,11 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
                     clusterType, fHour, hour, monthsDict, year, day, month):
 
     """
-    Description?
+    Common code for the line plot and spatial storm tracks plots. Plots a series of 
+    ATCF ensemble lines of type clusterType, colored by rank, onto either a basic 
+    (line plot) or Cartopy (spatial tracks) axis.
 
-    args: ax, avgVar, plotType, members
+    new args: ax, avgVar, plotType, members
         - ax: matplotlib axes object, the axes to plot on
         - avgVar: DataFrame, the data to plot, must contain columns ['member', clusterType, 'rank']
         - plotType: str, either "line" or "track", determines what to plot
@@ -608,7 +637,7 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
         matplotlib.pyplot as plt
         numpy as np
 
-    Returns axes object with specified data plotted
+    Returns axes object with specified data, colorbar, and title plotted.
     """
     colors = plt.cm.viridis(np.linspace(0, 1, len(members)))
     
@@ -638,16 +667,13 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
             ax.scatter(memberData['longitude'] - 180, memberData['latitude'],
                        color=color, s=dotSize, alpha=opacity, zorder=zorder)
 
-    #does this if statement assess whether "RadMean" is True? Won't this always evaluate to True because 'RadMean' is a non-empty string?
-    #Should it be something like "if clusterType == 'RadMean'"?
-    sortTitle = typeDict[clusterType][0] if 'RadMean' else clusterType
+    # FIXED BUG MATT FOUND IN TITLE LOGIC
+    sortTitle = typeDict[clusterType][0] if clusterType == 'RadMean' else clusterType
     
     sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=len(members)))
     sm.set_array([])  # Needed to avoid warning
     cbar = plt.colorbar(sm, ax=plt.gca(), pad=0.015, aspect=27)
     cbar.ax.tick_params(labelsize=8)
-    #cbatTitle not used?
-    #cbarTitle = 'MSLP' if plotType == 'track' else clusterType 
     cbar.set_label(f'Member Mean {sortTitle} Rank', fontsize=9, weight='bold')
     cbar.ax.invert_yaxis()
     cbar.set_ticks(range(1, 22, 2))
@@ -2294,7 +2320,7 @@ logger.info(f"  ODIR={ODIR_full}")
 
 # Load ATCF data once for all forecast hours
 adeckData, members = modifyAdeckData(radius, members, baseDataPath, initDate, 
-                                     storm, membersStart, membersEnd, clusterMembers)
+                                     storm, clusterMembers)
 
 # Cumulative timing accumulators, summed across all forecast hours
 timing_totals = {
