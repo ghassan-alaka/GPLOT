@@ -22,10 +22,13 @@ TO DO:
         GPLOT SID format (13L) as needed
 
 ANSWERS TO MATTS QUESTIONS:
-"do we need borders and coastlines if land==False?", in function plotCartopyFigure(ax, plotLand=True):
+"do we need borders and coastlines if land==False?", in function plotCartopyFigure():
         Yes, the land=False is just there because shading the land in is unnecessary if we have a background field like 500mb height
         because it is not seen anyways. Cartopy operations tend to be expensive which is why I have that toggle. We still need borders
         and coastlines in that plot though, because those are still visible.
+
+"NIKHIL - are these hard-coded for geopotential heights?" in function plotTrackClustering():
+    Yes unfortunately, I still need to make it so this works for a variety of background fields, I just haven't gotten around to it.
 
 
 Plot types (more description within functions):
@@ -117,7 +120,7 @@ import modules.HepTools as uf
 
 
 def modifyAdeckData(radius, members, baseDataPath, initDate, 
-                    storm, clusterMembers):
+                    storm, clusterMembers, fHours):
     """
     Load ATCF data from all members once (via HepTools.process_atcf_files), 
     get specified radius data, drop members with incomplete tracks, and append 
@@ -131,10 +134,7 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
         clusterMembers : int, minimum members required to continue, otherwise the script exits
 
     dependencies: 
-        HepTools.process_atcf_files()
-        sys
-        logging
-        pandas as pd
+        HepTools.process_atcf_files(), sys, logging, pandas as pd
 
     returns: tuple (adeckData, members)
         adeckData: DataFrame, all members + ensemble mean, sorted by member/TAU
@@ -192,16 +192,20 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
     adeckData = adeckData[finalCols].sort_values(by=["member", "TAU"]).reset_index(drop=True)
 
     # filter out members with incomplete track data, exit if not enough are present (len(members) < clusterMembers)
-    allTaus = set(adeckData['TAU'].unique())
-    memberTauCounts = adeckData.groupby('member')['TAU'].apply(set)
-    incompleteMembers = memberTauCounts[memberTauCounts.apply(lambda x: x != allTaus)].index.tolist()
+    # complete is defined as the member covering every REQUESTED forecast hour
+    requestedTaus = set(fHours)
+    memberTaus = adeckData.groupby('member')['TAU'].apply(set)
+    incompleteMembers = memberTaus[
+        memberTaus.apply(lambda taus: not requestedTaus.issubset(taus))
+    ].index.tolist()
     
     if incompleteMembers:
-        print(f"Skipping {len(incompleteMembers)} member(s) with incomplete track data: {incompleteMembers}")
+        print(f"Skipping {len(incompleteMembers)} member(s) missing one or more "
+              f"requested forecast hours {sorted(requestedTaus)}: {incompleteMembers}")
         adeckData = adeckData[~adeckData['member'].isin(incompleteMembers)]
         members = [m for m in members if m not in incompleteMembers]
     else:
-        print("All members have complete track data.")
+        print(f"All members cover the requested forecast hours {sorted(requestedTaus)}.")
 
     if len(members) < clusterMembers:
         print(f"Only {len(members)} member(s) available after filtering, but clusterMembers={clusterMembers}. Skipping forecast hour.")
@@ -224,7 +228,8 @@ def getHourData(fHour, adeckData):
 
     Common args (fHour, adeckData): see glossary
 
-    dependencies: HepTools.getTrackSpeedData()
+    dependencies: 
+        HepTools.getTrackSpeedData()
 
     returns: hourData (see glossary)
     """
@@ -279,7 +284,8 @@ def windRadiiData(hourData):
     POTENTIAL CHANGE: RadMean is a somewhat problematic/confusing/vague variable, maybe find a
     more readable way to do radius-related computations.
 
-    dependencies: numpy as np, pandas as pd
+    dependencies: 
+        numpy as np, pandas as pd
 
     returns: tuple (quartileData, radData)
         quartileData: DataFrame with 5 rows (min, 25th, median, 75th, max), which is
@@ -336,8 +342,8 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         variable : str, background GRIB field to plot under tracks (e.g. 'HGT')
         level : int, pressure level (hPa) for the background field
         
-    dependencies: pandas as pd, sys, HepTools.getGribData(), 
-        concurrent.futures.ThreadPoolExecutor()
+    dependencies: 
+        pandas as pd, sys, HepTools.getGribData(), concurrent.futures.ThreadPoolExecutor()
 
     returns: tuple (atcfClusters, gribClusters, clusterAvgs)
         atcfClusters: list of 2 DataFrames, each containing one cluster's ATCF member tracks
@@ -371,11 +377,12 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         clusterType, storm, and memberDataList from enclosing function.
         NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
 
-        args: idx, clusterMems
+        args:
             idx: 0 or 1, which cluster we are processing (index into memberDataList)
             clusterMems: list of ints, the member IDs in this particular cluster
 
-        dependencies: HepTools.getGribData(), sys
+        dependencies: 
+            HepTools.getGribData(), sys
 
         returns: tuple (memberDataList[idx], gribData, clusterAvg)
             memberDataList[idx]: DataFrame, this cluster's member ATCF data across all hours
@@ -446,11 +453,12 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
         Reads baseDataPath, initDate, fHour, hourData, storm, and adeckData from enclosing function.
         NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
 
-        args: idx, clusterMems
+        args:
             idx: 0 or 1, which cluster we are processing (index into memberDataList)
             clusterMems: list of ints, the member IDs in this particular cluster
 
-        dependencies: numpy as np, xarray as xr, HepTools.getGribData(), sys
+        dependencies: 
+            numpy as np, xarray as xr, HepTools.getGribData(), sys
 
         returns: dict with keys: {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
                                   'vortexWidth', 'vortexDepth', 'presLevData'}
@@ -584,19 +592,17 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
 
 def plotCartopyFigure(ax, plotLand=True):
     """
-    Plot the land, borders, and gridlines on a cartopy axes object.
+    Add map features to cartopy axes. Plot land (optional), political borders, coastlines, 
+    US state outlines, and gridlines on a cartopy axes object.
 
-    args: ax, plotLand
-        - ax: matplotlib axes object, the axes to plot on
-        - plotLand: bool, whether to plot land features
+    args:
+        ax: cartopy GeoAxes to draw on
+        plotLand: bool, whether to fill land (False when a background field is drawn)
 
     dependencies: 
-        cartopy.crs as ccrs
-        cartopy.feature as cf
-        cartopy.io.shapereader as shpreader
+        cartopy.crs as ccrs, cartopy.feature as cf, cartopy.io.shapereader as shpreader
 
-
-    Returns axes object with the specified features added.
+    returns: axes object with the specified features added.
     """
     if plotLand:
         ax.add_feature(cf.LAND.with_scale('50m'), rasterized=True)
@@ -623,21 +629,21 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
                     clusterType, fHour, hour, monthsDict, year, day, month):
 
     """
-    Common code for the line plot and spatial storm tracks plots. Plots a series of 
-    ATCF ensemble lines of type clusterType, colored by rank, onto either a basic 
-    (line plot) or Cartopy (spatial tracks) axis.
+    Draw a rank-colored ensemble figure onto an existing axes. Either MSLP vs. forecast hour
+    (plotType='line') or spatial storm tracks (plotType='track'), with lines colored by the
+    member's clusterType rank (rank 1 = darkest). Also adds colorbar and title.
 
-    new args: ax, avgVar, plotType, members
-        - ax: matplotlib axes object, the axes to plot on
-        - avgVar: DataFrame, the data to plot, must contain columns ['member', clusterType, 'rank']
-        - plotType: str, either "line" or "track", determines what to plot
-        - members: list of ints, the member IDs to plot
+    Common args (members, adeckData, typeDict, clusterType, fHour, hour, monthsDict,
+        year, day, month): see glossary
+    Function-specific:
+        ax: axes to draw on, plain axes for 'line', cartopy GeoAxes for 'track'
+        avgVar: DataFrame with ['member', clusterType, 'rank'], where 'rank' determines color
+        plotType: str, 'line' or 'track'
 
     dependencies: 
-        matplotlib.pyplot as plt
-        numpy as np
+        matplotlib.pyplot as plt, numpy as np
 
-    Returns axes object with specified data, colorbar, and title plotted.
+    returns: axes object with specified data, colorbar, and title plotted.
     """
     colors = plt.cm.viridis(np.linspace(0, 1, len(members)))
     
@@ -688,17 +694,18 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
 
 def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
     """
-    Description?
+    Set up the MSLP vs. forecast hour figure, and then do the majority of the plotting work
+    (member lines, colorbar, title) using plotSortedLines(plotType='line').
 
-    args: avgVarTypes, members, savePath
-        - avgVarTypes: DataFrame, the data to plot
-        - members: list of ints, the member IDs to plot
-        - savePath: str, the path to save the plot
+    Common args (members, savePath, clusterType, fHour, storm, 
+        radius, initDate): see glossary
+    Function-specific:
+        avgVarTypes: Same as avgVar in plotSortedLines()
 
     dependencies: 
-        matplotlib.pyplot as plt
-        plotSortedLines()
+        matplotlib.pyplot as plt, plotSortedLines()
 
+    returns: None (writes a PNG).
     """
     # plot figure and title
     plt.close('all')
@@ -718,19 +725,18 @@ def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, rad
 
 def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
     """
-    Description?
+    Set up the spatial storm tracks plot, draw map features via plotCartopyFigure(), then
+    draw rank-colored tracks, colorbar, and title via plotSortedLines(plotType='track').
 
-    args: avgVarTypes, members, savePath
-        - avgVarTypes: DataFrame, the data to plot
-        - members: list of ints, the member IDs to plot
-        - savePath: str, the path to save the plot
+    Common args (members, savePath, clusterType, fHour, storm, 
+        radius, initDate): see glossary
+    Function-specific:
+        avgVarTypes: Same as avgVar in plotSortedLines()
 
     dependencies: 
-        matplotlib.pyplot as plt
-        plotSortedLines()
-        plotCartopyFigure()
-        cartopy.crs as ccrs
+        matplotlib.pyplot as plt, plotSortedLines(), plotCartopyFigure(), cartopy.crs as ccrs
 
+    returns: None (writes a PNG).
     """
     plt.close('all')
     plt.figure(figsize=(10, 6))
@@ -747,19 +753,22 @@ def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm,
 def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius, 
                   initDate, adeckData, year, month, day, hour):
     """
-    Description?
+    Plot the wind-radii quartile figure. For each of the five percentile members (from
+    windRadiiData()), draw its track and its wind-radii arcs (potentially different per-quadrant)
+    on a map. Color by percentile, with a legend of member IDs and MSLP.
 
-    args: quartileData, radData,savePath
-        - quartileData: DataFrame, atcf data for the quartile members
-        - radData: DataFrame with coordinates for wind radii arcs for each quartile member
-        - savePath: str, the path to save the plot
+    Common args (savePath, fHour, storm, radius, initDate, adeckData, year, month,
+        day, hour): see glossary
+    Function-specific:
+        quartileData: DataFrame, ATCF data for the five quartile members (from windRadiiData)
+        radData: DataFrame of arc coordinates (from windRadiiData):
+            ['lat','lon','percentile','quadrant']
 
     dependencies: 
-        matplotlib.pyplot as plt
-        plotCartopyFigure()
-        cartopy.crs as ccrs
-        HepTools.getStormName()
+        matplotlib.pyplot as plt, numpy as np, plotCartopyFigure()
+        cartopy.crs as ccrs, HepTools.getStormName()
 
+    returns: None (writes a PNG).
     """
     plt.close('all')
     colors = plt.cm.viridis(np.linspace(0, 1, len(quartileData)))
@@ -810,22 +819,26 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
 def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allClusterMems, clusterType, 
                         clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour):
     """
-    Description?
+    Plot the two-panel ensemble-clustering figure. For each cluster, contour the cluster-averaged
+    background field (currently only works for 500 hPa geopotential heights), with each member's
+    track overlaid and the fHour position marked. 
 
-    args: atcfClusters, gribClusters, clusterAvgs,savePath
-        - atcfClusters: List of DataFrames, ATCF data for each cluster
-        - gribClusters: List of DataFrames, GRIB data for each cluster
-        - clusterAvgs: List of floats, average values for each cluster
-        - savePath: str, the path to save the plot
+    Common args (savePath, allClusterMems, clusterType, clusterTypeDict, fHour,
+        storm, variable, radius, year, month, day, hour): see glossary
+    Function-specific:
+        - atcfClusters: list of 2 DataFrames, with each holding one cluster's ATCF track
+        - gribClusters: list of 2 Datasets, cluster-averaged background field
+        - clusterAvgs: list of 2 floats, average MSLP for each cluster
+
+    POTENTIAL CHANGE: Contour levels and colormap are currently hard-coded for 500 hPa
+    geopotential heights, but we should make this work for other background fields.
 
     dependencies: 
-        cartopy.crs as ccrs
-        matplotlib.pyplot as plt
-        numpy as np
-        matplotlib.colors.LinearSegmentedColormap
-        HepTools.getStormName()
+        cartopy.crs as ccrs, matplotlib.pyplot as plt, numpy as np
+        matplotlib.colors.LinearSegmentedColormap, HepTools.getStormName()
         HepTools.getTitleDate()
 
+    returns: None (writes a PNG).
     """
     plt.close('all')
     fig, axes = plt.subplots(2, 2, figsize=(9.5, 5.5), constrained_layout=True, subplot_kw={'projection': ccrs.PlateCarree()}, gridspec_kw={"height_ratios": [0.02, 1]})
@@ -847,7 +860,6 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
         
         levelsContour = np.arange(540, 600, 2)
         levelsContourf = np.arange(540, 600, 2)
-        #NIKHIL - are these hard-coded for geopotential heights?
         colorscale_points = [ 
             (normalize(540), "#288DFF"),   # Blue (540)
             (normalize(552), "#029916"),   # Green (552)
@@ -900,22 +912,26 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
 def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHour, 
                        clusterTypeDict, radius, year, month, day, hour):
     """
-    Description?
+    Plot the two-panel vortex-average steering figure. For each cluster, plot a radius 
+    vs. pressure cross-section of radial/tangential wind. Additionally, outline the estimated
+    vortex with a box, and add an inset hodograph with storm-motion, vortex-averaged steering,
+    and shear vectors.
 
-    args: clusterDicts,savePath
-        - clusterDicts: list of dicts with keys: 'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
-                                'vortexWidth', 'vortexDepth', 'presLevData'}
-        - savePath: str, the path to save the plot
+    Common args (savePath, storm, initDate, clusterType, fHour, clusterTypeDict,
+        radius, year, month, day, hour): see glossary
+    Function-specific:
+        clusterDicts: list of 2 dicts from vortexAvgSteerData(), each with keys: 
+            {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
+             'vortexWidth', 'vortexDepth', 'presLevData'}
+
+    POTENTIAL CHANGE: Improve the dynamic vortex estimation box.
 
     dependencies: 
-        matplotlib.pyplot as plt
-        numpy as np
-        matplotlib.colors.LinearSegmentedColormap
-        HepTools.getStormName()
-        HepTools.getTitleDate()
-        matplotlib.ticker.LogLocator
-        matplotlib.lines.Line2D
-
+        matplotlib.pyplot as plt, numpy as np,
+        matplotlib.colors.LinearSegmentedColormap, matplotlib.ticker.LogLocator,
+        matplotlib.lines.Line2D, HepTools.getStormName(), HepTools.getTitleDate()
+        
+    returns: None (writes a PNG).
     """
     plt.close('all')
     fig, axes = plt.subplots(2, 2, figsize=(10, 5.5), constrained_layout=True, gridspec_kw={"height_ratios": [0.02, 1]})
@@ -1000,13 +1016,12 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
                 inset_ax.plot(data['uWind'], data['vWind'], color=color, zorder=2)
         
         # Draw the steering and shear vector arrows
-        #NIKHIL - THESE VARIABLES ARE NOT USED
-        motionVect = inset_ax.quiver(0.5, 0.5, uMotion, vMotion, angles='xy', scale_units='xy', scale=1, color='k', width=0.012, 
-                                     headwidth=3, headlength=4.5, zorder=3)
-        steerVect = inset_ax.quiver(0.5, 0.5, uSteer, vSteer, angles='xy', scale_units='xy', scale=1, color='#00AAFF', width=0.012, 
-                                    headwidth=3, headlength=4.5, zorder=3, edgecolors='black', linewidths=0.3)
-        shearVect = inset_ax.quiver(0.5, 0.5, uShear, vShear, angles='xy', scale_units='xy', scale=1, color='orange', width=0.012, 
-                                    headwidth=3, headlength=4.5, zorder=3, edgecolors='black', linewidths=0.3)
+        inset_ax.quiver(0.5, 0.5, uMotion, vMotion, angles='xy', scale_units='xy', scale=1, color='k', width=0.012, 
+                        headwidth=3, headlength=4.5, zorder=3)
+        inset_ax.quiver(0.5, 0.5, uSteer, vSteer, angles='xy', scale_units='xy', scale=1, color='#00AAFF', width=0.012, 
+                        headwidth=3, headlength=4.5, zorder=3, edgecolors='black', linewidths=0.3)
+        inset_ax.quiver(0.5, 0.5, uShear, vShear, angles='xy', scale_units='xy', scale=1, color='orange', width=0.012, 
+                        headwidth=3, headlength=4.5, zorder=3, edgecolors='black', linewidths=0.3)
 
     cbar = fig.colorbar(contourf, ax=axes, pad=0.04, aspect=40, orientation='horizontal')
     cbar.ax.tick_params(labelsize=8)
@@ -2170,10 +2185,9 @@ def compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot,
 
 # Parse command-line arguments -------------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description='GPLOT ens_compare: ensemble comparison plots')
-# Per-invocation identity only. ALL configuration (toggles, member range,
-# cluster/background settings, paths, forecast-hour range) is read from the
-# master namelist Section 8, matching the other GPLOT entry points where
-# --master-nml is the sole config carrier.
+
+# ALL configuration is read solely from the master namelist except for initialization date
+# and SID, which are the per-invocation identity (which cycle, which storm)
 parser.add_argument('--master-nml', dest='master_nml', required=True,
                     help='Path to the master namelist (carries all configuration)')
 parser.add_argument('--idate', type=str, required=True, help='Forecast cycle YYYYMMDDHH')
@@ -2311,8 +2325,9 @@ clusterTypeDict = {"MSLP": ["Strong", "Weak"],
 
 # Main execution --------------------------------------------------------------------------------------
 
-t_script_start = time.perf_counter()
+t_script_start = time.perf_counter()  # Doing some timing for testing purposes, not necessary but helpful to quickly gauge speed issues
 
+# MATT: Is this stuff actually getting output anywhere? I don't see it in the log file
 logger.info(f"GPLOT Ens Comparison starting: {sid} {idate}")
 logger.info(f"  DSOURCE={dsource} EXPT={expt}")
 logger.info(f"  IDIR={idir}")
@@ -2320,7 +2335,7 @@ logger.info(f"  ODIR={ODIR_full}")
 
 # Load ATCF data once for all forecast hours
 adeckData, members = modifyAdeckData(radius, members, baseDataPath, initDate, 
-                                     storm, clusterMembers)
+                                     storm, clusterMembers, fHours)
 
 # Cumulative timing accumulators, summed across all forecast hours
 timing_totals = {
@@ -2332,9 +2347,7 @@ timing_totals = {
     'tiltPlots': 0.0,
 }
 
-# Number of forecast hours each plot type actually ran for. Counted separately
-# from len(fHours) so that a plot type toggled off (or skipped for some hours)
-# still reports a correct average rather than being diluted by hours it never ran.
+# Number of forecast hours each plot type actually ran for
 timing_counts = {_k: 0 for _k in timing_totals}
 
 # Loop over all requested forecast hours
