@@ -24,7 +24,9 @@
 # (*.<model>.*.sat.fHHH.grb2*) are ever deleted -- other operational files
 # in those directories are untouched, and the directories themselves are
 # left in place. Cleanup is skipped for safety if any NOMADS directory
-# listing failed during the run.
+# listing failed during the run, and no cycle's files are deleted unless a
+# direct probe of that cycle's NOMADS URL definitively returns HTTP 404
+# (guards against truncated or rate-limited listings served with 200).
 #
 # Usage:
 #   HAFS_sat_grabber.sh -m <hfsa|hfsb> -o <output_base> [-g] [-n]
@@ -241,6 +243,20 @@ else
         esac
         STALE="$(find "${CYCDIR}" -maxdepth 2 -type f -name "*.${MODEL}.*.sat.f[0-9][0-9][0-9].grb2*" 2>/dev/null)"
         [ -z "${STALE}" ] && continue
+
+        # Require positive proof the cycle is gone before deleting: NOMADS
+        # must answer 404 for the cycle directory itself. NOMADS sometimes
+        # serves truncated listings or rate-limit pages with HTTP 200, which
+        # makes live cycles vanish from AVAIL_CYCLES without tripping
+        # LIST_FAIL -- absence from the crawl alone is not proof. On any
+        # other status (000 = connection/DNS failure) keep the files and let
+        # a later run retry the cleanup.
+        PROBE_URL="${NOMADS_BASE}/${MODEL}.${CYCNAME:0:8}/${CYCNAME:8:2}/"
+        PROBE_CODE="$(curl -s -o /dev/null -w '%{http_code}' --http1.1 --max-time 60 "${PROBE_URL}" 2>/dev/null)"
+        if [ "${PROBE_CODE}" != "404" ]; then
+            echo "    NOTE: ${CYCNAME} absent from listings but probe of ${PROBE_URL} returned HTTP ${PROBE_CODE:-000}, not 404; keeping local files." >&2
+            continue
+        fi
         for SFILE in ${STALE}; do
             if [ "${DRY_RUN}" == "YES" ]; then
                 echo "    [dry-run] would delete aged-off ${SFILE}"
