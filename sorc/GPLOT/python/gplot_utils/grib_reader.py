@@ -16,6 +16,7 @@ import os
 import logging
 import shutil
 import tempfile
+import time
 
 import numpy as np
 import xarray as xr
@@ -219,9 +220,15 @@ def cfgrib_indexpath(filepath):
             _CFGRIB_IDX_DIR = tempfile.mkdtemp(prefix='gplot-cfgrib-idx-')
             atexit.register(shutil.rmtree, _CFGRIB_IDX_DIR,
                             ignore_errors=True)
+            # WARNING so it reaches operational logs (batch scripts don't
+            # pass -v). One line per process; its presence in a log is
+            # positive confirmation the index-cache code path is active.
+            logger.warning(f"cfgrib index cache ACTIVE: private dir "
+                           f"{_CFGRIB_IDX_DIR}")
         except OSError as e:
             logger.warning(f"cfgrib_indexpath: cannot create private "
-                           f"index dir ({e}); cfgrib index disabled")
+                           f"index dir ({e}); cfgrib index DISABLED "
+                           f"(full re-scan on every open)")
             _CFGRIB_IDX_DIR = ''
     if not _CFGRIB_IDX_DIR:
         return ''
@@ -253,6 +260,8 @@ def open_grib2(filepath, filter_by_keys=None):
     """
     if not os.path.isfile(filepath):
         raise FileNotFoundError(f"GRIB2 file not found: {filepath}")
+
+    t0 = time.time()
 
     if filter_by_keys is not None:
         return [xr.open_dataset(
@@ -358,6 +367,16 @@ def open_grib2(filepath, filter_by_keys=None):
 
     if not datasets:
         raise ValueError(f"No readable GRIB2 messages in {filepath}")
+
+    # Timing at WARNING so operational logs (no -v) capture it. This is
+    # the direct probe for the index-cache fix: with the cache active the
+    # ~26 filtered opens share one scan and this reads seconds; a big
+    # number here on a parent-sized file means the scans are NOT being
+    # shared (cache off, or cfgrib not reusing the index across filters).
+    logger.warning(
+        f"open_grib2({os.path.basename(filepath)}): "
+        f"{len(datasets)} dataset group(s) in {time.time() - t0:.1f}s "
+        f"(index cache {'ON' if _CFGRIB_IDX_DIR else 'OFF'})")
 
     return datasets
 

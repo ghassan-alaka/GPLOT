@@ -2464,6 +2464,8 @@ def main():
                     logger.info(f"FHR {fhr:03d}: Already plotted, skipping")
                     continue
 
+            fhr_t0 = time.time()
+
             # NOTE: nest discovery + the multistorm race-condition
             # detector run BEFORE the GRIB2 open on purpose. The
             # detector can skip this FHR entirely, and open_grib2()
@@ -2666,12 +2668,15 @@ def main():
             else:
                 nest_outlines = None
 
+            t_nests_done = time.time()
+
             # Open GRIB2
             try:
                 datasets = open_grib2(grib_path)
             except Exception as e:
                 logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
                 continue
+            t_open_done = time.time()
 
             # HAFS ships simulated IR brightness temperatures in a separate
             # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
@@ -2687,6 +2692,8 @@ def main():
                                     f"({len(sat_datasets)} bands)")
                 except Exception as e:
                     logger.warning(f"Failed to open sat file {sat_path}: {e}")
+
+            t_sat_done = time.time()
 
             # Resolve parent-domain bounds from the GRIB2 grid extent when the
             # domain registry didn't provide any. Use a tiny inset so cartopy
@@ -2786,6 +2793,20 @@ def main():
                 except Exception as e:
                     logger.error(f"FHR {fhr:03d} {recipe['FILE_NAME']}: {e}",
                                  exc_info=True)
+
+            # Per-FHR wall-clock breakdown at WARNING so it lands in the
+            # operational logs (batch scripts don't pass -v). This is the
+            # primary diagnostic for the real-time d01 latency issue: it
+            # separates GRIB open cost (index-cache fix territory) from
+            # recipe render cost (matplotlib/cartopy territory).
+            logger.warning(
+                f"FHR {fhr:03d} timing: nest-check="
+                f"{t_nests_done - fhr_t0:.1f}s grib-open="
+                f"{t_open_done - t_nests_done:.1f}s sat+misc="
+                f"{t_sat_done - t_open_done:.1f}s recipes="
+                f"{time.time() - t_sat_done:.1f}s "
+                f"({n_recipe_plots} plotted, {n_recipe_existing} existing) "
+                f"total={time.time() - fhr_t0:.1f}s")
 
             # Mark this GRIB2 file as plotted if either (a) at least one
             # recipe was freshly produced, or (b) every recipe was either
