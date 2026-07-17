@@ -21,6 +21,8 @@ TO DO:
 - Stop making all of Nikhil's functions rely on the storm variable (of format AL132025); instead make them build up from the
         GPLOT SID format (13L) as needed
 
+- Potentially add ATCF path as a command line argument (probably should do it but discuss it first)
+
 ANSWERS TO MATTS QUESTIONS:
 "do we need borders and coastlines if land==False?", in function plotCartopyFigure():
         Yes, the land=False is just there because shading the land in is unnecessary if we have a background field like 500mb height
@@ -119,7 +121,7 @@ import modules.HepTools as uf
 # initialize data ----------------------------------------------------------------------------------------
 
 
-def modifyAdeckData(radius, members, baseDataPath, initDate, 
+def modifyAdeckData(radius, members, idir, initDate, 
                     storm, clusterMembers, fHours):
     """
     Load ATCF data from all members once (via HepTools.process_atcf_files), 
@@ -129,7 +131,7 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
     POTENTIAL CHANGE: Currently changes the DataFrame into expected format for plotting functions,
     but I should probably keep as is and change the plotting function variable names for consistency.
 
-    Common args (radius, members, baseDataPath, initDate, storm): see glossary
+    Common args (radius, members, idir, initDate, storm): see glossary
     Function-specific:
         clusterMembers : int, minimum members required to continue, otherwise the script exits
 
@@ -143,14 +145,14 @@ def modifyAdeckData(radius, members, baseDataPath, initDate,
 
     #read data or exit if no data is found
     try:
-        adeckData = uf.process_atcf_files(cycle_path=f'{baseDataPath}/{initDate}', timestamp=str(initDate),
+        adeckData = uf.process_atcf_files(cycle_path=f'{idir}/{initDate}', timestamp=str(initDate),
                                           storm_id=f"{storm[:2].upper()}{storm[2:4]}",
                                           members=members)
         if adeckData.empty:
             print(f"ATCF file exists but contains no data for storm {storm}")
             sys.exit(1)
     except Exception as e:
-        print(f"Error reading ATCF data at {baseDataPath} for storm {storm}, init {initDate}: {e}")
+        print(f"Error reading ATCF data at {idir} for storm {storm}, init {initDate}: {e}")
         sys.exit(1)
 
     # map radius to the correct columns
@@ -330,13 +332,13 @@ def windRadiiData(hourData):
 
 
 def trackClusteringData(clusterType, variable, level, fHour, adeckData, 
-                        allClusterMems, baseDataPath, initDate, hourData):
+                        allClusterMems, idir, initDate, hourData):
     """ 
     For each of the two clusters, reads in the cluster-averaged background GRIB field and
     the cluster's full ATCF tracks. Map bounds are dynamically computed to fit the full ATCF
     tracks. The two clusters are fetched concurrently via ThreadPoolExecutor.
 
-    Common args (clusterType, fHour, adeckData, allClusterMems, baseDataPath, 
+    Common args (clusterType, fHour, adeckData, allClusterMems, idir, 
         initDate, storm, hourData): see glossary
     Function specific:
         variable : str, background GRIB field to plot under tracks (e.g. 'HGT')
@@ -373,7 +375,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         be invoked concurrently using multithreading. This speeds things up since the
         bottleneck is the grb2 reads.
 
-        Reads baseDataPath, bounds, initDate, variable, fHour, level, hourData, 
+        Reads idir, bounds, initDate, variable, fHour, level, hourData, 
         clusterType, storm, and memberDataList from enclosing function.
         NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
 
@@ -391,17 +393,17 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         """
         # get GRIB data for the members in the cluster, exit if this does not work
         try:
-            gribData = uf.getGribData(f'{baseDataPath}', bounds, members=clusterMems, initDate=initDate, 
+            gribData = uf.getGribData(f'{idir}', bounds, members=clusterMems, initDate=initDate, 
                                       variable=variable, fHour=fHour, level=level)
             if gribData is None or len(gribData.data_vars) == 0:
                 print(f"No GRIB data returned for cluster {idx}, init {initDate}")
                 sys.exit(1)
 
         except FileNotFoundError as e:
-            print(f"GRIB file not found at {baseDataPath} for init {initDate}: {e}")
+            print(f"GRIB file not found at {idir} for init {initDate}: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading GRIB data  at {baseDataPath} for init {initDate}: {e}")
+            print(f"Error reading GRIB data  at {idir} for init {initDate}: {e}")
             sys.exit(1)
        
         # get cluster-averaged MSLP or radius at fHour
@@ -424,7 +426,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
     return atcfClusters, gribClusters, clusterAvgs
     
 
-def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm, 
+def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, 
                        adeckData, allClusterMems):
     """ 
     For of the two clusters, load storm-centered u/v data, project to radial/tangential components, 
@@ -432,7 +434,7 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
     mass-weighted vortex-averaged steering flow, vertical shear, and actual ATCF storm motion for 
     each cluster.
 
-    Common args (fHour, baseDataPath, initDate, hourData, storm, adeckData,
+    Common args (fHour, idir, initDate, hourData, storm, adeckData,
         allClusterMems): see glossary
     Notes: hourData supplies ATCF centers, adeckData supplies speed/direction for storm motion
 
@@ -450,7 +452,7 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
         be invoked concurrently using multithreading. This speeds things up since the
         bottleneck is the grb2 reads.
 
-        Reads baseDataPath, initDate, fHour, hourData, storm, and adeckData from enclosing function.
+        Reads idir, initDate, fHour, hourData, storm, and adeckData from enclosing function.
         NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
 
         args:
@@ -471,17 +473,17 @@ def vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, storm,
 
         # load 5x5 degree centered wind data into memory, handle errors
         try:
-            windData_xy = uf.getGribData(f'{baseDataPath}', centers, variable=['UGRD', 'VGRD'], members=clusterMems, 
+            windData_xy = uf.getGribData(f'{idir}', centers, variable=['UGRD', 'VGRD'], members=clusterMems, 
                                             initDate=initDate, fHour=fHour)
             if windData_xy is None or len(windData_xy.data_vars) == 0:
                 print(f"No GRIB data returned for cluster {cluster_idx}, storm {storm}")
                 sys.exit(1)
             
         except FileNotFoundError as e:
-            print(f"GRIB file not found at {baseDataPath} for storm {storm}, init {initDate}: {e}")
+            print(f"GRIB file not found at {idir} for storm {storm}, init {initDate}: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading GRIB data at {baseDataPath} for storm {storm}, init {initDate}: {e}")
+            print(f"Error reading GRIB data at {idir} for storm {storm}, init {initDate}: {e}")
             sys.exit(1)
         
         windData_xy = windData_xy.rename({"u": "uWind", "v": "vWind", "longitude": "x", "latitude": "y", "isobaricInhPa": "level"})
@@ -2195,7 +2197,7 @@ parser.add_argument('--sid', type=str, required=True, help='Storm ID, e.g. 13L')
 
 args = parser.parse_args()
 
-# Read all configuration from the master namelist ----------------
+# Read all configuration from the master namelist ---------------------------------------
 MASTER_NML = args.master_nml
 nml = read_master_namelist(MASTER_NML)
 
@@ -2204,29 +2206,31 @@ nml = read_master_namelist(MASTER_NML)
 # cartopy / shpreader.natural_earth() call further below.
 configure_cartopy(nml.get('CARTOPY_DIR'))
 
-#For center finding logic from SHIPS, need a gplot_dir, idir, itag, ext, idate, fhrfmt_raw, init_hr, fnl_hr, dt, sid
+# General experiment configuration (invariant across many runs)
+# For center finding logic from SHIPS, need a gplot_dir, idir, itag, ext, idate, fhrfmt_raw, init_hr, fnl_hr, dt, sid
 gplot_dir = nml.get('GPLOT_DIR', os.environ.get('GPLOT_DIR', ''))
 dsource = nml.get('DSOURCE', 'HAFS')
 expt = nml.get('EXPT', '')
 idir = nml.get('IDIR', '')
-baseDataPath = idir
 itag = nml.get('ITAG', '')
 ext = nml.get('EXT', '.grb2')
 init_hr = int(nml.get('INIT_HR', 0))
 fnl_hr = int(nml.get('FNL_HR', 126))
 fhrfmt_raw = nml.get('FMT_HR', 3)
 dt = int(nml.get('DT', 3))
-idate = args.idate or nml.get('IDATE', '')#duplicated below for date_str...
+
+# Configuration for this specific run case
+idate = str(args.idate or nml.get('IDATE', ''))
 sid = args.sid or nml.get('SID', '')
 
-#these come from args in SHIPS, but we currently don't take them as args - and probably don't need to - no inner domain in HERC, and only 1 tier
-domain = nml.get('DOMAIN','') #args.domain
-tier = nml.get('TIER','') #args.tier
+# these come from args in SHIPS, but we currently don't take them as args - and probably don't need to - no inner domain in HERC, and only 1 tier
+domain = nml.get('DOMAIN','')  # args.domain
+tier = nml.get('TIER','')  # args.tier
 
 # ATCF directory/tag: prefer the merged multistorm (ATCF2) over parent
 # track (ATCF1), mirroring the selection logic in GPLOT_maps.py.
 
-#don't currently have atcf_dir in args - could add later to match other modules. For now, default to nml.get
+# don't currently have atcf_dir in args - could add later to match other modules. For now, default to nml.get
 # if args.atcf_dir:
 #     atcf_dirs = [args.atcf_dir]
 #else:
@@ -2234,7 +2238,7 @@ atcf_dirs = [d for d in (nml.get('ATCF2_DIR', ''),
                             nml.get('ATCF1_DIR', '')) if d]
 atcf_tag = nml.get('ATCF2_TAG', '') or nml.get('ATCF1_TAG', '')
 
-# Handle list values from namelist
+# Handle list values from namelist (robustness check, in case any of these parameters got read in as a list)
 if isinstance(ext, list):
     ext = ext[0] if ext else '.grb2'
 if isinstance(itag, list):
@@ -2251,7 +2255,7 @@ except (ValueError, TypeError):
 
 odir_type = int(nml.get('ODIR_TYPE', 0))
 
-
+# Regex to classify nest vs. parent domain filenames
 _NEST_TOKEN_RE = re.compile(
     r'(?:^|[._-])(storm\d*|nest\d*|moving|d03)(?:[._-]|$)',
     re.IGNORECASE,
@@ -2261,18 +2265,18 @@ _PARENT_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Section-8 comparison toggles (read from the master namelist) ---
+# Comparison plot toggles (read from the master namelist) ----------------------------
 def _nml_bool(key, default='True'):
     return str(nml.get(key, default)).strip().lower() == 'true'
 
-ensembleLinePlots     = _nml_bool('ENSEMBLE_LINE_PLOTS')
+ensembleLinePlots = _nml_bool('ENSEMBLE_LINE_PLOTS')
 ensembleTracksColored = _nml_bool('ENSEMBLE_TRACKS_COLORED')
-ensembleWindRadii     = _nml_bool('ENSEMBLE_WIND_RADII')
-ensembleClustering    = _nml_bool('ENSEMBLE_CLUSTERING')
-vortexAvgSteer        = _nml_bool('VORTEX_AVG_STEER')
-tiltPlots             = _nml_bool('TILT_PLOTS')
+ensembleWindRadii = _nml_bool('ENSEMBLE_WIND_RADII')
+ensembleClustering = _nml_bool('ENSEMBLE_CLUSTERING')
+vortexAvgSteer = _nml_bool('VORTEX_AVG_STEER')
+tiltPlots = _nml_bool('TILT_PLOTS')
 
-# parameter lists
+# parameter lists, derived from namelist
 fHours = list(range(init_hr, fnl_hr + 1, dt))  # forecast hours from INIT_HR/FNL_HR/DT
 clusterType = nml.get('CLUSTER_TYPE', 'ltrack')  # MSLP, R34, R50, R64, ltrack, xtrack
 variable = nml.get('BG_VARIABLE', 'HGT')  # variable to plot under ATCF tracks
@@ -2285,13 +2289,12 @@ members = range(membersStart, membersEnd)  # members to use
 clusterMembers = int(nml.get('CLUSTER_MEMBERS', 4))  # number of members to include in each cluster
 
 # Parse date string into components
-date_str = str(idate)
-year = int(date_str[0:4])
-month = int(date_str[4:6])
-day = int(date_str[6:8])
-hour = int(date_str[8:10])
+year = int(idate[0:4])
+month = int(idate[4:6])
+day = int(idate[6:8])
+hour = int(idate[8:10])
 
-#nikhil's functions want "storm" to be in format AL132025, but sid is supposed to come in form "13l"
+# nikhil's functions want "storm" to be in format AL132025, but sid is supposed to come in form "13l"
 if sid[2].lower() == 'l':
     basin = 'AL'
 elif sid[2].lower() == 'e':
@@ -2334,7 +2337,7 @@ logger.info(f"  IDIR={idir}")
 logger.info(f"  ODIR={ODIR_full}")
 
 # Load ATCF data once for all forecast hours
-adeckData, members = modifyAdeckData(radius, members, baseDataPath, initDate, 
+adeckData, members = modifyAdeckData(radius, members, idir, initDate, 
                                      storm, clusterMembers, fHours)
 
 # Cumulative timing accumulators, summed across all forecast hours
@@ -2352,10 +2355,7 @@ timing_counts = {_k: 0 for _k in timing_totals}
 
 # Loop over all requested forecast hours
 for fHour in fHours:
-    print(f"\n{'='*60}")
-    print(f"Processing forecast hour: {fHour}")
-    print(f"{'='*60}\n")
-
+    print(f"\n{'-'*60}\nProcessing forecast hour: {fHour}\n{'-'*60}\n")
     t_hour_start = time.perf_counter()
 
     hourData = getHourData(fHour, adeckData)
@@ -2394,7 +2394,7 @@ for fHour in fHours:
         t_step_start = time.perf_counter()
         atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
             clusterType, variable, level, fHour, adeckData, allClusterMems, 
-            baseDataPath, initDate, hourData)
+            idir, initDate, hourData)
         plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
                             clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour)
         t_elapsed = time.perf_counter() - t_step_start
@@ -2403,7 +2403,7 @@ for fHour in fHours:
 
     if vortexAvgSteer:
         t_step_start = time.perf_counter()
-        clusterDicts = vortexAvgSteerData(fHour, baseDataPath, initDate, hourData, 
+        clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
                                           storm, adeckData, allClusterMems)
         plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
                            clusterTypeDict, radius, year, month, day, hour)
@@ -2415,7 +2415,7 @@ for fHour in fHours:
         t_step_start = time.perf_counter()
         plot_tilts(adeckData,atcf_dirs,atcf_tag,idir,dsource,
         gpout_path = ODIR, 
-        cycle = date_str, 
+        cycle = idate, 
         fhr=int(fHour),
         storm_id = storm[:4].upper(),
         members_to_plot = [f'{x:02}' for x in members[:-1]],

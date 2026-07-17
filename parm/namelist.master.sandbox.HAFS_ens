@@ -46,7 +46,7 @@ SYS_ENV = ORION
 IDATE = 2025081212
 
 ; 1G. STORM ID
-SID = 05L
+SID =
 
 ; 1H. INPUT PATH
 IDIR = /work/noaa/aoml-hafs1/lgramer/staging/data/ensemble/
@@ -91,9 +91,9 @@ DO_SRCLBL = True
 FORCE = False
 
 ; 1T. BATCH SUBMISSION MODE
-;BATCH_MODE; = Foreground
+BATCH_MODE = Foreground
 ;BATCH_MODE; = Background
-BATCH_MODE = SBatch
+;BATCH_MODE; = SBatch
 
 ; 1U. CONVERT FROM PNG TO GIF
 ;DO_CONVERTGIF; = False
@@ -230,9 +230,9 @@ MEMBERS_START = 0
 MEMBERS_END = 21
 
 ; 2C. CLUSTERING SETTINGS
-; CLUSTER_TYPE options: MSLP, R34, R50, R64, ltrack, xtrack
-CLUSTER_TYPE = ltrack
-CLUSTER_MEMBERS = 4
+; CLUSTER_TYPES options: MSLP, R34, R50, R64, ltrack, xtrack (space- or comma-separated)
+CLUSTER_TYPES = MSLP R34 xtrack ltrack
+CLUSTER_MEMBERS = 5
 
 ; 2D. BACKGROUND FIELD FOR CLUSTERING PLOTS
 BG_VARIABLE = HGT
