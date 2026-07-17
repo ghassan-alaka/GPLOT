@@ -189,6 +189,14 @@ def _get_filtered_3d(datasets, dsource, var, lev_top, lev_bot, bounds,
     return cube
 
 
+# Satellite-imagery variables (simulated GOES bands). Used to (a) render
+# the base fill as a raster (pcolormesh) instead of contours and (b) thin
+# the colorbar ticks to 10-degC multiples.
+_SAT_VARS = {'SIMIR', 'SBTAGR13toa',
+             'SIMWV_UPPER', 'SIMWV_MID',
+             'SBTAGR8toa', 'SBTAGR9toa', 'SBTAGR10toa'}
+
+
 # Grids below this point count are never decimated, regardless of the
 # PLOT_DECIMATE namelist switch. Chosen to split the HAFS parent grid
 # (2667x1501 = 4.0M points) from every storm-scale grid (multistorm
@@ -935,18 +943,42 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
         # each level bin gets its own dedicated color 1:1.
         cmap_final = build_discrete_cmap(cmap, len(levels) - 1, extend='both')
         norm_final = get_norm(levels)
-        cf = ax.contourf(base_field['lon'], base_field['lat'],
-                         base_field['data'], levels=levels,
-                         cmap=cmap_final, norm=norm_final, extend='both',
-                         transform=ccrs.PlateCarree())
+        if base_var in _SAT_VARS:
+            # Satellite imagery renders as a raster, not contours:
+            # per-pixel enhancement is how IR/WV products are
+            # conventionally displayed, and contourf on the 1-degC sat
+            # level sets (150 levels for SIMIR) cost minutes per panel
+            # on the parent grid -- cartopy must project every level's
+            # polygons, vs a single quadmesh here (~30x faster). The
+            # under/over colors already live in cmap_final via
+            # set_under/set_over; cbar_extend tells the colorbar to
+            # draw the triangles since a QuadMesh (unlike a contourf
+            # ContourSet) doesn't carry extend information itself.
+            cf = ax.pcolormesh(base_field['lon'], base_field['lat'],
+                               base_field['data'], cmap=cmap_final,
+                               norm=norm_final, shading='auto',
+                               transform=ccrs.PlateCarree())
+            cbar_extend = 'both'
+        else:
+            cf = ax.contourf(base_field['lon'], base_field['lat'],
+                             base_field['data'], levels=levels,
+                             cmap=cmap_final, norm=norm_final,
+                             extend='both',
+                             transform=ccrs.PlateCarree())
+            cbar_extend = None
     else:
         cf = ax.contourf(base_field['lon'], base_field['lat'],
                          base_field['data'], cmap=cmap, extend='both',
                          transform=ccrs.PlateCarree())
+        cbar_extend = None
 
-    # Colorbar
-    cbar = fig.colorbar(cf, ax=ax, orientation='horizontal', pad=0.05,
-                        shrink=0.8, aspect=40)
+    # Colorbar (extend triangles come from the ContourSet when the fill
+    # was contoured; pcolormesh needs them requested explicitly).
+    cbar_kwargs = dict(orientation='horizontal', pad=0.05,
+                       shrink=0.8, aspect=40)
+    if cbar_extend:
+        cbar_kwargs['extend'] = cbar_extend
+    cbar = fig.colorbar(cf, ax=ax, **cbar_kwargs)
     cbar_label = f"{base_var}"
     if base_field['units']:
         cbar_label += f" ({base_field['units']})"
@@ -955,10 +987,8 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     # Satellite variables use a 1-degC fill (smooth gradient on the
     # IR4 / WVCIMSS_r palettes) but should label only every 10 degC
     # so the colorbar stays readable. Pick ticks at multiples of 10
-    # within the level range.
-    _SAT_VARS = {'SIMIR', 'SBTAGR13toa',
-                 'SIMWV_UPPER', 'SIMWV_MID',
-                 'SBTAGR8toa', 'SBTAGR9toa', 'SBTAGR10toa'}
+    # within the level range. (_SAT_VARS is the module-level set shared
+    # with the raster-fill branch above.)
     if base_var in _SAT_VARS and levels is not None and len(levels) >= 2:
         lvmin, lvmax = float(levels[0]), float(levels[-1])
         # Round inward to nearest 10 so the displayed ticks are clean
