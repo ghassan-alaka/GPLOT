@@ -42,7 +42,8 @@ from gplot_utils.atcf import (read_atcf, read_bdeck, derive_longsid,
 from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, open_sat_file, get_var_2d,
                                       get_var_3d, get_layer_mean,
-                                      get_wind_components, get_grid_info)
+                                      get_wind_components, get_grid_info,
+                                      cfgrib_indexpath)
 from gplot_utils.kurihara import vortex_filter
 from gplot_utils.wn0_filter import remove_wavenumber0
 from gplot_utils.colormaps import (get_colormap, get_contour_levels, get_norm,
@@ -1616,7 +1617,7 @@ def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
                     fn, engine='cfgrib',
                     backend_kwargs={'filter_by_keys': filt,
                                     'errors': 'ignore',
-                                    'indexpath': ''})
+                                    'indexpath': cfgrib_indexpath(fn)})
                 if cand.data_vars:
                     ds = cand
                     break
@@ -2463,92 +2464,13 @@ def main():
                     logger.info(f"FHR {fhr:03d}: Already plotted, skipping")
                     continue
 
-            # Open GRIB2
-            try:
-                datasets = open_grib2(grib_path)
-            except Exception as e:
-                logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
-                continue
-
-            # HAFS ships simulated IR brightness temperatures in a separate
-            # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
-            # locate and open it; if present, append its datasets so recipes
-            # like SIMIR can resolve via the same get_var_2d() path.
-            sat_path = grib_path.replace('.atm.', '.sat.')
-            if sat_path != grib_path and os.path.isfile(sat_path):
-                try:
-                    sat_datasets = open_sat_file(sat_path)
-                    if sat_datasets:
-                        datasets = list(datasets) + list(sat_datasets)
-                        logger.info(f"Sat GRIB2 file: {sat_path} "
-                                    f"({len(sat_datasets)} bands)")
-                except Exception as e:
-                    logger.warning(f"Failed to open sat file {sat_path}: {e}")
-
-            # Resolve parent-domain bounds from the GRIB2 grid extent when the
-            # domain registry didn't provide any. Use a tiny inset so cartopy
-            # doesn't try to draw right at the edge.
-            if bounds is None:
-                grid = get_grid_info(datasets, dsource, gplot_dir)
-                lat_arr = grid.get('lat')
-                lon_arr = grid.get('lon')
-                if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
-                    logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
-                    continue
-                lon_min = float(np.min(lon_arr))
-                lon_max = float(np.max(lon_arr))
-                lon_span = lon_max - lon_min
-                is_global_input = lon_span > 350.0
-
-                # hwrf branch: pick storm-centered +/-40 only when the
-                # input is global HWRF (~360 deg span). For regional
-                # HAFS parent (~160 deg span) the existing "full data
-                # extent" behavior is preserved so the synoptic-scale
-                # context HAFS gave doesn't get cropped away. The
-                # is_storm_named_filename predicate is the right filter
-                # here: we only reach this block for parent-style
-                # domains (d01 / hwrf -- the registry returned None),
-                # and only hwrf is storm-named, so the gate uniquely
-                # selects hwrf without naming it explicitly.
-                if (is_storm_named_filename(domain)
-                        and is_global_input
-                        and tc_lat is not None
-                        and tc_lon is not None):
-                    bounds = get_domain_bounds(domain, tc_lat, tc_lon)
-                    logger.info(f"{domain} bounds (global input -> storm-"
-                                f"centered): {bounds}")
-                else:
-                    # Convert 0..360 longitudes to a cartopy-friendly extent.
-                    # Two cases:
-                    #   1. Global data (lon spans ~360 deg). The previous logic
-                    #      only shifted lon_max past 180, leaving lon_min=0 +
-                    #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
-                    #      collapsed the panel to a single vertical line. Use
-                    #      a true global extent (-180, 180) instead.
-                    #   2. Regional 0..360 data. Shift values > 180 down by
-                    #      360 if both ends would otherwise stay above 180.
-                    if is_global_input:
-                        # Global data -> full -180..180 extent.
-                        lon_min, lon_max = -180.0, 180.0
-                    elif lon_max > 180 and lon_min > 180:
-                        # Whole window past 180 -> shift both down.
-                        lon_min -= 360
-                        lon_max -= 360
-                    # else: leave as-is; downstream _align_lon_to_bounds
-                    # rewraps the data to match these bounds.
-                    bounds = (
-                        float(np.max(lat_arr)),
-                        float(np.min(lat_arr)),
-                        lon_min,
-                        lon_max,
-                    )
-                logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
-
-            # Reset the vortex-filter cache so we don't accidentally reuse a
-            # smoothed cube from the previous forecast hour (the `datasets`
-            # list id() also changes, but being explicit keeps memory bounded).
-            _clear_vortex_cache()
-
+            # NOTE: nest discovery + the multistorm race-condition
+            # detector run BEFORE the GRIB2 open on purpose. The
+            # detector can skip this FHR entirely, and open_grib2()
+            # on a multistorm parent file costs a full-file cfgrib
+            # scan -- paying that just to throw the FHR away made
+            # every skip-and-retry spawn iteration vastly more
+            # expensive than the cheap ATCF/glob checks below.
             # Moving-nest outline overlay. Discovered once per FHR
             # (shared across every recipe's draw_map call so MSLP, REFD,
             # IR, etc. all show the same set of dashed boxes). Only
@@ -2743,6 +2665,92 @@ def main():
                             f"overlay(s) and marking plotted.")
             else:
                 nest_outlines = None
+
+            # Open GRIB2
+            try:
+                datasets = open_grib2(grib_path)
+            except Exception as e:
+                logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
+                continue
+
+            # HAFS ships simulated IR brightness temperatures in a separate
+            # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
+            # locate and open it; if present, append its datasets so recipes
+            # like SIMIR can resolve via the same get_var_2d() path.
+            sat_path = grib_path.replace('.atm.', '.sat.')
+            if sat_path != grib_path and os.path.isfile(sat_path):
+                try:
+                    sat_datasets = open_sat_file(sat_path)
+                    if sat_datasets:
+                        datasets = list(datasets) + list(sat_datasets)
+                        logger.info(f"Sat GRIB2 file: {sat_path} "
+                                    f"({len(sat_datasets)} bands)")
+                except Exception as e:
+                    logger.warning(f"Failed to open sat file {sat_path}: {e}")
+
+            # Resolve parent-domain bounds from the GRIB2 grid extent when the
+            # domain registry didn't provide any. Use a tiny inset so cartopy
+            # doesn't try to draw right at the edge.
+            if bounds is None:
+                grid = get_grid_info(datasets, dsource, gplot_dir)
+                lat_arr = grid.get('lat')
+                lon_arr = grid.get('lon')
+                if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
+                    logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
+                    continue
+                lon_min = float(np.min(lon_arr))
+                lon_max = float(np.max(lon_arr))
+                lon_span = lon_max - lon_min
+                is_global_input = lon_span > 350.0
+
+                # hwrf branch: pick storm-centered +/-40 only when the
+                # input is global HWRF (~360 deg span). For regional
+                # HAFS parent (~160 deg span) the existing "full data
+                # extent" behavior is preserved so the synoptic-scale
+                # context HAFS gave doesn't get cropped away. The
+                # is_storm_named_filename predicate is the right filter
+                # here: we only reach this block for parent-style
+                # domains (d01 / hwrf -- the registry returned None),
+                # and only hwrf is storm-named, so the gate uniquely
+                # selects hwrf without naming it explicitly.
+                if (is_storm_named_filename(domain)
+                        and is_global_input
+                        and tc_lat is not None
+                        and tc_lon is not None):
+                    bounds = get_domain_bounds(domain, tc_lat, tc_lon)
+                    logger.info(f"{domain} bounds (global input -> storm-"
+                                f"centered): {bounds}")
+                else:
+                    # Convert 0..360 longitudes to a cartopy-friendly extent.
+                    # Two cases:
+                    #   1. Global data (lon spans ~360 deg). The previous logic
+                    #      only shifted lon_max past 180, leaving lon_min=0 +
+                    #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
+                    #      collapsed the panel to a single vertical line. Use
+                    #      a true global extent (-180, 180) instead.
+                    #   2. Regional 0..360 data. Shift values > 180 down by
+                    #      360 if both ends would otherwise stay above 180.
+                    if is_global_input:
+                        # Global data -> full -180..180 extent.
+                        lon_min, lon_max = -180.0, 180.0
+                    elif lon_max > 180 and lon_min > 180:
+                        # Whole window past 180 -> shift both down.
+                        lon_min -= 360
+                        lon_max -= 360
+                    # else: leave as-is; downstream _align_lon_to_bounds
+                    # rewraps the data to match these bounds.
+                    bounds = (
+                        float(np.max(lat_arr)),
+                        float(np.min(lat_arr)),
+                        lon_min,
+                        lon_max,
+                    )
+                logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
+
+            # Reset the vortex-filter cache so we don't accidentally reuse a
+            # smoothed cube from the previous forecast hour (the `datasets`
+            # list id() also changes, but being explicit keeps memory bounded).
+            _clear_vortex_cache()
 
             # Loop over plot recipes. Track successes per-FHR so we can
             # gate the plotted-file marker on actually having produced
