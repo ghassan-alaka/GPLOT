@@ -189,6 +189,58 @@ def _get_filtered_3d(datasets, dsource, var, lev_top, lev_bot, bounds,
     return cube
 
 
+# Grids below this point count are never decimated, regardless of the
+# PLOT_DECIMATE namelist switch. Chosen to split the HAFS parent grid
+# (2667x1501 = 4.0M points) from every storm-scale grid (multistorm
+# nest = 1001x801 = 0.8M), so the switch can live in a master namelist
+# shared by all domains without ever touching d03/storm panels.
+_DECIMATE_MIN_POINTS = 2_000_000
+
+
+def _decimate_datasets(datasets, fhr, target=1400):
+    """
+    Subsample parent-scale dataset groups for plotting.
+
+    The rendered figure is only ~1400 px wide, while the HAFS parent
+    grid carries ~2667 points in x -- contouring the native grid makes
+    matplotlib chew on 2-4x more points than the output can display,
+    at minutes per panel across a full recipe list. Slice every
+    horizontal dim by the smallest stride that brings the largest
+    dimension under ``target``. Coordinates are sliced consistently by
+    xarray, and downstream resolution-adaptive logic (smoothing sigmas,
+    streamline skip, Kurihara dx) keys off the decimated grid, so the
+    effective scales are preserved.
+
+    Only dataset groups with >= _DECIMATE_MIN_POINTS horizontal points
+    are touched; returns a new list, never mutating the input datasets.
+    """
+    out = []
+    notes = []
+    for ds in datasets:
+        dims = None
+        if 'latitude' in ds.dims and 'longitude' in ds.dims:
+            dims = ('latitude', 'longitude')
+        elif 'y' in ds.dims and 'x' in ds.dims:
+            dims = ('y', 'x')
+        if dims is not None:
+            ny = ds.sizes[dims[0]]
+            nx = ds.sizes[dims[1]]
+            if ny * nx >= _DECIMATE_MIN_POINTS:
+                stride = int(np.ceil(max(nx, ny) / float(target)))
+                if stride > 1:
+                    ds = ds.isel({dims[0]: slice(None, None, stride),
+                                  dims[1]: slice(None, None, stride)})
+                    notes.append((ny, nx, stride))
+        out.append(ds)
+    if notes:
+        ny, nx, stride = notes[0]
+        logger.warning(
+            f"FHR {fhr:03d}: plot decimation stride {stride}: "
+            f"{ny}x{nx} -> {-(-ny // stride)}x{-(-nx // stride)} on "
+            f"{len(notes)}/{len(out)} dataset group(s)")
+    return out
+
+
 def _layer_mean_from_cube(cube_3d):
     """
     Pressure-weighted vertical mean of a 3D cube (lev, lat, lon).
@@ -2280,6 +2332,15 @@ def main():
     # sweep the 00L "fake storm" pass sees zero nests on its d01
     # panel.
     draw_nests = bool(nml.get('DRAW_NESTS', False))
+    # Plot-time grid decimation for parent-scale panels (see
+    # _decimate_datasets). Off unless the namelist opts in.
+    plot_decimate = bool(nml.get('PLOT_DECIMATE', False))
+    plot_decimate_target = int(nml.get('PLOT_DECIMATE_TARGET', 1400)
+                               or 1400)
+    if plot_decimate:
+        logger.warning(f"PLOT_DECIMATE=True: parent-scale grids will be "
+                       f"subsampled to <= {plot_decimate_target} points "
+                       f"per horizontal dim for plotting")
     is_mstorm  = bool(nml.get('IS_MSTORM', False))
 
     # Multistorm sibling-expansion for atcf_dirs. The HAFS multistorm
@@ -2692,6 +2753,15 @@ def main():
                                     f"({len(sat_datasets)} bands)")
                 except Exception as e:
                     logger.warning(f"Failed to open sat file {sat_path}: {e}")
+
+            # Optional plot-time decimation of parent-scale grids
+            # (PLOT_DECIMATE namelist switch). Applied after the sat
+            # datasets are appended so the 4M-point SIMIR/SIMWV bands
+            # are subsampled too. Storm-scale grids are never touched
+            # (see _DECIMATE_MIN_POINTS).
+            if plot_decimate:
+                datasets = _decimate_datasets(datasets, fhr,
+                                              target=plot_decimate_target)
 
             t_sat_done = time.time()
 

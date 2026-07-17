@@ -83,13 +83,14 @@ _BOOL_KEYS = {
     'DO_MARKERS', 'DO_FHRLABELS', 'ATCF_REQD', 'DO_TOPOMASK',
     'DO_MAPS', 'DO_STATS', 'DO_SHIPS', 'DO_POLAR',
     'DO_AIRSEA', 'DO_OCEAN_MAPS', 'DO_OCEAN_OBS',
-    'DO_DBZ', 'OCEAN_WRAP_LON', 'DRAW_NESTS',
+    'DO_DBZ', 'OCEAN_WRAP_LON', 'DRAW_NESTS', 'PLOT_DECIMATE',
 }
 
 # Keys that should be parsed as integers
 _INT_KEYS = {
     'ODIR_TYPE', 'INIT_HR', 'FNL_HR', 'FMT_HR', 'DT',
     'NMAX_MAPS', 'MAX_FHR', 'NTREND', 'ENSMEM',
+    'PLOT_DECIMATE_TARGET',
 }
 
 # Keys that should be parsed as floats
