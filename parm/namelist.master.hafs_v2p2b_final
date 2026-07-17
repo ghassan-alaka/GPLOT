@@ -121,7 +121,7 @@ DRAW_NESTS = True
 ; 2G. SUBSAMPLE PARENT-SCALE GRIDS FOR PLOTTING?
 ;     Grids under 2M points (d03/storm nests) are never decimated.
 ;     Target = max points per horizontal dim after subsampling.
-PLOT_DECIMATE = True
+PLOT_DECIMATE = False
 ;PLOT_DECIMATE_TARGET; = 1400
 
 ;================================================================
