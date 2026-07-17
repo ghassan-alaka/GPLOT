@@ -399,6 +399,15 @@ if [ "${DO_MAPS}" = "True" ]; then
                 fi
             fi
 
+            # When the fake storm is in play, non-storm-centered domains
+            # run ONLY on the 00L pass (see the skip in the domain loop).
+            # Computed once here so both the old FOUND_FILES heuristic and
+            # the new deterministic rule key off the same flag.
+            MSTORM_00L="False"
+            if [[ " ${STORMS[*]^^} " == *" 00L "* ]]; then
+                MSTORM_00L="True"
+            fi
+
             # Set the storm counter. This is important because large-scale
             # output files may be duplicated for different storms. For example,
             # HWRF-B/GFS files for the outer domain are identical for all storms.
@@ -502,9 +511,14 @@ if [ "${DO_MAPS}" = "True" ]; then
                         NEST=1
                     fi
     
-                    # Skip subsequent storms if the outer domain has been plotted
+                    # Skip subsequent storms if the outer domain has been plotted.
+                    # Suppressed in multistorm+00L mode: FOUND_FILES is set by ANY
+                    # domain that finds files (including a real storm's d03), and
+                    # 00L loops last -- so this heuristic would kill the 00L d01
+                    # pass that the deterministic rule below reserves the domain
+                    # for, leaving d01 never rendered.
                     #if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
-                    if [ "${SC}" == "False" ] && [ ${NSTORM} -ge 2 ] && [ "${FOUND_FILES}" == "True" ]; then
+                    if [ "${MSTORM_00L}" != "True" ] && [ "${SC}" == "False" ] && [ ${NSTORM} -ge 2 ] && [ "${FOUND_FILES}" == "True" ]; then
                         echo "WARNING: Skipping this domain (${DMN}) because it is not storm-centered and this is at least the 2nd storm (${NSTORM})."
                         continue
                     fi
@@ -512,6 +526,25 @@ if [ "${DO_MAPS}" = "True" ]; then
                     # Skip the fake storm (00L) for storm-centered domains
                     if [ "${SC}" == "True" ] && [ "${STORM^^}" == "00L" ]; then
                         echo "WARNING: Skipping this domain (${DMN}) because it is storm-centered and this is the fake storm (00L)."
+                        continue
+                    fi
+
+                    # The inverse rule: in multistorm mode, non-storm-centered
+                    # domains (d01, basin, ...) run ONLY on the fake-storm
+                    # (00L) pass. Their output filenames are storm-agnostic,
+                    # and per-storm COM dirs can carry their own copies of the
+                    # parent GRIB2s (different <sid>-prefixed paths), so
+                    # per-storm passes just re-render identical figures --
+                    # racing on the same output files when jobs overlap in
+                    # real time -- or, in layouts where only 00L holds the
+                    # parent files, waste a file-search pass per real storm.
+                    # The 00L maps pass still draws every storm's nest outline
+                    # and L marker via the sibling-dir sweeps in GPLOT_maps.
+                    # Guarded on 00L actually being in STORMS so ensembles
+                    # (no fake 00L) and quiet-basin NONE cycles keep their
+                    # current behavior.
+                    if [ "${MSTORM_00L}" == "True" ] && [ "${SC}" == "False" ] && [ "${STORM^^}" != "00L" ]; then
+                        echo "MSG: Skipping this domain (${DMN}) for storm ${STORM}: non-storm-centered domains run once on the 00L pass in multistorm mode."
                         continue
                     fi
     
