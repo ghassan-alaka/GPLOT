@@ -2781,12 +2781,23 @@ def main():
                     n_recipe_existing += 1
                     continue
                 try:
+                    t_recipe = time.time()
                     ofile = draw_map(
                         recipe, datasets, dsource, bounds, fhr, idate, expt,
                         tc_lat, tc_lon, vmax, mslp_val, longsid, ensid,
                         gplot_dir, odir_full, domain, thin_factor, atcf_df,
                         nest_outlines=nest_outlines,
                     )
+                    # Call out individually slow recipes at WARNING (ops
+                    # logs hide INFO) so the per-FHR aggregate in the
+                    # timing line below can be attributed to a specific
+                    # product (streamline-based recipes on a full parent
+                    # grid are the usual suspects).
+                    dt_recipe = time.time() - t_recipe
+                    if dt_recipe > 60:
+                        logger.warning(
+                            f"FHR {fhr:03d} slow recipe "
+                            f"{recipe['FILE_NAME']}: {dt_recipe:.1f}s")
                     if ofile:
                         n_plots += 1
                         n_recipe_plots += 1
