@@ -121,17 +121,16 @@ import modules.HepTools as uf
 # initialize data ----------------------------------------------------------------------------------------
 
 
-def modifyAdeckData(radius, members, idir, initDate, 
-                    storm, clusterMembers, fHours):
+def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
     """
     Load ATCF data from all members once (via HepTools.process_atcf_files), 
-    get specified radius data, drop members with incomplete tracks, and append 
+    build per-radius columns, drop members with incomplete tracks, and append 
     ensemble mean as the final "member".
     
     POTENTIAL CHANGE: Currently changes the DataFrame into expected format for plotting functions,
     but I should probably keep as is and change the plotting function variable names for consistency.
 
-    Common args (radius, members, idir, initDate, storm): see glossary
+    Common args (members, idir, initDate, storm): see glossary
     Function-specific:
         clusterMembers : int, minimum members required to continue, otherwise the script exits
 
@@ -155,13 +154,13 @@ def modifyAdeckData(radius, members, idir, initDate,
         print(f"Error reading ATCF data at {idir} for storm {storm}, init {initDate}: {e}")
         sys.exit(1)
 
-    # map radius to the correct columns
+    # Source columns for every radius, each tuple is (mean, quad1..4) in the 
+    # raw ATCF column names produced by uf.process_atcf_files
     rad_col_map = {
-        34: ('r34',  'rad1',     'rad2',     'rad3',     'rad4'),
-        50: ('r50',  'r50_rad1', 'r50_rad2', 'r50_rad3', 'r50_rad4'),
-        64: ('r64',  'r64_rad1', 'r64_rad2', 'r64_rad3', 'r64_rad4'),
+        34: ('r34', 'rad1', 'rad2', 'rad3', 'rad4'),
+        50: ('r50', 'r50_rad1', 'r50_rad2', 'r50_rad3', 'r50_rad4'),
+        64: ('r64', 'r64_rad1', 'r64_rad2', 'r64_rad3', 'r64_rad4'),
     }
-    mean_col, q1_col, q2_col, q3_col, q4_col = rad_col_map[radius]
 
     # rename to match names in remainder of script
     adeckData = adeckData.rename(columns={'fhr': 'TAU', 'emem': 'member', 'lon': 'longitude', 'lat': 'latitude', 
@@ -170,27 +169,30 @@ def modifyAdeckData(radius, members, idir, initDate,
     # convert longitude from -180/180 to 0-360 to match GRIB files
     adeckData['longitude'] = adeckData['longitude'] % 360
 
-    # build RAD1-4 and RadMean from the appropriate radius columns
-    adeckData['RAD'] = radius
-    adeckData['RAD1'] = adeckData[q1_col]
-    adeckData['RAD2'] = adeckData[q2_col]
-    adeckData['RAD3'] = adeckData[q3_col]
-    adeckData['RAD4'] = adeckData[q4_col]
-    adeckData['RadMean'] = adeckData[mean_col]
+    # Build per-radius columns for ALL radii (R34/R50/R64 (mean) and R{n}_RAD1..4 (quadrants))
+    # NOTE: No single "RadMean" column exists anymore so a run can rank/cluster/plot by any of them
+    for _rad, (_mean, _q1, _q2, _q3, _q4) in rad_col_map.items():
+        adeckData[f'R{_rad}']      = adeckData[_mean]
+        adeckData[f'R{_rad}_RAD1'] = adeckData[_q1]
+        adeckData[f'R{_rad}_RAD2'] = adeckData[_q2]
+        adeckData[f'R{_rad}_RAD3'] = adeckData[_q3]
+        adeckData[f'R{_rad}_RAD4'] = adeckData[_q4]
 
-    # for non-34kt radii, fill missing rows (has r34 but no data for this radius) with zeros
-    if radius != 34:
-        missing_mask = adeckData['r34'].notna() & (adeckData[mean_col].isna() | (adeckData[mean_col] == 0))
-        if missing_mask.any():
-            print(f"Zero-filling {missing_mask.sum()} row(s) with missing {radius}kt radii")
-            adeckData.loc[missing_mask, ['RAD1', 'RAD2', 'RAD3', 'RAD4', 'RadMean']] = 0
+        # R50/R64 rows are often missing when R34 exists, so zero-fill those as needed
+        if _rad != 34:
+            missing = adeckData['r34'].notna() & (adeckData[_mean].isna() | (adeckData[_mean] == 0))
+            if missing.any():
+                print(f"Zero-filling {missing.sum()} row(s) with missing {_rad}kt radii")
+                adeckData.loc[missing, [f'R{_rad}', f'R{_rad}_RAD1', f'R{_rad}_RAD2',
+                                        f'R{_rad}_RAD3', f'R{_rad}_RAD4']] = 0
 
     # update members to only those present in the data
     members = [m for m in members if m in adeckData['member'].unique()]
 
     # select final columns
-    finalCols = ['TECH', 'TAU', 'latitude', 'longitude', 'MSLP', 'RAD', 'RadMean',
-                 'RAD1', 'RAD2', 'RAD3', 'RAD4', 'DIR', 'SPEED', 'member']
+    finalCols = ['TECH', 'TAU', 'latitude', 'longitude', 'MSLP', 'DIR', 'SPEED', 'member']
+    finalCols += [c for _rad in (34, 50, 64)
+                    for c in (f'R{_rad}', f'R{_rad}_RAD1', f'R{_rad}_RAD2', f'R{_rad}_RAD3', f'R{_rad}_RAD4')]
     adeckData = adeckData[finalCols].sort_values(by=["member", "TAU"]).reset_index(drop=True)
 
     # filter out members with incomplete track data, exit if not enough are present (len(members) < clusterMembers)
@@ -276,15 +278,14 @@ def sortedColoringData(clusterType, hourData):
     return avgVarTypes
 
 
-def windRadiiData(hourData):
+def windRadiiData(hourData, radius):
     """ 
     Select the five members closest to the ensembles quartiles (min/25th/median/75th/max), 
     then build the per-quadrant wind radii arc coordinates for those five members.
 
-    Common args (hourData): see glossary, note that hourData must include RadMean and RAD1-4
-
-    POTENTIAL CHANGE: RadMean is a somewhat problematic/confusing/vague variable, maybe find a
-    more readable way to do radius-related computations.
+    Common args (hourData): see glossary
+    Function-specific:
+        radius: int (34/50/64), which wind radius to build quartiles/arcs for
 
     dependencies: 
         numpy as np, pandas as pd
@@ -295,8 +296,9 @@ def windRadiiData(hourData):
         radData: DataFrame with columns ['lat', 'lon', 'percentile', 'quadrant']; one
             row per point along each quadrant's radius arc, for all 5 members
     """
-    percentiles = hourData['RadMean'].quantile([0, 0.25, 0.5, 0.75, 1.0]).to_numpy()
-    radiiArray = hourData['RadMean'].to_numpy()[:, None]
+    meanCol = f'R{radius}'
+    percentiles = hourData[meanCol].quantile([0, 0.25, 0.5, 0.75, 1.0]).to_numpy()
+    radiiArray = hourData[meanCol].to_numpy()[:, None]
     percentileArray = percentiles
     diffMatrix = np.abs(radiiArray - percentileArray)
 
@@ -310,7 +312,7 @@ def windRadiiData(hourData):
     allLatPoints, allLonPoints, allPercentiles, allQuadrants = [], [], [], []
     for percentile, memberData in quartileData.iterrows():
         centerLat, centerLon = memberData['latitude'], memberData['longitude']
-        radii = ['RAD1', 'RAD2', 'RAD3', 'RAD4']
+        radii = [f'R{radius}_RAD1', f'R{radius}_RAD2', f'R{radius}_RAD3', f'R{radius}_RAD4']
 
         # generate radii arc coords for each quadrant
         for idx, startAngle in enumerate([0, 90, 180, 270]):
@@ -324,7 +326,7 @@ def windRadiiData(hourData):
             allLatPoints.extend(latPoints)
             allLonPoints.extend(lonPoints)
             allPercentiles.extend(np.repeat([percentile], len(latPoints)))
-            allQuadrants.extend(np.repeat([radii[idx]], len(latPoints)))
+            allQuadrants.extend(np.repeat([f'RAD{idx + 1}'], len(latPoints)))
             
     # combine all data into a single DataFrame
     radData = pd.DataFrame({'lat': allLatPoints, 'lon': allLonPoints, 'percentile': allPercentiles, 'quadrant': allQuadrants})  
@@ -675,8 +677,7 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
             ax.scatter(memberData['longitude'] - 180, memberData['latitude'],
                        color=color, s=dotSize, alpha=opacity, zorder=zorder)
 
-    # FIXED BUG MATT FOUND IN TITLE LOGIC
-    sortTitle = typeDict[clusterType][0] if clusterType == 'RadMean' else clusterType
+    sortTitle = typeDict[clusterType][0]
     
     sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=len(members)))
     sm.set_array([])  # Needed to avoid warning
@@ -721,8 +722,7 @@ def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, rad
     ax.set_xlabel('Time in Hours', fontsize=9, weight='bold')
     ax.set_ylabel('MSLP', fontsize=9, weight='bold')
 
-    sortSave = f"R{radius}" if clusterType == 'RadMean' else clusterType
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{sortSave}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
 def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
@@ -748,8 +748,7 @@ def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm,
     ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, typeDict, 
                          clusterType, fHour, hour, monthsDict, year, day, month)
 
-    sortSave = f"R{radius}" if clusterType == 'RadMean' else clusterType
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{sortSave}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
 def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius, 
@@ -779,8 +778,6 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
 
     ax = plotCartopyFigure(ax)
-    
-    filename = ""
     
     meanLon, meanLat = quartileData['longitude'].mean(), quartileData['latitude'].mean()
     ax.set_extent([meanLon-8, meanLon+8, meanLat-6, meanLat+6])
@@ -900,8 +897,9 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     cbar.ax.tick_params(labelsize=8)
 
     # add titling
-    titleDict = {"MSLP": "MSLP", "RadMean": f"Radius of {radius}kt Winds", "ltrack": "Across Track Variation", 
-                 "xtrack": "Along Track Variation", "vortexDepth": "Vortex Depth"}
+    titleDict = {"MSLP": "MSLP", "ltrack": "Across Track Variation", "xtrack": "Along Track Variation", 
+                 "R34": "Radius of 34kt Winds", "R50": "Radius of 50kt Winds", "R64": "Radius of 64kt Winds", 
+                 "vortexDepth": "Vortex Depth"}
 
     name = uf.getStormName(storm, initDate)
     mainTitle = f"HAFS Ensemble {name} 500mb Heights and Tracks Clustered By {titleDict[clusterType]}"
@@ -1029,8 +1027,9 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
     cbar.ax.tick_params(labelsize=8)
 
     # add titling
-    titleDict = {"MSLP": "MSLP", "RadMean": f"Radius of {radius}kt Winds", "ltrack": "Across Track Variation", 
-                 "xtrack": "Along Track Variation", "vortexDepth": "Vortex Depth"}
+    titleDict = {"MSLP": "MSLP", "ltrack": "Across Track Variation", "xtrack": "Along Track Variation", 
+                 "R34": "Radius of 34kt Winds", "R50": "Radius of 50kt Winds", "R64": "Radius of 64kt Winds", 
+                 "vortexDepth": "Vortex Depth"}
 
     name = uf.getStormName(storm, initDate)
     mainTitle = f"HAFS Ensemble {name} Rad Avg Wind (kts) Clustered By {titleDict[clusterType]}"
@@ -2278,9 +2277,30 @@ tiltPlots = _nml_bool('TILT_PLOTS')
 
 # parameter lists, derived from namelist
 fHours = list(range(init_hr, fnl_hr + 1, dt))  # forecast hours from INIT_HR/FNL_HR/DT
-clusterType = nml.get('CLUSTER_TYPE', 'ltrack')  # MSLP, R34, R50, R64, ltrack, xtrack
 variable = nml.get('BG_VARIABLE', 'HGT')  # variable to plot under ATCF tracks
 level = int(nml.get('BG_LEVEL', 500))  # atmospheric level to plot for (if applicable)
+
+# Cluster types to generate graphics for
+ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
+
+# Normalize input into a clean list of clusterTypes
+_ct_raw = nml.get('CLUSTER_TYPES', '')
+if isinstance(_ct_raw, list):
+    clusterTypes = [str(_c).strip() for _c in _ct_raw if str(_c).strip()]
+else:
+    clusterTypes = [_c for _c in re.split(r'[,\s]+', str(_ct_raw).strip()) if _c]
+
+# Remove bad clusterType inputs and notify user
+_badTypes = [_c for _c in clusterTypes if _c not in ALLOWED_CLUSTER_TYPES]
+if _badTypes:
+    print(f"WARNING: Ignoring unrecognized CLUSTER_TYPES value(s): {_badTypes}")
+    clusterTypes = [_c for _c in clusterTypes if _c in ALLOWED_CLUSTER_TYPES]
+
+clusterTypes = list(dict.fromkeys(clusterTypes))  # de-dup, preserve order
+print(f"MSG: Cluster types to plot --> {clusterTypes}")
+
+# All three radii are considered for wind-radii plots every run
+requestedRadii = [34, 50, 64]
 
 # static parameters
 membersStart = int(nml.get('MEMBERS_START', 0))
@@ -2310,21 +2330,47 @@ ODIR = nml.get('ODIR', '')
 ODIR_full = ODIR+'/ensembleComparison'
 os.makedirs(ODIR_full, exist_ok=True)
 
-radius = int(clusterType[-2:]) if clusterType in ["R34", "R50", "R64"] else 34
-clusterType = "RadMean" if clusterType in ["R34", "R50", "R64"] else clusterType
+
+def cluster_radius(ct):
+    """Wind radius (int) implied by a cluster type; None for non-radius types."""
+    return int(ct[1:]) if ct in ("R34", "R50", "R64") else None
+
+
+def radius_is_plottable(hourData, radius):
+    """
+    Whether a wind-radii figure is worth making for this radius at this hour. Always makes R34, 
+    but R50/R64 are skipped unless at least half of the ensemble members have a nonzero radius 
+    there (so the low quartiles don't collapse onto identical zero-radius members).
+
+    args:
+        hourData: single-fHour ATCF data for all members (including the appended mean)
+        radius: int, 34/50/ 64
+    returns: bool
+    """
+    if radius == 34:
+        return True
+
+    # Exclude the appended ensemble mean (last member) from the member count
+    nMembers = max(len(hourData) - 1, 1)
+    nNonzero = int((hourData[f'R{radius}'] > 0).sum())
+    return nNonzero >= (nMembers / 2)
+
 
 # dictionaries for conversions and static variables
 monthsDict = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun", 
               7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
-typeDict = {"MSLP": ["Intensity", "MSLP (hPa)"], 
-            "RadMean": [f"{radius}kt Avg Wind Radius", "Radius (km)"], 
-            "ltrack": ["Across Track Deviation", "Distance (km)"], 
+typeDict = {"MSLP":   ["Intensity", "MSLP (hPa)"],
+            "ltrack": ["Across Track Deviation", "Distance (km)"],
             "xtrack": ["Along Track Deviation", "Distance (km)"]}
-clusterTypeDict = {"MSLP": ["Strong", "Weak"], 
-                   "RadMean": [f"R{radius} Small", f"R{radius} Large"], 
-                   "ltrack": ["Left of Track", "Right of Track"], 
-                   "xtrack": ["Slow", "Fast"], 
+clusterTypeDict = {"MSLP":   ["Strong", "Weak"],
+                   "ltrack": ["Left of Track", "Right of Track"],
+                   "xtrack": ["Slow", "Fast"],
                    "vortexDepth": ["Shallow", "Deep"]}
+
+# Add a per-radius entry for each wind-radius cluster type (R34/R50/R64)
+for _rad in (34, 50, 64):
+    typeDict[f"R{_rad}"] = [f"{_rad}kt Avg Wind Radius", "Radius (km)"]
+    clusterTypeDict[f"R{_rad}"] = [f"R{_rad} Small", f"R{_rad} Large"]
 
 # Main execution --------------------------------------------------------------------------------------
 
@@ -2337,8 +2383,7 @@ logger.info(f"  IDIR={idir}")
 logger.info(f"  ODIR={ODIR_full}")
 
 # Load ATCF data once for all forecast hours
-adeckData, members = modifyAdeckData(radius, members, idir, initDate, 
-                                     storm, clusterMembers, fHours)
+adeckData, members = modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours)
 
 # Cumulative timing accumulators, summed across all forecast hours
 timing_totals = {
@@ -2360,57 +2405,68 @@ for fHour in fHours:
 
     hourData = getHourData(fHour, adeckData)
 
-    if ensembleClustering or vortexAvgSteer:
-        allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
-
-    if ensembleLinePlots:
-        t_step_start = time.perf_counter()
-        avgVarTypes = sortedColoringData(clusterType, hourData)
-        plotLinePlots(avgVarTypes, members, ODIR_full, clusterType, 
-                      fHour, storm, radius, initDate)
-        t_elapsed = time.perf_counter() - t_step_start
-        timing_totals['ensembleLinePlots'] += t_elapsed
-        timing_counts['ensembleLinePlots'] += 1
-
-    if ensembleTracksColored:
-        t_step_start = time.perf_counter()
-        avgVarTypes = sortedColoringData(clusterType, hourData)
-        plotTracksColored(avgVarTypes, members, ODIR_full, clusterType, 
-                          fHour, storm, radius, initDate)
-        t_elapsed = time.perf_counter() - t_step_start
-        timing_totals['ensembleTracksColored'] += t_elapsed
-        timing_counts['ensembleTracksColored'] += 1
-
+    # Wind radii depends on radius, not clusterType, so it runs once per hour per radius
     if ensembleWindRadii:
-        t_step_start = time.perf_counter()
-        adeckRadiiData, radData = windRadiiData(hourData)
-        plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
-                      radius, initDate, adeckData, year, month, day, hour)
-        t_elapsed = time.perf_counter() - t_step_start
-        timing_totals['ensembleWindRadii'] += t_elapsed
-        timing_counts['ensembleWindRadii'] += 1
+        for _rad in requestedRadii:
+            # Skip if less than half the available members have nonzero rXX values
+            if not radius_is_plottable(hourData, _rad):
+                print(f"MSG: fHour {fHour}: skipping R{_rad} wind-radii plot, too few members")
+                continue
+            
+            t_step_start = time.perf_counter()
+            adeckRadiiData, radData = windRadiiData(hourData, _rad)
+            plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
+                          _rad, initDate, adeckData, year, month, day, hour)
+            t_elapsed = time.perf_counter() - t_step_start
+            timing_totals['ensembleWindRadii'] += t_elapsed
+            timing_counts['ensembleWindRadii'] += 1
 
-    if ensembleClustering:
-        t_step_start = time.perf_counter()
-        atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
-            clusterType, variable, level, fHour, adeckData, allClusterMems, 
-            idir, initDate, hourData)
-        plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                            clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour)
-        t_elapsed = time.perf_counter() - t_step_start
-        timing_totals['ensembleClustering'] += t_elapsed
-        timing_counts['ensembleClustering'] += 1
+    for clusterType in clusterTypes:
+        print(f"\nForecast hour {fHour}: cluster type {clusterType}")
 
-    if vortexAvgSteer:
-        t_step_start = time.perf_counter()
-        clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
-                                          storm, adeckData, allClusterMems)
-        plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
-                           clusterTypeDict, radius, year, month, day, hour)
-        t_elapsed = time.perf_counter() - t_step_start
-        timing_totals['vortexAvgSteer'] += t_elapsed
-        timing_counts['vortexAvgSteer'] += 1
+        if ensembleClustering or vortexAvgSteer:
+            allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
 
+        if ensembleLinePlots:
+            t_step_start = time.perf_counter()
+            avgVarTypes = sortedColoringData(clusterType, hourData)
+            plotLinePlots(avgVarTypes, members, ODIR_full, clusterType, 
+                          fHour, storm, cluster_radius(clusterType), initDate)
+            t_elapsed = time.perf_counter() - t_step_start
+            timing_totals['ensembleLinePlots'] += t_elapsed
+            timing_counts['ensembleLinePlots'] += 1
+
+        if ensembleTracksColored:
+            t_step_start = time.perf_counter()
+            avgVarTypes = sortedColoringData(clusterType, hourData)
+            plotTracksColored(avgVarTypes, members, ODIR_full, clusterType, 
+                              fHour, storm, cluster_radius(clusterType), initDate)
+            t_elapsed = time.perf_counter() - t_step_start
+            timing_totals['ensembleTracksColored'] += t_elapsed
+            timing_counts['ensembleTracksColored'] += 1
+
+        if ensembleClustering:
+            t_step_start = time.perf_counter()
+            atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
+                clusterType, variable, level, fHour, adeckData, allClusterMems, 
+                idir, initDate, hourData)
+            plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
+                                clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), year, month, day, hour)
+            t_elapsed = time.perf_counter() - t_step_start
+            timing_totals['ensembleClustering'] += t_elapsed
+            timing_counts['ensembleClustering'] += 1
+
+        if vortexAvgSteer:
+            t_step_start = time.perf_counter()
+            clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
+                                              storm, adeckData, allClusterMems)
+            plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
+                               clusterTypeDict, cluster_radius(clusterType), year, month, day, hour)
+            t_elapsed = time.perf_counter() - t_step_start
+            timing_totals['vortexAvgSteer'] += t_elapsed
+            timing_counts['vortexAvgSteer'] += 1
+
+    # Tilt plots do not depend on clusterType, so they run once per forecast hour
     if tiltPlots:
         t_step_start = time.perf_counter()
         plot_tilts(adeckData,atcf_dirs,atcf_tag,idir,dsource,
