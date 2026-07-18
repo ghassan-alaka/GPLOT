@@ -44,15 +44,15 @@ keysDict = {"mslp": {'typeOfLevel': 'meanSea', "shortName": "prmsl"},
 
 def getTrackSpeedData(atcfData, fHour):
     """
-    Calculates along-track (called xtrack) and across-track (called ltrack) deviations relative 
+    Calculates along-track (called ltrack) and across-track (called xtrack) deviations relative 
     to the ensemble mean storm center.
     args:
         atcfData: DataFrame, must contain 'TAU', 'latitude', and 'longitude' columns.
         fHour: int, the forecast hour to analyze.
     returns:
         DataFrame for the specific hour with added columns:
-            'xtrack': float, along-track distance from center mean in km (positive = ahead).
-            'ltrack': float, across-track distance from center mean in km (positive = right).
+            'xtrack': float, across-track distance from center mean in km (positive = right).
+            'ltrack': float, along-track distance from center mean in km (positive = ahead).
     """
     relevantHours = atcfData[atcfData['TAU'].isin([fHour, fHour - 6, fHour + 6])].copy()
     hourData = relevantHours[relevantHours["TAU"] == fHour].copy()
@@ -83,8 +83,8 @@ def getTrackSpeedData(atcfData, fHour):
     y_rot = x * np.sin(theta) + y * np.cos(theta)
 
     # add ltrack and xtrack data to hourData
-    hourData.loc[:, 'ltrack'] = np.round(x_rot / 1000, 2)
-    hourData.loc[:, 'xtrack'] = np.round(y_rot / 1000, 2)
+    hourData.loc[:, 'xtrack'] = np.round(x_rot / 1000, 2)
+    hourData.loc[:, 'ltrack'] = np.round(y_rot / 1000, 2)
     return hourData
     
 
@@ -302,20 +302,6 @@ def getStormName(storm, initDate):
     bTrack = bTrack[bTrack[2] == initDate]
     name = f"{bTrack.iloc[0, 27].strip()}-{bTrack.iloc[0, 1]:02d}L"
     return name
-
-
-def getTitleDate(year, month, day, hour, fHour):
-    """
-    Formats a string to include model initialization time, forecast hours, and valid time.
-    returns:
-        str formatted as described above
-    """
-    initTime = datetime(year, month, day, hour)
-    validTime = initTime + timedelta(hours=fHour)
-    subTitle = f"\nInit: {initTime.strftime('%Hz %b %d %Y')}  Forecast Hour: {fHour}  Valid: {validTime.strftime('%Hz %b %d %Y')}"
-    return subTitle  
-
-
 
 
 

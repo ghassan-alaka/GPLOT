@@ -66,12 +66,12 @@ way will be described in each function.
     initDate     : int, model initialization date, YYYYMMDDHH
     savePath     : str, output directory for the figure
     year, month, day, hour : ints, init-date components (used in titles)
-    monthsDict   : dict, maps month number to month abbreviation
 
 Last modified July 14, 2026
 """
 
 import time
+import calendar
 import os
 import sys
 import argparse
@@ -261,20 +261,36 @@ def getClusterMems(clusterType, hourData, clusterMembers):
 # calculate graphic-specific data -----------------------------------------------------------------------
 
 
-def sortedColoringData(clusterType, hourData):
+def sortedColoringData(clusterType, hourData, members):
     """ 
     Rank members by clusterType for the rank-colored line/track plots. MSLP is ranked
-    in ascending order (rank 1 = lowest), all other metrics are descending.
+    in ascending order (rank 1 = lowest), all other metrics are descending. Ensemble mean
+    is excluded, along with members with a zero radius (if applicable).
 
-    Common args (clusterType, hourData): see glossary
+    Common args (clusterType, hourData, members): see glossary
 
     returns: avgVarTypes, DataFrame with columns ['member', clusterType, 'rank'], 
-        where rank is from 1 to N in the ordering described above
+        where rank is from 1 to N over the ranked members and NaN for unranked members.
     """
-    avgVarTypes = hourData[['member', clusterType]].copy()
+    # Exclude the ensemble mean, it is drawn in black, not colored by rank
+    realMembers = members[:-1]
+    avgVarTypes = hourData[hourData['member'].isin(realMembers)][['member', clusterType]].copy()
+
+    # Only rank members that actually have winds at this radius (value > 0)
+    if clusterType in ('R34', 'R50', 'R64'):
+        rankable = avgVarTypes[clusterType] > 0
+    else:
+        rankable = pd.Series(True, index=avgVarTypes.index)
+
+    # Rank the members by clusterType
     ascendingOrder = True if clusterType == 'MSLP' else False
-    avgVarTypes['rank'] = avgVarTypes[clusterType].rank(method='min', ascending=ascendingOrder).astype(int)
-    
+    avgVarTypes['rank'] = np.nan  # unranked members stay NaN
+    avgVarTypes.loc[rankable, 'rank'] = (
+        avgVarTypes.loc[rankable, clusterType]
+        .rank(method='min', ascending=ascendingOrder)
+        .astype(int)
+    )
+
     return avgVarTypes
 
 
@@ -630,14 +646,14 @@ def plotCartopyFigure(ax, plotLand=True):
 
 
 def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict, 
-                    clusterType, fHour, hour, monthsDict, year, day, month):
+                    clusterType, titleLine):
 
     """
     Draw a rank-colored ensemble figure onto an existing axes. Either MSLP vs. forecast hour
     (plotType='line') or spatial storm tracks (plotType='track'), with lines colored by the
     member's clusterType rank (rank 1 = darkest). Also adds colorbar and title.
 
-    Common args (members, adeckData, typeDict, clusterType, fHour, hour, monthsDict,
+    Common args (members, adeckData, typeDict, clusterType, fHour, hour,
         year, day, month): see glossary
     Function-specific:
         ax: axes to draw on, plain axes for 'line', cartopy GeoAxes for 'track'
@@ -649,13 +665,22 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
 
     returns: axes object with specified data, colorbar, and title plotted.
     """
-    colors = plt.cm.viridis(np.linspace(0, 1, len(members)))
+    # Number of colors is the number of ranked members
+    nColors = int(np.nanmax(avgVar['rank']))
+    colors = plt.cm.viridis(np.linspace(0, 1, nColors))
+    grayColor = '0.6'  # gray for members with no winds at this radius
     
     # plot lines based on property of interest
     for member in members:
         memberData = adeckData[adeckData['member'] == member]
-        color = colors[avgVar[avgVar['member'] == member]['rank'] - 1]
 
+        # Pick this member's color (mean is black, zero radius is gray, else is colored by rank)
+        if member == members[-1]:
+            color = 'black'
+        else:
+            rank = avgVar.loc[avgVar['member'] == member, 'rank'].iloc[0]
+            color = grayColor if pd.isna(rank) else colors[int(rank) - 1]
+        
         if plotType == "line":
             if member == members[-1]:
                 dotSize, lineThickness, opacity, zorder = 50, 3, 1, member * 2 + 2
@@ -672,30 +697,50 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict,
             else:
                 dotSize, lineThickness, opacity, zorder = 5, 1.2, 0.7, member * 2 + 3
                             
-            ax.plot(memberData['longitude'] - 180, memberData['latitude'],
+            ax.plot(memberData['longitude'], memberData['latitude'], transform=ccrs.PlateCarree(),
                     color=color, linewidth=lineThickness, alpha=opacity, zorder=zorder)
-            ax.scatter(memberData['longitude'] - 180, memberData['latitude'],
+            ax.scatter(memberData['longitude'], memberData['latitude'], transform=ccrs.PlateCarree(),
                        color=color, s=dotSize, alpha=opacity, zorder=zorder)
 
     sortTitle = typeDict[clusterType][0]
-    
-    sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=len(members)))
+
+    # Colorbar spans the ranked members only
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=nColors))
     sm.set_array([])  # Needed to avoid warning
-    cbar = plt.colorbar(sm, ax=plt.gca(), pad=0.015, aspect=27)
+    cbar = plt.colorbar(sm, ax=ax, pad=0.015, aspect=27)
     cbar.ax.tick_params(labelsize=8)
     cbar.set_label(f'Member Mean {sortTitle} Rank', fontsize=9, weight='bold')
     cbar.ax.invert_yaxis()
-    cbar.set_ticks(range(1, 22, 2))
+    tickStep = max(1, nColors // 10)  # cap around 10 ticks regardless of member count
+    cbar.set_ticks(range(1, nColors + 1, tickStep))
 
+    # Label the two ends with what the extremes mean (e.g. Strong/Weak, Fast/Slow)
+    ascendingOrder = (clusterType == 'MSLP')
+    lowValLabel, highValLabel = clusterTypeDict[clusterType]
+    topLabel = lowValLabel if ascendingOrder else highValLabel  # rank 1 end of bar (top)
+    bottomLabel = highValLabel if ascendingOrder else lowValLabel  # rank nColors end of bar (bottom)
+    cbar.ax.text(0.5, 1.02, topLabel, transform=cbar.ax.transAxes,
+                 ha='center', va='bottom', fontsize=8, weight='bold')
+    cbar.ax.text(0.5, -0.02, bottomLabel, transform=cbar.ax.transAxes,
+                 ha='center', va='top', fontsize=8, weight='bold')
+
+    # Add titling
     fixedVar = "Track" if plotType == "track" else "MSLP"
-    title = f"HAFS Ensemble {fixedVar} Colored by {sortTitle} at Forecast Hour {fHour}"
-    subTitle = f"\nInitialized at {hour:02}Z {monthsDict[month]} {day:02} {year}"
-    plt.title(title + subTitle, fontsize=9, weight='bold', loc='left')
+    title = f"HAFS Ensemble {fixedVar} Colored by {sortTitle}"
+    plt.title(f"{title}\n{titleLine}", fontsize=9, weight='bold', loc='left')
+
+    # Legend for the lines that aren't colored by rank (ensemble mean, zero radius)
+    legendHandles = [Line2D([0], [0], color='black', lw=2, label='Ensemble Mean')]
+    if avgVar['rank'].isna().any():
+        legendHandles.append(Line2D([0], [0], color=grayColor, lw=1.2,
+                                    label=f'No {clusterType[1:]}kt winds'))
+    ax.legend(handles=legendHandles, loc='upper right', fontsize=8, framealpha=0.9)
 
     return ax
             
 
-def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
+def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, 
+                  radius, initDate, titleLine):
     """
     Set up the MSLP vs. forecast hour figure, and then do the majority of the plotting work
     (member lines, colorbar, title) using plotSortedLines(plotType='line').
@@ -717,7 +762,7 @@ def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, rad
     
     # plot lines based on property of interest
     ax = plotSortedLines(ax, avgVarTypes, 'line', members, adeckData, typeDict, 
-                         clusterType, fHour, hour, monthsDict, year, day, month)
+                         clusterType, titleLine)
     
     ax.set_xlabel('Time in Hours', fontsize=9, weight='bold')
     ax.set_ylabel('MSLP', fontsize=9, weight='bold')
@@ -725,7 +770,8 @@ def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, rad
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
-def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm, radius, initDate):
+def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm, 
+                      radius, initDate, titleLine):
     """
     Set up the spatial storm tracks plot, draw map features via plotCartopyFigure(), then
     draw rank-colored tracks, colorbar, and title via plotSortedLines(plotType='track').
@@ -746,13 +792,13 @@ def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm,
     
     ax = plotCartopyFigure(ax)
     ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, typeDict, 
-                         clusterType, fHour, hour, monthsDict, year, day, month)
+                         clusterType, titleLine)
 
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
 def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius, 
-                  initDate, adeckData, year, month, day, hour):
+                  initDate, adeckData, titleLine):
     """
     Plot the wind-radii quartile figure. For each of the five percentile members (from
     windRadiiData()), draw its track and its wind-radii arcs (potentially different per-quadrant)
@@ -785,10 +831,8 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
     ax.scatter(quartileData['longitude'], quartileData['latitude'], color=colors, zorder=100, s=20, transform=ccrs.PlateCarree())
 
     # add titling
-    name = uf.getStormName(storm, initDate)
-    title = f"HAFS Ensemble {name} {radius}kt Wind Radii Quartiles at Forecast Hour {fHour}"
-    subTitle = f"\nInitialized at {hour:02}Z {monthsDict[month]} {day:02} {year}"
-    ax.set_title(title + subTitle, fontsize=9, weight='bold', loc='left')
+    title = f"HAFS Ensemble {radius}kt Wind Radii Quartiles"
+    ax.set_title(f"{title}\n{titleLine}", fontsize=9, weight='bold', loc='left')
 
     # add legend
     custom_markers = [
@@ -816,7 +860,7 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
 
     
 def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allClusterMems, clusterType, 
-                        clusterTypeDict, fHour, storm, variable, radius, year, month, day, hour):
+                        clusterTypeDict, fHour, storm, variable, radius, titleLine):
     """
     Plot the two-panel ensemble-clustering figure. For each cluster, contour the cluster-averaged
     background field (currently only works for 500 hPa geopotential heights), with each member's
@@ -897,20 +941,18 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     cbar.ax.tick_params(labelsize=8)
 
     # add titling
-    titleDict = {"MSLP": "MSLP", "ltrack": "Across Track Variation", "xtrack": "Along Track Variation", 
+    titleDict = {"MSLP": "MSLP", "ltrack": "Along Track Variation", "xtrack": "Across Track Variation", 
                  "R34": "Radius of 34kt Winds", "R50": "Radius of 50kt Winds", "R64": "Radius of 64kt Winds", 
                  "vortexDepth": "Vortex Depth"}
 
-    name = uf.getStormName(storm, initDate)
-    mainTitle = f"HAFS Ensemble {name} 500mb Heights and Tracks Clustered By {titleDict[clusterType]}"
-    subTitle = uf.getTitleDate(year, month, day, hour, fHour)
-    fig.suptitle(mainTitle + subTitle, fontsize=10, weight='bold')
+    mainTitle = f"HAFS Ensemble 500mb Heights and Tracks Clustered By {titleDict[clusterType]}"
+    fig.suptitle(f"{mainTitle}\n{titleLine}", fontsize=10, weight='bold')
 
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
 
 def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHour, 
-                       clusterTypeDict, radius, year, month, day, hour):
+                       clusterTypeDict, radius, titleLine):
     """
     Plot the two-panel vortex-average steering figure. For each cluster, plot a radius 
     vs. pressure cross-section of radial/tangential wind. Additionally, outline the estimated
@@ -1027,14 +1069,12 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
     cbar.ax.tick_params(labelsize=8)
 
     # add titling
-    titleDict = {"MSLP": "MSLP", "ltrack": "Across Track Variation", "xtrack": "Along Track Variation", 
+    titleDict = {"MSLP": "MSLP", "ltrack": "Along Track Variation", "xtrack": "Across Track Variation", 
                  "R34": "Radius of 34kt Winds", "R50": "Radius of 50kt Winds", "R64": "Radius of 64kt Winds", 
                  "vortexDepth": "Vortex Depth"}
 
-    name = uf.getStormName(storm, initDate)
-    mainTitle = f"HAFS Ensemble {name} Rad Avg Wind (kts) Clustered By {titleDict[clusterType]}"
-    subTitle = uf.getTitleDate(year, month, day, hour, fHour)
-    fig.suptitle(mainTitle + subTitle, fontsize=10, weight='bold')
+    mainTitle = f"HAFS Ensemble Rad Avg Wind (kts) Clustered By {titleDict[clusterType]}"
+    fig.suptitle(f"{mainTitle}\n{titleLine}", fontsize=10, weight='bold')
 
     # proxy lines for hodograph segments
     hodograph_red    = Line2D([0], [0], color='r', lw=1.5)
@@ -2357,15 +2397,11 @@ def radius_is_plottable(hourData, radius):
 
 
 # dictionaries for conversions and static variables
-monthsDict = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun", 
-              7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
-typeDict = {"MSLP":   ["Intensity", "MSLP (hPa)"],
-            "ltrack": ["Across Track Deviation", "Distance (km)"],
-            "xtrack": ["Along Track Deviation", "Distance (km)"]}
-clusterTypeDict = {"MSLP":   ["Strong", "Weak"],
-                   "ltrack": ["Left of Track", "Right of Track"],
-                   "xtrack": ["Slow", "Fast"],
-                   "vortexDepth": ["Shallow", "Deep"]}
+typeDict = {"MSLP":   ["MSLP", "MSLP (hPa)"],
+            "ltrack": ["Along Track Deviation", "Distance (km)"],
+            "xtrack": ["Across Track Deviation", "Distance (km)"]}
+clusterTypeDict = {"MSLP":   ["Strong", "Weak"], "vortexDepth": ["Shallow", "Deep"],
+                   "ltrack": ["Behind", "Ahead"], "xtrack": ["Left", "Right"]}
 
 # Add a per-radius entry for each wind-radius cluster type (R34/R50/R64)
 for _rad in (34, 50, 64):
@@ -2384,6 +2420,9 @@ logger.info(f"  ODIR={ODIR_full}")
 
 # Load ATCF data once for all forecast hours
 adeckData, members = modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours)
+
+# Storm name is constant across all hours
+name = uf.getStormName(storm, initDate)
 
 # Cumulative timing accumulators, summed across all forecast hours
 timing_totals = {
@@ -2405,6 +2444,10 @@ for fHour in fHours:
 
     hourData = getHourData(fHour, adeckData)
 
+    # Shared second title line for every plot this hour 
+    titleLine = (f"{name} | Forecast Hour {fHour} | "
+                f"Initialized at {hour:02}Z {calendar.month_name[month]} {day:02} {year}")
+
     # Wind radii depends on radius, not clusterType, so it runs once per hour per radius
     if ensembleWindRadii:
         for _rad in requestedRadii:
@@ -2416,7 +2459,7 @@ for fHour in fHours:
             t_step_start = time.perf_counter()
             adeckRadiiData, radData = windRadiiData(hourData, _rad)
             plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
-                          _rad, initDate, adeckData, year, month, day, hour)
+                          _rad, initDate, adeckData, titleLine)
             t_elapsed = time.perf_counter() - t_step_start
             timing_totals['ensembleWindRadii'] += t_elapsed
             timing_counts['ensembleWindRadii'] += 1
@@ -2429,18 +2472,18 @@ for fHour in fHours:
 
         if ensembleLinePlots:
             t_step_start = time.perf_counter()
-            avgVarTypes = sortedColoringData(clusterType, hourData)
+            avgVarTypes = sortedColoringData(clusterType, hourData, members)
             plotLinePlots(avgVarTypes, members, ODIR_full, clusterType, 
-                          fHour, storm, cluster_radius(clusterType), initDate)
+                          fHour, storm, cluster_radius(clusterType), initDate, titleLine)
             t_elapsed = time.perf_counter() - t_step_start
             timing_totals['ensembleLinePlots'] += t_elapsed
             timing_counts['ensembleLinePlots'] += 1
 
         if ensembleTracksColored:
             t_step_start = time.perf_counter()
-            avgVarTypes = sortedColoringData(clusterType, hourData)
+            avgVarTypes = sortedColoringData(clusterType, hourData, members)
             plotTracksColored(avgVarTypes, members, ODIR_full, clusterType, 
-                              fHour, storm, cluster_radius(clusterType), initDate)
+                              fHour, storm, cluster_radius(clusterType), initDate, titleLine)
             t_elapsed = time.perf_counter() - t_step_start
             timing_totals['ensembleTracksColored'] += t_elapsed
             timing_counts['ensembleTracksColored'] += 1
@@ -2451,7 +2494,7 @@ for fHour in fHours:
                 clusterType, variable, level, fHour, adeckData, allClusterMems, 
                 idir, initDate, hourData)
             plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                                clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), year, month, day, hour)
+                                clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), titleLine)
             t_elapsed = time.perf_counter() - t_step_start
             timing_totals['ensembleClustering'] += t_elapsed
             timing_counts['ensembleClustering'] += 1
@@ -2461,7 +2504,7 @@ for fHour in fHours:
             clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
                                               storm, adeckData, allClusterMems)
             plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
-                               clusterTypeDict, cluster_radius(clusterType), year, month, day, hour)
+                               clusterTypeDict, cluster_radius(clusterType), titleLine)
             t_elapsed = time.perf_counter() - t_step_start
             timing_totals['vortexAvgSteer'] += t_elapsed
             timing_counts['vortexAvgSteer'] += 1
