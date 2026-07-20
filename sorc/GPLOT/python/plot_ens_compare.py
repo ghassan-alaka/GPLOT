@@ -645,156 +645,218 @@ def plotCartopyFigure(ax, plotLand=True):
     return ax
 
 
-def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict, 
+def computeTrackBounds(lons, lats):
+    """
+    Set a lon/lat box for the track map to 3:2 (wider than tall) or 2:3 (taller than wide).
+
+    args:
+        lons, lats: array-like longitudes (0-360) and latitudes in the ATCF file
+    returns: (lonMin, lonMax, latMin, latMax), orientation (horizontal/vertical)
+    """
+    # Long/short ratio, fractional padding, and a floor to prevent overzooming
+    targetRatio, padFrac, minSpan = 1.5, 0.08, 2.0
+
+    # Get bounding box purely based on ensemble tracks
+    lon = ((np.asarray(lons) + 180) % 360) - 180  # 0-360 to -180..180 for a PlateCarree extent
+    lat = np.asarray(lats)
+    lonMin, lonMax, latMin, latMax = lon.min(), lon.max(), lat.min(), lat.max()
+
+    # Get original ratio (width and height) based on those bounds
+    w, h = lonMax - lonMin, latMax - latMin
+    padX, padY = max(w * padFrac, minSpan / 2), max(h * padFrac, minSpan / 2)
+    lonMin, lonMax, latMin, latMax = lonMin - padX, lonMax + padX, latMin - padY, latMax + padY
+    w, h = lonMax - lonMin, latMax - latMin
+
+    if w >= h:  # wider than tall, lock to 3:2 by growing whichever axis is short
+        orientation = 'horizontal'
+        if w / h > targetRatio:
+            cy = (latMin + latMax) / 2; h = w / targetRatio
+            latMin, latMax = cy - h / 2, cy + h / 2
+        else:
+            cx = (lonMin + lonMax) / 2; w = h * targetRatio
+            lonMin, lonMax = cx - w / 2, cx + w / 2
+    else:  # taller than wide, lock to 2:3
+        orientation = 'vertical'
+        if h / w > targetRatio:
+            cx = (lonMin + lonMax) / 2; w = h / targetRatio
+            lonMin, lonMax = cx - w / 2, cx + w / 2
+        else:
+            cy = (latMin + latMax) / 2; h = w * targetRatio
+            latMin, latMax = cy - h / 2, cy + h / 2
+
+    return lonMin, lonMax, latMin, latMax, orientation
+
+
+def addRankColorbar(ax, sortTitle, clusterType, nColors, isTrack):
+    """
+    Add the vertical rank colorbar (rank 1 at top), with end labels showing what the extremes
+    mean (e.g. Strong/Weak).
+    """
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=nColors))
+    sm.set_array([])  # avoids a warning
+    tickStep = max(1, nColors // 10)  # keep to ~10 ticks regardless of member count
+
+    # put low MSLP at rank 1 (low=stronger), otherwise high value at rank 1
+    ascendingOrder = (clusterType == 'MSLP')
+    lowLabel, highLabel = clusterTypeDict[clusterType]
+    rank1Label = lowLabel if ascendingOrder else highLabel  # rank 1
+    rankNLabel = highLabel if ascendingOrder else lowLabel  # rank nColors
+
+    # generate colorbar and label text at ends
+    cbar = plt.colorbar(sm, ax=ax, pad=0.015, aspect=27)
+    cbar.ax.invert_yaxis()  # rank 1 at top
+    cbar.set_ticks(range(1, nColors + 1, tickStep))
+    cbar.ax.tick_params(labelsize=8)
+    cbar.set_label(f'Member Mean {sortTitle} Rank', fontsize=9, weight='bold')
+    cbar.ax.text(0.5, 1.02, rank1Label, transform=cbar.ax.transAxes,
+                 ha='center', va='bottom', fontsize=8, weight='bold')
+    cbar.ax.text(0.5, -0.02, rankNLabel, transform=cbar.ax.transAxes,
+                 ha='center', va='top', fontsize=8, weight='bold')
+
+    # For an equal-aspect track map, ax=ax sizes the bar to the larger allocated box, so snap its
+    # height to the map's real drawn rectangle. isTrack is False for line plots (axes fill their box).
+    if isTrack:
+        fig = ax.get_figure(); fig.canvas.draw()
+        mapPos, cbPos = ax.get_position(), cbar.ax.get_position()
+        cbar.ax.set_position([cbPos.x0, mapPos.y0, cbPos.width, mapPos.height])
+    return cbar
+
+
+def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict, fHour,
                     clusterType, titleLine):
-
     """
-    Draw a rank-colored ensemble figure onto an existing axes. Either MSLP vs. forecast hour
-    (plotType='line') or spatial storm tracks (plotType='track'), with lines colored by the
-    member's clusterType rank (rank 1 = darkest). Also adds colorbar and title.
+    Draw a rank-colored ensemble figure onto an existing axes: MSLP vs. forecast hour
+    (plotType='line') or spatial tracks (plotType='track'), lines colored by clusterType rank. 
+    Adds the colorbar, ranking-hour emphasis, title, and legend.
 
-    Common args (members, adeckData, typeDict, clusterType, fHour, hour,
-        year, day, month): see glossary
+    Common args (members, adeckData, typeDict, clusterType, fHour): see glossary
     Function-specific:
-        ax: axes to draw on, plain axes for 'line', cartopy GeoAxes for 'track'
-        avgVar: DataFrame with ['member', clusterType, 'rank'], where 'rank' determines color
-        plotType: str, 'line' or 'track'
+        ax: plain axes for 'line', cartopy GeoAxes for 'track'
+        avgVar: DataFrame ['member', clusterType, 'rank']; 'rank' sets the color (NaN = gray)
+        titleLine: common second title line (date/init/storm info)
 
-    dependencies: 
-        matplotlib.pyplot as plt, numpy as np
+    dependencies: matplotlib.pyplot as plt, numpy as np, pandas as pd, 
+        cartopy.crs as ccrs, matplotlib.lines.Line2D
 
-    returns: axes object with specified data, colorbar, and title plotted.
+    returns: axes with data, colorbar, title, and legend plotted.
     """
-    # Number of colors is the number of ranked members
-    nColors = int(np.nanmax(avgVar['rank']))
+    # Generate ranking colormap
+    nColors = int(np.nanmax(avgVar['rank'])) if avgVar['rank'].notna().any() else 1
     colors = plt.cm.viridis(np.linspace(0, 1, nColors))
     grayColor = '0.6'  # gray for members with no winds at this radius
-    
-    # plot lines based on property of interest
+    isTrack = (plotType == "track")
+
     for member in members:
         memberData = adeckData[adeckData['member'] == member]
-
-        # Pick this member's color (mean is black, zero radius is gray, else is colored by rank)
+        
+        # Color lines accordingly (different for mean, zero-radius, regular)
         if member == members[-1]:
             color = 'black'
         else:
             rank = avgVar.loc[avgVar['member'] == member, 'rank'].iloc[0]
             color = grayColor if pd.isna(rank) else colors[int(rank) - 1]
-        
-        if plotType == "line":
-            if member == members[-1]:
-                dotSize, lineThickness, opacity, zorder = 50, 3, 1, member * 2 + 2
-            else:
-                dotSize, lineThickness, opacity, zorder = 15, 0.8, 0.5, member * 2 + 3
-            
-            ax.plot(memberData['TAU'], memberData['MSLP'], color=color, linewidth=lineThickness, 
-                    alpha=opacity, zorder=zorder)
-            ax.scatter(memberData['TAU'], memberData['MSLP'], color=color, s=dotSize, 
-                       alpha=opacity, zorder=zorder)
-        elif plotType == "track":
-            if member == members[-1]:
-                dotSize, lineThickness, opacity, zorder = 25, 2.5, 1, member * 2 + 2
-            else:
-                dotSize, lineThickness, opacity, zorder = 5, 1.2, 0.7, member * 2 + 3
-                            
-            ax.plot(memberData['longitude'], memberData['latitude'], transform=ccrs.PlateCarree(),
-                    color=color, linewidth=lineThickness, alpha=opacity, zorder=zorder)
-            ax.scatter(memberData['longitude'], memberData['latitude'], transform=ccrs.PlateCarree(),
-                       color=color, s=dotSize, alpha=opacity, zorder=zorder)
+        isMean = (member == members[-1])
 
+        # Specifiy dot and line characteristics (different for mean vs regular members)
+        if isTrack:
+            style = (25, 2.5, 1) if isMean else (5, 1.2, 0.7)
+            xCol, yCol, kw = 'longitude', 'latitude', {'transform': ccrs.PlateCarree()}
+        else:
+            style = (50, 3, 1) if isMean else (15, 0.8, 0.5)
+            xCol, yCol, kw = 'TAU', 'MSLP', {}
+        dotSize, lineThickness, opacity = style
+        zorder = member * 2 + (2 if isMean else 3)
+
+        # Plot lines and dots
+        ax.plot(memberData[xCol], memberData[yCol], color=color, linewidth=lineThickness,
+                alpha=opacity, zorder=zorder, **kw)
+        ax.scatter(memberData[xCol], memberData[yCol], color=color, s=dotSize,
+                   alpha=opacity, zorder=zorder, **kw)
+
+        # Emphasize the ranking hour dots (fHour) with a larger, black-edged marker
+        rankPoint = memberData[memberData['TAU'] == fHour]
+        if not rankPoint.empty:
+            fHourDotSize = dotSize * 3 if isMean else dotSize * 4
+            ax.scatter(rankPoint[xCol], rankPoint[yCol], color=color, s=fHourDotSize,
+                       edgecolors='black', linewidths=1, zorder=zorder + 100, **kw)
+
+    # Generate title and colorbar
     sortTitle = typeDict[clusterType][0]
+    addRankColorbar(ax, sortTitle, clusterType, nColors, isTrack)
+    fixedVar = "Track" if isTrack else "MSLP"
+    plt.title(f"HAFS Ensemble {fixedVar} Colored by {sortTitle}\n{titleLine}",
+              fontsize=9, weight='bold', loc='left')
 
-    # Colorbar spans the ranked members only
-    sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=nColors))
-    sm.set_array([])  # Needed to avoid warning
-    cbar = plt.colorbar(sm, ax=ax, pad=0.015, aspect=27)
-    cbar.ax.tick_params(labelsize=8)
-    cbar.set_label(f'Member Mean {sortTitle} Rank', fontsize=9, weight='bold')
-    cbar.ax.invert_yaxis()
-    tickStep = max(1, nColors // 10)  # cap around 10 ticks regardless of member count
-    cbar.set_ticks(range(1, nColors + 1, tickStep))
-
-    # Label the two ends with what the extremes mean (e.g. Strong/Weak, Fast/Slow)
-    ascendingOrder = (clusterType == 'MSLP')
-    lowValLabel, highValLabel = clusterTypeDict[clusterType]
-    topLabel = lowValLabel if ascendingOrder else highValLabel  # rank 1 end of bar (top)
-    bottomLabel = highValLabel if ascendingOrder else lowValLabel  # rank nColors end of bar (bottom)
-    cbar.ax.text(0.5, 1.02, topLabel, transform=cbar.ax.transAxes,
-                 ha='center', va='bottom', fontsize=8, weight='bold')
-    cbar.ax.text(0.5, -0.02, bottomLabel, transform=cbar.ax.transAxes,
-                 ha='center', va='top', fontsize=8, weight='bold')
-
-    # Add titling
-    fixedVar = "Track" if plotType == "track" else "MSLP"
-    title = f"HAFS Ensemble {fixedVar} Colored by {sortTitle}"
-    plt.title(f"{title}\n{titleLine}", fontsize=9, weight='bold', loc='left')
-
-    # Legend for the lines that aren't colored by rank (ensemble mean, zero radius)
+    # Legend for the lines not colored by rank: the black mean, plus gray "no winds" members
     legendHandles = [Line2D([0], [0], color='black', lw=2, label='Ensemble Mean')]
     if avgVar['rank'].isna().any():
         legendHandles.append(Line2D([0], [0], color=grayColor, lw=1.2,
                                     label=f'No {clusterType[1:]}kt winds'))
     ax.legend(handles=legendHandles, loc='upper right', fontsize=8, framealpha=0.9)
-
     return ax
-            
 
-def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm, 
+
+def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm,
                   radius, initDate, titleLine):
     """
-    Set up the MSLP vs. forecast hour figure, and then do the majority of the plotting work
-    (member lines, colorbar, title) using plotSortedLines(plotType='line').
+    MSLP vs. forecast-hour figure. The drawing is done by plotSortedLines(plotType='line'),
+    with a few plot-specific customizations done in here (labels, ticks).
+    
+    Common args (members, savePath, clusterType, fHour, storm, radius, initDate): see glossary
+        avgVarTypes: same as avgVar in plotSortedLines().
 
-    Common args (members, savePath, clusterType, fHour, storm, 
-        radius, initDate): see glossary
-    Function-specific:
-        avgVarTypes: Same as avgVar in plotSortedLines()
-
-    dependencies: 
-        matplotlib.pyplot as plt, plotSortedLines()
-
-    returns: None (writes a PNG).
+    returns: None (Writes a PNG).
     """
-    # plot figure and title
+    # Build figure and set axis labels
     plt.close('all')
     plt.figure(figsize=(10, 6))
     ax = plt.gca()
-    
-    # plot lines based on property of interest
-    ax = plotSortedLines(ax, avgVarTypes, 'line', members, adeckData, typeDict, 
+    ax = plotSortedLines(ax, avgVarTypes, 'line', members, adeckData, typeDict, fHour,
                          clusterType, titleLine)
-    
     ax.set_xlabel('Time in Hours', fontsize=9, weight='bold')
     ax.set_ylabel('MSLP', fontsize=9, weight='bold')
 
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    # Set x ticks every 12 hours and gridlines
+    tauMin, tauMax = adeckData['TAU'].min(), adeckData['TAU'].max()
+    ax.set_xticks(np.arange(tauMin, tauMax , 12))
+    ax.grid(True, linewidth=1, color='gray', alpha=0.3, linestyle='--')
+    ax.tick_params(axis='both', labelsize=9, labelcolor='gray')
+    for label in ax.get_xticklabels() + ax.get_yticklabels():
+        label.set_fontweight('bold')
+
+    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png",
+                dpi=200, bbox_inches='tight')
 
 
-def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm, 
+def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm,
                       radius, initDate, titleLine):
     """
-    Set up the spatial storm tracks plot, draw map features via plotCartopyFigure(), then
-    draw rank-colored tracks, colorbar, and title via plotSortedLines(plotType='track').
+    Spatial storm tracks plot. Map features via plotCartopyFigure(), drawing via
+    plotSortedLines(plotType='track'). The extent is aspect-locked to 3:2 or 2:3 and the
+    figure is sized to match.
 
-    Common args (members, savePath, clusterType, fHour, storm, 
-        radius, initDate): see glossary
-    Function-specific:
-        avgVarTypes: Same as avgVar in plotSortedLines()
-
-    dependencies: 
-        matplotlib.pyplot as plt, plotSortedLines(), plotCartopyFigure(), cartopy.crs as ccrs
-
-    returns: None (writes a PNG).
+    Common args (members, savePath, clusterType, fHour, storm, radius, initDate): see glossary
+        avgVarTypes: same as avgVar in plotSortedLines().
+    
+    returns: None (Writes a PNG).
     """
     plt.close('all')
-    plt.figure(figsize=(10, 6))
+
+    # Determine and set figure aspect based on ATCF track points
+    lonMin, lonMax, latMin, latMax, orientation = computeTrackBounds(
+        adeckData['longitude'], adeckData['latitude'])
+    figsize = (10, 6.67) if orientation == 'horizontal' else (6.67, 10)
+
+    # Build figure and set extent based on ATCF lines
+    plt.figure(figsize=figsize)
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
-    
+    ax.set_extent([lonMin, lonMax, latMin, latMax], crs=ccrs.PlateCarree())
     ax = plotCartopyFigure(ax)
-    ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, typeDict, 
+    ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, typeDict, fHour,
                          clusterType, titleLine)
 
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png",
+                dpi=200, bbox_inches='tight')
 
 
 def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius, 
