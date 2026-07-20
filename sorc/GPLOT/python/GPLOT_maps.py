@@ -341,14 +341,31 @@ def _align_field_lon(field, lon_w, lon_e, data_keys=('data', 'u', 'v')):
     field['lon'] = _align_lon_to_bounds(field['lon'], lon_w, lon_e)
     lon = field['lon']
     if len(lon) > 1:
+        # The seam is the (single) index where lon DECREASES: after
+        # wrapping, a correctly ordered lon array is strictly
+        # increasing. The old detector looked for |diff| > 180, which
+        # catches a full-width array (wrap jump ~ -360) but NOT a
+        # bounds-subset field that crosses the 0/360 seam -- e.g. the
+        # basin panel (-110..10) cut from 0..360 GFS data comes back
+        # from get_field as [0..10, -110..-0.25], whose internal jump
+        # is -(panel width) = -120. The result was full-width phantom
+        # contour streaks and a 1-cell seam stripe at the prime
+        # meridian on every 0-deg-crossing panel.
         diffs = np.diff(lon)
-        wrap_idx = np.where(np.abs(diffs) > 180)[0]
-        if len(wrap_idx) > 0:
+        wrap_idx = np.where(diffs < 0)[0]
+        if len(wrap_idx) == 1:
             roll_by = -(int(wrap_idx[0]) + 1)
             field['lon'] = np.roll(lon, roll_by)
             for key in data_keys:
                 if field.get(key) is not None:
                     field[key] = np.roll(field[key], roll_by, axis=-1)
+        elif len(wrap_idx) > 1:
+            # More than one decrease cannot be fixed by a single roll;
+            # leave the field alone but make the anomaly visible.
+            logger.warning(
+                f"_align_field_lon: lon array decreases at "
+                f"{len(wrap_idx)} indices; leaving unrolled "
+                f"(lon[0]={lon[0]:.2f}, lon[-1]={lon[-1]:.2f})")
     return field
 
 
