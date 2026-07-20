@@ -42,7 +42,8 @@ from gplot_utils.atcf import (read_atcf, read_bdeck, derive_longsid,
 from gplot_utils import ensemble as ens_utils
 from gplot_utils.grib_reader import (open_grib2, open_sat_file, get_var_2d,
                                       get_var_3d, get_layer_mean,
-                                      get_wind_components, get_grid_info)
+                                      get_wind_components, get_grid_info,
+                                      cfgrib_indexpath)
 from gplot_utils.kurihara import vortex_filter
 from gplot_utils.wn0_filter import remove_wavenumber0
 from gplot_utils.colormaps import (get_colormap, get_contour_levels, get_norm,
@@ -188,6 +189,66 @@ def _get_filtered_3d(datasets, dsource, var, lev_top, lev_bot, bounds,
     return cube
 
 
+# Satellite-imagery variables (simulated GOES bands). Used to (a) render
+# the base fill as a raster (pcolormesh) instead of contours and (b) thin
+# the colorbar ticks to 10-degC multiples.
+_SAT_VARS = {'SIMIR', 'SBTAGR13toa',
+             'SIMWV_UPPER', 'SIMWV_MID',
+             'SBTAGR8toa', 'SBTAGR9toa', 'SBTAGR10toa'}
+
+
+# Grids below this point count are never decimated, regardless of the
+# PLOT_DECIMATE namelist switch. Chosen to split the HAFS parent grid
+# (2667x1501 = 4.0M points) from every storm-scale grid (multistorm
+# nest = 1001x801 = 0.8M), so the switch can live in a master namelist
+# shared by all domains without ever touching d03/storm panels.
+_DECIMATE_MIN_POINTS = 2_000_000
+
+
+def _decimate_datasets(datasets, fhr, target=1400):
+    """
+    Subsample parent-scale dataset groups for plotting.
+
+    The rendered figure is only ~1400 px wide, while the HAFS parent
+    grid carries ~2667 points in x -- contouring the native grid makes
+    matplotlib chew on 2-4x more points than the output can display,
+    at minutes per panel across a full recipe list. Slice every
+    horizontal dim by the smallest stride that brings the largest
+    dimension under ``target``. Coordinates are sliced consistently by
+    xarray, and downstream resolution-adaptive logic (smoothing sigmas,
+    streamline skip, Kurihara dx) keys off the decimated grid, so the
+    effective scales are preserved.
+
+    Only dataset groups with >= _DECIMATE_MIN_POINTS horizontal points
+    are touched; returns a new list, never mutating the input datasets.
+    """
+    out = []
+    notes = []
+    for ds in datasets:
+        dims = None
+        if 'latitude' in ds.dims and 'longitude' in ds.dims:
+            dims = ('latitude', 'longitude')
+        elif 'y' in ds.dims and 'x' in ds.dims:
+            dims = ('y', 'x')
+        if dims is not None:
+            ny = ds.sizes[dims[0]]
+            nx = ds.sizes[dims[1]]
+            if ny * nx >= _DECIMATE_MIN_POINTS:
+                stride = int(np.ceil(max(nx, ny) / float(target)))
+                if stride > 1:
+                    ds = ds.isel({dims[0]: slice(None, None, stride),
+                                  dims[1]: slice(None, None, stride)})
+                    notes.append((ny, nx, stride))
+        out.append(ds)
+    if notes:
+        ny, nx, stride = notes[0]
+        logger.warning(
+            f"FHR {fhr:03d}: plot decimation stride {stride}: "
+            f"{ny}x{nx} -> {-(-ny // stride)}x{-(-nx // stride)} on "
+            f"{len(notes)}/{len(out)} dataset group(s)")
+    return out
+
+
 def _layer_mean_from_cube(cube_3d):
     """
     Pressure-weighted vertical mean of a 3D cube (lev, lat, lon).
@@ -280,14 +341,31 @@ def _align_field_lon(field, lon_w, lon_e, data_keys=('data', 'u', 'v')):
     field['lon'] = _align_lon_to_bounds(field['lon'], lon_w, lon_e)
     lon = field['lon']
     if len(lon) > 1:
+        # The seam is the (single) index where lon DECREASES: after
+        # wrapping, a correctly ordered lon array is strictly
+        # increasing. The old detector looked for |diff| > 180, which
+        # catches a full-width array (wrap jump ~ -360) but NOT a
+        # bounds-subset field that crosses the 0/360 seam -- e.g. the
+        # basin panel (-110..10) cut from 0..360 GFS data comes back
+        # from get_field as [0..10, -110..-0.25], whose internal jump
+        # is -(panel width) = -120. The result was full-width phantom
+        # contour streaks and a 1-cell seam stripe at the prime
+        # meridian on every 0-deg-crossing panel.
         diffs = np.diff(lon)
-        wrap_idx = np.where(np.abs(diffs) > 180)[0]
-        if len(wrap_idx) > 0:
+        wrap_idx = np.where(diffs < 0)[0]
+        if len(wrap_idx) == 1:
             roll_by = -(int(wrap_idx[0]) + 1)
             field['lon'] = np.roll(lon, roll_by)
             for key in data_keys:
                 if field.get(key) is not None:
                     field[key] = np.roll(field[key], roll_by, axis=-1)
+        elif len(wrap_idx) > 1:
+            # More than one decrease cannot be fixed by a single roll;
+            # leave the field alone but make the anomaly visible.
+            logger.warning(
+                f"_align_field_lon: lon array decreases at "
+                f"{len(wrap_idx)} indices; leaving unrolled "
+                f"(lon[0]={lon[0]:.2f}, lon[-1]={lon[-1]:.2f})")
     return field
 
 
@@ -882,18 +960,42 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
         # each level bin gets its own dedicated color 1:1.
         cmap_final = build_discrete_cmap(cmap, len(levels) - 1, extend='both')
         norm_final = get_norm(levels)
-        cf = ax.contourf(base_field['lon'], base_field['lat'],
-                         base_field['data'], levels=levels,
-                         cmap=cmap_final, norm=norm_final, extend='both',
-                         transform=ccrs.PlateCarree())
+        if base_var in _SAT_VARS:
+            # Satellite imagery renders as a raster, not contours:
+            # per-pixel enhancement is how IR/WV products are
+            # conventionally displayed, and contourf on the 1-degC sat
+            # level sets (150 levels for SIMIR) cost minutes per panel
+            # on the parent grid -- cartopy must project every level's
+            # polygons, vs a single quadmesh here (~30x faster). The
+            # under/over colors already live in cmap_final via
+            # set_under/set_over; cbar_extend tells the colorbar to
+            # draw the triangles since a QuadMesh (unlike a contourf
+            # ContourSet) doesn't carry extend information itself.
+            cf = ax.pcolormesh(base_field['lon'], base_field['lat'],
+                               base_field['data'], cmap=cmap_final,
+                               norm=norm_final, shading='auto',
+                               transform=ccrs.PlateCarree())
+            cbar_extend = 'both'
+        else:
+            cf = ax.contourf(base_field['lon'], base_field['lat'],
+                             base_field['data'], levels=levels,
+                             cmap=cmap_final, norm=norm_final,
+                             extend='both',
+                             transform=ccrs.PlateCarree())
+            cbar_extend = None
     else:
         cf = ax.contourf(base_field['lon'], base_field['lat'],
                          base_field['data'], cmap=cmap, extend='both',
                          transform=ccrs.PlateCarree())
+        cbar_extend = None
 
-    # Colorbar
-    cbar = fig.colorbar(cf, ax=ax, orientation='horizontal', pad=0.05,
-                        shrink=0.8, aspect=40)
+    # Colorbar (extend triangles come from the ContourSet when the fill
+    # was contoured; pcolormesh needs them requested explicitly).
+    cbar_kwargs = dict(orientation='horizontal', pad=0.05,
+                       shrink=0.8, aspect=40)
+    if cbar_extend:
+        cbar_kwargs['extend'] = cbar_extend
+    cbar = fig.colorbar(cf, ax=ax, **cbar_kwargs)
     cbar_label = f"{base_var}"
     if base_field['units']:
         cbar_label += f" ({base_field['units']})"
@@ -902,10 +1004,8 @@ def draw_map(recipe, datasets, dsource, bounds, fhr, idate, expt,
     # Satellite variables use a 1-degC fill (smooth gradient on the
     # IR4 / WVCIMSS_r palettes) but should label only every 10 degC
     # so the colorbar stays readable. Pick ticks at multiples of 10
-    # within the level range.
-    _SAT_VARS = {'SIMIR', 'SBTAGR13toa',
-                 'SIMWV_UPPER', 'SIMWV_MID',
-                 'SBTAGR8toa', 'SBTAGR9toa', 'SBTAGR10toa'}
+    # within the level range. (_SAT_VARS is the module-level set shared
+    # with the raster-fill branch above.)
     if base_var in _SAT_VARS and levels is not None and len(levels) >= 2:
         lvmin, lvmax = float(levels[0]), float(levels[-1])
         # Round inward to nearest 10 so the displayed ticks are clean
@@ -1616,7 +1716,7 @@ def _discover_nest_outlines(parent_grib_path, fhr, idate=None,
                     fn, engine='cfgrib',
                     backend_kwargs={'filter_by_keys': filt,
                                     'errors': 'ignore',
-                                    'indexpath': ''})
+                                    'indexpath': cfgrib_indexpath(fn)})
                 if cand.data_vars:
                     ds = cand
                     break
@@ -2279,6 +2379,15 @@ def main():
     # sweep the 00L "fake storm" pass sees zero nests on its d01
     # panel.
     draw_nests = bool(nml.get('DRAW_NESTS', False))
+    # Plot-time grid decimation for parent-scale panels (see
+    # _decimate_datasets). Off unless the namelist opts in.
+    plot_decimate = bool(nml.get('PLOT_DECIMATE', False))
+    plot_decimate_target = int(nml.get('PLOT_DECIMATE_TARGET', 1400)
+                               or 1400)
+    if plot_decimate:
+        logger.warning(f"PLOT_DECIMATE=True: parent-scale grids will be "
+                       f"subsampled to <= {plot_decimate_target} points "
+                       f"per horizontal dim for plotting")
     is_mstorm  = bool(nml.get('IS_MSTORM', False))
 
     # Multistorm sibling-expansion for atcf_dirs. The HAFS multistorm
@@ -2463,92 +2572,15 @@ def main():
                     logger.info(f"FHR {fhr:03d}: Already plotted, skipping")
                     continue
 
-            # Open GRIB2
-            try:
-                datasets = open_grib2(grib_path)
-            except Exception as e:
-                logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
-                continue
+            fhr_t0 = time.time()
 
-            # HAFS ships simulated IR brightness temperatures in a separate
-            # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
-            # locate and open it; if present, append its datasets so recipes
-            # like SIMIR can resolve via the same get_var_2d() path.
-            sat_path = grib_path.replace('.atm.', '.sat.')
-            if sat_path != grib_path and os.path.isfile(sat_path):
-                try:
-                    sat_datasets = open_sat_file(sat_path)
-                    if sat_datasets:
-                        datasets = list(datasets) + list(sat_datasets)
-                        logger.info(f"Sat GRIB2 file: {sat_path} "
-                                    f"({len(sat_datasets)} bands)")
-                except Exception as e:
-                    logger.warning(f"Failed to open sat file {sat_path}: {e}")
-
-            # Resolve parent-domain bounds from the GRIB2 grid extent when the
-            # domain registry didn't provide any. Use a tiny inset so cartopy
-            # doesn't try to draw right at the edge.
-            if bounds is None:
-                grid = get_grid_info(datasets, dsource, gplot_dir)
-                lat_arr = grid.get('lat')
-                lon_arr = grid.get('lon')
-                if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
-                    logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
-                    continue
-                lon_min = float(np.min(lon_arr))
-                lon_max = float(np.max(lon_arr))
-                lon_span = lon_max - lon_min
-                is_global_input = lon_span > 350.0
-
-                # hwrf branch: pick storm-centered +/-40 only when the
-                # input is global HWRF (~360 deg span). For regional
-                # HAFS parent (~160 deg span) the existing "full data
-                # extent" behavior is preserved so the synoptic-scale
-                # context HAFS gave doesn't get cropped away. The
-                # is_storm_named_filename predicate is the right filter
-                # here: we only reach this block for parent-style
-                # domains (d01 / hwrf -- the registry returned None),
-                # and only hwrf is storm-named, so the gate uniquely
-                # selects hwrf without naming it explicitly.
-                if (is_storm_named_filename(domain)
-                        and is_global_input
-                        and tc_lat is not None
-                        and tc_lon is not None):
-                    bounds = get_domain_bounds(domain, tc_lat, tc_lon)
-                    logger.info(f"{domain} bounds (global input -> storm-"
-                                f"centered): {bounds}")
-                else:
-                    # Convert 0..360 longitudes to a cartopy-friendly extent.
-                    # Two cases:
-                    #   1. Global data (lon spans ~360 deg). The previous logic
-                    #      only shifted lon_max past 180, leaving lon_min=0 +
-                    #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
-                    #      collapsed the panel to a single vertical line. Use
-                    #      a true global extent (-180, 180) instead.
-                    #   2. Regional 0..360 data. Shift values > 180 down by
-                    #      360 if both ends would otherwise stay above 180.
-                    if is_global_input:
-                        # Global data -> full -180..180 extent.
-                        lon_min, lon_max = -180.0, 180.0
-                    elif lon_max > 180 and lon_min > 180:
-                        # Whole window past 180 -> shift both down.
-                        lon_min -= 360
-                        lon_max -= 360
-                    # else: leave as-is; downstream _align_lon_to_bounds
-                    # rewraps the data to match these bounds.
-                    bounds = (
-                        float(np.max(lat_arr)),
-                        float(np.min(lat_arr)),
-                        lon_min,
-                        lon_max,
-                    )
-                logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
-
-            # Reset the vortex-filter cache so we don't accidentally reuse a
-            # smoothed cube from the previous forecast hour (the `datasets`
-            # list id() also changes, but being explicit keeps memory bounded).
-            _clear_vortex_cache()
-
+            # NOTE: nest discovery + the multistorm race-condition
+            # detector run BEFORE the GRIB2 open on purpose. The
+            # detector can skip this FHR entirely, and open_grib2()
+            # on a multistorm parent file costs a full-file cfgrib
+            # scan -- paying that just to throw the FHR away made
+            # every skip-and-retry spawn iteration vastly more
+            # expensive than the cheap ATCF/glob checks below.
             # Moving-nest outline overlay. Discovered once per FHR
             # (shared across every recipe's draw_map call so MSLP, REFD,
             # IR, etc. all show the same set of dashed boxes). Only
@@ -2744,6 +2776,106 @@ def main():
             else:
                 nest_outlines = None
 
+            t_nests_done = time.time()
+
+            # Open GRIB2
+            try:
+                datasets = open_grib2(grib_path)
+            except Exception as e:
+                logger.error(f"FHR {fhr:03d}: Failed to open GRIB2: {e}")
+                continue
+            t_open_done = time.time()
+
+            # HAFS ships simulated IR brightness temperatures in a separate
+            # ``*.sat.f*.grb2`` file sitting next to the main atm file.  Try to
+            # locate and open it; if present, append its datasets so recipes
+            # like SIMIR can resolve via the same get_var_2d() path.
+            sat_path = grib_path.replace('.atm.', '.sat.')
+            if sat_path != grib_path and os.path.isfile(sat_path):
+                try:
+                    sat_datasets = open_sat_file(sat_path)
+                    if sat_datasets:
+                        datasets = list(datasets) + list(sat_datasets)
+                        logger.info(f"Sat GRIB2 file: {sat_path} "
+                                    f"({len(sat_datasets)} bands)")
+                except Exception as e:
+                    logger.warning(f"Failed to open sat file {sat_path}: {e}")
+
+            # Optional plot-time decimation of parent-scale grids
+            # (PLOT_DECIMATE namelist switch). Applied after the sat
+            # datasets are appended so the 4M-point SIMIR/SIMWV bands
+            # are subsampled too. Storm-scale grids are never touched
+            # (see _DECIMATE_MIN_POINTS).
+            if plot_decimate:
+                datasets = _decimate_datasets(datasets, fhr,
+                                              target=plot_decimate_target)
+
+            t_sat_done = time.time()
+
+            # Resolve parent-domain bounds from the GRIB2 grid extent when the
+            # domain registry didn't provide any. Use a tiny inset so cartopy
+            # doesn't try to draw right at the edge.
+            if bounds is None:
+                grid = get_grid_info(datasets, dsource, gplot_dir)
+                lat_arr = grid.get('lat')
+                lon_arr = grid.get('lon')
+                if lat_arr is None or lon_arr is None or len(lat_arr) == 0:
+                    logger.warning(f"FHR {fhr:03d}: Cannot derive bounds from GRIB2")
+                    continue
+                lon_min = float(np.min(lon_arr))
+                lon_max = float(np.max(lon_arr))
+                lon_span = lon_max - lon_min
+                is_global_input = lon_span > 350.0
+
+                # hwrf branch: pick storm-centered +/-40 only when the
+                # input is global HWRF (~360 deg span). For regional
+                # HAFS parent (~160 deg span) the existing "full data
+                # extent" behavior is preserved so the synoptic-scale
+                # context HAFS gave doesn't get cropped away. The
+                # is_storm_named_filename predicate is the right filter
+                # here: we only reach this block for parent-style
+                # domains (d01 / hwrf -- the registry returned None),
+                # and only hwrf is storm-named, so the gate uniquely
+                # selects hwrf without naming it explicitly.
+                if (is_storm_named_filename(domain)
+                        and is_global_input
+                        and tc_lat is not None
+                        and tc_lon is not None):
+                    bounds = get_domain_bounds(domain, tc_lat, tc_lon)
+                    logger.info(f"{domain} bounds (global input -> storm-"
+                                f"centered): {bounds}")
+                else:
+                    # Convert 0..360 longitudes to a cartopy-friendly extent.
+                    # Two cases:
+                    #   1. Global data (lon spans ~360 deg). The previous logic
+                    #      only shifted lon_max past 180, leaving lon_min=0 +
+                    #      lon_max=-0.25 -- a degenerate 0.25-deg strip that
+                    #      collapsed the panel to a single vertical line. Use
+                    #      a true global extent (-180, 180) instead.
+                    #   2. Regional 0..360 data. Shift values > 180 down by
+                    #      360 if both ends would otherwise stay above 180.
+                    if is_global_input:
+                        # Global data -> full -180..180 extent.
+                        lon_min, lon_max = -180.0, 180.0
+                    elif lon_max > 180 and lon_min > 180:
+                        # Whole window past 180 -> shift both down.
+                        lon_min -= 360
+                        lon_max -= 360
+                    # else: leave as-is; downstream _align_lon_to_bounds
+                    # rewraps the data to match these bounds.
+                    bounds = (
+                        float(np.max(lat_arr)),
+                        float(np.min(lat_arr)),
+                        lon_min,
+                        lon_max,
+                    )
+                logger.info(f"Parent-domain bounds derived from GRIB2: {bounds}")
+
+            # Reset the vortex-filter cache so we don't accidentally reuse a
+            # smoothed cube from the previous forecast hour (the `datasets`
+            # list id() also changes, but being explicit keeps memory bounded).
+            _clear_vortex_cache()
+
             # Loop over plot recipes. Track successes per-FHR so we can
             # gate the plotted-file marker on actually having produced
             # something -- a failed FHR (every recipe raised) must not be
@@ -2766,18 +2898,43 @@ def main():
                     n_recipe_existing += 1
                     continue
                 try:
+                    t_recipe = time.time()
                     ofile = draw_map(
                         recipe, datasets, dsource, bounds, fhr, idate, expt,
                         tc_lat, tc_lon, vmax, mslp_val, longsid, ensid,
                         gplot_dir, odir_full, domain, thin_factor, atcf_df,
                         nest_outlines=nest_outlines,
                     )
+                    # Call out individually slow recipes at WARNING (ops
+                    # logs hide INFO) so the per-FHR aggregate in the
+                    # timing line below can be attributed to a specific
+                    # product (streamline-based recipes on a full parent
+                    # grid are the usual suspects).
+                    dt_recipe = time.time() - t_recipe
+                    if dt_recipe > 60:
+                        logger.warning(
+                            f"FHR {fhr:03d} slow recipe "
+                            f"{recipe['FILE_NAME']}: {dt_recipe:.1f}s")
                     if ofile:
                         n_plots += 1
                         n_recipe_plots += 1
                 except Exception as e:
                     logger.error(f"FHR {fhr:03d} {recipe['FILE_NAME']}: {e}",
                                  exc_info=True)
+
+            # Per-FHR wall-clock breakdown at WARNING so it lands in the
+            # operational logs (batch scripts don't pass -v). This is the
+            # primary diagnostic for the real-time d01 latency issue: it
+            # separates GRIB open cost (index-cache fix territory) from
+            # recipe render cost (matplotlib/cartopy territory).
+            logger.warning(
+                f"FHR {fhr:03d} timing: nest-check="
+                f"{t_nests_done - fhr_t0:.1f}s grib-open="
+                f"{t_open_done - t_nests_done:.1f}s sat+misc="
+                f"{t_sat_done - t_open_done:.1f}s recipes="
+                f"{time.time() - t_sat_done:.1f}s "
+                f"({n_recipe_plots} plotted, {n_recipe_existing} existing) "
+                f"total={time.time() - fhr_t0:.1f}s")
 
             # Mark this GRIB2 file as plotted if either (a) at least one
             # recipe was freshly produced, or (b) every recipe was either

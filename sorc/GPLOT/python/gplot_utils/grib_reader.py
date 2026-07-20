@@ -10,8 +10,13 @@ GPLOT_func.ncl using xarray + cfgrib. Provides:
   - Automatic unit conversions (m/s -> kt, Pa -> hPa, etc.)
 """
 
+import atexit
+import hashlib
 import os
 import logging
+import shutil
+import tempfile
+import time
 
 import numpy as np
 import xarray as xr
@@ -174,13 +179,64 @@ _CFGRIB_SURFACE_VARS = {
 
 # cfgrib defaults to writing a persistent ``<path>.<hash>.idx`` pickle
 # next to every GRIB2 it opens. When multiple GPLOT modules (maps, ships,
-# polar, airsea, ocean) hit the same GRIB2 file concurrently each writes
-# a different .idx (one per filter_by_keys hash), and the writes race --
-# producing zero-byte / truncated pickles that the next reader chokes on
-# with ``EOFError: Ran out of input``. Force cfgrib to keep the index in
-# memory only by passing ``indexpath=''``. The per-open re-scan cost on
-# HAFS-sized GRIB2 files is sub-second and well worth the stability.
-_CFGRIB_INDEXPATH = ''
+# polar, airsea, ocean) hit the same GRIB2 file concurrently, the writes
+# race -- producing zero-byte / truncated pickles that the next reader
+# chokes on with ``EOFError: Ran out of input``. The original fix
+# disabled the index entirely (``indexpath=''``), assuming the per-open
+# re-scan was sub-second. That holds for storm-nest files (~0.2 GB) but
+# NOT for multistorm parent files (~1.2 GB, 750 messages): open_grib2()
+# issues ~26 filtered opens per file, each re-scanning the whole file,
+# which cost 10+ minutes per forecast hour on Lustre and made real-time
+# d01 maps fall hours behind the model.
+#
+# Instead, redirect the index into a private per-process temp directory.
+# cfgrib's index is built from index_keys and subset in memory by
+# filter_by_keys afterward, so it is filter-independent: all ~26 opens
+# of one file share a single index -- one scan instead of 26 -- while no
+# two processes ever share an index path, so the corruption race stays
+# structurally impossible. The directory honors $TMPDIR (node-local and
+# auto-purged on SLURM) and is removed at interpreter exit as a backstop.
+_CFGRIB_IDX_DIR = None
+
+
+def cfgrib_indexpath(filepath):
+    """
+    Return a cfgrib ``indexpath`` template that caches the index for
+    ``filepath`` in a private per-process directory.
+
+    The template embeds the GRIB2 basename plus a short hash of the
+    absolute path -- two different files can share a basename (e.g.
+    00L-named ensemble member files in per-member dirs) and cfgrib does
+    not verify that a loaded index matches its source path, so the path
+    hash prevents cross-file index reuse. ``{short_hash}`` is left for
+    cfgrib to fill with its index-keys hash.
+
+    Falls back to ``''`` (index disabled; cfgrib re-scans on every open)
+    if the private directory cannot be created.
+    """
+    global _CFGRIB_IDX_DIR
+    if _CFGRIB_IDX_DIR is None:
+        try:
+            _CFGRIB_IDX_DIR = tempfile.mkdtemp(prefix='gplot-cfgrib-idx-')
+            atexit.register(shutil.rmtree, _CFGRIB_IDX_DIR,
+                            ignore_errors=True)
+            # WARNING so it reaches operational logs (batch scripts don't
+            # pass -v). One line per process; its presence in a log is
+            # positive confirmation the index-cache code path is active.
+            logger.warning(f"cfgrib index cache ACTIVE: private dir "
+                           f"{_CFGRIB_IDX_DIR}")
+        except OSError as e:
+            logger.warning(f"cfgrib_indexpath: cannot create private "
+                           f"index dir ({e}); cfgrib index DISABLED "
+                           f"(full re-scan on every open)")
+            _CFGRIB_IDX_DIR = ''
+    if not _CFGRIB_IDX_DIR:
+        return ''
+    path_tag = hashlib.md5(
+        os.path.abspath(filepath).encode()).hexdigest()[:8]
+    return os.path.join(
+        _CFGRIB_IDX_DIR,
+        f"{os.path.basename(filepath)}.{path_tag}.{{short_hash}}.idx")
 
 
 def open_grib2(filepath, filter_by_keys=None):
@@ -205,11 +261,13 @@ def open_grib2(filepath, filter_by_keys=None):
     if not os.path.isfile(filepath):
         raise FileNotFoundError(f"GRIB2 file not found: {filepath}")
 
+    t0 = time.time()
+
     if filter_by_keys is not None:
         return [xr.open_dataset(
             filepath, engine='cfgrib',
             backend_kwargs={'filter_by_keys': filter_by_keys,
-                            'indexpath': _CFGRIB_INDEXPATH}
+                            'indexpath': cfgrib_indexpath(filepath)}
         )]
 
     # GRIB2 files contain multiple level types that must be opened separately.
@@ -255,7 +313,7 @@ def open_grib2(filepath, filter_by_keys=None):
                 backend_kwargs={
                     'filter_by_keys': filt,
                     'errors': 'ignore',
-                    'indexpath': _CFGRIB_INDEXPATH,
+                    'indexpath': cfgrib_indexpath(filepath),
                 }
             )
             if len(ds.data_vars) > 0:
@@ -269,7 +327,7 @@ def open_grib2(filepath, filter_by_keys=None):
             ds = xr.open_dataset(
                 filepath, engine='cfgrib',
                 backend_kwargs={'errors': 'ignore',
-                                'indexpath': _CFGRIB_INDEXPATH}
+                                'indexpath': cfgrib_indexpath(filepath)}
             )
             if len(ds.data_vars) > 0:
                 datasets.append(ds)
@@ -294,7 +352,7 @@ def open_grib2(filepath, filter_by_keys=None):
                         'typeOfLevel': lev,
                     },
                     'errors': 'ignore',
-                    'indexpath': _CFGRIB_INDEXPATH,
+                    'indexpath': cfgrib_indexpath(filepath),
                 },
             )
         except Exception as e:
@@ -309,6 +367,16 @@ def open_grib2(filepath, filter_by_keys=None):
 
     if not datasets:
         raise ValueError(f"No readable GRIB2 messages in {filepath}")
+
+    # Timing at WARNING so operational logs (no -v) capture it. This is
+    # the direct probe for the index-cache fix: with the cache active the
+    # ~26 filtered opens share one scan and this reads seconds; a big
+    # number here on a parent-sized file means the scans are NOT being
+    # shared (cache off, or cfgrib not reusing the index across filters).
+    logger.warning(
+        f"open_grib2({os.path.basename(filepath)}): "
+        f"{len(datasets)} dataset group(s) in {time.time() - t0:.1f}s "
+        f"(index cache {'ON' if _CFGRIB_IDX_DIR else 'OFF'})")
 
     return datasets
 
@@ -352,7 +420,7 @@ def open_sat_file(filepath):
                         'parameterNumber': pnum,
                     },
                     'errors': 'ignore',
-                    'indexpath': _CFGRIB_INDEXPATH,
+                    'indexpath': cfgrib_indexpath(filepath),
                 },
             )
             if 'unknown' in ds.data_vars:
