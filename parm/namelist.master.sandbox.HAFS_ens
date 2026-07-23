@@ -43,7 +43,7 @@ EID = 00-20
 SYS_ENV = ORION
 
 ; 1F. FORECAST CYCLE
-IDATE = 2025081212
+IDATE = 2025081312
 
 ; 1G. STORM ID
 SID =
@@ -71,8 +71,8 @@ ADECK_DIR = /work/noaa/aoml-hafs1/lgramer/staging/Verification/Statistics/real-t
 BDECK_DIR = /work/noaa/aoml-hafs1/lgramer/staging/Verification/Statistics/real-time-2025_tmp
 
 ; 1L. FORECAST HOUR INFORMATION
-INIT_HR = 48
-FNL_HR = 54
+INIT_HR = 0
+FNL_HR = 42
 FMT_HR = 6
 
 ; 1M. TIME STEP FOR GRAPHICAL OUTPUT
@@ -221,8 +221,8 @@ OCEAN_WRAP_LON = True
 ENSEMBLE_LINE_PLOTS = True
 ENSEMBLE_TRACKS_COLORED = True
 ENSEMBLE_WIND_RADII = True
-ENSEMBLE_CLUSTERING = False
-VORTEX_AVG_STEER = False
+ENSEMBLE_CLUSTERING = True
+VORTEX_AVG_STEER = True
 TILT_PLOTS = False
 
 ; 2B. ENSEMBLE MEMBER RANGE (MEMBERS_END is exclusive)

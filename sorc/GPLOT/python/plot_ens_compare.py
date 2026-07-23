@@ -461,7 +461,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm,
 
     returns: clusterDicts, list of 2 dicts (one per cluster), each with keys: 
         {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion', 
-         'vortexWidth', 'vortexDepth', 'presLevData'}
+         'vortexDepth', 'presLevData'}
     """
     
     def _process_single_vortex(cluster_idx, clusterMems):
@@ -481,9 +481,13 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm,
             numpy as np, xarray as xr, HepTools.getGribData(), sys
 
         returns: dict with keys: {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
-                                  'vortexWidth', 'vortexDepth', 'presLevData'}
+                                  'vortexDepth', 'presLevData'}
         """
 
+        def _massWeights(levelCoord):
+            """Compute mass weighting using layer thickness (accounts for uneven vertical spacing)"""
+            dp = np.abs(np.gradient(np.asarray(levelCoord.values, dtype=float)))
+            return xr.DataArray(dp, dims=["level"], coords={"level": levelCoord})
 
         # get ATCF center data
         centerData = hourData[hourData["member"].isin(clusterMems)]
@@ -532,53 +536,51 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm,
             )
         )
 
-        # calculate RMW wind value and radius at each pressure level
-        tanWindRmw = radAvgData.tangential_wind.max(dim='radius')
-        rmwRadius_vals = radAvgData.radius.values[radAvgData.tangential_wind.argmax(dim='radius').values]
-        rmwRadius = xr.DataArray(rmwRadius_vals, dims=['level'], coords={'level': radAvgData.level})
-        rmwData = xr.Dataset({'tanWindRmw': tanWindRmw, 'rmwRadius': rmwRadius})
+        FRAC_DEPTH = 0.99   # fraction of column KE enclosed below the vortex top
 
-        # get wind data from rmw to outer edge of box at level of rmw
-        maxRmwLevelIdx = rmwData.tanWindRmw.sel(level=slice(1000, 800)).argmax(dim='level').item()
-        rmw = rmwData.rmwRadius.isel(level=maxRmwLevelIdx)
-        rmwWind = rmwData.tanWindRmw.isel(level=maxRmwLevelIdx)
-        rmwLevel = radAvgData.tangential_wind.sel(radius=slice(rmw, None)).isel(level=maxRmwLevelIdx)
+        rad = radAvgData.radius
+        vtLow = radAvgData.tangential_wind.sel(level=slice(1000, 850)).mean(dim='level')
 
-        # calculate vortex depth using wind decay and tilt with height methods
-        decayThresh = rmwWind * 0.75 if rmwWind < 33 else rmwWind * 0.5
-        vortexHgtDecay = radAvgData.level.where(rmwData.tanWindRmw < decayThresh, drop=True).max().item()
-        vortexHgtTilt = radAvgData.level.where(
-            np.abs(rmwData.rmwRadius.diff('level')) > np.abs(rmwData.level.diff('level')), drop=True).max().item()
-        
-        # calculate vortex depth as the average and find the nearest level
-        vortexDepth_computed = (vortexHgtDecay + vortexHgtTilt) / 2
-        vortexDepth = windData_xy.level.sel(level=vortexDepth_computed, method='nearest').item()
-        
-        # calculate vortex width using TS wind radius for hurricanes, 50% of RMW for TS
-        isBelowThresh = rmwLevel < (rmwWind * 0.5 if rmwWind < 33 else 18)
-        if isBelowThresh.any():
-            vortexWidth = rmwLevel.radius.where(isBelowThresh, drop=True).min().item()
+        # width stays the full 5x5 degree disk because steering is on the synoptic-scale
+        vortexWidth = float(rad.max())
+
+        # depth: outer radius is the edge of the low-level TS-wind field, but if winds are below
+        # TS status, the edge is the full box (probably no core anyways in this case)
+        vtThresh = 25 / 1.94384  # TS winds estimated to ~25kts given radial averaging
+        hasCore = bool((vtLow >= vtThresh).any())
+        if hasCore:
+            R_depth = float(rad.where(vtLow >= vtThresh).max())  # outer edge of TS-wind annulus
         else:
-            vortexWidth = rmwLevel.radius.max().item()
-            
-        print(f"Vortex Depth:({vortexHgtDecay} + {vortexHgtTilt}) / 2 = {vortexDepth}")
-        print(f"Vortex Width: {vortexWidth}")
+            R_depth = float(rad.max())  # no core, full box
+
+        # compute mean winds at each level over the width of the vortex (defined above)
+        mean_vt_core = radAvgData.tangential_wind.where(rad <= R_depth).mean(dim='radius')
+        levs_desc = np.sort(radAvgData.level.values)[::-1]
+        mean_vt_core = mean_vt_core.sel(level=levs_desc)  # reorder to integrate upward
+
+        # compute fraction of vortex IKE contained below each pressure level (mass weighted)
+        kePerLayer = (mean_vt_core ** 2) * _massWeights(mean_vt_core.level)
+        cumFracZ = kePerLayer.cumsum('level') / kePerLayer.sum()
+
+        # lowest altitude that still clears FRAC_DEPTH going up.
+        vortexDepth = float(mean_vt_core.level.where(cumFracZ >= FRAC_DEPTH).max())
+
+        print(f"[{storm} f{fHour:03d}] width={vortexWidth:.0f}km (full box)  "
+              f"R_depth={R_depth:.0f}km  depthTop={vortexDepth:.0f}hPa")
 
         # slice Cartesian wind data to only include estimated vortex
         windData_xy = windData_xy.sel(level=slice(1000, vortexDepth))
-        rData = xr.DataArray(r, dims=("x", "y"), coords={"x": windData_xy.x, "y": windData_xy.y})
-        windData_xy = windData_xy.where(rData <= vortexWidth)
+        windData_xy = windData_xy.where(r <= vortexWidth)
     
-        # calculate mass-weighted vortex-averaged steering
-        weights = xr.DataArray(windData_xy.level.values / 1000, dims=["level"], coords={"level": windData_xy.level})
+        # calculate mass-weighted domain-averaged steering (over the 5x5 degree circle)
         presLevData = windData_xy.mean(dim=['x', 'y'])
-        steeringData = presLevData.weighted(weights).mean(dim='level')
-    
+        steeringData = presLevData.weighted(_massWeights(presLevData.level)).mean(dim='level')
+
         # calculate shear from vortex bottom to vortex top
         bottomData = windData_xy.sel(level=slice(950, 850)).mean(dim=['x', 'y'])
-        bottomData = bottomData.weighted(weights).mean(dim='level')
+        bottomData = bottomData.weighted(_massWeights(bottomData.level)).mean(dim='level')
         topData = windData_xy.sel(level=slice(vortexDepth + 100, vortexDepth)).mean(dim=['x', 'y'])
-        topData = topData.weighted(weights).mean(dim='level')
+        topData = topData.weighted(_massWeights(topData.level)).mean(dim='level')
         shearData = (topData - bottomData)
 
         # extract computed scalar values
@@ -596,8 +598,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm,
         vMotion = stormSpeedDir['SPEED'] * np.cos(theta) / 1.94384
 
         return {'radAvgData': radAvgData, 'uSteer': uSteer, 'vSteer': vSteer, 'uShear': uShear, 'vShear': vShear,
-                             'uMotion': uMotion, 'vMotion': vMotion, 'vortexWidth': vortexWidth, 'vortexDepth': vortexDepth,
-                             'presLevData': presLevData}
+                'uMotion': uMotion, 'vMotion': vMotion, 'vortexDepth': vortexDepth, 'presLevData': presLevData}
 
     # Parallel submission block
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(allClusterMems)) as executor:
@@ -983,8 +984,7 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     
         # plot subfigure title
         dataType = f"{clusterType}" if clusterType in ["MSLP", "R34", "R50", "R64"] else "Min MSLP"
-        units = "nm" if clusterType in ["R34", "R50", "R64"] else "hPa"
-        title = f"{clusterTypeDict[clusterType][idx]} (Cluster Avg {dataType}: {clusterAvg:.1f} {units})"
+        title = f"{clusterTypeDict[clusterType][idx]} (Cluster Avg {dataType}: {clusterAvg:.1f} hPa)"
         ax.set_title(title, fontsize=9, weight='bold', loc='center')
 
         # plot grb2 data and colorbar
@@ -1026,9 +1026,7 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
     Function-specific:
         clusterDicts: list of 2 dicts from vortexAvgSteerData(), each with keys: 
             {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
-             'vortexWidth', 'vortexDepth', 'presLevData'}
-
-    POTENTIAL CHANGE: Improve the dynamic vortex estimation box.
+             'vortexDepth', 'presLevData'}
 
     dependencies: 
         matplotlib.pyplot as plt, numpy as np,
@@ -1069,9 +1067,19 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
         contour = ax.contour(radWindData.radius, radWindData.level, radWindData, levels, colors='black', linewidths=0.8)
         ax.clabel(contour, inline=True, fontsize=8)
 
-        ax.plot([data['vortexWidth'], data['vortexWidth'], 0], [1000, data['vortexDepth'], data['vortexDepth']], color='black')
+        # dynamic vortex top: horizontal dashed line across the full width,
+        # labeled. Width is no longer drawn (it's always the full box now).
+        ax.axhline(data['vortexDepth'], color='black', linestyle='--', linewidth=1.2)
+        ax.text(0.5, data['vortexDepth'], f"Vortex Top ({int(data['vortexDepth'])} hPa)",
+                transform=ax.get_yaxis_transform(), ha='center', va='bottom',
+                fontsize=8, weight='bold',
+                bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.7))
 
-        ax.set_title(f"{clusterTypeDict[clusterType][idx]} (Vortex Depth: 1000-{int(data['vortexDepth'])} hPa)", fontsize=9, weight='bold')
+        # add informational subtitle
+        steerMag = np.hypot(data['uSteer'], data['vSteer']) * 1.94384
+        shearMag = np.hypot(data['uShear'], data['vShear']) * 1.94384
+        ax.set_title(f"{clusterTypeDict[clusterType][idx]}  |  Steering {steerMag:.0f} kt  |  Shear {shearMag:.0f} kt",
+                     fontsize=9, weight='bold')
     
         ax.set_yscale('log')
         ax.invert_yaxis()
