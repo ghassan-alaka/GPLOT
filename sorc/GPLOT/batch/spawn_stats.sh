@@ -510,7 +510,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # from the namelist SID; member ATCF files are 00L-named.
         if [ "${IS_ENS}" == "True" ]; then
             for ATCF_M in "${ATCF_TMP[@]}"; do
-                if [[ "${ATCF_M}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                if [[ "${ATCF_M}" == *"/${CYCLE}/${ENSID}/"* ]]; then
                     ATCF="${ATCF_M}"
                     break
                 fi

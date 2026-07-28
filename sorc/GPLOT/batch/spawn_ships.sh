@@ -542,7 +542,7 @@ if [ "${DO_SHIPS}" = "True" ]; then
                         # path .../${CYCLE}/${ENSID}.
                         if [ "${IS_ENS}" == "True" ]; then
                             for ATCF in "${ATCF_TMP[@]}"; do
-                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}/"* ]]; then
                                     STORM_ATCF="${ATCF}"
                                     CYCLE_ATCF="${ATCF}"
                                     break
