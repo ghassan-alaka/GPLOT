@@ -239,7 +239,8 @@ def getHourData(fHour, adeckData):
     """
 
     hourData = uf.getTrackSpeedData(adeckData, fHour)
-    print(hourData)
+    #print(hourData)
+    print(f'Filtered aDeck data to hour {fHour}')
     return hourData
 
 
@@ -1488,13 +1489,12 @@ def add_shear_and_translation_stats(data, ax_main, colormap, location=(0.3, 0.05
     ax.legend(loc='best',fontsize=legend_fontsize)
     return ax
 
-def plot_tilts(atcf_df,atcf_dirs,atcf_tag,idir,dsource,
+def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fhrfmt, output_timestep,
                gpout_path = '/work/noaa/aoml-hafs1/lgramer/GPOUT/HERC', 
                cycle = '2025081600', 
                fhr=0,
                storm_id = 'AL05',
                 members_to_plot = 'all',
-               out_path = 'OUTPUT/PATH/NEEDED',
               show=False):
     
     """
@@ -1506,6 +1506,7 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag,idir,dsource,
         - atcf_df: DataFrame containing ATCF data
         - atcf_dirs: list of directories containing ATCF data - from namelist or from command line
         - atcf_tag: string, tag for ATCF data - from namelist or from command line
+        - itag: string, tag for grb2 file - from namelist or from command line
         - idir: input directory for ATCF data - from namelist or from command line
         - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
         - gpout_path: path of gplot output - duplicated I believe, but leaving for now
@@ -1514,6 +1515,9 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag,idir,dsource,
         - storm_id: str, BBNN, basin and number
         - members_to_plot: either 'all' or a list of specific ensemble members of interest like ['01','05','10']
         - out_path: path to save figures
+        - ext: file extension substring for file search function
+        - fhrfmt: probably '%03d' or whatever to get 3-digit formats, comes from namelist
+        - output_timestep: create graphics for every {output_timestep} hours
         - show: bool, create plots in current operating environment, like when running in a notebook
     
     dependencies:
@@ -1534,8 +1538,8 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag,idir,dsource,
     #For now, I will use 1000, 500, 350?
     #commented ships dependency out! Deprecating
     # tilt_data = uf.get_tilt_from_ships_data(gpout_path, cycle, storm_id)
-    centers_data, shear_data = find_centers_and_shear(members_to_plot, fhr, atcf_dirs, atcf_tag, idir, cycle, out_path, dsource,
-                 master_namelist_path=MASTER_NML)
+    centers_data, shear_data = find_centers_and_shear(members_to_plot, fhr, atcf_dirs, atcf_tag, itag, idir, cycle, out_path, dsource,
+                                                    ext, fhrfmt, output_timestep, master_namelist_path=MASTER_NML)
     tilt_data = calculate_tilt_vectors(centers_data)
 
     #keep track of whether bad vortex centers exist anywhere in the ensemble
@@ -2089,8 +2093,13 @@ def _haversine_km(lat1, lon1, lat2, lon2):
     a = np.sin(dlat / 2) ** 2 + np.cos(rlat1) * np.cos(rlat2) * np.sin(dlon / 2) ** 2
     return 2.0 * 6371.0 * np.arcsin(np.sqrt(a))
 
-def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, idir, idate, odir, dsource,
+def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate, odir, dsource, ext, fhrfmt, output_timestep,
                  master_namelist_path=None):
+    """
+    MD 20260728 - ADD DOCSTRING!!
+    """
+
+
     # Fall back to the module-level namelist path resolved from --master-nml.
     if master_namelist_path is None:
         master_namelist_path = MASTER_NML
@@ -2130,8 +2139,12 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, idir, idate, odir,
         else:
             logger.info("  No spawn file list found; falling back to "
                          "find_grib_files() discovery")
+                         #MATT NOTE - it would be great to do this outside this function, maybe later.
+                         #issues: #2. ext is assumed to be defined in main namespace
+                         #3. fhrfmt is assumed to be defined in main namespace
+                         #4. dt is assumed to be defined in main namespace
             grib_files = find_grib_files(idir, itag, ext, idate, fhrfmt,
-                                        fhr, fhr, dt, ensid) #called with init_hr and fnl_hr = fhr because only want one grib here
+                                        fhr, fhr, output_timestep, ensid) #called with init_hr and fnl_hr = fhr because only want one grib 
         if not grib_files:
             logger.error(f"No GRIB2 files found in {idir}")
             #_write_status(status_file, 'failed') #commenting out status writer because that does not exist in our current module MD 20260622
@@ -2582,13 +2595,12 @@ for fHour in fHours:
     # Tilt plots do not depend on clusterType, so they run once per forecast hour
     if tiltPlots:
         t_step_start = time.perf_counter()
-        plot_tilts(adeckData,atcf_dirs,atcf_tag,idir,dsource,
+        plot_tilts(adeckData,atcf_dirs,atcf_tag,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
         gpout_path = ODIR, 
         cycle = idate, 
         fhr=int(fHour),
         storm_id = storm[:4].upper(),
         members_to_plot = [f'{x:02}' for x in members[:-1]],
-        out_path = ODIR_full,
         show=False)
         t_elapsed = time.perf_counter() - t_step_start
         timing_totals['tiltPlots'] += t_elapsed
