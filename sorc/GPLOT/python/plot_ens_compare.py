@@ -362,7 +362,7 @@ def windRadiiData(hourData, radius):
     return quartileData, radData
 
 
-def trackClusteringData(clusterType, variable, level, fHour, adeckData, 
+def trackClusteringData(clusterType, variable, level, fHour, adeckData, sid, expt,
                         allClusterMems, idir, initDate, hourData):
     """ 
     For each of the two clusters, reads in the cluster-averaged background GRIB field and
@@ -425,7 +425,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         """
         # get GRIB data for the members in the cluster, exit if this does not work
         try:
-            gribData = uf.getGribData(f'{idir}', bounds, members=clusterMems, initDate=initDate, 
+            gribData = uf.getGribData(f'{idir}', bounds, sid, expt, members=clusterMems, initDate=initDate, 
                                       variable=variable, fHour=fHour, level=level)
             if gribData is None or len(gribData.data_vars) == 0:
                 print(f"No GRIB data returned for cluster {idx}, init {initDate}")
@@ -458,7 +458,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
     return atcfClusters, gribClusters, clusterAvgs
     
 
-def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, 
+def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
                        adeckData, allClusterMems):
     """ 
     For of the two clusters, load storm-centered u/v data, project to radial/tangential components, 
@@ -510,7 +510,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm,
 
         # load 5x5 degree centered wind data into memory, handle errors
         try:
-            windData_xy = uf.getGribData(f'{idir}', centers, variable=['UGRD', 'VGRD'], members=clusterMems, 
+            windData_xy = uf.getGribData(f'{idir}', centers, sid, expt, variable=['UGRD', 'VGRD'], members=clusterMems, 
                                             initDate=initDate, fHour=fHour)
             if windData_xy is None or len(windData_xy.data_vars) == 0:
                 print(f"No GRIB data returned for cluster {cluster_idx}, storm {storm}")
@@ -2172,7 +2172,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
                 filter_by_keys={"typeOfLevel": "isobaricInhPa",
                                 'level':[1000,500,350],
                                'shortName':['gh','u','v']},
-                backend_kwargs={"indexpath":""},
+                backend_kwargs={"indexpath":""}, 
             )
             datasets.append(ds)
         except Exception as e:
@@ -2579,7 +2579,7 @@ for fHour in fHours:
         if ensembleClustering:
             t_step_start = time.perf_counter()
             atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
-                clusterType, variable, level, fHour, adeckData, allClusterMems, 
+                clusterType, variable, level, fHour, adeckData, sid, expt, allClusterMems, 
                 idir, initDate, hourData)
             plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
                                 clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), titleLine)
@@ -2590,7 +2590,7 @@ for fHour in fHours:
         if vortexAvgSteer:
             t_step_start = time.perf_counter()
             clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
-                                              storm, adeckData, allClusterMems)
+                                              storm, sid, expt, adeckData, allClusterMems)
             plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
                                clusterTypeDict, cluster_radius(clusterType), titleLine)
             t_elapsed = time.perf_counter() - t_step_start

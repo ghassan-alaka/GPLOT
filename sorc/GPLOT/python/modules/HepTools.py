@@ -88,7 +88,7 @@ def getTrackSpeedData(atcfData, fHour):
     return hourData
     
 
-def getGribData(basePath, bounds, members=range(0, 21), 
+def getGribData(basePath, bounds, sid, expt, members=range(0, 21),
                 initDate="all", variable="u-wind", fHour="all", level=None):
     """
     Optimized GRIB2 data fetcher using wgrib2 to pre-slice the needed data. Determines 
@@ -118,13 +118,13 @@ def getGribData(basePath, bounds, members=range(0, 21),
     
     # If 'bounds' is a list, get a fixed geographical box (Earth-Relative plot)
     if isinstance(bounds, list):
-        return _process_earth_relative(basePath, bounds, members, initDate, 
-                                       fHour, match_str, script_path)
+        return _process_earth_relative(basePath, bounds, members, initDate, fHour, 
+                                       match_str, script_path, sid, expt)
     
     # If 'bounds is a dict, get a storm-centered box for each member (Storm-Relative plot)
     else:
-        return _process_storm_relative(basePath, bounds, members, initDate, 
-                                       fHour, match_str, script_path, variable)
+        return _process_storm_relative(basePath, bounds, members, initDate, fHour, 
+                                       match_str, script_path, variable, sid, expt)
 
 
 def _build_match_string(variable, level):
@@ -149,7 +149,7 @@ def _build_match_string(variable, level):
 
 
 def _process_earth_relative(basePath, bounds, members, initDate, fHour, 
-                            match_str, script_path):
+                            match_str, script_path, sid, expt):
     """
     Fetches data for a fixed Lat/Lon box across all members.
     returns:
@@ -165,7 +165,8 @@ def _process_earth_relative(basePath, bounds, members, initDate, fHour,
             print(f"Skipping missing member {member}")
             continue
         
-        temp_file = f"/dev/shm/temp_mem{member:02}_f{fHour}.grb2"  # Define temp file name for this member
+        # Define temp file name for this member
+        temp_file = f"/dev/shm/temp_mem{member:02}_f{fHour}_{initDate}_{sid}_{expt}.grb2"  
         
         try:
             # Call the shell script to extract the specific lat/lon box and variable data
@@ -193,7 +194,7 @@ def _process_earth_relative(basePath, bounds, members, initDate, fHour,
 
 
 def _process_storm_relative(basePath, bounds, members, initDate, fHour, 
-                            match_str, script_path, variable):
+                            match_str, script_path, variable, sid, expt):
     """
     Fetches data centered on a storm for each member (with bounds being a fixed distance 
     from the member's storm center), transforming coordinates from degrees to km.
@@ -219,7 +220,8 @@ def _process_storm_relative(basePath, bounds, members, initDate, fHour,
             print(f"Skipping missing member {member}")
             continue
         
-        temp_file = f"/dev/shm/temp_centered_mem{member:02}_f{fHour}.grb2"  # Define temp file name for this member
+        # Define temp file name for this member
+        temp_file = f"/dev/shm/temp_centered_mem{member:02}_f{fHour}_{initDate}_{sid}_{expt}.grb2"
         
         try:
             # Extract rough box using shell script
