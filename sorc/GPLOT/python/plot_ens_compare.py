@@ -9,6 +9,14 @@ TO DO:
 - Remove Forecast hour loop (NIKHIL TO MATT: Are you sure we want to do this? All the other modules run serial from forecast hour
         to forecast hour as far as I know. I think it may be better to optimize within each forecast hour rather the parallelize across
         all hours, given that the bottleneck is grb2 file reading anyways.)
+        Matt response - no, you're right, but we need to make considerations when adjusting to try to plot things in real time. 
+        Somewhere, we need to add a check of whether Graphic_XYX_fhrNNN.gif already exists, and skip it if so.
+        Unless it is one of the ones whose track length will be updated...
+        Perhaps this is an adjustment that happens separately in each plot type? For example, tilt plots and vortex structure clusters
+        do not need to be repeated if the plot already exists, but lineplots, tracks, wind radii, etc. will need to be overwritten 
+        with additional track info. PlottedFiles logic. I would count this item as "resolved" and just move the discussion to the next
+        one.
+        
 
 - Add logic to check "already plotted" forecast hours, skip function call if plot is already there
 
@@ -22,6 +30,11 @@ TO DO:
         GPLOT SID format (13L) as needed
 
 - Potentially add ATCF path as a command line argument (probably should do it but discuss it first)
+
+- Need a minimum number of ensembles present based on clusterSize preference - can't make clusters of 5 if there are only 9 members.
+    Or, we can but there will be overlap. Options:
+        - Warn user that there will be overlap
+        - Warn user that the clusterSize is invalid, overwrite it with a smaller one (N_members//2)
 
 ANSWERS TO MATTS QUESTIONS:
 "do we need borders and coastlines if land==False?", in function plotCartopyFigure():
@@ -45,7 +58,8 @@ Plot types (more description within functions):
 
 COMMON ARGUMENT GLOSSARY:
 (Trying this out, I think it'll make the function docstrings less bloated but let me know if you don't like it)
-(Nikhil's functions only for now, will try to unify with Matt's functions)
+(Nikhil's functions only for now, will try to unify with Matt's functions.)
+Good idea - MD 20260730
 
 The arguments below recur across several functions with identical defintions. Thus,
 individual function docstrings will name them but not describe them; they will instead
@@ -78,8 +92,6 @@ import argparse
 import concurrent.futures
 import logging
 
-#needs to point to a sorc/GPLOT/python which contains gplot_utils directory
-#This is not present in the current branch, but will be present once merged!
 # Make gplot_utils / modules importable regardless of CWD (this file lives in
 # sorc/GPLOT/python/). Mirrors GPLOT_maps.py:35 -- no hardcoded user paths.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -397,6 +409,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData,
         Reads idir, bounds, initDate, variable, fHour, level, hourData, 
         clusterType, storm, and memberDataList from enclosing function.
         NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
+        Agreed - MD 20260730. Feel free to delete these notes in next push or I will.
 
         args:
             idx: 0 or 1, which cluster we are processing (index into memberDataList)
@@ -473,6 +486,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm,
 
         Reads idir, initDate, fHour, hourData, storm, and adeckData from enclosing function.
         NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
+        Agreed - MD 20260730
 
         args:
             idx: 0 or 1, which cluster we are processing (index into memberDataList)
@@ -1536,8 +1550,6 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     
     #should we add option to specify the pressure levels to use for tilt calculation?
     #For now, I will use 1000, 500, 350?
-    #commented ships dependency out! Deprecating
-    # tilt_data = uf.get_tilt_from_ships_data(gpout_path, cycle, storm_id)
     centers_data, shear_data = find_centers_and_shear(members_to_plot, fhr, atcf_dirs, atcf_tag, itag, idir, cycle, out_path, dsource,
                                                     ext, fhrfmt, output_timestep, master_namelist_path=MASTER_NML)
     tilt_data = calculate_tilt_vectors(centers_data)
@@ -1545,10 +1557,6 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     #keep track of whether bad vortex centers exist anywhere in the ensemble
     any_bad_vortices = False
 
-    #for shear, only need shear_mag_deep, shear_dir_deep
-    #commented ships dependency out! Deprecating
-    # shear_data = uf.get_shear_from_ships_data(gpout_path, cycle, storm_id)
-    
     #combine
     shear_and_tilt = tilt_data.merge(shear_data, on = ['fhr','emem'], how='outer')
 
@@ -1600,10 +1608,6 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     for e in exclude_members:
         select_emem.remove(e)
     
-    #plot all forecast hours by default. can add option to select a handful - will be obsolete in production version because will call with fhr specified
-    #DEPRECATED
-    #forecast_hours= list(all_data['fhr'].unique())
-    
     intensity_colormap = cm.viridis
     # Define colormap for current emem selection based on intensity (mslp)
     # Define colormap extent as (min mslp minus 1, max mslp + 1), with one discrete color at each integer mslp value between
@@ -1636,7 +1640,7 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     
     ax.set_extent([centerlon_ref - window_size/2, centerlon_ref + window_size/2,
                    centerlat_ref - window_size/2, centerlat_ref + window_size/2], crs=ccrs.PlateCarree())
-    # ax.coastlines(resolution='10m')
+    # ax.coastlines(resolution='10m') - left over from earth-centered plot. should probably deprecate - md 20260730
 
     #loop through ensemble members to create each tilt vector
     excluded_emems = []
@@ -1656,7 +1660,7 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
         centerlon = centerlon_ref
         centerlat = centerlat_ref
         
-        # #for earth-relative - maybe I should get rid of this capability, it has never been used or requested
+        # left over from earth-centered plot. should probably deprecate - md 20260730
         # centerlon = current_data['lon_1000'].values[0]
         # centerlat = current_data['lat_1000'].values[0]
 
@@ -1723,7 +1727,7 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     bad_vortex_handle = plt.Line2D([], [], color='black', marker='x', linestyle='None', markersize=5, label='Bad Vortex (1km per hPa)')
 
     
-    # # Add dashed lat/lon gridlines - only when earth centered! again - maybe get rid of this
+    # # Add dashed lat/lon gridlines - left over from earth-centered plot. should probably deprecate - md 20260730
     # gl = ax.gridlines(draw_labels=True, linestyle='--', linewidth=0.8, color='gray', alpha=0)
     # gl.top_labels = False
     # gl.right_labels = False
@@ -1871,7 +1875,8 @@ def find_atcf_file(atcf_dir, atcf_tag, idate, sid, ens_id):
         return [m for m in matches
                 if not m.endswith(('.grb2', '.grb', '.idx',
                                    '.grib2', '.orig', '.nc'))
-                #and not os.path.basename(m).endswith('.all') this line prevents it from finding the ensembel atcf
+                #and not os.path.basename(m).endswith('.all') this line exists in other modules
+                #                                               but prevents it from finding the ensemble atcf
                 and not _FHR_RE.search(os.path.basename(m))]
 
     for adir in dirs:
