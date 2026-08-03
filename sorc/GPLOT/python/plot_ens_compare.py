@@ -45,6 +45,8 @@ ANSWERS TO MATTS QUESTIONS:
 "NIKHIL - are these hard-coded for geopotential heights?" in function plotTrackClustering():
     Yes unfortunately, I still need to make it so this works for a variety of background fields, I just haven't gotten around to it.
 
+New observation 20260730 - do we get overlapping temp files when running multiple jobs at once?
+
 
 Plot types (more description within functions):
 1. Ensemble Line Plots:      MSLP vs. forecast hour for all members, colored by rank for a user-chosen metric.
@@ -2411,12 +2413,15 @@ level = int(nml.get('BG_LEVEL', 500))  # atmospheric level to plot for (if appli
 # Cluster types to generate graphics for
 ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
 
-# Normalize input into a clean list of clusterTypes
-_ct_raw = nml.get('CLUSTER_TYPES', '')
-if isinstance(_ct_raw, list):
-    clusterTypes = [str(_c).strip() for _c in _ct_raw if str(_c).strip()]
+# Normalize input into a clean list of clusterTypes, default to all
+_ct_raw = nml.get('CLUSTER_TYPES', 'all')
+if _ct_raw=='all':
+    clusterTypes = ALLOWED_CLUSTER_TYPES
 else:
-    clusterTypes = [_c for _c in re.split(r'[,\s]+', str(_ct_raw).strip()) if _c]
+    if isinstance(_ct_raw, list):
+        clusterTypes = [str(_c).strip() for _c in _ct_raw if str(_c).strip()]
+    else:
+        clusterTypes = [_c for _c in re.split(r'[,\s]+', str(_ct_raw).strip()) if _c]
 
 # Remove bad clusterType inputs and notify user
 _badTypes = [_c for _c in clusterTypes if _c not in ALLOWED_CLUSTER_TYPES]
@@ -2501,6 +2506,7 @@ for _rad in (34, 50, 64):
 t_script_start = time.perf_counter()  # Doing some timing for testing purposes, not necessary but helpful to quickly gauge speed issues
 
 # MATT: Is this stuff actually getting output anywhere? I don't see it in the log file
+# I don't see it either. Not sure how logging works. MD 20260730
 logger.info(f"GPLOT Ens Comparison starting: {sid} {idate}")
 logger.info(f"  DSOURCE={dsource} EXPT={expt}")
 logger.info(f"  IDIR={idir}")
