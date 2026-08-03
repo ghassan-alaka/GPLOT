@@ -27,6 +27,7 @@ import os
 import subprocess
 import glob
 import warnings
+import threading
 
 #this script relies on GPLOT_DIR existing in the environment
 GPLOT_DIR = os.environ['GPLOT_DIR']
@@ -166,7 +167,8 @@ def _process_earth_relative(basePath, bounds, members, initDate, fHour,
             continue
         
         # Define temp file name for this member
-        temp_file = f"/dev/shm/temp_mem{member:02}_f{fHour}_{initDate}_{sid}_{expt}.grb2"  
+        tid = threading.get_ident()
+        temp_file = f"/dev/shm/temp_mem{member:02}_f{fHour}_{initDate}_{sid}_{expt}_{tid}.grb2"  
         
         try:
             # Call the shell script to extract the specific lat/lon box and variable data
@@ -221,7 +223,8 @@ def _process_storm_relative(basePath, bounds, members, initDate, fHour,
             continue
         
         # Define temp file name for this member
-        temp_file = f"/dev/shm/temp_centered_mem{member:02}_f{fHour}_{initDate}_{sid}_{expt}.grb2"
+        tid = threading.get_ident()
+        temp_file = f"/dev/shm/temp_centered_mem{member:02}_f{fHour}_{initDate}_{sid}_{expt}_{tid}.grb2"
         
         try:
             # Extract rough box using shell script
