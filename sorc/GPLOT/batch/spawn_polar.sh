@@ -1079,7 +1079,7 @@ if [ "${DO_POLAR}" = "True" ]; then
                                 done
                             fi
 
-                            # Change options in the batch submission script.
+                            # Change options in the batch submission script. MD 20260804 - why do we need logdir=odir here - does nothing
                             LOG_DIR="${ODIR_FULL}"
                             LOGFILE1="${LOG_DIR}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.log"
                             LOGFILE2="${LOG_DIR}GPLOT_Polar.${EXPT}.${CYCLE}${ENSIDTAG}.${DMN}${STORMTAG}.${TR}.out"

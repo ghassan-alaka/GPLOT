@@ -141,10 +141,6 @@ echo "MSG: Storm ID(s)        --> ${SID:-<all>}"
 echo "MSG: Forecast hours     --> ${INIT_HR} to ${FNL_HR} by ${DT}"
 echo "MSG: Batch mode         --> ${BATCH_MODE}"
 
-# Ensure output log directory exists
-LOGDIR="${ODIR}/log/"
-mkdir -p ${LOGDIR}
-
 # Find the forecast cycles for which graphics should be created
 if [ -z "${IDATE}" ]; then
     echo ${IDIR}
@@ -178,6 +174,13 @@ PYFILE="${PY_DIR}plot_ens_compare.py"
 
 # Get all of the ATCF files across all forecast cycles so they can be searched later.
 # If duplicates exist, keep the final ATCF (ATCF2).
+#MD 20260804. current behavior - atcf_tmp gets the full path of every ensemble member's atcf file from idir
+#then atcf_all removes duplicates based on basename... so it just gets one of the ensemble members' atcf
+#pros - this could work if all we want to know is what storms are present
+#cons - this will not work for creating a full list of atcf files to read
+
+#Follow-up - would it be marginally more robust to try to search for the control member? like add a "grep /00/" to the file search?
+
 ATCF_TMP=()
 ATCF_ALL=()
 for C in ${CYCLES[@]}; do
@@ -192,6 +195,35 @@ for ATCF in ${ATCF_TMP[@]}; do
     fi
 done
 
+#MD added 20260804 - add robustness to sbatch and squeue executable search
+#squeue is not currently used - it is used in other modules to check if similar jobs already exist
+#should add this functionality.
+# Get the 'sbatch' executable
+if [ -z "${X_SBATCH}" ]; then
+    X_SBATCH="`which sbatch 2>/dev/null`"
+fi
+if [ -z "${X_SBATCH}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SBATCH="`sed -n -e 's/^sbatch =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SBATCH}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'sbatch'. Exiting."
+    exit 2
+fi
+
+# Get the 'squeue' executable
+if [ -z "${X_SQUEUE}" ]; then
+    X_SQUEUE="`which squeue 2>/dev/null`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ -f ${BATCH_DFLTS} ]; then
+    X_SQUEUE="`sed -n -e 's/^squeue =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+fi
+if [ -z "${X_SQUEUE}" ] && [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+    echo "ERROR: Can't find 'squeue'. Exiting."
+    exit 2
+fi
+
+
+
 # Loop over cycles and submit one batch job per cycle.
 # Iterate CYCLES (resolved above from IDATE or auto-discovery); IDATE is empty
 # when cycles are auto-discovered, so looping it directly would never run.
@@ -201,6 +233,12 @@ for DATE in ${CYCLES[@]}; do
     # Find the ATCFs for the current CYCLE.
     # It will be blank if no ATCFs are found.
     CYCLE_ATCF=( `printf '%s\n' ${ATCF_ALL[@]} | grep "${DATE}"` )
+
+    # If the CYCLE is empty, skip it
+    if [ -z "$CYCLE_ATCF" ]; then
+        echo "WARNING: The cycle is undefined. Skipping to next."
+        continue
+    fi
 
     #MD 20260622 - adding logic to search for storms in the ATCF
     # 1) Try to get STORMS from the namelist (SID)
@@ -235,31 +273,96 @@ for DATE in ${CYCLES[@]}; do
 
     echo "MSG: Found these storms: ${STORMS[*]}"
 
+    #make output directory if not already there
+    ODIR_FULL="${ODIR}/ensembleComparison"
+    mkdir -p "${ODIR_FULL}"
 
-
-
-
+#put the log file in ODIR_FULL rather than LOGDIR - LOGDIR should just contain spawn logfiles
     for STORM in ${STORMS[@]:-""}; do
+        STORMTAG="`echo "${STORM:-XXXX}" | tr '[:upper:]' '[:lower:]'`"
+
         JOBNAME="GPLOT.ens_compare.${EXPT}.${DATE}"
         if [ ! -z "${STORM}" ]; then
             JOBNAME="${JOBNAME}.${STORM}"
         fi
-        LOGFILE="${LOGDIR}ens_compare.${EXPT}.${DATE}.log"
+        LOGFILE1="${ODIR_FULL}/GPLOT_ensembleComparison.${EXPT}.${DATE}.${STORMTAG}.log"
+        LOGFILE2="${ODIR_FULL}/GPLOT_ensembleComparison.${EXPT}.${DATE}.${STORMTAG}.out"
 
         # Status tracking (mirrors the other modules' state machine, keyed per
         # (cycle, storm)). The status file lives where the Python writes its
         # output (ODIR/ensembleComparison). The spawn marks 'working' before
         # submitting; plot_ens_compare.py writes 'complete' on success. This is
         # what lets the HAFS workflow's `find -name 'status.*'` see ens_compare.
-        STORMTAG="`echo "${STORM:-XXXX}" | tr '[:upper:]' '[:lower:]'`"
-        ODIR_FULL="${ODIR}/ensembleComparison"
-        mkdir -p "${ODIR_FULL}"
+
+        #MD 20260806 - I want to track expected output files, and if a file exists, skip it during the main plotting script
+        #I think the best way would be to CREATE that tracking file here (only if it does not already exist)
+        #Upon creation, mark all of the files as "not produced". 
+        #Then if the spawn script is called again, it won't overwrite the file
+        #It will only be edited by the plotting script when a plot is done
+        ##################################### BEGIN UNPLOTTEDFILES PSEUDOCODE #####################################################
+        #UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${EXPT}.${DATE}.${STORMTAG}.dat"
+        #psuedocode - if not exists(UNPLOTTED_FILE):
+            #write LIST_OF_FILENAMES into UNPLOTTED_FILE
+        #data needed for this list: 
+        #FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
+        #ensembleLinePlots = $(get_var "ENSEMBLE_LINE_PLOTS" ${NMLIST})
+        #ensembleTracksColored = $(get_var "ENSEMBLE_TRACKS_COLORED" ${NMLIST})
+        #ensembleWindRadii = $(get_var "ENSEMBLE_WIND_RADII" ${NMLIST})
+        #ensembleClustering = $(get_var "ENSEMBLE_CLUSTERING" ${NMLIST})
+        #vortexAvgSteer = $(get_var "VORTEX_AVG_STEER" ${NMLIST})
+        #tiltPlots = $(get_var "TILT_PLOTS" ${NMLIST})
+        #background variable, background level (I think only HGT and 500 allowed right now)
+        #DO_CONVERTGIF = $(get_var "DO_CONVERTGIF" ${NMLIST}), default to False
+        #DO_CONVERTGIF="False" #can add this capability when we actually add gif conversion to figures
+        #figext '.gif' if DO_CONVERTGIF else '.png'
+
+        #ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
+        #clusterTypes = $(get_var "CLUSTER_TYPES" ${NMLIST}), default to "all"
+        #if clusterTypes = all: 
+        #    then clusterTypes = ALLOWED_CLUSTER_TYPES
+        #else: sanity check:
+        #    for clusterType in clusterTypes: 
+        #        if clusterType NOT IN ALLOWED_CLUSTER_TYPES: 
+        #           remove clusterType from list
+        #if clusterTypes empty now:
+        #   then clusterTypes = ALLOWED_CLUSTER_TYPES
+
+        #FILE_TYPES = []
+        #if ensembleLinePlots is True:
+        #   FILE_TYPES.append("lineplot")
+        #if ensembleTracksColored is True:
+        #   FILE_TYPES.append("")
+
+        
+        #ALL_FILENAMES = []
+        #for fhour in FHOUR_LIST:
+        #   for clusterType in clusterTypes:
+        #       if ensembleLinePLots is TRUE:
+        #           filename={STORMTAG}.{DATE}.lineplot.{clusterType}.f{fhour, left padded with zeros to be 3 characters long}.{figext}
+        #           ALL_FILENAMES.append(filename)
+
+        ##################################### END UNPLOTTEDFILES PSEUDOCODE #######################################################
+
+
         STATUS_FILE="${ODIR_FULL}/status.ens_compare.${DATE}.${STORMTAG}.log"
         CASE_STATUS="`cat ${STATUS_FILE} 2>/dev/null`"
         if [ "${CASE_STATUS}" == "complete" ]; then
             echo "MSG: Status complete for ${DATE} ${STORM}; skipping."
             continue
         fi
+
+        #MD 20260804 - need to account for alternate file structures maybe
+        #   staged data in lgramer directory:
+        #   2024: .../2024100600/{ENSID}/00l.2024100600.hfsa.trak.atcfunix.all
+        #   2025: .../2025102312/{ENSID}/00l.2025102312.hfsa.trak.atcfunix.all
+        #   2026: .../H226_ens_2km_{ENSID}/com/2025102212/00L/00l.2025102212.hfsa.trak.atcfunix.all
+        #
+        #   in adeck, it can look like
+        #   hafs.{CYCLE}/hp{ENSID}.t00z.cyclone.trackatcfunix and hafs.{CYCLE}/hc00.t00z.cyclone.trackatcfunix
+
+        #That being said, the 2026 data is going to live in AWS bitbucket - we can transfer it to Ursa in any 
+        #structure we want. For now, I will plan for transferring it in the same format.
+
 
         # GRIB2 pre-flight: ens_compare reads per-member GRIB2 from
         # ${IDIR}/${CYCLE}/<member>/*.grb2 (see HepTools.getGribData). Don't
@@ -273,7 +376,7 @@ for DATE in ${CYCLES[@]}; do
             continue
         fi
 
-        ARGS="${MACHINE} ${PYFILE} ${LOGFILE} ${NMLIST} ${DATE} ${STORM:-XXXX}"
+        ARGS="${MACHINE} ${PYFILE} ${LOGFILE1} ${NMLIST} ${DATE} ${STORM:-XXXX}"
 
         echo "MSG: Submitting ens_compare job --> ${JOBNAME}"
         echo "working" > "${STATUS_FILE}"
@@ -297,16 +400,19 @@ for DATE in ${CYCLES[@]}; do
         else
             RUNTIME="07:59:59"
         fi
-
+        #feed output into the .out file, (will add .log file to command line arguments as logger)
         if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            SLRM_OPTS="--job-name=${JOBNAME} --output=${LOGFILE} --error=${LOGFILE}"
+            SLRM_OPTS="--job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
             SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
             SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --cpus-per-task=${ENS_CPUS} --mem=16G --time=${RUNTIME}"
-            sbatch ${SLRM_OPTS} ${BATCHFILE} ${ARGS}
+            echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${BATCHFILE} ${ARGS}]."
+            ${X_SBATCH} ${SLRM_OPTS} ${BATCHFILE} ${ARGS}
         elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            ${BATCHFILE} ${ARGS} > ${LOGFILE} 2>&1
+            echo "MSG: Executing this command [${BATCHFILE} ${ARGS} > ${LOGFILE2} 2>&1]."
+            ${BATCHFILE} ${ARGS} >> ${LOGFILE2} 2>&1
         else
-            ${BATCHFILE} ${ARGS} > ${LOGFILE} 2>&1 &
+            echo "MSG: Executing this command [${BATCHFILE} ${ARGS} > ${LOGFILE2} 2>&1 &]."
+            ${BATCHFILE} ${ARGS} >> ${LOGFILE2} 2>&1 &
         fi
 
         # Throttle: stop submitting once the per-invocation cap is reached.

@@ -5,47 +5,15 @@ Description:
 This script reads HAFS ensemble ATCF data, computes member statistics and rankings, and generates a series of 
 diagnostic plots for HAFS TC ensemble forecasts.
 
-TO DO:
-- Remove Forecast hour loop (NIKHIL TO MATT: Are you sure we want to do this? All the other modules run serial from forecast hour
-        to forecast hour as far as I know. I think it may be better to optimize within each forecast hour rather the parallelize across
-        all hours, given that the bottleneck is grb2 file reading anyways.)
-        Matt response - no, you're right, but we need to make considerations when adjusting to try to plot things in real time. 
-        Somewhere, we need to add a check of whether Graphic_XYX_fhrNNN.gif already exists, and skip it if so.
-        Unless it is one of the ones whose track length will be updated...
-        Perhaps this is an adjustment that happens separately in each plot type? For example, tilt plots and vortex structure clusters
-        do not need to be repeated if the plot already exists, but lineplots, tracks, wind radii, etc. will need to be overwritten 
-        with additional track info. PlottedFiles logic. I would count this item as "resolved" and just move the discussion to the next
-        one.
-        
-
+TO DO:      
 - Add logic to check "already plotted" forecast hours, skip function call if plot is already there
 
 - Add logic to check if new ensemble members have been produced?
-
-- Switch from using print to using logger.info, and generate a more useful set of print/debug statements. Still not
-        exactly sure how this works but I did a brief search and it seems more useful. I assume thats what the other parts
-        of GPLOT currently use?
-
-- Stop making all of Nikhil's functions rely on the storm variable (of format AL132025); instead make them build up from the
-        GPLOT SID format (13L) as needed
-
-- Potentially add ATCF path as a command line argument (probably should do it but discuss it first)
 
 - Need a minimum number of ensembles present based on clusterSize preference - can't make clusters of 5 if there are only 9 members.
     Or, we can but there will be overlap. Options:
         - Warn user that there will be overlap
         - Warn user that the clusterSize is invalid, overwrite it with a smaller one (N_members//2)
-
-ANSWERS TO MATTS QUESTIONS:
-"do we need borders and coastlines if land==False?", in function plotCartopyFigure():
-        Yes, the land=False is just there because shading the land in is unnecessary if we have a background field like 500mb height
-        because it is not seen anyways. Cartopy operations tend to be expensive which is why I have that toggle. We still need borders
-        and coastlines in that plot though, because those are still visible.
-
-"NIKHIL - are these hard-coded for geopotential heights?" in function plotTrackClustering():
-    Yes unfortunately, I still need to make it so this works for a variety of background fields, I just haven't gotten around to it.
-
-New observation 20260730 - do we get overlapping temp files when running multiple jobs at once?
 
 
 Plot types (more description within functions):
@@ -59,9 +27,6 @@ Plot types (more description within functions):
 6. Ensemble Tilt:            Overlays mid- and deep-layer vortex tilt, along with shear/motion rose
 
 COMMON ARGUMENT GLOSSARY:
-(Trying this out, I think it'll make the function docstrings less bloated but let me know if you don't like it)
-(Nikhil's functions only for now, will try to unify with Matt's functions.)
-Good idea - MD 20260730
 
 The arguments below recur across several functions with identical defintions. Thus,
 individual function docstrings will name them but not describe them; they will instead
@@ -94,6 +59,8 @@ import argparse
 import concurrent.futures
 import logging
 
+logger = logging.getLogger('plot_ens_compare')
+
 # Make gplot_utils / modules importable regardless of CWD (this file lives in
 # sorc/GPLOT/python/). Mirrors GPLOT_maps.py:35 -- no hardcoded user paths.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -108,14 +75,14 @@ from gplot_utils.atcf import (walk_files_depth_limited, read_atcf, atcf_from_lis
 
 import glob
 import re
-logger = logging.getLogger('__main__')
+
 
 import pandas as pd
 import numpy as np
 import xarray as xr
 
 import matplotlib
-matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.colors import LinearSegmentedColormap
@@ -131,8 +98,27 @@ import cartopy.io.shapereader as shpreader
 
 import modules.HepTools as uf
 
+# dictionaries for conversions and static variables
+typeDict = {"MSLP":   ["MSLP", "MSLP (hPa)"],
+            "ltrack": ["Along Track Deviation", "Distance (km)"],
+            "xtrack": ["Across Track Deviation", "Distance (km)"]}
+clusterTypeDict = {"MSLP":   ["Strong", "Weak"], "vortexDepth": ["Shallow", "Deep"],
+                "ltrack": ["Behind", "Ahead"], "xtrack": ["Left", "Right"]}
 
-# initialize data ----------------------------------------------------------------------------------------
+# Add a per-radius entry for each wind-radius cluster type (R34/R50/R64)
+for _rad in (34, 50, 64):
+    typeDict[f"R{_rad}"] = [f"{_rad}kt Avg Wind Radius", "Radius (km)"]
+    clusterTypeDict[f"R{_rad}"] = [f"R{_rad} Small", f"R{_rad} Large"]
+
+# Regex to classify nest vs. parent domain filenames
+_NEST_TOKEN_RE = re.compile(
+    r'(?:^|[._-])(storm\d*|nest\d*|moving|d03)(?:[._-]|$)',
+    re.IGNORECASE,
+)
+_PARENT_TOKEN_RE = re.compile(
+    r'(?:^|[._-])(parent|d01|hwrf)(?:[._-]|$)',
+    re.IGNORECASE,
+)
 
 
 def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
@@ -162,10 +148,10 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
                                           storm_id=f"{storm[:2].upper()}{storm[2:4]}",
                                           members=members)
         if adeckData.empty:
-            print(f"ATCF file exists but contains no data for storm {storm}")
+            logger.error(f"ATCF file exists but contains no data for storm {storm}")
             sys.exit(1)
     except Exception as e:
-        print(f"Error reading ATCF data at {idir} for storm {storm}, init {initDate}: {e}")
+        logger.error(f"Error reading ATCF data at {idir} for storm {storm}, init {initDate}: {e}")
         sys.exit(1)
 
     # Source columns for every radius, each tuple is (mean, quad1..4) in the 
@@ -196,7 +182,7 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
         if _rad != 34:
             missing = adeckData['r34'].notna() & (adeckData[_mean].isna() | (adeckData[_mean] == 0))
             if missing.any():
-                print(f"Zero-filling {missing.sum()} row(s) with missing {_rad}kt radii")
+                logger.warning(f"Zero-filling {missing.sum()} row(s) with missing {_rad}kt radii")
                 adeckData.loc[missing, [f'R{_rad}', f'R{_rad}_RAD1', f'R{_rad}_RAD2',
                                         f'R{_rad}_RAD3', f'R{_rad}_RAD4']] = 0
 
@@ -218,15 +204,15 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
     ].index.tolist()
     
     if incompleteMembers:
-        print(f"Skipping {len(incompleteMembers)} member(s) missing one or more "
+        logger.warning(f"Skipping {len(incompleteMembers)} member(s) missing one or more "
               f"requested forecast hours {sorted(requestedTaus)}: {incompleteMembers}")
         adeckData = adeckData[~adeckData['member'].isin(incompleteMembers)]
         members = [m for m in members if m not in incompleteMembers]
     else:
-        print(f"All members cover the requested forecast hours {sorted(requestedTaus)}.")
+        logger.info(f"All members cover the requested forecast hours {sorted(requestedTaus)}.")
 
     if len(members) < clusterMembers:
-        print(f"Only {len(members)} member(s) available after filtering, but clusterMembers={clusterMembers}. Skipping forecast hour.")
+        logger.error(f"Only {len(members)} member(s) available after filtering, but clusterMembers={clusterMembers}. Skipping forecast hour.")
         sys.exit(0)
 
     # calculate ensemble mean
@@ -253,8 +239,9 @@ def getHourData(fHour, adeckData):
     """
 
     hourData = uf.getTrackSpeedData(adeckData, fHour)
-    #print(hourData)
-    print(f'Filtered aDeck data to hour {fHour}')
+    #recall - logger.debug will not execute unless debug mode is specified
+    logger.debug(hourData)
+    logger.debug(f'Filtered aDeck data to hour {fHour}')
     return hourData
 
 
@@ -270,6 +257,7 @@ def getClusterMems(clusterType, hourData, clusterMembers):
     allClusterMems = []
     allClusterMems.append(hourData.nsmallest(clusterMembers, clusterType)["member"].tolist())
     allClusterMems.append(hourData.nlargest(clusterMembers, clusterType)["member"].tolist())
+    logger.debug("getClusterMems() complete")
     return allClusterMems
 
 
@@ -306,6 +294,7 @@ def sortedColoringData(clusterType, hourData, members):
         .astype(int)
     )
 
+    logger.debug("sortedColoringData() complete")
     return avgVarTypes
 
 
@@ -337,7 +326,8 @@ def windRadiiData(hourData, radius):
     closestRowIdxs = np.argmin(diffMatrix, axis=0)
     quartileData = hourData.iloc[closestRowIdxs]
     quartileData.index = ["min", "25th", "med", "75th", "max"]
-    print(quartileData)
+    logger.debug("Quartile data in windRadiiData():")
+    logger.debug(quartileData)
 
     # loop through each member in quartile data
     allLatPoints, allLonPoints, allPercentiles, allQuadrants = [], [], [], []
@@ -360,7 +350,8 @@ def windRadiiData(hourData, radius):
             allQuadrants.extend(np.repeat([f'RAD{idx + 1}'], len(latPoints)))
             
     # combine all data into a single DataFrame
-    radData = pd.DataFrame({'lat': allLatPoints, 'lon': allLonPoints, 'percentile': allPercentiles, 'quadrant': allQuadrants})  
+    radData = pd.DataFrame({'lat': allLatPoints, 'lon': allLonPoints, 'percentile': allPercentiles, 'quadrant': allQuadrants})
+    logger.debug('windRadiiData() complete')  
     return quartileData, radData
 
 
@@ -430,20 +421,21 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData, sid, exp
             gribData = uf.getGribData(f'{idir}', bounds, sid, expt, members=clusterMems, initDate=initDate, 
                                       variable=variable, fHour=fHour, level=level)
             if gribData is None or len(gribData.data_vars) == 0:
-                print(f"No GRIB data returned for cluster {idx}, init {initDate}")
+                logger.error(f"No GRIB data returned for cluster {idx}, init {initDate}")
                 sys.exit(1)
 
         except FileNotFoundError as e:
-            print(f"GRIB file not found at {idir} for init {initDate}: {e}")
+            logger.error(f"GRIB file not found at {idir} for init {initDate}: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading GRIB data  at {idir} for init {initDate}: {e}")
+            logger.error(f"Error reading GRIB data  at {idir} for init {initDate}: {e}")
             sys.exit(1)
        
         # get cluster-averaged MSLP or radius at fHour
         clusterHourData = hourData[hourData["member"].isin(clusterMems)]
         clusterAvg = clusterHourData['MSLP'].mean()
             
+        logger.debug('_fetch_cluster() completed')
         return memberDataList[idx], gribData, clusterAvg
 
     
@@ -457,6 +449,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData, sid, exp
     gribClusters = [r[1] for r in results]
     clusterAvgs  = [r[2] for r in results]
 
+    logger.debug('trackClusteringData() completed')
     return atcfClusters, gribClusters, clusterAvgs
     
 
@@ -504,6 +497,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
         def _massWeights(levelCoord):
             """Compute mass weighting using layer thickness (accounts for uneven vertical spacing)"""
             dp = np.abs(np.gradient(np.asarray(levelCoord.values, dtype=float)))
+            logger.debug('_massWeights() completed')
             return xr.DataArray(dp, dims=["level"], coords={"level": levelCoord})
 
         # get ATCF center data
@@ -515,14 +509,14 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
             windData_xy = uf.getGribData(f'{idir}', centers, sid, expt, variable=['UGRD', 'VGRD'], members=clusterMems, 
                                             initDate=initDate, fHour=fHour)
             if windData_xy is None or len(windData_xy.data_vars) == 0:
-                print(f"No GRIB data returned for cluster {cluster_idx}, storm {storm}")
+                logger.error(f"No GRIB data returned for cluster {cluster_idx}, storm {storm}")
                 sys.exit(1)
             
         except FileNotFoundError as e:
-            print(f"GRIB file not found at {idir} for storm {storm}, init {initDate}: {e}")
+            logger.error(f"GRIB file not found at {idir} for storm {storm}, init {initDate}: {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading GRIB data at {idir} for storm {storm}, init {initDate}: {e}")
+            logger.error(f"Error reading GRIB data at {idir} for storm {storm}, init {initDate}: {e}")
             sys.exit(1)
         
         windData_xy = windData_xy.rename({"u": "uWind", "v": "vWind", "longitude": "x", "latitude": "y", "isobaricInhPa": "level"})
@@ -582,7 +576,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
         # lowest altitude that still clears FRAC_DEPTH going up.
         vortexDepth = float(mean_vt_core.level.where(cumFracZ >= FRAC_DEPTH).max())
 
-        print(f"[{storm} f{fHour:03d}] width={vortexWidth:.0f}km (full box)  "
+        logger.debug(f"[{storm} f{fHour:03d}] width={vortexWidth:.0f}km (full box)  "
               f"R_depth={R_depth:.0f}km  depthTop={vortexDepth:.0f}hPa")
 
         # slice Cartesian wind data to only include estimated vortex
@@ -614,6 +608,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
         uMotion = stormSpeedDir['SPEED'] * np.sin(theta) / 1.94384
         vMotion = stormSpeedDir['SPEED'] * np.cos(theta) / 1.94384
 
+        logger.debug("_process_single_vortex() complete")
         return {'radAvgData': radAvgData, 'uSteer': uSteer, 'vSteer': vSteer, 'uShear': uShear, 'vShear': vShear,
                 'uMotion': uMotion, 'vMotion': vMotion, 'vortexDepth': vortexDepth, 'presLevData': presLevData}
 
@@ -622,6 +617,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
         futures = [executor.submit(_process_single_vortex, cluster_idx, clusterMems) for cluster_idx, clusterMems in enumerate(allClusterMems)]
         clusterDicts = [f.result() for f in futures]
     
+    logger.debug("vortexAvgSteerData() complete")
     return clusterDicts
     
 
@@ -660,6 +656,7 @@ def plotCartopyFigure(ax, plotLand=True):
     gl.xlabel_style = {'size': 7, 'weight': 'bold', 'color': 'gray'}
     gl.ylabel_style = {'size': 7, 'weight': 'bold', 'color': 'gray'}
     
+    logger.debug("plotCartopyFigure() complete")
     return ax
 
 
@@ -702,6 +699,7 @@ def computeTrackBounds(lons, lats):
             cy = (latMin + latMax) / 2; h = w * targetRatio
             latMin, latMax = cy - h / 2, cy + h / 2
 
+    logger.debug("computeTrackBounds() complete")
     return lonMin, lonMax, latMin, latMax, orientation
 
 
@@ -737,17 +735,19 @@ def addRankColorbar(ax, sortTitle, clusterType, nColors, isTrack):
         fig = ax.get_figure(); fig.canvas.draw()
         mapPos, cbPos = ax.get_position(), cbar.ax.get_position()
         cbar.ax.set_position([cbPos.x0, mapPos.y0, cbPos.width, mapPos.height])
+
+    logger.debug("addRankColorbar() complete")
     return cbar
 
 
-def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict, fHour,
+def plotSortedLines(ax, avgVar, plotType, members, adeckData, fHour,
                     clusterType, titleLine):
     """
     Draw a rank-colored ensemble figure onto an existing axes: MSLP vs. forecast hour
     (plotType='line') or spatial tracks (plotType='track'), lines colored by clusterType rank. 
     Adds the colorbar, ranking-hour emphasis, title, and legend.
 
-    Common args (members, adeckData, typeDict, clusterType, fHour): see glossary
+    Common args (members, adeckData, clusterType, fHour): see glossary
     Function-specific:
         ax: plain axes for 'line', cartopy GeoAxes for 'track'
         avgVar: DataFrame ['member', clusterType, 'rank']; 'rank' sets the color (NaN = gray)
@@ -811,10 +811,12 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, typeDict, fHour,
         legendHandles.append(Line2D([0], [0], color=grayColor, lw=1.2,
                                     label=f'No {clusterType[1:]}kt winds'))
     ax.legend(handles=legendHandles, loc='upper right', fontsize=8, framealpha=0.9)
+
+    logger.debug("plotSortedLines() complete")
     return ax
 
 
-def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm,
+def plotLinePlots(avgVarTypes, members, adeckData, savePath, clusterType, fHour, storm,
                   radius, initDate, titleLine):
     """
     MSLP vs. forecast-hour figure. The drawing is done by plotSortedLines(plotType='line'),
@@ -829,7 +831,7 @@ def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm,
     plt.close('all')
     plt.figure(figsize=(10, 6))
     ax = plt.gca()
-    ax = plotSortedLines(ax, avgVarTypes, 'line', members, adeckData, typeDict, fHour,
+    ax = plotSortedLines(ax, avgVarTypes, 'line', members, adeckData, fHour,
                          clusterType, titleLine)
     ax.set_xlabel('Time in Hours', fontsize=9, weight='bold')
     ax.set_ylabel('MSLP', fontsize=9, weight='bold')
@@ -842,18 +844,20 @@ def plotLinePlots(avgVarTypes, members, savePath, clusterType, fHour, storm,
     for label in ax.get_xticklabels() + ax.get_yticklabels():
         label.set_fontweight('bold')
 
+    
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png",
                 dpi=200, bbox_inches='tight')
+    logger.debug("plotLinePlots() complete")
 
 
-def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm,
+def plotTracksColored(avgVarTypes, members, adeckData, savePath, clusterType, fHour, storm,
                       radius, initDate, titleLine):
     """
     Spatial storm tracks plot. Map features via plotCartopyFigure(), drawing via
     plotSortedLines(plotType='track'). The extent is aspect-locked to 3:2 or 2:3 and the
     figure is sized to match.
 
-    Common args (members, savePath, clusterType, fHour, storm, radius, initDate): see glossary
+    Common args (members, adeckData, savePath, clusterType, fHour, storm, radius, initDate): see glossary
         avgVarTypes: same as avgVar in plotSortedLines().
     
     returns: None (Writes a PNG).
@@ -870,11 +874,13 @@ def plotTracksColored(avgVarTypes, members, savePath, clusterType, fHour, storm,
     ax = plt.axes(projection=ccrs.PlateCarree(central_longitude=180))
     ax.set_extent([lonMin, lonMax, latMin, latMax], crs=ccrs.PlateCarree())
     ax = plotCartopyFigure(ax)
-    ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, typeDict, fHour,
+    ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, fHour,
                          clusterType, titleLine)
 
+    
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png",
                 dpi=200, bbox_inches='tight')
+    logger.debug("plotTracksColored() complete")
 
 
 def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius, 
@@ -936,11 +942,13 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
             ax.plot([memQuadData.iloc[-1]['lon'], memQuadNext['lon']], [memQuadData.iloc[-1]['lat'], memQuadNext['lat']],
                     color=colors[idx], transform=ccrs.PlateCarree(), zorder=10)
 
+    
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.wind_radii.R{radius}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    logger.debug("plotWindRadii() complete")
 
     
 def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allClusterMems, clusterType, 
-                        clusterTypeDict, fHour, storm, variable, radius, titleLine):
+                        clusterTypeDict, fHour, storm, variable, radius, initDate, titleLine):
     """
     Plot the two-panel ensemble-clustering figure. For each cluster, contour the cluster-averaged
     background field (currently only works for 500 hPa geopotential heights), with each member's
@@ -1027,8 +1035,10 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     mainTitle = f"HAFS Ensemble 500mb Heights and Tracks Clustered By {titleDict[clusterType]}"
     fig.suptitle(f"{mainTitle}\n{titleLine}", fontsize=10, weight='bold')
 
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
 
+    
+    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    logger.debug("plotTrackClustering() complete")
 
 def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHour, 
                        clusterTypeDict, radius, titleLine):
@@ -1184,7 +1194,7 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
     cbar.ax.legend(linesList, labelsList, loc="lower center", bbox_to_anchor=(0.5, -3), ncol=3, frameon=False, fontsize=8)
 
     plt.savefig(f"{savePath}/{storm[2:4]}l.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
-
+    logger.debug("plotVortexAvgSteer() complete")
 
 def call_iqr_calculation(df, metric='shear'):
     """
@@ -1217,14 +1227,15 @@ def call_iqr_calculation(df, metric='shear'):
     # Warning for NAN translation speeds
     #if count does not match, there is a big problem. Never seen this happen, and hopefully never will
     if nan_dir_count != nan_speed_count:
-        print("WARNING: Nan count mismatch:")
-        print(f"Some ensemble member(s) have a {metric} with defined magnitude, undefined direction or vice-versa.")
+        logger.warning("WARNING: Nan count mismatch:")
+        logger.warning(f"Some ensemble member(s) have a {metric} with defined magnitude, undefined direction or vice-versa.")
 
     elif nan_dir_count != 0:
-        print("WARNING: {} Ensemble members have undefined {} from GPLOT output".format(nan_dir_count, metric))
+        logger.warning("WARNING: {} Ensemble members have undefined {} from GPLOT output".format(nan_dir_count, metric))
     
     #calculate iqr on circle
     iqr_data = find_iqr_circle(df, metric)
+    logger.debug("call_iqr_calculation() complete")
     return iqr_data
 
 def find_iqr_circle(df_fhr, metric='shear'):
@@ -1291,6 +1302,8 @@ def find_iqr_circle(df_fhr, metric='shear'):
                              'q3_th_deep':q3_th_deep,
                              'q3_v_deep':q3_v_deep},index=[0])
 
+
+    logger.debug("find_iqr_circle() complete")
     return out_data
 
 def add_scalebar(ax, location=(0.1, 0.05), length=100, linewidth=1, units='km', text_offset=0.01):
@@ -1333,6 +1346,7 @@ def add_scalebar(ax, location=(0.1, 0.05), length=100, linewidth=1, units='km', 
     ax.text(lon + deg_length / 2, lat + text_offset * (y1 - y0),
             f'{length} {units}', transform=ccrs.PlateCarree(),
             ha='center', va='bottom', fontsize=9)
+    logger.debug("add_scalebar() complete")
 
 def add_shear_and_translation_stats(data, ax_main, colormap, location=(0.3, 0.05), size=0.25, legend_fontsize=6, bar_hack=True, exclude_translation=True):
     """
@@ -1503,9 +1517,11 @@ def add_shear_and_translation_stats(data, ax_main, colormap, location=(0.3, 0.05
     ax.set_theta_zero_location('N')            # put 0° at top
     ax.set_theta_direction(-1)                 # clockwise positive
     ax.legend(loc='best',fontsize=legend_fontsize)
+    logger.debug("add_shear_and_translation_stats() complete")
     return ax
 
 def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fhrfmt, output_timestep,
+                master_namelist_path,
                gpout_path = '/work/noaa/aoml-hafs1/lgramer/GPOUT/HERC', 
                cycle = '2025081600', 
                fhr=0,
@@ -1548,12 +1564,12 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
         add_scalebar()
     
     """
-    
+    logger.info(f"Begin Plot Tilts for fhr {fhr:03}, storm {storm_id}")
     
     #should we add option to specify the pressure levels to use for tilt calculation?
     #For now, I will use 1000, 500, 350?
     centers_data, shear_data = find_centers_and_shear(members_to_plot, fhr, atcf_dirs, atcf_tag, itag, idir, cycle, out_path, dsource,
-                                                    ext, fhrfmt, output_timestep, master_namelist_path=MASTER_NML)
+                                                    ext, fhrfmt, output_timestep, master_namelist_path=master_namelist_path)
     tilt_data = calculate_tilt_vectors(centers_data)
 
     #keep track of whether bad vortex centers exist anywhere in the ensemble
@@ -1604,7 +1620,7 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     exclude_members = []
     for emem in select_emem:
         if emem not in all_data['emem'].unique():
-            print(f"WARNING: Ensemble member {emem} was passed as an argument, but is missing from current data. Excluding this member from analysis.")
+            logger.warning(f"WARNING: Ensemble member {emem} was passed as an argument, but is missing from current data. Excluding this member from analysis.")
             exclude_members.append(emem)
     
     for e in exclude_members:
@@ -1761,7 +1777,8 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     if show:
         plt.show()
         time.sleep(1)
-    plt.close('all')
+    # plt.close('all')
+    logger.debug("plot_tilts() complete")
 
 ##### Only got to here on 6/24/2026 Docstring edit ###########################################################
 
@@ -1827,8 +1844,9 @@ def find_grib_files(idir, itag, ext, idate, fhr_fmt, init_hr, fnl_hr, dt, ens_id
             found = True
             break
         if not found:
-            logger.debug(f"No GRIB2 file for fhr={fhr}")
+            logger.warning(f"No GRIB2 file for fhr={fhr}")
         fhr += dt
+    logger.debug("find_grib_files() complete")
     return files
 
 #this functionality is used in SHIPS and similar ones are used throughout GPLOT - we should move this to an external script.
@@ -1847,6 +1865,7 @@ def find_atcf_file(atcf_dir, atcf_tag, idate, sid, ens_id):
     else:
         dirs = [atcf_dir] if atcf_dir else []
     if not dirs:
+        logger.debug("find_atcf_file() complete, dirs variable was emtpy. Returning None")
         return None
 
     basin = sid[-1].lower() if sid else ''
@@ -1869,17 +1888,20 @@ def find_atcf_file(atcf_dir, atcf_tag, idate, sid, ens_id):
         bn = os.path.basename(path)
         tag_match = 0 if (atcf_tag and atcf_tag in bn) else 1
         parent_penalty = 1 if '.parent.' in bn else 0
+        logger.debug(f"_rank() complete, returning (tag_match, parent_penalty, bn): {(tag_match, parent_penalty, bn)}")
         return (tag_match, parent_penalty, bn)
 
     _FHR_RE = re.compile(r'\.f\d{3,4}$')
 
     def _filter(matches):
-        return [m for m in matches
-                if not m.endswith(('.grb2', '.grb', '.idx',
-                                   '.grib2', '.orig', '.nc'))
-                #and not os.path.basename(m).endswith('.all') this line exists in other modules
-                #                                               but prevents it from finding the ensemble atcf
-                and not _FHR_RE.search(os.path.basename(m))]
+        ret_val = [m for m in matches
+                    if not m.endswith(('.grb2', '.grb', '.idx',
+                                    '.grib2', '.orig', '.nc'))
+                    #and not os.path.basename(m).endswith('.all') this line exists in other modules
+                    #                                               but prevents it from finding the ensemble atcf
+                    and not _FHR_RE.search(os.path.basename(m))]
+        logger.debug(f"_filter() complete, returning ret_val: {ret_val}")
+        return ret_val
 
     for adir in dirs:
         if not os.path.isdir(adir):
@@ -1888,11 +1910,13 @@ def find_atcf_file(atcf_dir, atcf_tag, idate, sid, ens_id):
             matches = _filter(glob.glob(os.path.join(adir, tmpl)))
             if matches:
                 matches.sort(key=_rank)
+                logger.debug(f"find_atcf_file() complete, returning walked[0]: {matches[0]}")
                 return matches[0]
         for tmpl in broader_tmpls:
             matches = _filter(glob.glob(os.path.join(adir, tmpl)))
             if matches:
                 matches.sort(key=_rank)
+                logger.debug(f"find_atcf_file() complete, returning walked[0]: {matches[0]}")
                 return matches[0]
 
     # Bounded recursive fallback: the flat globs above are non-recursive, so a
@@ -1907,8 +1931,10 @@ def find_atcf_file(atcf_dir, atcf_tag, idate, sid, ens_id):
     walked = _filter(walked)
     if walked:
         walked.sort(key=_rank)
+        logger.debug(f"find_atcf_file() complete, returning walked[0]: {walked[0]}")
         return walked[0]
 
+    logger.debug("find_atcf_file() complete, got through all searches and found nothing, returning None")
     return None
 
 #this comes from SHIPS and could go in a separate module
@@ -1978,6 +2004,8 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     for lev in levels:
         clat, clon, hgt, _ = raw[lev]
         centers[lev] = (clat, clon, hgt, 1 if use.get(lev, False) else 0)
+
+    logger.debug("compute_tccen() complete")
     return centers
 
 #this comes from SHIPS and could go in separate module
@@ -1996,6 +2024,7 @@ def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon, lat, lon):
     """
     result = get_var_2d(datasets, dsource, 'HGT', str(level))
     if result is None:
+        logger.warning("get_var_2d() returned None, so find_center_at_level() is returning (nan, nan, nan, 0)")
         return np.nan, np.nan, np.nan, 0
 
     data = result['data']
@@ -2007,6 +2036,7 @@ def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon, lat, lon):
     lon_mask = (rlon >= tc_lon_data - 5) & (rlon <= tc_lon_data + 5)
 
     if not np.any(lat_mask) or not np.any(lon_mask):
+        logger.warning("found centers were more than 5 degrees away, so find_center_at_level() is returning (nan, nan, nan, 0)")
         return np.nan, np.nan, np.nan, 0
 
     sub = data[np.ix_(lat_mask, lon_mask)]
@@ -2014,11 +2044,13 @@ def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon, lat, lon):
     sub_lon = rlon[lon_mask]
 
     if sub.size == 0 or np.all(np.isnan(sub)):
+        logger.warning("found centers were more than 5 degrees away or nonexistent domain?, so find_center_at_level() is returning (nan, nan, nan, 0)")
         return np.nan, np.nan, np.nan, 0
 
     smoothed = _filter121_2d(sub, n_iter=25)
     i_c, j_c = _centroid_min(smoothed)
     if not (np.isfinite(i_c) and np.isfinite(j_c)):
+        logger.warning("_centroid_min() result was not finite, so find_center_at_level() is returning (nan, nan, nan, 0)")
         return np.nan, np.nan, np.nan, 0
 
     clat = float(np.interp(i_c, np.arange(len(sub_lat)), sub_lat))
@@ -2027,6 +2059,7 @@ def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon, lat, lon):
         clon -= 360
 
     hgt_val = float(np.nanmin(smoothed))
+    logger.debug("find_center_at_level() complete with valid entries")
     return clat, clon, hgt_val, 1
 
 #this comes from ships and really should be in a separate module
@@ -2047,6 +2080,7 @@ def _filter121_2d(arr, n_iter):
         out[:, 1:-1] = 0.25 * (tmp[:, :-2] + 2.0 * tmp[:, 1:-1] + tmp[:, 2:])
         out[0, :] = tmp[0, :]
         out[-1, :] = tmp[-1, :]
+    logger.debug("_filter121_2d() complete")
     return out
 
 #this comes from ships and should be in a separate module
@@ -2055,11 +2089,14 @@ def _match_lon_convention(lon_val, lon_array):
     if lon_array.min() >= 0 and lon_array.max() > 180:
         # Data in 0..360
         if lon_val < 0:
+            logger.debug("_match_lon_convention() complete, added 360 to raw lon values")
             return lon_val + 360
     elif lon_array.max() <= 180:
         # Data in -180..180
         if lon_val > 180:
+            logger.debug("_match_lon_convention() complete, subtracted 360 from raw lon values")
             return lon_val - 360
+    logger.debug("_match_lon_convention() complete, raw lon values left alone")
     return lon_val
 
 #this comes from ships and should be in a separate module
@@ -2075,20 +2112,24 @@ def _centroid_min(field):
     (nan, nan) if the field has no usable values.
     """
     if not np.isfinite(field).any():
+        logger.warning("_centroid_min() returning nan due to non-finite field values")
         return np.nan, np.nan
     fmin = float(np.nanmin(field))
     fmax = float(np.nanmax(field))
     if fmax == fmin:
+        logger.warning("_centroid_min() returning nan due field min == field max")
         return np.nan, np.nan
     A = fmin + 0.20 * (fmax - fmin)
     weights = np.maximum(A - field, 0.0)
     weights = np.nan_to_num(weights, nan=0.0)
     total = float(weights.sum())
     if total <= 0 or not np.isfinite(total):
+        logger.warning("_centroid_min() returning nan due to bad weighted-min calculation")
         return np.nan, np.nan
     i_idx, j_idx = np.indices(field.shape)
     i_c = float((i_idx * weights).sum() / total)
     j_c = float((j_idx * weights).sum() / total)
+    logger.debug("_centroid_min() returning centroid coordinates")
     return i_c, j_c
 
 #comes from SHIPS and should be in separate module
@@ -2098,7 +2139,9 @@ def _haversine_km(lat1, lon1, lat2, lon2):
     dlat = np.radians(lat2 - lat1)
     dlon = np.radians(lon2 - lon1)
     a = np.sin(dlat / 2) ** 2 + np.cos(rlat1) * np.cos(rlat2) * np.sin(dlon / 2) ** 2
-    return 2.0 * 6371.0 * np.arcsin(np.sqrt(a))
+    ret_val = 2.0 * 6371.0 * np.arcsin(np.sqrt(a))
+    logger.debug(f"_haversine_km() returning ret_val: {ret_val}")
+    return ret_val
 
 def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate, odir, dsource, ext, fhrfmt, output_timestep,
                  master_namelist_path=None):
@@ -2133,7 +2176,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
 
 
     for ensid in memlist:
-        logger.info(f'starting loop with ensid={ensid}') #DEBUG
+        logger.debug(f'starting loop with ensid={ensid}') #DEBUG
 
         ensemble_member_dataframe = pd.DataFrame()
         tccen_store = {}
@@ -2141,20 +2184,17 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
         grib_files = None
         #this part is just included in case we want other grb discovery later
         if grib_files is not None:
-            logger.info(f"  Using spawn-prepared file list: "
+            logger.debug(f"  Using spawn-prepared file list: "
                         f"{len(grib_files)} FHRs")
         else:
-            logger.info("  No spawn file list found; falling back to "
+            logger.debug("  No spawn file list found; falling back to "
                          "find_grib_files() discovery")
                          #MATT NOTE - it would be great to do this outside this function, maybe later.
-                         #issues: #2. ext is assumed to be defined in main namespace
-                         #3. fhrfmt is assumed to be defined in main namespace
-                         #4. dt is assumed to be defined in main namespace
             grib_files = find_grib_files(idir, itag, ext, idate, fhrfmt,
                                         fhr, fhr, output_timestep, ensid) #called with init_hr and fnl_hr = fhr because only want one grib 
         if not grib_files:
             logger.error(f"No GRIB2 files found in {idir}")
-            #_write_status(status_file, 'failed') #commenting out status writer because that does not exist in our current module MD 20260622
+            logger.error("find_centers_and_shear() exiting unsuccessfully")
             return 1
 
         #in other modules, we iterate through grib_files because there are multiple forecast hours, but here, there should only be one!
@@ -2166,7 +2206,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
 
         #optimize this with Nikhil's grib reader!
         try:
-            logging.info('In the GRIB read section')
+            logger.debug('In the GRIB read section')
             datasets=[]
             ds = xr.open_dataset(
                 grib_path,
@@ -2175,10 +2215,13 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
                                 'level':[1000,500,350],
                                'shortName':['gh','u','v']},
                 backend_kwargs={"indexpath":""}, 
+                decode_timedelta=True
             )
             datasets.append(ds)
         except Exception as e:
             logger.error(f"Failed to open {grib_path}: {e}")
+            logger.error("find_centers_and_shear() exiting unsuccessfully")
+            return 1
 
         # ---- Find ATCF file ----
         ################ Could try to replace this with our heptools atcf reading, but also don't need to because this really does
@@ -2199,10 +2242,10 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
                 atcf_file = fallback
         if atcf_file is None:
             logger.error("No ATCF file found; find_centers requires ATCF data")
-            _write_status(status_file, 'failed')
+            logger.error("find_centers_and_shear() exiting unsuccessfully")
             return 1
 
-        print(f"  ATCF: {atcf_file}")
+        logger.debug(f"  ATCF: {atcf_file}")
         atcf_df = read_atcf(atcf_file)
 
         # Check ATCF availability for this hour
@@ -2245,6 +2288,7 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
     outer_dataframe_centers = outer_dataframe_centers.reset_index(drop=True)
     outer_dataframe_shear = outer_dataframe_shear.reset_index(drop=True)
 
+    logger.debug("find_centers_and_shear() completing successfully")
     return outer_dataframe_centers, outer_dataframe_shear
 
 def calculate_tilt_vectors(centers_df):
@@ -2272,6 +2316,8 @@ def calculate_tilt_vectors(centers_df):
     
     #some lines have no good tilts at all - set max mag to 0
     tilt_data['max_mag']=tilt_data['max_mag'].fillna(0.0)
+
+    logger.debug("calculate_tilt_vectors() complete")
     return tilt_data
 
 def compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot,
@@ -2292,6 +2338,7 @@ def compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot,
     v_bot = get_var_2d(datasets, dsource, 'V', str(lev_bot))
 
     if any(x is None for x in [u_top, u_bot, v_top, v_bot]):
+        logger.error("one of 4 get_var_2d() calls returned None, exiting compute_shear() with (nan, nan)")
         return np.nan, np.nan
 
     # Shear = top - bottom
@@ -2309,164 +2356,15 @@ def compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot,
 
     shear_mag, shear_dir = compute_wind_shear(du_cart, dv_cart, x_km, y_km,
                                                r_inner, r_outer)
+
+    logger.debug("compute_shear() complete successfully")
     return shear_mag, shear_dir
-
-
-###################################################################################################################################
-
-# Parse command-line arguments -------------------------------------------------------------------------------
-parser = argparse.ArgumentParser(description='GPLOT ens_compare: ensemble comparison plots')
-
-# ALL configuration is read solely from the master namelist except for initialization date
-# and SID, which are the per-invocation identity (which cycle, which storm)
-parser.add_argument('--master-nml', dest='master_nml', required=True,
-                    help='Path to the master namelist (carries all configuration)')
-parser.add_argument('--idate', type=str, required=True, help='Forecast cycle YYYYMMDDHH')
-parser.add_argument('--sid', type=str, required=True, help='Storm ID, e.g. 13L')
-
-args = parser.parse_args()
-
-# Read all configuration from the master namelist ---------------------------------------
-MASTER_NML = args.master_nml
-nml = read_master_namelist(MASTER_NML)
-
-# Point cartopy at the local Natural Earth cache (CARTOPY_DIR) so the offline
-# supercomputer does not try to download shapefiles. Must run before any
-# cartopy / shpreader.natural_earth() call further below.
-configure_cartopy(nml.get('CARTOPY_DIR'))
-
-# General experiment configuration (invariant across many runs)
-# For center finding logic from SHIPS, need a gplot_dir, idir, itag, ext, idate, fhrfmt_raw, init_hr, fnl_hr, dt, sid
-gplot_dir = nml.get('GPLOT_DIR', os.environ.get('GPLOT_DIR', ''))
-dsource = nml.get('DSOURCE', 'HAFS')
-expt = nml.get('EXPT', '')
-idir = nml.get('IDIR', '')
-itag = nml.get('ITAG', '')
-ext = nml.get('EXT', '.grb2')
-init_hr = int(nml.get('INIT_HR', 0))
-fnl_hr = int(nml.get('FNL_HR', 126))
-fhrfmt_raw = nml.get('FMT_HR', 3)
-dt = int(nml.get('DT', 3))
-
-# Configuration for this specific run case
-idate = str(args.idate or nml.get('IDATE', ''))
-sid = args.sid or nml.get('SID', '')
-
-# these come from args in SHIPS, but we currently don't take them as args - and probably don't need to - no inner domain in HERC, and only 1 tier
-domain = nml.get('DOMAIN','')  # args.domain
-tier = nml.get('TIER','')  # args.tier
-
-# ATCF directory/tag: prefer the merged multistorm (ATCF2) over parent
-# track (ATCF1), mirroring the selection logic in GPLOT_maps.py.
-
-# don't currently have atcf_dir in args - could add later to match other modules. For now, default to nml.get
-# if args.atcf_dir:
-#     atcf_dirs = [args.atcf_dir]
-#else:
-atcf_dirs = [d for d in (nml.get('ATCF2_DIR', ''),
-                            nml.get('ATCF1_DIR', '')) if d]
-atcf_tag = nml.get('ATCF2_TAG', '') or nml.get('ATCF1_TAG', '')
-
-# Handle list values from namelist (robustness check, in case any of these parameters got read in as a list)
-if isinstance(ext, list):
-    ext = ext[0] if ext else '.grb2'
-if isinstance(itag, list):
-    itag = itag[0] if itag else ''
-if isinstance(idir, list):
-    idir = idir[0] if idir else ''
-
-# Build forecast hour format string
-try:
-    ndigits = int(fhrfmt_raw)
-    fhrfmt = f'%0{ndigits}d'
-except (ValueError, TypeError):
-    fhrfmt = '%03d'
-
-odir_type = int(nml.get('ODIR_TYPE', 0))
-
-# Regex to classify nest vs. parent domain filenames
-_NEST_TOKEN_RE = re.compile(
-    r'(?:^|[._-])(storm\d*|nest\d*|moving|d03)(?:[._-]|$)',
-    re.IGNORECASE,
-)
-_PARENT_TOKEN_RE = re.compile(
-    r'(?:^|[._-])(parent|d01|hwrf)(?:[._-]|$)',
-    re.IGNORECASE,
-)
-
-# Comparison plot toggles (read from the master namelist) ----------------------------
-def _nml_bool(key, default='True'):
-    return str(nml.get(key, default)).strip().lower() == 'true'
-
-ensembleLinePlots = _nml_bool('ENSEMBLE_LINE_PLOTS')
-ensembleTracksColored = _nml_bool('ENSEMBLE_TRACKS_COLORED')
-ensembleWindRadii = _nml_bool('ENSEMBLE_WIND_RADII')
-ensembleClustering = _nml_bool('ENSEMBLE_CLUSTERING')
-vortexAvgSteer = _nml_bool('VORTEX_AVG_STEER')
-tiltPlots = _nml_bool('TILT_PLOTS')
-
-# parameter lists, derived from namelist
-fHours = list(range(init_hr, fnl_hr + 1, dt))  # forecast hours from INIT_HR/FNL_HR/DT
-variable = nml.get('BG_VARIABLE', 'HGT')  # variable to plot under ATCF tracks
-level = int(nml.get('BG_LEVEL', 500))  # atmospheric level to plot for (if applicable)
-
-# Cluster types to generate graphics for
-ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
-
-# Normalize input into a clean list of clusterTypes, default to all
-_ct_raw = nml.get('CLUSTER_TYPES', 'all')
-if _ct_raw=='all':
-    clusterTypes = ALLOWED_CLUSTER_TYPES
-else:
-    if isinstance(_ct_raw, list):
-        clusterTypes = [str(_c).strip() for _c in _ct_raw if str(_c).strip()]
-    else:
-        clusterTypes = [_c for _c in re.split(r'[,\s]+', str(_ct_raw).strip()) if _c]
-
-# Remove bad clusterType inputs and notify user
-_badTypes = [_c for _c in clusterTypes if _c not in ALLOWED_CLUSTER_TYPES]
-if _badTypes:
-    print(f"WARNING: Ignoring unrecognized CLUSTER_TYPES value(s): {_badTypes}")
-    clusterTypes = [_c for _c in clusterTypes if _c in ALLOWED_CLUSTER_TYPES]
-
-clusterTypes = list(dict.fromkeys(clusterTypes))  # de-dup, preserve order
-print(f"MSG: Cluster types to plot --> {clusterTypes}")
-
-# All three radii are considered for wind-radii plots every run
-requestedRadii = [34, 50, 64]
-
-# static parameters
-membersStart = int(nml.get('MEMBERS_START', 0))
-membersEnd = int(nml.get('MEMBERS_END', 21))
-members = range(membersStart, membersEnd)  # members to use
-clusterMembers = int(nml.get('CLUSTER_MEMBERS', 4))  # number of members to include in each cluster
-
-# Parse date string into components
-year = int(idate[0:4])
-month = int(idate[4:6])
-day = int(idate[6:8])
-hour = int(idate[8:10])
-
-# nikhil's functions want "storm" to be in format AL132025, but sid is supposed to come in form "13l"
-if sid[2].lower() == 'l':
-    basin = 'AL'
-elif sid[2].lower() == 'e':
-    basin='EP'
-else:
-    raise ValueError(f"Unsupported basin in SID: {sid}")
-
-storm = f'{basin}{sid[:2]}{year}'
-
-# input-dependent variables
-initDate = int(f"{year:04d}{month:02d}{day:02d}{hour:02d}")
-ODIR = nml.get('ODIR', '')
-ODIR_full = ODIR+'/ensembleComparison'
-os.makedirs(ODIR_full, exist_ok=True)
-
 
 def cluster_radius(ct):
     """Wind radius (int) implied by a cluster type; None for non-radius types."""
-    return int(ct[1:]) if ct in ("R34", "R50", "R64") else None
+    ret_val = int(ct[1:]) if ct in ("R34", "R50", "R64") else None
+    logger.debug("cluster_radius() complete")
+    return ret_val
 
 
 def radius_is_plottable(hourData, radius):
@@ -2481,158 +2379,330 @@ def radius_is_plottable(hourData, radius):
     returns: bool
     """
     if radius == 34:
+        logger.debug(f"radius_is_plotable() complete, returning True")
         return True
 
     # Exclude the appended ensemble mean (last member) from the member count
     nMembers = max(len(hourData) - 1, 1)
     nNonzero = int((hourData[f'R{radius}'] > 0).sum())
-    return nNonzero >= (nMembers / 2)
+    ret_val = nNonzero >= (nMembers / 2)
+    logger.debug(f"radius_is_plotable() complete, returning {ret_val}")
+    return ret_val
 
 
-# dictionaries for conversions and static variables
-typeDict = {"MSLP":   ["MSLP", "MSLP (hPa)"],
-            "ltrack": ["Along Track Deviation", "Distance (km)"],
-            "xtrack": ["Across Track Deviation", "Distance (km)"]}
-clusterTypeDict = {"MSLP":   ["Strong", "Weak"], "vortexDepth": ["Shallow", "Deep"],
-                   "ltrack": ["Behind", "Ahead"], "xtrack": ["Left", "Right"]}
+###################################################################################################################################
 
-# Add a per-radius entry for each wind-radius cluster type (R34/R50/R64)
-for _rad in (34, 50, 64):
-    typeDict[f"R{_rad}"] = [f"{_rad}kt Avg Wind Radius", "Radius (km)"]
-    clusterTypeDict[f"R{_rad}"] = [f"R{_rad} Small", f"R{_rad} Large"]
+def main():
 
-# Main execution --------------------------------------------------------------------------------------
+    # Configure logging
+    #set logging level - can later include option to specify a more general level of verbosity
+    #options; DEBUG, INFO, WARNING, ERROR, CRITICAL
+    #every logging level captures its own level plus increased criticality. so
+    #level INFO will capture INFO, WARNING, ERROR, and CRITICAL, but not DEBUG
+    log_level = logging.INFO
+    # if args.verbose >= 1:
+    #     log_level = logging.INFO
+    # if args.verbose >= 2:
+    #     log_level = logging.DEBUG
+    logging.basicConfig(level=log_level,
+                        format='%(name)s %(levelname)s: %(message)s')
 
-t_script_start = time.perf_counter()  # Doing some timing for testing purposes, not necessary but helpful to quickly gauge speed issues
+    matplotlib.use('Agg')
 
-# MATT: Is this stuff actually getting output anywhere? I don't see it in the log file
-# I don't see it either. Not sure how logging works. MD 20260730
-logger.info(f"GPLOT Ens Comparison starting: {sid} {idate}")
-logger.info(f"  DSOURCE={dsource} EXPT={expt}")
-logger.info(f"  IDIR={idir}")
-logger.info(f"  ODIR={ODIR_full}")
+    # Parse command-line arguments -------------------------------------------------------------------------------
+    parser = argparse.ArgumentParser(description='GPLOT ens_compare: ensemble comparison plots')
 
-# Load ATCF data once for all forecast hours
-adeckData, members = modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours)
+    # ALL configuration is read solely from the master namelist except for initialization date
+    # and SID, which are the per-invocation identity (which cycle, which storm)
+    parser.add_argument('--master-nml', dest='master_nml', required=True,
+                        help='Path to the master namelist (carries all configuration)')
+    parser.add_argument('--idate', type=str, required=True, help='Forecast cycle YYYYMMDDHH')
+    parser.add_argument('--sid', type=str, required=True, help='Storm ID, e.g. 13L')
 
-# Storm name is constant across all hours
-name = uf.getStormName(storm, initDate)
+    args = parser.parse_args()
 
-# Cumulative timing accumulators, summed across all forecast hours
-timing_totals = {
-    'ensembleLinePlots': 0.0,
-    'ensembleTracksColored': 0.0,
-    'ensembleWindRadii': 0.0,
-    'ensembleClustering': 0.0,
-    'vortexAvgSteer': 0.0,
-    'tiltPlots': 0.0,
-}
+    # Read all configuration from the master namelist ---------------------------------------
+    MASTER_NML = args.master_nml
+    nml = read_master_namelist(MASTER_NML)
 
-# Number of forecast hours each plot type actually ran for
-timing_counts = {_k: 0 for _k in timing_totals}
+    # Point cartopy at the local Natural Earth cache (CARTOPY_DIR) so the offline
+    # supercomputer does not try to download shapefiles. Must run before any
+    # cartopy / shpreader.natural_earth() call further below.
+    configure_cartopy(nml.get('CARTOPY_DIR'))
 
-# Loop over all requested forecast hours
-for fHour in fHours:
-    print(f"\n{'-'*60}\nProcessing forecast hour: {fHour}\n{'-'*60}\n")
-    t_hour_start = time.perf_counter()
+    # General experiment configuration (invariant across many runs)
+    # For center finding logic from SHIPS, need a gplot_dir, idir, itag, ext, idate, fhrfmt_raw, init_hr, fnl_hr, dt, sid
+    gplot_dir = nml.get('GPLOT_DIR', os.environ.get('GPLOT_DIR', ''))
+    dsource = nml.get('DSOURCE', 'HAFS')
+    expt = nml.get('EXPT', '')
+    idir = nml.get('IDIR', '')
+    itag = nml.get('ITAG', '')
+    ext = nml.get('EXT', '.grb2')
+    init_hr = int(nml.get('INIT_HR', 0))
+    fnl_hr = int(nml.get('FNL_HR', 126))
+    fhrfmt_raw = nml.get('FMT_HR', 3)
+    dt = int(nml.get('DT', 3))
 
-    hourData = getHourData(fHour, adeckData)
+    # Configuration for this specific run case
+    idate = str(args.idate or nml.get('IDATE', ''))
+    sid = args.sid or nml.get('SID', '')
 
-    # Shared second title line for every plot this hour 
-    titleLine = (f"{name} | Forecast Hour {fHour} | "
-                f"Initialized at {hour:02}Z {calendar.month_name[month]} {day:02} {year}")
+    # these come from args in SHIPS, but we currently don't take them as args - and probably don't need to - no inner domain in HERC, and only 1 tier
+    domain = nml.get('DOMAIN','')  # args.domain
+    tier = nml.get('TIER','')  # args.tier
 
-    # Wind radii depends on radius, not clusterType, so it runs once per hour per radius
-    if ensembleWindRadii:
-        for _rad in requestedRadii:
-            # Skip if less than half the available members have nonzero rXX values
-            if not radius_is_plottable(hourData, _rad):
-                print(f"MSG: fHour {fHour}: skipping R{_rad} wind-radii plot, too few members")
-                continue
-            
+
+    # ATCF directory/tag: prefer the merged multistorm (ATCF2) over parent
+    # track (ATCF1), mirroring the selection logic in GPLOT_maps.py.
+
+    # don't currently have atcf_dir in args - could add later to match other modules. For now, default to nml.get
+    # if args.atcf_dir:
+    #     atcf_dirs = [args.atcf_dir]
+    #else:
+    atcf_dirs = [d for d in (nml.get('ATCF2_DIR', ''),
+                                nml.get('ATCF1_DIR', '')) if d]
+    atcf_tag = nml.get('ATCF2_TAG', '') or nml.get('ATCF1_TAG', '')
+
+    # Handle list values from namelist (robustness check, in case any of these parameters got read in as a list)
+    if isinstance(ext, list):
+        ext = ext[0] if ext else '.grb2'
+    if isinstance(itag, list):
+        itag = itag[0] if itag else ''
+    if isinstance(idir, list):
+        idir = idir[0] if idir else ''
+
+    # Build forecast hour format string
+    try:
+        ndigits = int(fhrfmt_raw)
+        fhrfmt = f'%0{ndigits}d'
+    except (ValueError, TypeError):
+        fhrfmt = '%03d'
+
+    odir_type = int(nml.get('ODIR_TYPE', 0))
+
+
+
+    # Comparison plot toggles (read from the master namelist) ----------------------------
+    def _nml_bool(key, default='True'):
+        return str(nml.get(key, default)).strip().lower() == 'true'
+
+    ensembleLinePlots = _nml_bool('ENSEMBLE_LINE_PLOTS')
+    ensembleTracksColored = _nml_bool('ENSEMBLE_TRACKS_COLORED')
+    ensembleWindRadii = _nml_bool('ENSEMBLE_WIND_RADII')
+    ensembleClustering = _nml_bool('ENSEMBLE_CLUSTERING')
+    vortexAvgSteer = _nml_bool('VORTEX_AVG_STEER')
+    tiltPlots = _nml_bool('TILT_PLOTS')
+
+    # parameter lists, derived from namelist
+    fHours = list(range(init_hr, fnl_hr + 1, dt))  # forecast hours from INIT_HR/FNL_HR/DT
+    variable = nml.get('BG_VARIABLE', 'HGT')  # variable to plot under ATCF tracks
+    level = int(nml.get('BG_LEVEL', 500))  # atmospheric level to plot for (if applicable)
+
+    # Cluster types to generate graphics for
+    ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
+
+    # Normalize input into a clean list of clusterTypes, default to all
+    _ct_raw = nml.get('CLUSTER_TYPES', 'all')
+    if _ct_raw=='all':
+        clusterTypes = ALLOWED_CLUSTER_TYPES
+    else:
+        if isinstance(_ct_raw, list):
+            clusterTypes = [str(_c).strip() for _c in _ct_raw if str(_c).strip()]
+        else:
+            clusterTypes = [_c for _c in re.split(r'[,\s]+', str(_ct_raw).strip()) if _c]
+
+    # Remove bad clusterType inputs and notify user
+    _badTypes = [_c for _c in clusterTypes if _c not in ALLOWED_CLUSTER_TYPES]
+    if _badTypes:
+        logger.warning(f"Ignoring unrecognized CLUSTER_TYPES value(s): {_badTypes}")
+        clusterTypes = [_c for _c in clusterTypes if _c in ALLOWED_CLUSTER_TYPES]
+
+    clusterTypes = list(dict.fromkeys(clusterTypes))  # de-dup, preserve order
+    logger.info(f"Cluster types to plot --> {clusterTypes}")
+
+    # All three radii are considered for wind-radii plots every run
+    requestedRadii = [34, 50, 64]
+
+    # static parameters
+    membersStart = int(nml.get('MEMBERS_START', 0))
+    membersEnd = int(nml.get('MEMBERS_END', 21))
+    members = range(membersStart, membersEnd)  # members to use
+    clusterMembers = int(nml.get('CLUSTER_MEMBERS', 4))  # number of members to include in each cluster
+
+    # Parse date string into components
+    year = int(idate[0:4])
+    month = int(idate[4:6])
+    day = int(idate[6:8])
+    hour = int(idate[8:10])
+
+    # nikhil's functions want "storm" to be in format AL132025, but sid is supposed to come in form "13l"
+    if sid[2].lower() == 'l':
+        basin = 'AL'
+    elif sid[2].lower() == 'e':
+        basin='EP'
+    else:
+        raise ValueError(f"Unsupported basin in SID: {sid}")
+
+    storm = f'{basin}{sid[:2]}{year}'
+
+    # input-dependent variables
+    initDate = int(f"{year:04d}{month:02d}{day:02d}{hour:02d}")
+    ODIR = nml.get('ODIR', '')
+    ODIR_full = ODIR+'/ensembleComparison'
+    os.makedirs(ODIR_full, exist_ok=True)
+
+
+    #Define status file and lockfile names
+    STATUS_FILE=os.path.join(ODIR_full, f"status.ens_compare.{idate}.{sid.lower()}.log")
+    ST_LOCK_FILE = f'{STATUS_FILE}.lock'
+
+
+
+
+
+
+
+    # Main execution --------------------------------------------------------------------------------------
+
+    t_script_start = time.perf_counter()  # Doing some timing for testing purposes, not necessary but helpful to quickly gauge speed issues
+
+    # MATT: Is this stuff actually getting output anywhere? I don't see it in the log file
+    # I don't see it either. Not sure how logging works. MD 20260730
+    logger.info(f"GPLOT Ens Comparison starting: {sid} {idate}")
+    logger.info(f"  DSOURCE={dsource} EXPT={expt}")
+    logger.info(f"  IDIR={idir}")
+    logger.info(f"  ODIR={ODIR_full}")
+
+    # Load ATCF data once for all forecast hours
+    adeckData, members = modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours)
+
+    # Storm name is constant across all hours
+    name = uf.getStormName(storm, initDate)
+
+    # Cumulative timing accumulators, summed across all forecast hours
+    timing_totals = {
+        'ensembleLinePlots': 0.0,
+        'ensembleTracksColored': 0.0,
+        'ensembleWindRadii': 0.0,
+        'ensembleClustering': 0.0,
+        'vortexAvgSteer': 0.0,
+        'tiltPlots': 0.0,
+    }
+
+    # Number of forecast hours each plot type actually ran for
+    timing_counts = {_k: 0 for _k in timing_totals}
+
+    # Loop over all requested forecast hours
+    for fHour in fHours:
+        logger.info(f"\n{'-'*60}\nProcessing forecast hour: {fHour}\n{'-'*60}\n")
+        t_hour_start = time.perf_counter()
+
+        hourData = getHourData(fHour, adeckData)
+
+        # Shared second title line for every plot this hour 
+        titleLine = (f"{name} | Forecast Hour {fHour} | "
+                    f"Initialized at {hour:02}Z {calendar.month_name[month]} {day:02} {year}")
+
+        # Wind radii depends on radius, not clusterType, so it runs once per hour per radius
+        if ensembleWindRadii:
+            for _rad in requestedRadii:
+                # Skip if less than half the available members have nonzero rXX values
+                if not radius_is_plottable(hourData, _rad):
+                    logger.warning(f"fHour {fHour}: skipping R{_rad} wind-radii plot, too few members")
+                    continue
+                
+                t_step_start = time.perf_counter()
+                adeckRadiiData, radData = windRadiiData(hourData, _rad)
+                plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
+                            _rad, initDate, adeckData, titleLine)
+                t_elapsed = time.perf_counter() - t_step_start
+                timing_totals['ensembleWindRadii'] += t_elapsed
+                timing_counts['ensembleWindRadii'] += 1
+
+        for clusterType in clusterTypes:
+            logger.info(f"Forecast hour: {fHour}; cluster type: {clusterType}")
+
+            if ensembleClustering or vortexAvgSteer:
+                allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
+
+            if ensembleLinePlots:
+                t_step_start = time.perf_counter()
+                avgVarTypes = sortedColoringData(clusterType, hourData, members)
+                plotLinePlots(avgVarTypes, members, adeckData, ODIR_full, clusterType, 
+                            fHour, storm, cluster_radius(clusterType), initDate, titleLine)
+                t_elapsed = time.perf_counter() - t_step_start
+                timing_totals['ensembleLinePlots'] += t_elapsed
+                timing_counts['ensembleLinePlots'] += 1
+
+            if ensembleTracksColored:
+                t_step_start = time.perf_counter()
+                avgVarTypes = sortedColoringData(clusterType, hourData, members)
+                plotTracksColored(avgVarTypes, members, adeckData, ODIR_full, clusterType, 
+                                fHour, storm, cluster_radius(clusterType), initDate, titleLine)
+                t_elapsed = time.perf_counter() - t_step_start
+                timing_totals['ensembleTracksColored'] += t_elapsed
+                timing_counts['ensembleTracksColored'] += 1
+
+            if ensembleClustering:
+                t_step_start = time.perf_counter()
+                atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
+                    clusterType, variable, level, fHour, adeckData, sid, expt, allClusterMems, 
+                    idir, initDate, hourData)
+                plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
+                                    clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), initDate, titleLine)
+                t_elapsed = time.perf_counter() - t_step_start
+                timing_totals['ensembleClustering'] += t_elapsed
+                timing_counts['ensembleClustering'] += 1
+
+            if vortexAvgSteer:
+                t_step_start = time.perf_counter()
+                clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
+                                                storm, sid, expt, adeckData, allClusterMems)
+                plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
+                                clusterTypeDict, cluster_radius(clusterType), titleLine)
+                t_elapsed = time.perf_counter() - t_step_start
+                timing_totals['vortexAvgSteer'] += t_elapsed
+                timing_counts['vortexAvgSteer'] += 1
+
+        # Tilt plots do not depend on clusterType, so they run once per forecast hour
+        if tiltPlots:
             t_step_start = time.perf_counter()
-            adeckRadiiData, radData = windRadiiData(hourData, _rad)
-            plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
-                          _rad, initDate, adeckData, titleLine)
+            plot_tilts(adeckData,atcf_dirs,atcf_tag,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
+            MASTER_NML,
+            gpout_path = ODIR, 
+            cycle = idate, 
+            fhr=int(fHour),
+            storm_id = storm[:4].upper(),
+            members_to_plot = [f'{x:02}' for x in members[:-1]],
+            show=False)
             t_elapsed = time.perf_counter() - t_step_start
-            timing_totals['ensembleWindRadii'] += t_elapsed
-            timing_counts['ensembleWindRadii'] += 1
-
-    for clusterType in clusterTypes:
-        print(f"\nForecast hour {fHour}: cluster type {clusterType}")
-
-        if ensembleClustering or vortexAvgSteer:
-            allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
-
-        if ensembleLinePlots:
-            t_step_start = time.perf_counter()
-            avgVarTypes = sortedColoringData(clusterType, hourData, members)
-            plotLinePlots(avgVarTypes, members, ODIR_full, clusterType, 
-                          fHour, storm, cluster_radius(clusterType), initDate, titleLine)
-            t_elapsed = time.perf_counter() - t_step_start
-            timing_totals['ensembleLinePlots'] += t_elapsed
-            timing_counts['ensembleLinePlots'] += 1
-
-        if ensembleTracksColored:
-            t_step_start = time.perf_counter()
-            avgVarTypes = sortedColoringData(clusterType, hourData, members)
-            plotTracksColored(avgVarTypes, members, ODIR_full, clusterType, 
-                              fHour, storm, cluster_radius(clusterType), initDate, titleLine)
-            t_elapsed = time.perf_counter() - t_step_start
-            timing_totals['ensembleTracksColored'] += t_elapsed
-            timing_counts['ensembleTracksColored'] += 1
-
-        if ensembleClustering:
-            t_step_start = time.perf_counter()
-            atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
-                clusterType, variable, level, fHour, adeckData, sid, expt, allClusterMems, 
-                idir, initDate, hourData)
-            plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                                clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), titleLine)
-            t_elapsed = time.perf_counter() - t_step_start
-            timing_totals['ensembleClustering'] += t_elapsed
-            timing_counts['ensembleClustering'] += 1
-
-        if vortexAvgSteer:
-            t_step_start = time.perf_counter()
-            clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
-                                              storm, sid, expt, adeckData, allClusterMems)
-            plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
-                               clusterTypeDict, cluster_radius(clusterType), titleLine)
-            t_elapsed = time.perf_counter() - t_step_start
-            timing_totals['vortexAvgSteer'] += t_elapsed
-            timing_counts['vortexAvgSteer'] += 1
-
-    # Tilt plots do not depend on clusterType, so they run once per forecast hour
-    if tiltPlots:
-        t_step_start = time.perf_counter()
-        plot_tilts(adeckData,atcf_dirs,atcf_tag,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
-        gpout_path = ODIR, 
-        cycle = idate, 
-        fhr=int(fHour),
-        storm_id = storm[:4].upper(),
-        members_to_plot = [f'{x:02}' for x in members[:-1]],
-        show=False)
-        t_elapsed = time.perf_counter() - t_step_start
-        timing_totals['tiltPlots'] += t_elapsed
-        timing_counts['tiltPlots'] += 1
+            timing_totals['tiltPlots'] += t_elapsed
+            timing_counts['tiltPlots'] += 1
 
 
-print(f"\nTotal Python time for all hours: {time.perf_counter() - t_script_start:.4f}s")
+    logger.info(f"\nTotal Python time for all hours: {time.perf_counter() - t_script_start:.4f}s")
 
-print("Average time per forecast hour, by plot type:")
-for _label, _seconds in timing_totals.items():
-    _n = timing_counts[_label]
-    if _n > 0:
-        print(f"  {_label:<25} {_seconds / _n:>10.4f}s  (n={_n})")
+    logger.info("Average time per forecast hour, by plot type:")
+    for _label, _seconds in timing_totals.items():
+        _n = timing_counts[_label]
+        if _n > 0:
+            logger.info(f"  {_label:<25} {_seconds / _n:>10.4f}s  (n={_n})")
 
-# Mark this (cycle, storm) case complete so the HAFS workflow's status check
-# (find -name 'status.*') sees ens_compare finish. Must match the path/key the
-# spawn writes 'working' to: ODIR/ensembleComparison/status.ens_compare.<idate>.<sid>.log
-try:
-    _status_file = os.path.join(ODIR_full, f"status.ens_compare.{idate}.{sid.lower()}.log")
-    with open(_status_file, 'w') as _sf:
-        _sf.write("complete\n")
-    print(f"MSG: Wrote status 'complete' --> {_status_file}")
-except Exception as _status_err:
-    print(f"WARNING: Could not write status file: {_status_err}")
+    # Mark this (cycle, storm) case complete so the HAFS workflow's status check
+    # (find -name 'status.*') sees ens_compare finish. Must match the path/key the
+    # spawn writes 'working' to: ODIR/ensembleComparison/status.ens_compare.<idate>.<sid>.log
+    try:
+        # _status_file = os.path.join(ODIR_full, f"status.ens_compare.{idate}.{sid.lower()}.log")
+        # with open(_status_file, 'w') as _sf:
+        #     _sf.write("complete\n")
+        #implementing lockfile from polar - MD 20260804
+        os.system(f'lockfile -r-1 -l 180 {ST_LOCK_FILE}')
+        os.system(f'echo "complete" > {STATUS_FILE}')
+        os.system(f'rm -f {ST_LOCK_FILE}')
+        logger.info(f"MSG: Wrote status 'complete' --> {STATUS_FILE}")
+    except Exception as _status_err:
+        logger.error(f"WARNING: Could not write status file: {_status_err}")
+
+##############################
+if __name__ == '__main__':
+  main()

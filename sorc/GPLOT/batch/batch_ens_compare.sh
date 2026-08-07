@@ -80,6 +80,8 @@ rm -f /dev/shm/temp_mem* /dev/shm/temp_centered_mem*
 #    paths, forecast-hour range) is read from the namelist by the Python module;
 #    only the per-invocation identity (--idate/--sid) plus --master-nml is passed.
 START_TIME=$(date +%s)
+echo ""
+echo "Executing ${PYFILE}. Start time: $(date -d "@$START_TIME" '+%Y-%m-%d %H:%M:%S')}" >> ${LOGFILE}
 
 python3 ${PYFILE} \
     --master-nml "${NMLIST}" \

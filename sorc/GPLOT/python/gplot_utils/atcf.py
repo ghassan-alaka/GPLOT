@@ -218,7 +218,7 @@ def read_atcf(filepath, model_id=None, cycle=None, wind_radii=34):
     # Sort by forecast hour
     df = df.sort_values('fhr').reset_index(drop=True)
 
-    logger.info(f"Read ATCF: {filepath} -> {len(df)} rows"
+    logger.debug(f"Read ATCF: {filepath} -> {len(df)} rows"
                 f" (model={model_id}, cycle={cycle}, wr={wind_radii})")
     return df
 
