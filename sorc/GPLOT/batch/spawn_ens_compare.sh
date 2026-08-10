@@ -165,8 +165,11 @@ echo ""
 
 # Build forecast hour list
 #MD 20260701 - FHOUR_LIST is unused! this is only for output notes. FHR iteration happens in the py file
-FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
-echo "MSG: Forecast hours --> ${FHOUR_LIST}"
+#FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
+#MD 20260810 - using bash array instead of space-separated string for fhour list.
+#also, it is now used in unplotted file tracking
+read -ra FHOUR_LIST <<< "$(seq "$INIT_HR" "$DT" "$FNL_HR" | tr '\n' ' ')"
+echo "MSG: Forecast hours --> ${FHOUR_LIST[*]}"
 
 # Set batch script and python script paths
 BATCHFILE="${BATCH_DIR}batch_ens_compare.sh"
@@ -294,62 +297,135 @@ for DATE in ${CYCLES[@]}; do
         # submitting; plot_ens_compare.py writes 'complete' on success. This is
         # what lets the HAFS workflow's `find -name 'status.*'` see ens_compare.
 
-        #MD 20260806 - I want to track expected output files, and if a file exists, skip it during the main plotting script
-        #I think the best way would be to CREATE that tracking file here (only if it does not already exist)
-        #Upon creation, mark all of the files as "not produced". 
-        #Then if the spawn script is called again, it won't overwrite the file
-        #It will only be edited by the plotting script when a plot is done
-        ##################################### BEGIN UNPLOTTEDFILES PSEUDOCODE #####################################################
-        #UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${EXPT}.${DATE}.${STORMTAG}.dat"
-        #psuedocode - if not exists(UNPLOTTED_FILE):
-            #write LIST_OF_FILENAMES into UNPLOTTED_FILE
-        #data needed for this list: 
-        #FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
-        #ensembleLinePlots = $(get_var "ENSEMBLE_LINE_PLOTS" ${NMLIST})
-        #ensembleTracksColored = $(get_var "ENSEMBLE_TRACKS_COLORED" ${NMLIST})
-        #ensembleWindRadii = $(get_var "ENSEMBLE_WIND_RADII" ${NMLIST})
-        #ensembleClustering = $(get_var "ENSEMBLE_CLUSTERING" ${NMLIST})
-        #vortexAvgSteer = $(get_var "VORTEX_AVG_STEER" ${NMLIST})
-        #tiltPlots = $(get_var "TILT_PLOTS" ${NMLIST})
-        #background variable, background level (I think only HGT and 500 allowed right now)
-        #DO_CONVERTGIF = $(get_var "DO_CONVERTGIF" ${NMLIST}), default to False
-        #DO_CONVERTGIF="False" #can add this capability when we actually add gif conversion to figures
-        #figext '.gif' if DO_CONVERTGIF else '.png'
-
-        #ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
-        #clusterTypes = $(get_var "CLUSTER_TYPES" ${NMLIST}), default to "all"
-        #if clusterTypes = all: 
-        #    then clusterTypes = ALLOWED_CLUSTER_TYPES
-        #else: sanity check:
-        #    for clusterType in clusterTypes: 
-        #        if clusterType NOT IN ALLOWED_CLUSTER_TYPES: 
-        #           remove clusterType from list
-        #if clusterTypes empty now:
-        #   then clusterTypes = ALLOWED_CLUSTER_TYPES
-
-        #FILE_TYPES = []
-        #if ensembleLinePlots is True:
-        #   FILE_TYPES.append("lineplot")
-        #if ensembleTracksColored is True:
-        #   FILE_TYPES.append("")
-
-        
-        #ALL_FILENAMES = []
-        #for fhour in FHOUR_LIST:
-        #   for clusterType in clusterTypes:
-        #       if ensembleLinePLots is TRUE:
-        #           filename={STORMTAG}.{DATE}.lineplot.{clusterType}.f{fhour, left padded with zeros to be 3 characters long}.{figext}
-        #           ALL_FILENAMES.append(filename)
-
-        ##################################### END UNPLOTTEDFILES PSEUDOCODE #######################################################
-
-
         STATUS_FILE="${ODIR_FULL}/status.ens_compare.${DATE}.${STORMTAG}.log"
         CASE_STATUS="`cat ${STATUS_FILE} 2>/dev/null`"
         if [ "${CASE_STATUS}" == "complete" ]; then
             echo "MSG: Status complete for ${DATE} ${STORM}; skipping."
             continue
         fi
+
+        #MD 20260806 - I want to track expected output files, and if a file exists, skip it during the main plotting script
+        #I think the best way would be to CREATE that tracking file here (only if it does not already exist)
+        #Upon creation, mark all of the files as "not produced". 
+        #Then if the spawn script is called again, it won't overwrite the file
+        #It will only be edited by the plotting script when a plot is done
+        ##################################### BEGIN UNPLOTTEDFILES CHECK #####################################################
+        UNPLOTTED_FILE="${ODIR_FULL}/UnplottedFiles.${EXPT}.${DATE}.${STORMTAG}.dat"
+        if [ ! -f "${UNPLOTTED_FILE}" ]; then
+            echo "MSG: UnplottedFiles list not found. Creating."
+            #data needed for this list: FHOUR_LIST - already exists
+            ensembleLinePlots=$(get_var "ENSEMBLE_LINE_PLOTS" ${NMLIST})
+            ensembleTracksColored=$(get_var "ENSEMBLE_TRACKS_COLORED" ${NMLIST})
+            ensembleWindRadii=$(get_var "ENSEMBLE_WIND_RADII" ${NMLIST})
+            ensembleClustering=$(get_var "ENSEMBLE_CLUSTERING" ${NMLIST})
+            vortexAvgSteer=$(get_var "VORTEX_AVG_STEER" ${NMLIST})
+            tiltPlots=$(get_var "TILT_PLOTS" ${NMLIST})
+            #MD 20260810 - only HGT and 500 allowed right now for background
+            bgVars=$(get_var "BG_VARIABLE" ${NMLIST})
+            bgLevs=$(get_var "BG_LEVEL" ${NMLIST})
+            #DO_CONVERTGIF = $(get_var "DO_CONVERTGIF" ${NMLIST}), default to False
+            DO_CONVERTGIF="False" #can add this capability when we actually add gif conversion to figures
+            if [[ "$DO_CONVERTGIF" == "True" ]]; then
+                FIGEXT=".gif"
+            else
+                FIGEXT=".png"
+            fi
+
+            ALLOWED_CLUSTER_TYPES=("MSLP" "R34" "R50" "R64" "ltrack" "xtrack")
+            clusterTypes=$(get_var "CLUSTER_TYPES" ${NMLIST})
+            if [ -z "${clusterTypes}" ]; then clusterTypes="all"; fi
+
+            if [[ "$clusterTypes" == "all" ]]; then
+                clusterTypes=("${ALLOWED_CLUSTER_TYPES[@]}")
+            else
+                # Sanity check: keep only allowed cluster types
+                valid_cluster_types=()
+
+                for clusterType in "${clusterTypes[@]}"; do
+                    if [[ " ${ALLOWED_CLUSTER_TYPES[*]} " == *" $clusterType "* ]]; then
+                        valid_cluster_types+=("$clusterType")
+                    fi
+                done
+
+                clusterTypes=("${valid_cluster_types[@]}")
+
+                # If nothing valid was provided, use all cluster types
+                if [[ ${#clusterTypes[@]} -eq 0 ]]; then
+                    clusterTypes=("${ALLOWED_CLUSTER_TYPES[@]}")
+                fi
+            fi
+
+            # Build list of cluster file types
+            CLUSTER_FILE_TYPES=()
+
+            if [[ "$ensembleLinePlots" == "True" ]]; then
+                CLUSTER_FILE_TYPES+=("line_plot")
+            fi
+
+            if [[ "$ensembleTracksColored" == "True" ]]; then
+                CLUSTER_FILE_TYPES+=("spatial_tracks")
+            fi
+
+            if [[ "$ensembleWindRadii" == "True" ]]; then
+                CLUSTER_FILE_TYPES+=("wind_radii")
+            fi
+
+            if [[ "$ensembleClustering" == "True" ]]; then
+                for bgVar in "${bgVars[@]}"; do
+                    for bgLev in "${bgLevs[@]}"; do
+                        CLUSTER_FILE_TYPES+=("${bgVar}${bgLev}.spatial_cluster")
+                    done
+                done
+            fi
+
+            if [[ "$vortexAvgSteer" == "True" ]]; then
+                CLUSTER_FILE_TYPES+=("wind.vortex_cluster")
+            fi
+
+
+            # Build all base filenames
+            ALL_BASE_FILENAMES=()
+
+            for clusterType in "${clusterTypes[@]}"; do
+                for fileType in "${CLUSTER_FILE_TYPES[@]}"; do
+                    ALL_BASE_FILENAMES+=("${fileType}.${clusterType}")
+                done
+            done
+
+            if [[ "$tiltPlots" == "True" ]]; then
+                ALL_BASE_FILENAMES+=("vortex_tilt")
+            fi
+
+
+            # Build complete filenames
+            ALL_FILENAMES=()
+
+            for fhour in "${FHOUR_LIST[@]}"; do
+                echo "hereio $fhour"
+                # Zero-pad forecast hour to 3 digits
+                printf -v fhour_padded "%03d" "$fhour"
+
+                for file_base in "${ALL_BASE_FILENAMES[@]}"; do
+                    ALL_FILENAMES+=("${STORMTAG}.${DATE}.${file_base}.f${fhour_padded}${FIGEXT}")
+                done
+            done
+
+            # Write filenames to output file
+            printf '%s\n' "${ALL_FILENAMES[@]}" | sort > "$UNPLOTTED_FILE"
+
+        elif [[ ! -s "$UNPLOTTED_FILE" ]]; then
+            echo "MSG: Unplotted Files list already exists, and is empty."
+            echo "MSG: This means there is nothing left to plot, and the job is done."
+            echo "MSG: Updating status to complete for ${DATE} ${STORM} and skipping."
+            echo "complete" > "${STATUS_FILE}"
+            continue
+            
+        else
+            echo "MSG: Unplotted Files list already exists, skipping creation."
+        fi
+        #exit #DELETE DELETE DELETE
+        ##################################### END UNPLOTTEDFILES CHECK #######################################################
+
 
         #MD 20260804 - need to account for alternate file structures maybe
         #   staged data in lgramer directory:

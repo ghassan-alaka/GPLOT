@@ -948,14 +948,14 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
 
     
 def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allClusterMems, clusterType, 
-                        clusterTypeDict, fHour, storm, variable, radius, initDate, titleLine):
+                        clusterTypeDict, fHour, storm, level, variable, radius, initDate, titleLine):
     """
     Plot the two-panel ensemble-clustering figure. For each cluster, contour the cluster-averaged
     background field (currently only works for 500 hPa geopotential heights), with each member's
     track overlaid and the fHour position marked. 
 
     Common args (savePath, allClusterMems, clusterType, clusterTypeDict, fHour,
-        storm, variable, radius, year, month, day, hour): see glossary
+        storm, level, variable, radius, year, month, day, hour): see glossary
     Function-specific:
         - atcfClusters: list of 2 DataFrames, with each holding one cluster's ATCF track
         - gribClusters: list of 2 Datasets, cluster-averaged background field
@@ -1037,7 +1037,7 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
 
 
     
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}{level}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
     logger.debug("plotTrackClustering() complete")
 
 def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHour, 
@@ -1770,10 +1770,11 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     
     stid = storm_id.replace('AL','')+'l'
     plt.title('{} {} Tilt at f{}'.format(storm_id, cycle,f"{fhr:03}"))
-    if members_to_plot == 'all':
-        plt.savefig('{}/{}.{}.tilt_plot.all_members.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}"))
-    else:
-        plt.savefig('{}/{}.{}.tilt_plot.selected_members.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}"))
+    # if members_to_plot == 'all':
+    #     plt.savefig('{}/{}.{}.tilt_plot.all_members.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}"))
+    # else:
+    #MD 20260810 - removing name flexibility, not currently ever passing "all" into function
+    plt.savefig('{}/{}.{}.vortex_tilt.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}"))
     if show:
         plt.show()
         time.sleep(1)
@@ -2502,7 +2503,7 @@ def main():
     ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
 
     # Normalize input into a clean list of clusterTypes, default to all
-    _ct_raw = nml.get('CLUSTER_TYPES', 'all')
+    _ct_raw = nml.get('CLUSTER_TYPE', 'all')
     if _ct_raw=='all':
         clusterTypes = ALLOWED_CLUSTER_TYPES
     else:
@@ -2649,7 +2650,7 @@ def main():
                     clusterType, variable, level, fHour, adeckData, sid, expt, allClusterMems, 
                     idir, initDate, hourData)
                 plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                                    clusterTypeDict, fHour, storm, variable, cluster_radius(clusterType), initDate, titleLine)
+                                    clusterTypeDict, fHour, storm, level, variable, cluster_radius(clusterType), initDate, titleLine)
                 t_elapsed = time.perf_counter() - t_step_start
                 timing_totals['ensembleClustering'] += t_elapsed
                 timing_counts['ensembleClustering'] += 1
