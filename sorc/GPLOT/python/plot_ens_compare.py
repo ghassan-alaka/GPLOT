@@ -547,37 +547,49 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
             )
         )
 
-        FRAC_DEPTH = 0.99   # fraction of column KE enclosed below the vortex top
+        FRAC_DEPTH = 0.99  # fraction of column KE enclosed below the vortex top
+        PEAK_FRAC = 0.50  # radius defined as where tangential wind falls to this fraction of its peak
+        VT_MIN_DEPTH = 10 / 1.94384  # min wind that's allowed to count toward vortex depth (10 kts)
+        DEPTH_FLOOR_HPA = 700.0  # last-resort floor if depth calc is too shallow
 
+        # get radius coordinates and tangential wind averaged over low-levels, per radius
         rad = radAvgData.radius
         vtLow = radAvgData.tangential_wind.sel(level=slice(1000, 850)).mean(dim='level')
 
         # width stays the full 5x5 degree disk because steering is on the synoptic-scale
         vortexWidth = float(rad.max())
 
-        # depth: outer radius is the edge of the low-level TS-wind field, but if winds are below
-        # TS status, the edge is the full box (probably no core anyways in this case)
-        vtThresh = 25 / 1.94384  # TS winds estimated to ~25kts given radial averaging
-        hasCore = bool((vtLow >= vtThresh).any())
-        if hasCore:
-            R_depth = float(rad.where(vtLow >= vtThresh).max())  # outer edge of TS-wind annulus
-        else:
-            R_depth = float(rad.max())  # no core, full box
+        # R_depth: largest radius where low-level winds exceed vtThresh
+        vtPeak = float(vtLow.max())  # strongest low-level tangential wind
+        vtThresh = max(PEAK_FRAC * vtPeak, VT_MIN_DEPTH)
+        R_depth = float(rad.where(vtLow >= vtThresh).max())
 
-        # compute mean winds at each level over the width of the vortex (defined above)
+        # compute core-mean tangential vertical wind profile over the width of the vortex
         mean_vt_core = radAvgData.tangential_wind.where(rad <= R_depth).mean(dim='radius')
         levs_desc = np.sort(radAvgData.level.values)[::-1]
         mean_vt_core = mean_vt_core.sel(level=levs_desc)  # reorder to integrate upward
 
-        # compute fraction of vortex IKE contained below each pressure level (mass weighted)
-        kePerLayer = (mean_vt_core ** 2) * _massWeights(mean_vt_core.level)
-        cumFracZ = kePerLayer.cumsum('level') / kePerLayer.sum()
+        # check if any level in the core-mean profile has wind > 10kts
+        hasVortexSignal = bool((mean_vt_core >= VT_MIN_DEPTH).any())
+        if hasVortexSignal:
+            # set vortex top as layer that encloses 99% of column KE
+            mean_vt_depth = mean_vt_core.where(mean_vt_core >= VT_MIN_DEPTH)
+            kePerLayer = (mean_vt_depth ** 2) * _massWeights(mean_vt_depth.level)  # apply mass weighting
+            cumFracZ = kePerLayer.cumsum('level') / kePerLayer.sum()
+            vortexDepth = float(mean_vt_core.level.where(cumFracZ >= FRAC_DEPTH).max())
+        else:
+            vortexDepth = np.nan  # no level clears 10kt at all, nothing meaningful to integrate
 
-        # lowest altitude that still clears FRAC_DEPTH going up.
-        vortexDepth = float(mean_vt_core.level.where(cumFracZ >= FRAC_DEPTH).max())
+        # if vortex top is NaN or shallower than 700 hPa, set top to 700 hPa
+        if np.isnan(vortexDepth) or vortexDepth > DEPTH_FLOOR_HPA:
+            depthFloored = True
+            vortexDepth = DEPTH_FLOOR_HPA
+        else:
+            depthFloored = False
 
         logger.debug(f"[{storm} f{fHour:03d}] width={vortexWidth:.0f}km (full box)  "
-              f"R_depth={R_depth:.0f}km  depthTop={vortexDepth:.0f}hPa")
+                     f"vtPeak={vtPeak*1.94384:.0f}kt  R_depth={R_depth:.0f}km  "
+                     f"depthTop={vortexDepth:.0f}hPa  floored={depthFloored}")
 
         # slice Cartesian wind data to only include estimated vortex
         windData_xy = windData_xy.sel(level=slice(1000, vortexDepth))
@@ -587,7 +599,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
         presLevData = windData_xy.mean(dim=['x', 'y'])
         steeringData = presLevData.weighted(_massWeights(presLevData.level)).mean(dim='level')
 
-        # calculate shear from vortex bottom to vortex top
+        # calculate bulk shear from vortex bottom to vortex top
         bottomData = windData_xy.sel(level=slice(950, 850)).mean(dim=['x', 'y'])
         bottomData = bottomData.weighted(_massWeights(bottomData.level)).mean(dim='level')
         topData = windData_xy.sel(level=slice(vortexDepth + 100, vortexDepth)).mean(dim=['x', 'y'])
@@ -2380,14 +2392,14 @@ def radius_is_plottable(hourData, radius):
     returns: bool
     """
     if radius == 34:
-        logger.debug(f"radius_is_plotable() complete, returning True")
+        logger.debug(f"radius_is_plottable() complete, returning True")
         return True
 
     # Exclude the appended ensemble mean (last member) from the member count
     nMembers = max(len(hourData) - 1, 1)
     nNonzero = int((hourData[f'R{radius}'] > 0).sum())
     ret_val = nNonzero >= (nMembers / 2)
-    logger.debug(f"radius_is_plotable() complete, returning {ret_val}")
+    logger.debug(f"radius_is_plottable() complete, returning {ret_val}")
     return ret_val
 
 
