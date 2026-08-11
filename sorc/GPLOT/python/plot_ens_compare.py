@@ -591,20 +591,33 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
                      f"vtPeak={vtPeak*1.94384:.0f}kt  R_depth={R_depth:.0f}km  "
                      f"depthTop={vortexDepth:.0f}hPa  floored={depthFloored}")
 
-        # slice Cartesian wind data to only include estimated vortex
+        # full-column domain-averaged wind for the hodograph (before slicing to vortex depth)
+        presLevData = windData_xy.where(r <= vortexWidth).mean(dim=['x', 'y'])
+
+        # slice Cartesian wind data to only include estimated vortex (for steering/shear)
         windData_xy = windData_xy.sel(level=slice(1000, vortexDepth))
         windData_xy = windData_xy.where(r <= vortexWidth)
-    
-        # calculate mass-weighted domain-averaged steering (over the 5x5 degree circle)
-        presLevData = windData_xy.mean(dim=['x', 'y'])
-        steeringData = presLevData.weighted(_massWeights(presLevData.level)).mean(dim='level')
 
-        # calculate bulk shear from vortex bottom to vortex top
-        bottomData = windData_xy.sel(level=slice(950, 850)).mean(dim=['x', 'y'])
-        bottomData = bottomData.weighted(_massWeights(bottomData.level)).mean(dim='level')
-        topData = windData_xy.sel(level=slice(vortexDepth + 100, vortexDepth)).mean(dim=['x', 'y'])
-        topData = topData.weighted(_massWeights(topData.level)).mean(dim='level')
-        shearData = (topData - bottomData)
+        # calculate mass-weighted domain-averaged steering (over the 5x5 degree circle)
+        vortexColData = windData_xy.mean(dim=['x', 'y'])
+        steeringData = vortexColData.weighted(_massWeights(vortexColData.level)).mean(dim='level')
+
+        # calculate fixed deep-layer bulk shear (850-200 hPa)
+        botDeep = presLevData.sel(level=850, method='nearest')
+        topDeep = presLevData.sel(level=200, method='nearest')
+        shearData = (topDeep - botDeep)
+
+        # calculate max shear across every layer pair within the deep layer (200-850 hPa)
+        deepLevels = presLevData.sel(level=slice(850, 200))
+        top = deepLevels.rename({'level': 'levTop'})
+        bot = deepLevels.rename({'level': 'levBot'})
+        shearMagAll = np.hypot(top.uWind - bot.uWind, top.vWind - bot.vWind)  # dims (levTop, levBot)
+
+        # pick the layer pair with the largest magnitude difference
+        maxIdx = shearMagAll.argmax(dim=['levTop', 'levBot'])
+        maxShearMag = float(shearMagAll.isel(maxIdx))
+        maxShearTop = float(shearMagAll.levTop.isel(levTop=maxIdx['levTop']))
+        maxShearBot = float(shearMagAll.levBot.isel(levBot=maxIdx['levBot']))
 
         # extract computed scalar values
         uSteer, vSteer = steeringData.uWind.item(), steeringData.vWind.item()
@@ -622,7 +635,8 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
 
         logger.debug("_process_single_vortex() complete")
         return {'radAvgData': radAvgData, 'uSteer': uSteer, 'vSteer': vSteer, 'uShear': uShear, 'vShear': vShear,
-                'uMotion': uMotion, 'vMotion': vMotion, 'vortexDepth': vortexDepth, 'presLevData': presLevData}
+                'uMotion': uMotion, 'vMotion': vMotion, 'vortexDepth': vortexDepth, 'presLevData': presLevData,
+                'maxShearMag': maxShearMag, 'maxShearBot': maxShearBot, 'maxShearTop': maxShearTop}
 
     # Parallel submission block
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(allClusterMems)) as executor:
@@ -926,7 +940,8 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
     meanLon, meanLat = quartileData['longitude'].mean(), quartileData['latitude'].mean()
     ax.set_extent([meanLon-8, meanLon+8, meanLat-6, meanLat+6])
 
-    ax.scatter(quartileData['longitude'], quartileData['latitude'], color=colors, zorder=100, s=20, transform=ccrs.PlateCarree())
+    ax.scatter(quartileData['longitude'], quartileData['latitude'], color=colors, zorder=100, 
+               s=25, transform=ccrs.PlateCarree(), edgecolors='black', linewidths=1)
 
     # add titling
     title = f"HAFS Ensemble {radius}kt Wind Radii Quartiles"
@@ -943,7 +958,7 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
     for idx, (percentile, data) in enumerate(quartileData.iterrows()):
         memberData = adeckData[adeckData['member'] == data['member']]
         ax.plot(memberData['longitude'], memberData['latitude'], color=colors[idx], transform=ccrs.PlateCarree(), alpha=0.5, linewidth=1)
-        ax.scatter(memberData['longitude'][::2], memberData['latitude'][::2], color=colors[idx], transform=ccrs.PlateCarree(), alpha=0.5, s=7)
+        ax.scatter(memberData['longitude'][::2], memberData['latitude'][::2], color=colors[idx], transform=ccrs.PlateCarree(), alpha=0.5, s=10)
 
         memRadData = radData[radData['percentile'] == data.name]
         for quad, quadrant in enumerate(['RAD1', 'RAD2', 'RAD3', 'RAD4']):
@@ -1106,8 +1121,7 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
         contour = ax.contour(radWindData.radius, radWindData.level, radWindData, levels, colors='black', linewidths=0.8)
         ax.clabel(contour, inline=True, fontsize=8)
 
-        # dynamic vortex top: horizontal dashed line across the full width,
-        # labeled. Width is no longer drawn (it's always the full box now).
+        # dynamic vortex top: horizontal dashed line across the full width, labeled
         ax.axhline(data['vortexDepth'], color='black', linestyle='--', linewidth=1.2)
         ax.text(0.5, data['vortexDepth'], f"Vortex Top ({int(data['vortexDepth'])} hPa)",
                 transform=ax.get_yaxis_transform(), ha='center', va='bottom',
@@ -1116,9 +1130,15 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
 
         # add informational subtitle
         steerMag = np.hypot(data['uSteer'], data['vSteer']) * 1.94384
-        shearMag = np.hypot(data['uShear'], data['vShear']) * 1.94384
-        ax.set_title(f"{clusterTypeDict[clusterType][idx]}  |  Steering {steerMag:.0f} kt  |  Shear {shearMag:.0f} kt",
-                     fontsize=9, weight='bold')
+        bulkShearMag = np.hypot(data['uShear'], data['vShear']) * 1.94384
+        maxShearMag = data['maxShearMag'] * 1.94384
+        hiP = max(data['maxShearBot'], data['maxShearTop'])
+        loP = min(data['maxShearBot'], data['maxShearTop'])
+        maxShearLayer = f"{hiP:.0f}-{loP:.0f} hPa"
+        ax.set_title(
+            f"{clusterTypeDict[clusterType][idx]}  |  Steering {steerMag:.0f} kt\n"
+            f"Bulk Shear {bulkShearMag:.0f} kt  |  Max Shear {maxShearMag:.0f} kt ({maxShearLayer})",
+            fontsize=9, weight='bold')
     
         ax.set_yscale('log')
         ax.invert_yaxis()
@@ -1195,14 +1215,10 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
     steer_proxy  = Line2D([0], [0], color='#00AAFF', lw=0, marker=r'$\rightarrow$', markersize=10)
     shear_proxy  = Line2D([0], [0], color='orange', lw=0, marker=r'$\rightarrow$', markersize=10)
 
-    linesList = [hodograph_red, motion_proxy, hodograph_green, steer_proxy, shear_proxy]
-    labelsList = ["Hodograph (1000–850)", "Storm Motion", "Vortex-Averaged Steering Flow", "Vertical Shear (Top – Bottom of Vortex, 100 hPa Avg)"]
-    if clusterDicts[0]['vortexDepth'] > 500 and clusterDicts[1]['vortexDepth'] > 500:
-        labelsList.insert(2, "Hodograph (850–Vortex Top)")
-    else:
-        labelsList.insert(2, "Hodograph (850–500)")
-        linesList.insert(4, hodograph_purple)
-        labelsList.insert(4, "Hodograph (500–Vortex Top)")
+    linesList = [hodograph_red, motion_proxy, hodograph_green, steer_proxy, hodograph_purple, shear_proxy]
+    labelsList = ["Hodograph (1000–850)", "Storm Motion", "Hodograph (850–500)",
+                  "Vortex-Averaged Steering Flow", "Hodograph (500–100)",
+                  "Deep-Layer Bulk Shear (200-850 hPa)"]
     cbar.ax.legend(linesList, labelsList, loc="lower center", bbox_to_anchor=(0.5, -3), ncol=3, frameon=False, fontsize=8)
 
     plt.savefig(f"{savePath}/{storm[2:4]}l.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
@@ -2515,7 +2531,7 @@ def main():
     ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
 
     # Normalize input into a clean list of clusterTypes, default to all
-    _ct_raw = nml.get('CLUSTER_TYPE', 'all')
+    _ct_raw = nml.get('CLUSTER_TYPES', 'all')
     if _ct_raw=='all':
         clusterTypes = ALLOWED_CLUSTER_TYPES
     else:
@@ -2637,6 +2653,10 @@ def main():
 
             if ensembleClustering or vortexAvgSteer:
                 allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
+                skipClustering = set(allClusterMems[0]) == set(allClusterMems[1])
+                if skipClustering:
+                    logger.warning(f"fHour {fHour}: {clusterType} produced identical clusters; "
+                                   f"skipping clustering/vortex plots")
 
             if ensembleLinePlots:
                 t_step_start = time.perf_counter()
@@ -2656,7 +2676,7 @@ def main():
                 timing_totals['ensembleTracksColored'] += t_elapsed
                 timing_counts['ensembleTracksColored'] += 1
 
-            if ensembleClustering:
+            if ensembleClustering and not skipClustering:
                 t_step_start = time.perf_counter()
                 atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
                     clusterType, variable, level, fHour, adeckData, sid, expt, allClusterMems, 
@@ -2667,7 +2687,7 @@ def main():
                 timing_totals['ensembleClustering'] += t_elapsed
                 timing_counts['ensembleClustering'] += 1
 
-            if vortexAvgSteer:
+            if vortexAvgSteer and not skipClustering:
                 t_step_start = time.perf_counter()
                 clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
                                                 storm, sid, expt, adeckData, allClusterMems)
