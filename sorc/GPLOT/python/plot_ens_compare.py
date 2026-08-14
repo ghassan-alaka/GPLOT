@@ -110,6 +110,53 @@ for _rad in (34, 50, 64):
     typeDict[f"R{_rad}"] = [f"{_rad}kt Avg Wind Radius", "Radius (km)"]
     clusterTypeDict[f"R{_rad}"] = [f"R{_rad} Small", f"R{_rad} Large"]
 
+
+# Add functionality for flexible spatial cluster background field
+def _cmap(stops, vmin, vmax):
+    """Generate colormap from (value, color) stops given in the field's own units."""
+    return LinearSegmentedColormap.from_list("", [((v - vmin) / (vmax - vmin), c) for v, c in stops])
+
+
+# Define colormaps for HGT and RH
+_HGT_STOPS = [(0.00, "#288DFF"), (0.20, "#029916"), (0.50, "#e8d505"),
+              (0.70, "#e87802"), (0.80, "#e30202"), (0.90, "#800000"),
+              (1.00, "#4B004B")]
+_RH_STOPS = [(0, "#6E4B1F"), (30, "#C8A96E"), (50, "#FFFFFF"),
+             (70, "#6FBF73"), (100, "#0B4D1E")]
+
+# Background fields available for the spatial-clustering plot 
+# Namelist inputs that aren't in this dict are rejected during namelist parsing
+#   scale: scale raw data to correct units (HGT gpm to dam is 0.1, RH already in percent)
+#   levels: filled-contour levels
+#   lineLevels: black line-contour levels, or None to skip line contours (skipped for RH)
+#   labelEvery: label every Nth line contour (unused when lineLevels is None)
+#   cmap: LinearSegmentedColormap for the filled contours
+#   cbarLabel: colorbar label including units
+#   titleField: human-readable field name for the figure suptitle
+BG_FIELD_SPECS = {
+    ('HGT', 850): dict(scale=0.1, levels=np.arange(138, 163, 2),
+                       lineLevels=np.arange(138, 163, 2), labelEvery=2,
+                       cmap=_cmap(_HGT_STOPS, 0, 1),
+                       cbarLabel='850 hPa Height (dam)', titleField='850mb Heights'),
+    ('HGT', 500): dict(scale=0.1, levels=np.arange(540, 602, 2),
+                       lineLevels=np.arange(540, 602, 2), labelEvery=2,
+                       cmap=_cmap(_HGT_STOPS, 0, 1),
+                       cbarLabel='500 hPa Height (dam)', titleField='500mb Heights'),
+    ('HGT', 200): dict(scale=0.1, levels=np.arange(1215, 1263, 3),
+                       lineLevels=np.arange(1215, 1263, 3), labelEvery=2,
+                       cmap=_cmap(_HGT_STOPS, 0, 1),
+                       cbarLabel='200 hPa Height (dam)', titleField='200mb Heights'),
+    ('RH', 850):  dict(scale=1.0, levels=np.arange(0, 105, 5),
+                       lineLevels=None, labelEvery=None, cmap=_cmap(_RH_STOPS, 0, 100),
+                       cbarLabel='850 hPa Relative Humidity (%)', titleField='850mb RH'),
+    ('RH', 700):  dict(scale=1.0, levels=np.arange(0, 105, 5),
+                       lineLevels=None, labelEvery=None, cmap=_cmap(_RH_STOPS, 0, 100),
+                       cbarLabel='700 hPa Relative Humidity (%)', titleField='700mb RH'),
+    ('RH', 500):  dict(scale=1.0, levels=np.arange(0, 105, 5),
+                       lineLevels=None, labelEvery=None, cmap=_cmap(_RH_STOPS, 0, 100),
+                       cbarLabel='500 hPa Relative Humidity (%)', titleField='500mb RH'),
+}
+
 # Regex to classify nest vs. parent domain filenames
 _NEST_TOKEN_RE = re.compile(
     r'(?:^|[._-])(storm\d*|nest\d*|moving|d03)(?:[._-]|$)',
@@ -999,10 +1046,13 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     returns: None (writes a PNG).
     """
     plt.close('all')
-    fig, axes = plt.subplots(2, 2, figsize=(9.5, 5.5), constrained_layout=True, subplot_kw={'projection': ccrs.PlateCarree()}, gridspec_kw={"height_ratios": [0.02, 1]})
+    fig, axes = plt.subplots(2, 2, figsize=(9.5, 5.5), constrained_layout=True, subplot_kw={'projection': ccrs.PlateCarree()}, 
+                             gridspec_kw={"height_ratios": [0.02, 1]})
     for ax in axes[0]:
         ax.axis('off')
     axes = axes[1]
+
+    spec = BG_FIELD_SPECS[(variable, level)]
 
     for idx, (clusterMems, atcfData, gribData, clusterAvg, ax) in enumerate(zip(allClusterMems, atcfClusters, gribClusters, clusterAvgs, axes)):
         ax = plotCartopyFigure(ax, plotLand=False)
@@ -1010,38 +1060,22 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
         ax.set_extent([gribData.longitude.min(), gribData.longitude.max(), 
                        gribData.latitude.min(), gribData.latitude.max()], crs=ccrs.PlateCarree())
 
-        def normalize(value):
-            return (value - 540) / (600 - 540)
-        
-        gribData = gribData / 10
-        gribData = gribData[list(gribData.data_vars)[0]]
-        
-        levelsContour = np.arange(540, 600, 2)
-        levelsContourf = np.arange(540, 600, 2)
-        colorscale_points = [ 
-            (normalize(540), "#288DFF"),   # Blue (540)
-            (normalize(552), "#029916"),   # Green (552)
-            (normalize(570), "#e8d505"),   # Yellow (570)
-            (normalize(582), "#e87802"),   # Orange (582)
-            (normalize(588), "#e30202"),   # Red (588)
-            (normalize(594), "#800000"),   # Deep maroon (594)
-            (normalize(600), "#4B004B"),   # Purple-maroon (600)
-        ]
-        newcmp = LinearSegmentedColormap.from_list("", colorscale_points)
+        gribData = gribData[list(gribData.data_vars)[0]] * spec['scale']  # select and scale data
 
+        contourf = ax.contourf(gribData.longitude, gribData.latitude, gribData,
+                               spec['levels'], extend='both', transform=ccrs.PlateCarree(), cmap=spec['cmap'])
 
-        contours = ax.contour(gribData.longitude, gribData.latitude, gribData, levelsContour, 
-                              transform=ccrs.PlateCarree(), colors='black', linewidths=0.5) 
-        ax.clabel(contours, levelsContour[::2], inline=True, fontsize=8)
+        # plot contours on top of shading if requested
+        if spec['lineLevels'] is not None:
+            contours = ax.contour(gribData.longitude, gribData.latitude, gribData,
+                                spec['lineLevels'], transform=ccrs.PlateCarree(),
+                                colors='black', linewidths=0.5)
+            ax.clabel(contours, spec['lineLevels'][::spec['labelEvery']],
+                    inline=True, fontsize=8)
     
         # plot subfigure title
-        dataType = f"{clusterType}" if clusterType in ["MSLP", "R34", "R50", "R64"] else "Min MSLP"
-        title = f"{clusterTypeDict[clusterType][idx]} (Cluster Avg {dataType}: {clusterAvg:.1f} hPa)"
+        title = f"{clusterTypeDict[clusterType][idx]} (Cluster Avg Min MSLP: {clusterAvg:.1f} hPa)"
         ax.set_title(title, fontsize=9, weight='bold', loc='center')
-
-        # plot grb2 data and colorbar
-        contourf = ax.contourf(gribData.longitude, gribData.latitude, gribData, levelsContourf, extend='both',
-                               transform=ccrs.PlateCarree(), cmap=newcmp)
 
         # plot ATCF data
         for clusterMem in clusterMems:
@@ -1053,19 +1087,19 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
 
     cbar = fig.colorbar(contourf, ax=axes, orientation='horizontal', pad=0.04, aspect=50)
     cbar.ax.tick_params(labelsize=8)
+    cbar.set_label(spec['cbarLabel'], fontsize=9, weight='bold')
 
     # add titling
     titleDict = {"MSLP": "MSLP", "ltrack": "Along Track Variation", "xtrack": "Across Track Variation", 
                  "R34": "Radius of 34kt Winds", "R50": "Radius of 50kt Winds", "R64": "Radius of 64kt Winds", 
                  "vortexDepth": "Vortex Depth"}
 
-    mainTitle = f"HAFS Ensemble 500mb Heights and Tracks Clustered By {titleDict[clusterType]}"
+    mainTitle = f"HAFS Ensemble {spec['titleField']} and Tracks Clustered By {titleDict[clusterType]}"
     fig.suptitle(f"{mainTitle}\n{titleLine}", fontsize=10, weight='bold')
-
-
     
     plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}{level}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
     logger.debug("plotTrackClustering() complete")
+
 
 def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHour, 
                        clusterTypeDict, radius, titleLine):
@@ -2419,6 +2453,41 @@ def radius_is_plottable(hourData, radius):
     return ret_val
 
 
+def parse_bg_fields(nml):
+    """
+    Parse BG_FIELDS (in format 'VAR:LEVEL') into a list of (variable, level) tuples. 
+    Unrecognized pairs are dropped with a warning.
+
+    args:
+        nml: master namelist
+    returns: fields, list of tuples, each tuple containing (VAR, LEVEL)
+    """
+    # Get raw field and default to 500mb heights if it cannot be found
+    raw = nml.get('BG_FIELDS', "HGT:500")
+    if raw == "HGT:500":
+        logger.warning(f"BG_FIELDS not set; falling back to default: {raw}")
+
+    # Convert to list of VAR:LEVEL pairs if necessary
+    tokens = raw if isinstance(raw, list) else re.split(r'[,\s]+', str(raw).strip())
+
+    # Convert to list of (VAR, LEVEL) tuples, exclude any combos that aren't allowed
+    fields, bad = [], []
+    for tok in [t for t in tokens if t]:
+        m = re.fullmatch(r'([A-Za-z_]+):(\d+)', tok)
+        pair = (m.group(1).upper(), int(m.group(2))) if m else None
+        if pair in BG_FIELD_SPECS:
+            fields.append(pair)
+        else:
+            bad.append(tok)
+
+    if bad:
+        logger.warning(f"Ignoring unrecognized BG_FIELDS entry/entries: {bad}")
+
+    fields = list(dict.fromkeys(fields))  # de-dup, preserve order
+    logger.info(f"Background fields to plot --> {[f'{v}:{l}' for v, l in fields]}")
+    return fields
+
+
 ###################################################################################################################################
 
 def main():
@@ -2524,8 +2593,7 @@ def main():
 
     # parameter lists, derived from namelist
     fHours = list(range(init_hr, fnl_hr + 1, dt))  # forecast hours from INIT_HR/FNL_HR/DT
-    variable = nml.get('BG_VARIABLE', 'HGT')  # variable to plot under ATCF tracks
-    level = int(nml.get('BG_LEVEL', 500))  # atmospheric level to plot for (if applicable)
+    bgFields = parse_bg_fields(nml)  # [(variable, level), ...] for clustering plots
 
     # Cluster types to generate graphics for
     ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
@@ -2677,15 +2745,16 @@ def main():
                 timing_counts['ensembleTracksColored'] += 1
 
             if ensembleClustering and not skipClustering:
-                t_step_start = time.perf_counter()
-                atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
-                    clusterType, variable, level, fHour, adeckData, sid, expt, allClusterMems, 
-                    idir, initDate, hourData)
-                plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                                    clusterTypeDict, fHour, storm, level, variable, cluster_radius(clusterType), initDate, titleLine)
-                t_elapsed = time.perf_counter() - t_step_start
-                timing_totals['ensembleClustering'] += t_elapsed
-                timing_counts['ensembleClustering'] += 1
+                for bgVariable, bgLevel in bgFields:
+                    t_step_start = time.perf_counter()
+                    atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
+                        clusterType, bgVariable, bgLevel, fHour, adeckData, sid, expt, allClusterMems, 
+                        idir, initDate, hourData)
+                    plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
+                                        clusterTypeDict, fHour, storm, bgLevel, bgVariable, cluster_radius(clusterType), initDate, titleLine)
+                    t_elapsed = time.perf_counter() - t_step_start
+                    timing_totals['ensembleClustering'] += t_elapsed
+                    timing_counts['ensembleClustering'] += 1
 
             if vortexAvgSteer and not skipClustering:
                 t_step_start = time.perf_counter()
