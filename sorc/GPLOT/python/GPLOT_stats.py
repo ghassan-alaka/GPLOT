@@ -374,7 +374,31 @@ def compute_map_bounds(model_data, bdeck_df=None, padding_frac=0.05):
         return (-90, 90, -180, 180)
 
     lat_min, lat_max = min(all_lats), max(all_lats)
-    lon_min, lon_max = min(all_lons), max(all_lons)
+
+    # Dateline-aware longitude bounds. A CPac/WPac track crossing 180
+    # has signed lons jumping +179.9 -> -179.9, so a naive min/max
+    # spans nearly the whole globe and the panel collapses into a
+    # world-wide strip with every track huddled at one edge. Compute
+    # the span in both the signed [-180, 180] and [0, 360] conventions
+    # and keep whichever is tighter -- storm tracks are compact, so
+    # the right convention is unambiguous. When the [0, 360] form wins
+    # (only happens for 180-crossing tracks) the returned bounds have
+    # lon_e > 180, which _guidance_projection pairs with a
+    # central_longitude=180 map downstream, mirroring the GPLOT_maps
+    # convention for dateline-crossing panels.
+    lons_signed = [((l + 180.0) % 360.0) - 180.0 for l in all_lons]
+    lons_360 = [l % 360.0 for l in all_lons]
+    span_signed = max(lons_signed) - min(lons_signed)
+    span_360 = max(lons_360) - min(lons_360)
+    # Signed convention wins ties: when a track straddles neither seam
+    # the two spans are equal up to float rounding, and the 1-degree
+    # margin keeps modulo noise from flipping an ordinary Atlantic
+    # panel onto the shifted projection. A genuine 180-crossing makes
+    # span_360 smaller by tens of degrees, far past the margin.
+    if span_360 < span_signed - 1.0:
+        lon_min, lon_max = min(lons_360), max(lons_360)
+    else:
+        lon_min, lon_max = min(lons_signed), max(lons_signed)
 
     rng_lat = lat_max - lat_min
     rng_lon = lon_max - lon_min
@@ -406,6 +430,44 @@ def compute_map_bounds(model_data, bdeck_df=None, padding_frac=0.05):
     return (lat_n, lat_s, lon_w, lon_e)
 
 
+def _wrap_track_lons(df, lon_w, lon_e):
+    """
+    Return a copy of ``df`` with its 'lon' column wrapped to the
+    convention of the panel bounds ([0, 360] when the panel crosses
+    the dateline, signed [-180, 180] otherwise).
+
+    Track lines are drawn with matplotlib Line2D artists, whose
+    vertices are projected point-by-point with no antimeridian
+    splitting (unlike contour geometries) -- a signed +179 -> -179
+    jump in a dateline-crossing track otherwise draws a full-width
+    horizontal streak across the panel. Wrapping the data into the
+    bounds convention makes consecutive vertices numerically adjacent
+    so the segments stay contiguous.
+    """
+    if df is None or len(df) == 0 or 'lon' not in df:
+        return df
+    if lon_e > 180 or lon_w < -180:
+        return df.assign(lon=df['lon'] % 360.0)
+    return df.assign(lon=((df['lon'] + 180.0) % 360.0) - 180.0)
+
+
+def _guidance_projection(lon_w, lon_e):
+    """
+    Map projection for a guidance panel given its lon bounds.
+
+    Bounds with an edge past +-180 come from compute_map_bounds
+    choosing the [0, 360] convention for a dateline-crossing track;
+    they need cartopy's central_longitude=180 or set_extent silently
+    falls back to a global extent. Track lines/markers keep
+    ``transform=ccrs.PlateCarree()`` -- cartopy wraps each vertex into
+    the shifted frame, and per-point overlays are too small for the
+    transform!=projection cost that matters on gridded maps panels.
+    """
+    if lon_e > 180 or lon_w < -180:
+        return ccrs.PlateCarree(central_longitude=180)
+    return ccrs.PlateCarree()
+
+
 # ============================================================
 # Plotting functions
 # ============================================================
@@ -423,9 +485,13 @@ def plot_track_guidance(model_data, bdeck_df, model_info, idate,
 
     bounds = compute_map_bounds(model_data, bdeck_df)
     lat_n, lat_s, lon_w, lon_e = bounds
+    bdeck_df = _wrap_track_lons(bdeck_df, lon_w, lon_e)
+    model_data = {mid: _wrap_track_lons(mdf, lon_w, lon_e)
+                  for mid, mdf in model_data.items()}
 
     fig = plt.figure(figsize=(12, 10))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+    ax = fig.add_subplot(1, 1, 1,
+                         projection=_guidance_projection(lon_w, lon_e))
     ax.set_extent([lon_w, lon_e, lat_s, lat_n], crs=ccrs.PlateCarree())
 
     ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
@@ -619,9 +685,13 @@ def plot_track_intensity_guidance(model_data, bdeck_df, model_info, idate,
 
     bounds = compute_map_bounds(model_data, bdeck_df)
     lat_n, lat_s, lon_w, lon_e = bounds
+    bdeck_df = _wrap_track_lons(bdeck_df, lon_w, lon_e)
+    model_data = {mid: _wrap_track_lons(mdf, lon_w, lon_e)
+                  for mid, mdf in model_data.items()}
 
     fig = plt.figure(figsize=(12, 10))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+    ax = fig.add_subplot(1, 1, 1,
+                         projection=_guidance_projection(lon_w, lon_e))
     ax.set_extent([lon_w, lon_e, lat_s, lat_n], crs=ccrs.PlateCarree())
 
     ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
@@ -698,9 +768,13 @@ def plot_track_trend(trend_data, bdeck_df, idate, model_id,
 
     bounds = compute_map_bounds(all_model_data, bdeck_df)
     lat_n, lat_s, lon_w, lon_e = bounds
+    bdeck_df = _wrap_track_lons(bdeck_df, lon_w, lon_e)
+    trend_data = [(cyc, _wrap_track_lons(mdf, lon_w, lon_e))
+                  for cyc, mdf in trend_data]
 
     fig = plt.figure(figsize=(12, 10))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+    ax = fig.add_subplot(1, 1, 1,
+                         projection=_guidance_projection(lon_w, lon_e))
     ax.set_extent([lon_w, lon_e, lat_s, lat_n], crs=ccrs.PlateCarree())
 
     ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
@@ -753,9 +827,13 @@ def plot_lifetime_tracks(lifetime_data, bdeck_df, idate, model_id,
 
     bounds = compute_map_bounds(all_model_data, bdeck_df)
     lat_n, lat_s, lon_w, lon_e = bounds
+    bdeck_df = _wrap_track_lons(bdeck_df, lon_w, lon_e)
+    lifetime_data = [(cyc, _wrap_track_lons(mdf, lon_w, lon_e))
+                     for cyc, mdf in lifetime_data]
 
     fig = plt.figure(figsize=(12, 10))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+    ax = fig.add_subplot(1, 1, 1,
+                         projection=_guidance_projection(lon_w, lon_e))
     ax.set_extent([lon_w, lon_e, lat_s, lat_n], crs=ccrs.PlateCarree())
 
     ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
