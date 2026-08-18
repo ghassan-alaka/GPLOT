@@ -57,6 +57,7 @@ import os
 import sys
 import argparse
 import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import logging
 
 logger = logging.getLogger('plot_ens_compare')
@@ -65,17 +66,14 @@ logger = logging.getLogger('plot_ens_compare')
 # sorc/GPLOT/python/). Mirrors GPLOT_maps.py:35 -- no hardcoded user paths.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gplot_utils.namelist import read_master_namelist
-from gplot_utils.grib_reader import (get_var_2d, get_grid_info)
+from gplot_utils.grib_reader import get_var_2d
 from gplot_utils.plot_utils import configure_cartopy
 from gplot_utils.coord_transform import (sph2cart,
                                           make_cartesian_grid,
                                           compute_wind_shear)
-from gplot_utils.atcf import (walk_files_depth_limited, read_atcf, atcf_from_listfile) 
-#atcf from listfile will hopefully be used later once we produce list of atcf files to process
 
 import glob
 import re
-
 
 import pandas as pd
 import numpy as np
@@ -280,7 +278,7 @@ def getHourData(fHour, adeckData):
     Common args (fHour, adeckData): see glossary
 
     dependencies: 
-        HepTools.getTrackSpeedData()
+        HepTools.getTrackSpeedData(), logging
 
     returns: hourData (see glossary)
     """
@@ -298,6 +296,8 @@ def getClusterMems(clusterType, hourData, clusterMembers):
     members and clusterMembers highest-valued members).
 
     Common args (clusterType, hourData, clusterMembers): see glossary
+
+    dependencies: logging
 
     returns: allClusterMems (see glossary), [0] is the low cluster and [1] is the high cluster
     """
@@ -318,6 +318,8 @@ def sortedColoringData(clusterType, hourData, members):
     is excluded, along with members with a zero radius (if applicable).
 
     Common args (clusterType, hourData, members): see glossary
+
+    dependencies: pandas as pd, numpy as np, logging
 
     returns: avgVarTypes, DataFrame with columns ['member', clusterType, 'rank'], 
         where rank is from 1 to N over the ranked members and NaN for unranked members.
@@ -355,7 +357,7 @@ def windRadiiData(hourData, radius):
         radius: int (34/50/64), which wind radius to build quartiles/arcs for
 
     dependencies: 
-        numpy as np, pandas as pd
+        numpy as np, pandas as pd, logging
 
     returns: tuple (quartileData, radData)
         quartileData: DataFrame with 5 rows (min, 25th, median, 75th, max), which is
@@ -416,7 +418,7 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData, sid, exp
         level : int, pressure level (hPa) for the background field
         
     dependencies: 
-        pandas as pd, sys, HepTools.getGribData(), concurrent.futures.ThreadPoolExecutor()
+        pandas as pd, sys, HepTools.getGribData(), concurrent.futures.ThreadPoolExecutor(), logging
 
     returns: tuple (atcfClusters, gribClusters, clusterAvgs)
         atcfClusters: list of 2 DataFrames, each containing one cluster's ATCF member tracks
@@ -448,15 +450,13 @@ def trackClusteringData(clusterType, variable, level, fHour, adeckData, sid, exp
 
         Reads idir, bounds, initDate, variable, fHour, level, hourData, 
         clusterType, storm, and memberDataList from enclosing function.
-        NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
-        Agreed - MD 20260730. Feel free to delete these notes in next push or I will.
 
         args:
             idx: 0 or 1, which cluster we are processing (index into memberDataList)
             clusterMems: list of ints, the member IDs in this particular cluster
 
         dependencies: 
-            HepTools.getGribData(), sys
+            HepTools.getGribData(), sys, logging
 
         returns: tuple (memberDataList[idx], gribData, clusterAvg)
             memberDataList[idx]: DataFrame, this cluster's member ATCF data across all hours
@@ -513,7 +513,7 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
     Notes: hourData supplies ATCF centers, adeckData supplies speed/direction for storm motion
 
     dependencies: numpy as np, xarray as xr, HepTools.getGribData()
-        concurrent.futures.ThreadPoolExecutor(), sys
+        concurrent.futures.ThreadPoolExecutor(), sys, logging
 
     returns: clusterDicts, list of 2 dicts (one per cluster), each with keys: 
         {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion', 
@@ -527,15 +527,13 @@ def vortexAvgSteerData(fHour, idir, initDate, hourData, storm, sid, expt,
         bottleneck is the grb2 reads.
 
         Reads idir, initDate, fHour, hourData, storm, and adeckData from enclosing function.
-        NOTE TO MATT: I think this is good enough reasoning to not include all the args again in this internal function
-        Agreed - MD 20260730
 
         args:
             idx: 0 or 1, which cluster we are processing (index into memberDataList)
             clusterMems: list of ints, the member IDs in this particular cluster
 
         dependencies: 
-            numpy as np, xarray as xr, HepTools.getGribData(), sys
+            numpy as np, xarray as xr, HepTools.getGribData(), sys, logging
 
         returns: dict with keys: {'radAvgData', 'uSteer', 'vSteer', 'uShear', 'vShear', 'uMotion', 'vMotion',
                                   'vortexDepth', 'presLevData'}
@@ -707,7 +705,8 @@ def plotCartopyFigure(ax, plotLand=True):
         plotLand: bool, whether to fill land (False when a background field is drawn)
 
     dependencies: 
-        cartopy.crs as ccrs, cartopy.feature as cf, cartopy.io.shapereader as shpreader
+        cartopy.crs as ccrs, cartopy.feature as cf, cartopy.io.shapereader as shpreader,
+        logging
 
     returns: axes object with the specified features added.
     """
@@ -739,6 +738,10 @@ def computeTrackBounds(lons, lats):
 
     args:
         lons, lats: array-like longitudes (0-360) and latitudes in the ATCF file
+
+    dependencies: 
+        numpy as np, logging
+
     returns: (lonMin, lonMax, latMin, latMax), orientation (horizontal/vertical)
     """
     # Long/short ratio, fractional padding, and a floor to prevent overzooming
@@ -780,6 +783,13 @@ def addRankColorbar(ax, sortTitle, clusterType, nColors, isTrack):
     """
     Add the vertical rank colorbar (rank 1 at top), with end labels showing what the extremes
     mean (e.g. Strong/Weak).
+
+    args:
+
+    dependencies:
+
+    return:
+
     """
     sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=nColors))
     sm.set_array([])  # avoids a warning
@@ -826,8 +836,10 @@ def plotSortedLines(ax, avgVar, plotType, members, adeckData, fHour,
         avgVar: DataFrame ['member', clusterType, 'rank']; 'rank' sets the color (NaN = gray)
         titleLine: common second title line (date/init/storm info)
 
-    dependencies: matplotlib.pyplot as plt, numpy as np, pandas as pd, 
-        cartopy.crs as ccrs, matplotlib.lines.Line2D
+    dependencies: 
+        matplotlib.pyplot as plt, numpy as np, pandas as pd, 
+        cartopy.crs as ccrs, matplotlib.lines.Line2D, logging
+        typeDict: static dictionary defined in main namespace
 
     returns: axes with data, colorbar, title, and legend plotted.
     """
@@ -898,6 +910,9 @@ def plotLinePlots(avgVarTypes, members, adeckData, savePath, clusterType, fHour,
     Common args (members, savePath, clusterType, fHour, storm, radius, initDate): see glossary
         avgVarTypes: same as avgVar in plotSortedLines().
 
+    dependencies:
+        matplotlib.pyplot as plt, plotSortedLines(), numpy as np, logging
+
     returns: None (Writes a PNG).
     """
     # Build figure and set axis labels
@@ -932,6 +947,9 @@ def plotTracksColored(avgVarTypes, members, adeckData, savePath, clusterType, fH
 
     Common args (members, adeckData, savePath, clusterType, fHour, storm, radius, initDate): see glossary
         avgVarTypes: same as avgVar in plotSortedLines().
+
+    dependencies:
+        matplotlib.pyplot as plt, cartopy.crs as ccrs, logging
     
     returns: None (Writes a PNG).
     """
@@ -972,7 +990,8 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
 
     dependencies: 
         matplotlib.pyplot as plt, numpy as np, plotCartopyFigure()
-        cartopy.crs as ccrs, HepTools.getStormName()
+        cartopy.crs as ccrs, HepTools.getStormName(), logging,
+        matplotlib.lines.Line2D
 
     returns: None (writes a PNG).
     """
@@ -1041,7 +1060,8 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     dependencies: 
         cartopy.crs as ccrs, matplotlib.pyplot as plt, numpy as np
         matplotlib.colors.LinearSegmentedColormap, HepTools.getStormName()
-        HepTools.getTitleDate()
+        HepTools.getTitleDate(), plotCartopyFigure(), logging
+        BG_FIELD_SPECS (static variable defined in main namespace)
 
     returns: None (writes a PNG).
     """
@@ -1119,7 +1139,8 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
     dependencies: 
         matplotlib.pyplot as plt, numpy as np,
         matplotlib.colors.LinearSegmentedColormap, matplotlib.ticker.LogLocator,
-        matplotlib.lines.Line2D, HepTools.getStormName(), HepTools.getTitleDate()
+        matplotlib.lines.Line2D, HepTools.getStormName(), HepTools.getTitleDate(),
+        logging
         
     returns: None (writes a PNG).
     """
@@ -1270,6 +1291,7 @@ def call_iqr_calculation(df, metric='shear'):
     dependencies: 
         numpy as np
         find_iqr_circle()
+        logging
 
     returns: iqr_data: DataFrame, containing the IQR results for the specified metric
     """
@@ -1316,6 +1338,7 @@ def find_iqr_circle(df_fhr, metric='shear'):
     dependencies: 
         numpy as np
         pandas as pd
+        logging
 
     returns: out_data: DataFrame, containing the IQR results for the specified metric
     """
@@ -1383,6 +1406,7 @@ def add_scalebar(ax, location=(0.1, 0.05), length=100, linewidth=1, units='km', 
     dependencies:
         cartopy.crs as ccrs
         numpy as np
+        logging
     """
 
     #sometimes passing 0 in to scale - not allowed
@@ -1431,14 +1455,10 @@ def add_shear_and_translation_stats(data, ax_main, colormap, location=(0.3, 0.05
         matplotlib.collections.PatchCollection
         numpy as np
         call_iqr_calculation()
+        logging
 
     returns: ax: matplotlib pyplot axis with shear and translation stats added
     
-    """
-
-    """
-    9/1/2025 - I am going to add different behavior depending on how many ensemble members are selected.
-    If there are only a handful, we can display each vector individually instead of the IQR.
     """
 
     #get number of ensemble members to determine which behavior to use
@@ -1582,9 +1602,7 @@ def add_shear_and_translation_stats(data, ax_main, colormap, location=(0.3, 0.05
     logger.debug("add_shear_and_translation_stats() complete")
     return ax
 
-def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fhrfmt, output_timestep,
-                master_namelist_path,
-               gpout_path = '/work/noaa/aoml-hafs1/lgramer/GPOUT/HERC', 
+def plot_tilts(atcf_df, itag, idir,dsource, out_path, ext, fhrfmt, output_timestep,
                cycle = '2025081600', 
                fhr=0,
                storm_id = 'AL05',
@@ -1594,24 +1612,20 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     """
     Main function to plot tilts and shears from ships data and atcf data. 
     This function reads in the necessary data, processes it, and generates plots for analysis.
-    ALSO - Should I replace print with logger.info???????????
 
-    Args: atcf_df, atcf_dirs, atcf_tag, idir, dsource, gpout_path, cycle, fhr, storm_id, members_to_plot, out_path, show
+    Args: atcf_df, idir, dsource, out_path, cycle, fhr, storm_id, members_to_plot, show
         - atcf_df: DataFrame containing ATCF data
-        - atcf_dirs: list of directories containing ATCF data - from namelist or from command line
-        - atcf_tag: string, tag for ATCF data - from namelist or from command line
         - itag: string, tag for grb2 file - from namelist or from command line
         - idir: input directory for ATCF data - from namelist or from command line
         - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
-        - gpout_path: path of gplot output - duplicated I believe, but leaving for now
+        - out_path: full path for saving figures
+        - ext: file extension substring for file search function
+        - fhrfmt: probably '%03d' or whatever to get 3-digit formats, comes from namelist
+        - output_timestep: create graphics for every {output_timestep} hours
         - cycle: str, forecast cycle, YYYYMMDDHH
         - fhr: int, forecast hour
         - storm_id: str, BBNN, basin and number
         - members_to_plot: either 'all' or a list of specific ensemble members of interest like ['01','05','10']
-        - out_path: path to save figures
-        - ext: file extension substring for file search function
-        - fhrfmt: probably '%03d' or whatever to get 3-digit formats, comes from namelist
-        - output_timestep: create graphics for every {output_timestep} hours
         - show: bool, create plots in current operating environment, like when running in a notebook
     
     dependencies:
@@ -1624,14 +1638,19 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
         cartopy.crs as ccrs
         add_shear_and_translation_stats()
         add_scalebar()
+        logging
     
     """
     logger.info(f"Begin Plot Tilts for fhr {fhr:03}, storm {storm_id}")
     
     #should we add option to specify the pressure levels to use for tilt calculation?
     #For now, I will use 1000, 500, 350?
-    centers_data, shear_data = find_centers_and_shear(members_to_plot, fhr, atcf_dirs, atcf_tag, itag, idir, cycle, out_path, dsource,
-                                                    ext, fhrfmt, output_timestep, master_namelist_path=master_namelist_path)
+    #get atcf centers from hourData, pass into tilt plotting function
+    atcf_centers = atcf_df[atcf_df['TAU']==fhr][['latitude','longitude','member']].copy()
+    atcf_centers['member'] = [f'{x:02}' for x in atcf_centers['member']]
+
+    centers_data, shear_data = find_centers_and_shear(members_to_plot, atcf_centers, fhr, itag, idir, cycle, out_path, dsource,
+                                                    ext, fhrfmt, output_timestep)
     tilt_data = calculate_tilt_vectors(centers_data)
 
     #keep track of whether bad vortex centers exist anywhere in the ensemble
@@ -1843,7 +1862,6 @@ def plot_tilts(atcf_df,atcf_dirs,atcf_tag, itag, idir,dsource, out_path, ext, fh
     # plt.close('all')
     logger.debug("plot_tilts() complete")
 
-##### Only got to here on 6/24/2026 Docstring edit ###########################################################
 
 #this functionality is used in SHIPS and similar ones are used throughout GPLOT - we should move this to an external script.
 def find_grib_files(idir, itag, ext, idate, fhr_fmt, init_hr, fnl_hr, dt, ens_id,
@@ -1851,16 +1869,28 @@ def find_grib_files(idir, itag, ext, idate, fhr_fmt, init_hr, fnl_hr, dt, ens_id
     """
     Build list of (fhr, filepath) for available GRIB2 files.
 
-    SHIPS diagnostics are storm-centric (shear annulus averages,
-    vortex-centered fields, IKE integrals, etc.), so when multiple
-    per-fhr GRIB2 files exist -- e.g. HAFS multistorm runs with both
-    `.parent.atm.*.grb2` and `.storm2.atm.*.grb2` side by side -- we
-    select the higher-resolution storm nest rather than the parent.
-    The ``prefer_nest`` flag controls this; set False to take whatever
-    ``sorted(glob)`` returns (legacy behavior).
-
-    The ``.sat.`` files (simulated IR / microwave) are excluded here --
-    they are picked up separately by ``open_sat_file()`` when needed.
+    Args: idir, itag, ext, idate, fhr_fmt, init_hr, fnl_hr, dt, ens_id, prefer_nest
+        - idir: input directory for ATCF data - from namelist or from command line
+        - ext: file extension substring for file search function
+        - itag: string, tag for grb2 file - from namelist or from command line
+        - idate: str, forecast cycle, YYYYMMDDHH
+        - fhr_fmt: probably '%03d' or whatever to get 3-digit formats, comes from namelist
+        - init_hr: int, first forecast hour in range
+        - fnl_hr: int, last forecast hour in range. Note - in this use case, I think these will be the same hour
+        - dt: int, output timestep
+        - ens_id: string, ensemble member ID, 0-padded if necessary
+        - prefer_nest: bool, default True, decide which grb to keep if there are two
+            Not applicable in ensemble case as of 2026
+        
+    dependencies:
+        os
+        _NEST_TOKEN_RE   (regex pattern defined in main namespace)
+        _PARENT_TOKEN_RE (regex pattern defined in main namespace)
+        logging
+        
+    returns:
+        files: list of (fhr, filepath)
+    
     """
     files = []
     fhr = init_hr
@@ -1912,94 +1942,6 @@ def find_grib_files(idir, itag, ext, idate, fhr_fmt, init_hr, fnl_hr, dt, ens_id
     logger.debug("find_grib_files() complete")
     return files
 
-#this functionality is used in SHIPS and similar ones are used throughout GPLOT - we should move this to an external script.
-def find_atcf_file(atcf_dir, atcf_tag, idate, sid, ens_id):
-    """Search for ATCF file matching storm and cycle.
-
-    ``atcf_dir`` may be a single path or a list/tuple of paths to try
-    in order -- typically [ATCF2_DIR, ATCF1_DIR] so the experiment's
-    real track directory wins over a placeholder.  Files whose basename
-    contains ``atcf_tag`` are preferred over siblings, and ``.parent.``
-    variants are ranked below nest-merged ones.  Per-fhr splits
-    (``.f000``, ``.f003``, ...) and ``.all`` / ``.orig`` are excluded.
-    """
-    if isinstance(atcf_dir, (list, tuple)):
-        dirs = [d for d in atcf_dir if d]
-    else:
-        dirs = [atcf_dir] if atcf_dir else []
-    if not dirs:
-        logger.debug("find_atcf_file() complete, dirs variable was emtpy. Returning None")
-        return None
-
-    basin = sid[-1].lower() if sid else ''
-    storm_num = sid[:-1] if sid else ''
-
-    pattern_tmpls = [
-        f"{atcf_tag}*{sid.lower()}*{idate}*atcf*",
-        f"*{sid.lower()}*{idate}*trak*atcf*",
-        f"*{sid.lower()}*{idate}*atcf*",
-        f"*{storm_num}{basin}*{idate}*atcf*",
-        f"{idate}/{ens_id}/{sid.lower()}*{idate}*atcf*" #this was added to find ens member
-        
-    ]
-    broader_tmpls = [
-        f"*{sid.lower()}*{idate}*",
-        f"*{storm_num}{basin}*{idate[:4]}*",
-    ]
-
-    def _rank(path):
-        bn = os.path.basename(path)
-        tag_match = 0 if (atcf_tag and atcf_tag in bn) else 1
-        parent_penalty = 1 if '.parent.' in bn else 0
-        logger.debug(f"_rank() complete, returning (tag_match, parent_penalty, bn): {(tag_match, parent_penalty, bn)}")
-        return (tag_match, parent_penalty, bn)
-
-    _FHR_RE = re.compile(r'\.f\d{3,4}$')
-
-    def _filter(matches):
-        ret_val = [m for m in matches
-                    if not m.endswith(('.grb2', '.grb', '.idx',
-                                    '.grib2', '.orig', '.nc'))
-                    #and not os.path.basename(m).endswith('.all') this line exists in other modules
-                    #                                               but prevents it from finding the ensemble atcf
-                    and not _FHR_RE.search(os.path.basename(m))]
-        logger.debug(f"_filter() complete, returning ret_val: {ret_val}")
-        return ret_val
-
-    for adir in dirs:
-        if not os.path.isdir(adir):
-            continue
-        for tmpl in pattern_tmpls:
-            matches = _filter(glob.glob(os.path.join(adir, tmpl)))
-            if matches:
-                matches.sort(key=_rank)
-                logger.debug(f"find_atcf_file() complete, returning walked[0]: {matches[0]}")
-                return matches[0]
-        for tmpl in broader_tmpls:
-            matches = _filter(glob.glob(os.path.join(adir, tmpl)))
-            if matches:
-                matches.sort(key=_rank)
-                logger.debug(f"find_atcf_file() complete, returning walked[0]: {matches[0]}")
-                return matches[0]
-
-    # Bounded recursive fallback: the flat globs above are non-recursive, so a
-    # track nested under e.g. com/<cycle>/<storm>/ is missed when ATCF*_DIR
-    # points higher. Walk up to 4 levels below each dir (depth-capped so a big
-    # ATCF*_DIR can't trigger an unbounded walk) and match basename on
-    # sid + idate + 'atcf'.
-    sid_lc = sid.lower()
-    walked = [full for full, bn in walk_files_depth_limited(dirs, max_depth=4)
-              if sid_lc in bn.lower() and idate in bn
-              and 'atcf' in bn.lower()]
-    walked = _filter(walked)
-    if walked:
-        walked.sort(key=_rank)
-        logger.debug(f"find_atcf_file() complete, returning walked[0]: {walked[0]}")
-        return walked[0]
-
-    logger.debug("find_atcf_file() complete, got through all searches and found nothing, returning None")
-    return None
-
 #this comes from SHIPS and could go in a separate module
 def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     """
@@ -2010,6 +1952,20 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     Continuity propagates: a level fails if any of its anchor levels
     below failed.
 
+    args: datasets, dsource, tc_lat, tc_lon, levels
+        - datasets: list of xarray datasets. in this module, it is a single dataset, but it was left in
+            list format to match SHIPS functionality prior to parallelization.
+        - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
+        - tc_lat: float, storm center latitude
+        - tc_lon: float, storm center longitude
+        - levels: list of height levels for calculation, in mb
+
+    dependencies:
+        find_center_at_level()
+        numpy as np
+        _haversine_km()
+        logging
+    
     Returns dict: level -> (lat, lon, hgt_value, use_flag).
     """
     if levels is None:
@@ -2019,10 +1975,6 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
         # None from get_var_2d and be filtered out downstream.
         levels = list(range(200, 1001, 25))
 
-    grid = get_grid_info(datasets, dsource)
-    lat = grid['lat']
-    lon = grid['lon']
-
     # Process surface->top so the continuity chain anchors at the
     # near-surface vortex (matches NCL: levels are flipped if
     # max(LEV) != LEV(0) before the use-flag pass).
@@ -2031,7 +1983,7 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     raw = {}
     for lev in levs_asc:
         clat, clon, hgt, found = find_center_at_level(
-            datasets, dsource, lev, tc_lat, tc_lon, lat, lon)
+            datasets, dsource, lev, tc_lat, tc_lon)
         raw[lev] = (clat, clon, hgt, found)
         #this really spams the log
         # if found:
@@ -2072,13 +2024,29 @@ def compute_tccen(datasets, dsource, tc_lat, tc_lon, levels=None):
     return centers
 
 #this comes from SHIPS and could go in separate module
-def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon, lat, lon):
+def find_center_at_level(datasets, dsource, level, tc_lat, tc_lon):
     """
     Find the TC center at a given pressure level via the geopotential-
     height centroid algorithm ported from NCL findCenter type=1:
     1) crop to ~5 degrees around the ATCF position;
     2) smooth with a 1-2-1 filter, 25 iterations;
     3) value-weighted centroid of the lower 20% of the smoothed field.
+
+    args: datasets, dsource, level, tc_lat, tc_lon
+        - datasets: list of xarray datasets. in this module, it is a single dataset, but it was left in
+            list format to match SHIPS functionality prior to parallelization.
+        - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
+        - level: height level for calculation, in mb
+        - tc_lat: float, storm center latitude
+        - tc_lon: float, storm center longitude
+
+    dependencies: 
+        gplot_utils.grib_reader.get_var_2d()
+        numpy as np
+        _match_lon_convention()
+        _filter121_2d()
+        _centroid_min()
+        logging
 
     Returns (center_lat, center_lon, hgt_value, found_flag).
     hgt_value is min(smoothed) at the center for downstream "lowest
@@ -2132,6 +2100,17 @@ def _filter121_2d(arr, n_iter):
     field. Each iteration smooths along axis 0, then axis 1, on the
     interior; edges are left unchanged. NaNs are filled with the field
     mean before filtering so they don't propagate.
+
+    args: arr, n_iter
+        - arr: data array on which to perform the 1-2-1 smoothing filter
+        - n_iter: int, how many times to pass the filter
+
+    dependencies: 
+        numpy as np
+        logging
+
+    returns:
+        smoothed array
     """
     out = np.asarray(arr, dtype=float).copy()
     if not np.all(np.isfinite(out)):
@@ -2148,7 +2127,18 @@ def _filter121_2d(arr, n_iter):
 
 #this comes from ships and should be in a separate module
 def _match_lon_convention(lon_val, lon_array):
-    """Ensure a single lon value matches the convention of the lon array."""
+    """Ensure a single lon value matches the convention of the lon array.
+
+    args: lon_val, lon_array
+        - lon_val: tc center longitude
+        - lon_array: model longitude values from static data table
+
+    dependencies: 
+        logging
+
+    returns:
+        tc center longitude in correct convenction
+    """
     if lon_array.min() >= 0 and lon_array.max() > 180:
         # Data in 0..360
         if lon_val < 0:
@@ -2171,9 +2161,17 @@ def _centroid_min(field):
     (A - field)-weighted mean of grid indices over points where
     field <= A (so the deepest part of the trough dominates).
 
+    args: field
+        - field: 2d field on which to perform the centroid algorithm
+
+    dependencies:
+        numpy as np 
+        logging
+
     Returns (i_centroid, j_centroid) as float indices into field, or
     (nan, nan) if the field has no usable values.
     """
+
     if not np.isfinite(field).any():
         logger.warning("_centroid_min() returning nan due to non-finite field values")
         return np.nan, np.nan
@@ -2197,7 +2195,18 @@ def _centroid_min(field):
 
 #comes from SHIPS and should be in separate module
 def _haversine_km(lat1, lon1, lat2, lon2):
-    """Great-circle distance in km between two points (degrees)."""
+    """Great-circle distance in km between two points (degrees).
+
+        args: lat1, lon1, lat2, lon2
+        - floats indicating two points 
+
+    dependencies:
+        numpy as np 
+        logging
+
+    Returns (i_centroid, j_centroid) as float indices into field
+    """
+
     rlat1, rlat2 = np.radians(lat1), np.radians(lat2)
     dlat = np.radians(lat2 - lat1)
     dlon = np.radians(lon2 - lon1)
@@ -2206,30 +2215,37 @@ def _haversine_km(lat1, lon1, lat2, lon2):
     logger.debug(f"_haversine_km() returning ret_val: {ret_val}")
     return ret_val
 
-def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate, odir, dsource, ext, fhrfmt, output_timestep,
-                 master_namelist_path=None):
+def find_centers_and_shear(members, atcf_centers, fhr, itag,  idir, idate, odir, dsource, ext, fhrfmt, output_timestep):
     """
-    MD 20260728 - ADD DOCSTRING!!
+    Description: Shell function to execute center-finding and shear-calculating function. Summons functions in parallel
+        using ProcessPoolExecutor
+
+
+    args: members, atcf_centers, fhr, itag,  idir, idate, odir, dsource, ext, fhrfmt, output_timestep
+        - members: list of 0-padded strings for member ID
+        - atcf_centers: pandas DataFrame, subset of hourData containing atcf center coordinates for each member
+        - fhr: int, forecast hour
+        - itag: str, input file tag for grib2 files
+        - idir: str, input data directory for grib2 files
+        - idate: str, forecast cycle, YYYYMMDDHH
+        - odir: directory for output folders, I think from legacy version probably can remove REMOVE
+        - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
+        - ext: file extension substring for file search function
+        - fhrfmt: probably '%03d' or whatever to get 3-digit formats, comes from namelist
+        - output_timestep: create graphics for every {output_timestep} hours
+
+    dependencies:
+        pandas as pd
+        concurrent.futures.ProcessPoolExecutor()
+        concurrent.futures.as_completed()
+        logging
+
+    Returns (outer_dataframe_centers, outer_dataframe_shear)
+        pandas dataframes containing tc center and shears at various heights
     """
-
-
-    # Fall back to the module-level namelist path resolved from --master-nml.
-    if master_namelist_path is None:
-        master_namelist_path = MASTER_NML
-
-    #SUGGESTIONS - PASS IN tc_lat, tc_lon!!!! rather than reading the atcf's here
     
     outer_dataframe_centers = pd.DataFrame()
     outer_dataframe_shear = pd.DataFrame()
-
-    #this is duplicated from main code
-    ##nml = read_master_namelist(args.master_nml)
-    nml = read_master_namelist(master_namelist_path)
-    gplot_dir = nml.get('GPLOT_DIR', os.environ.get('GPLOT_DIR', ''))
-    #end duplicated code
-
-    ships_nml_name = nml.get('SHIPS_NML', f'namelist.ships.default')
-    ships_nml_path = os.path.join(gplot_dir, 'parm', ships_nml_name)
 
     yr = idate[:4]
     if members == 'all':
@@ -2238,123 +2254,74 @@ def find_centers_and_shear(members, fhr, atcf_dirs, atcf_tag, itag,  idir, idate
         memlist = members
 
 
-    for ensid in memlist:
-        logger.debug(f'starting loop with ensid={ensid}') #DEBUG
+    
 
-        ensemble_member_dataframe = pd.DataFrame()
-        tccen_store = {}
+    outer_dataframe_centers_list = []
+    outer_dataframe_shear_list = []
 
-        grib_files = None
-        #this part is just included in case we want other grb discovery later
-        if grib_files is not None:
-            logger.debug(f"  Using spawn-prepared file list: "
-                        f"{len(grib_files)} FHRs")
-        else:
-            logger.debug("  No spawn file list found; falling back to "
-                         "find_grib_files() discovery")
-                         #MATT NOTE - it would be great to do this outside this function, maybe later.
-            grib_files = find_grib_files(idir, itag, ext, idate, fhrfmt,
-                                        fhr, fhr, output_timestep, ensid) #called with init_hr and fnl_hr = fhr because only want one grib 
-        if not grib_files:
-            logger.error(f"No GRIB2 files found in {idir}")
-            logger.error("find_centers_and_shear() exiting unsuccessfully")
-            return 1
+    with ProcessPoolExecutor(max_workers=22) as executor:
 
-        #in other modules, we iterate through grib_files because there are multiple forecast hours, but here, there should only be one!
-        #but also note, by default, it returns [(fhr, filepath)]
-        #ran into problem here on test.
-        assert len(grib_files) == 1
+        futures = {
+            executor.submit(
+                process_ensemble_member,
+                ensid,
+                atcf_centers,
+                idir,
+                itag,
+                ext,
+                idate,
+                fhrfmt,
+                fhr,
+                output_timestep,
+                dsource,
+            ): ensid
+            for ensid in memlist
+        }
 
-        fhr_copy, grib_path = grib_files[0]
+        for future in as_completed(futures):
 
-        #optimize this with Nikhil's grib reader!
-        try:
-            logger.debug('In the GRIB read section')
-            datasets=[]
-            ds = xr.open_dataset(
-                grib_path,
-                engine="cfgrib",
-                filter_by_keys={"typeOfLevel": "isobaricInhPa",
-                                'level':[1000,500,350],
-                               'shortName':['gh','u','v']},
-                backend_kwargs={"indexpath":""}, 
-                decode_timedelta=True
-            )
-            datasets.append(ds)
-        except Exception as e:
-            logger.error(f"Failed to open {grib_path}: {e}")
-            logger.error("find_centers_and_shear() exiting unsuccessfully")
-            return 1
+            ensid = futures[future]
 
-        # ---- Find ATCF file ----
-        ################ Could try to replace this with our heptools atcf reading, but also don't need to because this really does
-        #function one-at-a-time. Could parallelize later too.
-        atcf_file = find_atcf_file(atcf_dirs, atcf_tag, idate, '', ensid) #sid='' required for ensemble
-        if atcf_file is None:
-            # find_atcf_file globs ATCF*_DIR non-recursively; if those namelist
-            # dirs sit above the actual file (e.g. ATCF under com/<cycle>/<storm>/)
-            # it misses it. Fall back to the spawn's recursively-resolved path in
-            # ATCF_FILES.dat -- the same source polar/airsea use.
+            try:
+                dataframe_centers, dataframe_shear = future.result()
 
-            #MD 20260622 - atcf_from_listfile() not currently supported in plot_ens_compare because we are not producing an atcf files list
-            # fallback = atcf_from_listfile(odir_path, sid)
-            fallback = None
-            if fallback is not None:
-                logger.warning(f"find_atcf_file found nothing under {atcf_dirs}; "
-                               f"using ATCF_FILES.dat fallback -> {fallback}")
-                atcf_file = fallback
-        if atcf_file is None:
-            logger.error("No ATCF file found; find_centers requires ATCF data")
-            logger.error("find_centers_and_shear() exiting unsuccessfully")
-            return 1
+                outer_dataframe_centers_list.append(dataframe_centers)
+                outer_dataframe_shear_list.append(dataframe_shear)
 
-        logger.debug(f"  ATCF: {atcf_file}")
-        atcf_df = read_atcf(atcf_file)
-
-        # Check ATCF availability for this hour
-        atcf_row = atcf_df[atcf_df['fhr'] == fhr]
-        if atcf_row.empty:
-            logger.debug(f"No ATCF entry for fhr={fhr}, skipping")
-            continue
-
-        tc_lat = atcf_row.iloc[0]['lat']
-        tc_lon = atcf_row.iloc[0]['lon']
-        #GET SHEAR
-        shear = compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top = 350, lev_bot=1000, r_inner=200, r_outer=800)
-        ensemble_member_dataframe_shear = pd.DataFrame([shear], columns = ['shear_mag_deep','shear_dir_deep'], index=[0])
-        ensemble_member_dataframe_shear['emem'] = ensid
-        ensemble_member_dataframe_shear['fhr'] = fhr
-        outer_dataframe_shear = pd.concat([outer_dataframe_shear, ensemble_member_dataframe_shear])
+            except Exception as e:
+                logger.error(
+                    f"Failed processing ensemble member {ensid}: {e}"
+                )
+                raise
 
 
-        #GET TC CENTERS
-        centers = None
-        #the way this is stored is copied from SHIPS - I don't like it, but I want to leave it in the same format for code portability
-        # if 'TCCEN' in active_diags:
-        #MD 20260624 - should we be plotting the 1000hPa center, or should we be using the ATCF center? Hmm...
-        #By default, I am calculating the 1000mb center, but not using it in favor of the ATCF center.
-        centers = compute_tccen(datasets, dsource, tc_lat, tc_lon, levels = [1000,500,350])
-        for lev, (clat, clon, _hgt, flag) in centers.items():
-            if np.isfinite(clat):
-                tccen_store[(fhr, lev)] = [clat, clon, flag]
+    outer_dataframe_centers = pd.concat(
+        outer_dataframe_centers_list,
+        ignore_index=True,
+    )
 
-        for key in sorted(tccen_store.keys()):
-            vals = tccen_store[key]
-            fhr, lev = key
-            lat, lon, flag = vals
-            data_row = pd.DataFrame([[fhr, lev, lat, lon, flag]], columns =['fhr','lev','lat','lon','vtx'], index=[0])
-            ensemble_member_dataframe = pd.concat([ensemble_member_dataframe,data_row])
-        
-        ensemble_member_dataframe['emem'] = ensid
-        outer_dataframe_centers = pd.concat([outer_dataframe_centers,ensemble_member_dataframe])
-
-    outer_dataframe_centers = outer_dataframe_centers.reset_index(drop=True)
-    outer_dataframe_shear = outer_dataframe_shear.reset_index(drop=True)
+    outer_dataframe_shear = pd.concat(
+        outer_dataframe_shear_list,
+        ignore_index=True,
+    )
 
     logger.debug("find_centers_and_shear() completing successfully")
     return outer_dataframe_centers, outer_dataframe_shear
 
 def calculate_tilt_vectors(centers_df):
+    """
+    Description: Calculate u,v vectors for vortex tilt given the vortex centers at various heights
+
+
+    args: centers_df
+        pandas dataframe with tc centers at various heights
+
+    dependencies:
+        numpy as np
+        logging
+
+    Returns tilt_data - pandas dataframe containing vortex tilt vectors
+    """
     #grab levels of interest, rename columns for later merge
     data1000 = centers_df[centers_df['lev']==1000].copy().reset_index(drop=True).drop('lev',axis=1).rename(columns={'lat':'lat_1000','lon':'lon_1000','vtx':'vtx_1000'})
     data500 = centers_df[centers_df['lev']==500].copy().reset_index(drop=True).drop('lev',axis=1).rename(columns={'lat':'lat_500','lon':'lon_500','vtx':'vtx_500'})
@@ -2383,15 +2350,192 @@ def calculate_tilt_vectors(centers_df):
     logger.debug("calculate_tilt_vectors() complete")
     return tilt_data
 
+############################################### START Experimental parallelization #########################
+def process_ensemble_member(ensid,
+                            atcf_centers,
+                            idir,
+                            itag,
+                            ext,
+                            idate,
+                            fhrfmt,
+                            fhr,
+                            output_timestep,
+                            dsource):
+    """
+    Description: Read grb2 file and calculate centers, shear for one ensemble member.
+        To be run in parallel for multiple ensemble members
+
+
+    args: ensid, atcf_centers, idir, itag, ext, idate, fhrfmt, fhr, output_timestep, dsource
+        - ensid: string, ensemble member ID, 0-padded if necessary
+        - atcf_centers: pandas dataframe with surface TC centers from ATCF
+        - idir: input directory for ATCF data - from namelist or from command line
+        - itag: string, tag for grb2 file - from namelist or from command line
+        - ext: file extension substring for file search function
+        - idate: str, forecast cycle, YYYYMMDDHH
+        - fhr_fmt: probably '%03d' or whatever to get 3-digit formats, comes from namelist
+        - fhr: int, forecast hour
+        - output_timestep: create graphics for every {output_timestep} hours
+        - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
+
+    dependencies:
+        logging
+        find_grib_files()
+        xarray as xr
+        compute_shear()
+        pandas as pd
+        compute_tccen()
+        numpy as np
+
+    Returns dataframe_centers, dataframe_shear
+        pandas dataframes containing tc centers and shear for one ensemble member
+        """
+
+    logger.debug(f"starting loop with ensid={ensid}")
+
+    # TC center
+    tc_lat = atcf_centers[
+        atcf_centers["member"] == ensid
+    ].iloc[0]["latitude"]
+
+    tc_lon = atcf_centers[
+        atcf_centers["member"] == ensid
+    ].iloc[0]["longitude"]
+
+    # Find GRIB
+    grib_files = find_grib_files(
+        idir,
+        itag,
+        ext,
+        idate,
+        fhrfmt,
+        fhr,
+        fhr,
+        output_timestep,
+        ensid,
+    )
+
+    if not grib_files:
+        raise FileNotFoundError(
+            f"No GRIB2 files found for ensid={ensid} in {idir}"
+        )
+
+    assert len(grib_files) == 1
+
+    fhr_copy, grib_path = grib_files[0]
+
+    # Read GRIB
+    try:
+        logger.debug(f"Reading GRIB for ensid={ensid}: {grib_path}")
+
+        datasets = []
+
+        ds = xr.open_dataset(
+            grib_path,
+            engine="cfgrib",
+            filter_by_keys={
+                "typeOfLevel": "isobaricInhPa",
+                "level": [1000, 500, 350],
+                "shortName": ["gh", "u", "v"],
+            },
+            backend_kwargs={"indexpath": ""},
+            decode_timedelta=True,
+        )
+
+        datasets.append(ds)
+
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to open {grib_path} for ensid={ensid}: {e}"
+        ) from e
+
+    # ---------------------------------------------------------
+    # SHEAR
+    # ---------------------------------------------------------
+
+    shear = compute_shear(
+        datasets,
+        dsource,
+        tc_lat,
+        tc_lon,
+        lev_top=350,
+        lev_bot=1000,
+        r_inner=200,
+        r_outer=800,
+    )
+
+    dataframe_shear = pd.DataFrame(
+        [shear],
+        columns=["shear_mag_deep", "shear_dir_deep"],
+        index=[0],
+    )
+
+    dataframe_shear["emem"] = ensid
+    dataframe_shear["fhr"] = fhr
+
+    # ---------------------------------------------------------
+    # TC CENTERS
+    # ---------------------------------------------------------
+
+    centers = compute_tccen(
+        datasets,
+        dsource,
+        tc_lat,
+        tc_lon,
+        levels=[1000, 500, 350],
+    )
+
+    center_rows = []
+
+    for lev, (clat, clon, _hgt, flag) in centers.items():
+
+        if np.isfinite(clat):
+            center_rows.append(
+                [fhr, lev, clat, clon, flag]
+            )
+
+    if center_rows:
+        dataframe_centers = pd.DataFrame(
+            center_rows,
+            columns=["fhr", "lev", "lat", "lon", "vtx"],
+        )
+    else:
+        dataframe_centers = pd.DataFrame(
+            columns=["fhr", "lev", "lat", "lon", "vtx"]
+        )
+
+    dataframe_centers["emem"] = ensid
+
+    # Close dataset
+    ds.close()
+
+    return dataframe_centers, dataframe_shear
+    ##################################################################### END EXPERIMENT ###############
+
 def compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot,
                   r_inner=200, r_outer=800):
     """
     Compute vertical wind shear magnitude and heading.
 
-    Parameters
-    ----------
-    lev_top, lev_bot : int
-        Top/bottom pressure levels in hPa (e.g., 200, 850).
+    args: datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot, r_inner, r_outer
+        - datasets: list of xarray datasets for which to calculate shear. it is a single dataset, but it was left in
+            list format to match SHIPS functionality
+        - dsource: string, data source for ATCF data - from namelist or from command line. Used for static data lookup
+        - tc_lat: float, storm center latitude
+        - tc_lon: float, storm center longitude
+        - lev_top: int, top of shear layer height
+        - lev_bot: int, bottom of shear layer height
+        - r_inner: int, distance to start of "environment" for calculating environmental wind shear. Default 200km
+        - r_outer: int, distance to end of "environment" for calculating environmental wind shear. Default 800km
+
+    dependencies:
+        gplot_utils.grib_reader.get_var_2d()
+        gplot_utils.coord_transform.sph2cart()
+        gplot_utils.coord_transform.make_cartesian_grid()
+        gplot_utils.coord_transform.compute_wind_shear()
+        numpy as np
+        logging
+        _match_lon_convention()
 
     Returns (shear_mag_kts, shear_heading_deg) or (nan, nan).
     """
@@ -2424,7 +2568,10 @@ def compute_shear(datasets, dsource, tc_lat, tc_lon, lev_top, lev_bot,
     return shear_mag, shear_dir
 
 def cluster_radius(ct):
-    """Wind radius (int) implied by a cluster type; None for non-radius types."""
+    """Wind radius (int) implied by a cluster type; None for non-radius types.
+    dependencies:
+        logging
+    """
     ret_val = int(ct[1:]) if ct in ("R34", "R50", "R64") else None
     logger.debug("cluster_radius() complete")
     return ret_val
@@ -2439,6 +2586,10 @@ def radius_is_plottable(hourData, radius):
     args:
         hourData: single-fHour ATCF data for all members (including the appended mean)
         radius: int, 34/50/ 64
+
+    dependencies:
+        logging
+
     returns: bool
     """
     if radius == 34:
@@ -2460,6 +2611,12 @@ def parse_bg_fields(nml):
 
     args:
         nml: master namelist
+
+    depdendencies:
+        logging
+        regex as re
+        BG_FIELD_SPECS: (variable defined in main namespace)
+
     returns: fields, list of tuples, each tuple containing (VAR, LEVEL)
     """
     # Get raw field and default to 500mb heights if it cannot be found
@@ -2557,6 +2714,7 @@ def main():
     # if args.atcf_dir:
     #     atcf_dirs = [args.atcf_dir]
     #else:
+    #DONT NEED ANYMORE - CAN REMOVE
     atcf_dirs = [d for d in (nml.get('ATCF2_DIR', ''),
                                 nml.get('ATCF1_DIR', '')) if d]
     atcf_tag = nml.get('ATCF2_TAG', '') or nml.get('ATCF1_TAG', '')
@@ -2594,6 +2752,10 @@ def main():
     # parameter lists, derived from namelist
     fHours = list(range(init_hr, fnl_hr + 1, dt))  # forecast hours from INIT_HR/FNL_HR/DT
     bgFields = parse_bg_fields(nml)  # [(variable, level), ...] for clustering plots
+    #MD 20260818 - these two variabels below are legacy. 
+    #including for now while I merge other changes
+    variable = nml.get('BG_VARIABLE', 'HGT')  # variable to plot under ATCF tracks
+    level = int(nml.get('BG_LEVEL', 500))  # atmospheric level to plot for (if applicable)
 
     # Cluster types to generate graphics for
     ALLOWED_CLUSTER_TYPES = ["MSLP", "R34", "R50", "R64", "ltrack", "xtrack"]
@@ -2769,9 +2931,8 @@ def main():
         # Tilt plots do not depend on clusterType, so they run once per forecast hour
         if tiltPlots:
             t_step_start = time.perf_counter()
-            plot_tilts(adeckData,atcf_dirs,atcf_tag,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
-            MASTER_NML,
-            gpout_path = ODIR, 
+
+            plot_tilts(adeckData,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
             cycle = idate, 
             fhr=int(fHour),
             storm_id = storm[:4].upper(),
