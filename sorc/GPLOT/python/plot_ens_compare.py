@@ -2644,23 +2644,23 @@ def parse_bg_fields(nml):
     logger.info(f"Background fields to plot --> {[f'{v}:{l}' for v, l in fields]}")
     return fields
 
+def write_unplotted_file_list(file_path, file_list):
+    with open(file_path, 'w') as f:
+        for line in file_list:
+            f.write(f"{line}\n")
+
+def read_unplotted_file_list(file_path):
+    with open(file_path, 'r') as f:
+        out_list=[x.strip() for x in f.readlines()]
+    return out_list
+    
+
 
 ###################################################################################################################################
 
 def main():
 
-    # Configure logging
-    #set logging level - can later include option to specify a more general level of verbosity
-    #options; DEBUG, INFO, WARNING, ERROR, CRITICAL
-    #every logging level captures its own level plus increased criticality. so
-    #level INFO will capture INFO, WARNING, ERROR, and CRITICAL, but not DEBUG
-    log_level = logging.INFO
-    # if args.verbose >= 1:
-    #     log_level = logging.INFO
-    # if args.verbose >= 2:
-    #     log_level = logging.DEBUG
-    logging.basicConfig(level=log_level,
-                        format='%(name)s %(levelname)s: %(message)s')
+
 
     matplotlib.use('Agg')
 
@@ -2673,8 +2673,16 @@ def main():
                         help='Path to the master namelist (carries all configuration)')
     parser.add_argument('--idate', type=str, required=True, help='Forecast cycle YYYYMMDDHH')
     parser.add_argument('--sid', type=str, required=True, help='Storm ID, e.g. 13L')
+    parser.add_argument('-v', '--verbose', type=int, default=0,
+                        help='Verbosity level')
 
     args = parser.parse_args()
+
+    # Configure logging
+    log_level = logging.DEBUG if args.verbose > 0 else logging.INFO
+
+    logging.basicConfig(level=log_level,
+                        format='%(name)s %(levelname)s: %(message)s')
 
     # Read all configuration from the master namelist ---------------------------------------
     MASTER_NML = args.master_nml
@@ -2825,15 +2833,31 @@ def main():
 
     t_script_start = time.perf_counter()  # Doing some timing for testing purposes, not necessary but helpful to quickly gauge speed issues
 
-    # MATT: Is this stuff actually getting output anywhere? I don't see it in the log file
-    # I don't see it either. Not sure how logging works. MD 20260730
     logger.info(f"GPLOT Ens Comparison starting: {sid} {idate}")
     logger.info(f"  DSOURCE={dsource} EXPT={expt}")
     logger.info(f"  IDIR={idir}")
     logger.info(f"  ODIR={ODIR_full}")
 
+    #read in UnplottedFiles
+    UnplottedFilePath = f"{ODIR_full}/UnplottedFiles.{expt}.{idate}.{sid.lower()}.dat"
+    # with open(UnplottedFilePath, 'r') as f:
+    #     UnplottedFilesList=[x.strip() for x in f.readlines()]
+    UnplottedFilesList=read_unplotted_file_list(UnplottedFilePath)
+
+
     # Load ATCF data once for all forecast hours
     adeckData, members = modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours)
+    
+    #flag whether the atcf has all required forecast hours for requested plots. NOTE MD 20260819
+    #Need to adjust how we check whether all expected members are present. For 2026, this will change per forecast hour, so need to think about it
+    #leaving member_check as variable placeholder
+    #also, current "fnl_hr" check is only checking whether ANY members have the final hour, and we should really check whether ALL members have the final hour,
+    #but will leave that until after we decide how to check that lal members are present
+    member_check = True
+    if (fnl_hr in adeckData['TAU']) and member_check:
+        ALL_DATA_PRESENT = True
+    else:
+        ALL_DATA_PRESENT = False
 
     # Storm name is constant across all hours
     name = uf.getStormName(storm, initDate)
@@ -2854,6 +2878,12 @@ def main():
     # Loop over all requested forecast hours
     for fHour in fHours:
         logger.info(f"\n{'-'*60}\nProcessing forecast hour: {fHour}\n{'-'*60}\n")
+
+        #check if there are any unplotted files at this hour
+        if all(f'f{fHour:03}' not in x for x in UnplottedFilesList):
+            logger.info(f"All files already processed for hour: {fHour}. Skipping...")
+            continue
+
         t_hour_start = time.perf_counter()
 
         hourData = getHourData(fHour, adeckData)
@@ -2865,15 +2895,26 @@ def main():
         # Wind radii depends on radius, not clusterType, so it runs once per hour per radius
         if ensembleWindRadii:
             for _rad in requestedRadii:
-                # Skip if less than half the available members have nonzero rXX values
+                #check if plot is still needed - NOTE: if we change to .gif, this needs to update
+                current_windRad_filename = f'{sid.lower()}.{initDate}.wind_radii.R{_rad}.f{fHour:03}.png'
+                if current_windRad_filename not in UnplottedFilesList:
+                    logger.debug(f'skipping plot: {current_windRad_filename} because it is not in unplottedfileslist.')
+                    continue
+
+                # Skip if less than half the available members have nonzero rXX values, and remove from UnplottedFilesList
                 if not radius_is_plottable(hourData, _rad):
                     logger.warning(f"fHour {fHour}: skipping R{_rad} wind-radii plot, too few members")
+                    UnplottedFilesList.remove(current_windRad_filename)
                     continue
                 
                 t_step_start = time.perf_counter()
                 adeckRadiiData, radData = windRadiiData(hourData, _rad)
                 plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
                             _rad, initDate, adeckData, titleLine)
+                #if plot contains all requested forecast hours, remove the file from the unplotted files list and overwrite the file
+                if ALL_DATA_PRESENT:
+                    UnplottedFilesList.remove(current_windRad_filename)
+                    write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
                 t_elapsed = time.perf_counter() - t_step_start
                 timing_totals['ensembleWindRadii'] += t_elapsed
                 timing_counts['ensembleWindRadii'] += 1
@@ -2881,66 +2922,127 @@ def main():
         for clusterType in clusterTypes:
             logger.info(f"Forecast hour: {fHour}; cluster type: {clusterType}")
 
+            #first, check if we can skip this cluster type because it is already plotted.
+            if all(f'{clusterType}.f{fHour:03}' not in x for x in UnplottedFilesList):
+                logger.info(f"All files already processed for cluster type {clusterType} for hour: {fHour}. Skipping...")
+                continue
+
             if ensembleClustering or vortexAvgSteer:
                 allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
                 skipClustering = set(allClusterMems[0]) == set(allClusterMems[1])
                 if skipClustering:
+                    #skip these clusters and remove from unplotted files list
                     logger.warning(f"fHour {fHour}: {clusterType} produced identical clusters; "
-                                   f"skipping clustering/vortex plots")
+                                   f"skipping clustering/vortex plots and removing from unplotted files list")
+                    #make list of files to remove and remove them
+                    #can't just iterate and find matching files then remove them because
+                    #that has possibility to miss files because file indices change when
+                    #a file is removed
+                    files_to_remove = []
+                    for file in UnplottedFilesList:
+                        if f'{clusterType}.f{fHour:03}' in file:
+                            files_to_remove.append(file)
+                    for file in files_to_remove:
+                        UnplottedFilesList.remove(file)
+                    del files_to_remove
+                    write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
 
             if ensembleLinePlots:
-                t_step_start = time.perf_counter()
-                avgVarTypes = sortedColoringData(clusterType, hourData, members)
-                plotLinePlots(avgVarTypes, members, adeckData, ODIR_full, clusterType, 
-                            fHour, storm, cluster_radius(clusterType), initDate, titleLine)
-                t_elapsed = time.perf_counter() - t_step_start
-                timing_totals['ensembleLinePlots'] += t_elapsed
-                timing_counts['ensembleLinePlots'] += 1
+                current_lineplot_filename = f'{sid.lower()}.{initDate}.line_plot.{clusterType}.f{fHour:03}.png'
+                #skip if not in unplotted list
+                if current_lineplot_filename not in UnplottedFilesList:
+                    logger.debug(f'skipping plot: {current_lineplot_filename} because it is not in unplottedfileslist.')
+                else:
+                    t_step_start = time.perf_counter()
+                    avgVarTypes = sortedColoringData(clusterType, hourData, members)
+                    plotLinePlots(avgVarTypes, members, adeckData, ODIR_full, clusterType, 
+                                fHour, storm, cluster_radius(clusterType), initDate, titleLine)
+                    #if plot contains all required forecast hours, remove it from unplotted files list
+                    if ALL_DATA_PRESENT:
+                        UnplottedFilesList.remove(current_lineplot_filename)
+                        write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
+                    t_elapsed = time.perf_counter() - t_step_start
+                    timing_totals['ensembleLinePlots'] += t_elapsed
+                    timing_counts['ensembleLinePlots'] += 1
 
             if ensembleTracksColored:
-                t_step_start = time.perf_counter()
-                avgVarTypes = sortedColoringData(clusterType, hourData, members)
-                plotTracksColored(avgVarTypes, members, adeckData, ODIR_full, clusterType, 
-                                fHour, storm, cluster_radius(clusterType), initDate, titleLine)
-                t_elapsed = time.perf_counter() - t_step_start
-                timing_totals['ensembleTracksColored'] += t_elapsed
-                timing_counts['ensembleTracksColored'] += 1
+                current_trackplot_filename = f'{sid.lower()}.{initDate}.spatial_tracks.{clusterType}.f{fHour:03}.png'
+                #skip if not in unplotted list
+                if current_trackplot_filename not in UnplottedFilesList:
+                    logger.debug(f'skipping plot: {current_trackplot_filename} because it is not in unplottedfileslist.')
+                else:
+                    t_step_start = time.perf_counter()
+                    avgVarTypes = sortedColoringData(clusterType, hourData, members)
+                    plotTracksColored(avgVarTypes, members, adeckData, ODIR_full, clusterType, 
+                                    fHour, storm, cluster_radius(clusterType), initDate, titleLine)
+                    #if plot contains all required forecast hours, remove it from unplotted files list
+                    if ALL_DATA_PRESENT:
+                        UnplottedFilesList.remove(current_trackplot_filename)
+                        write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
+                    t_elapsed = time.perf_counter() - t_step_start
+                    timing_totals['ensembleTracksColored'] += t_elapsed
+                    timing_counts['ensembleTracksColored'] += 1
 
             if ensembleClustering and not skipClustering:
                 for bgVariable, bgLevel in bgFields:
-                    t_step_start = time.perf_counter()
-                    atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
-                        clusterType, bgVariable, bgLevel, fHour, adeckData, sid, expt, allClusterMems, 
-                        idir, initDate, hourData)
-                    plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                                        clusterTypeDict, fHour, storm, bgLevel, bgVariable, cluster_radius(clusterType), initDate, titleLine)
-                    t_elapsed = time.perf_counter() - t_step_start
-                    timing_totals['ensembleClustering'] += t_elapsed
-                    timing_counts['ensembleClustering'] += 1
+                    current_track_clustering_filename = f'{sid.lower()}.{initDate}.{bgVariable}{bgLevel}.spatial_cluster.{clusterType}.f{fHour:03}.png'
+                    #skip if not in unplotted files list
+                    if current_track_clustering_filename not in UnplottedFilesList:
+                        logger.debug(f'skipping plot: {current_track_clustering_filename} because it is not in unplottedfileslist.')
+                    else:
+                        t_step_start = time.perf_counter()
+                        atcfClusters, gribClusters, clusterAvgs = trackClusteringData(
+                            clusterType, bgVariable, bgLevel, fHour, adeckData, sid, expt, allClusterMems, 
+                            idir, initDate, hourData)
+                        plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
+                                            clusterTypeDict, fHour, storm, bgLevel, bgVariable, cluster_radius(clusterType), initDate, titleLine)
+                        #if plot contains all required forecast hours, remove it from unplotted files list
+                        if ALL_DATA_PRESENT:
+                            UnplottedFilesList.remove(current_track_clustering_filename)
+                            write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
+                        t_elapsed = time.perf_counter() - t_step_start
+                        timing_totals['ensembleClustering'] += t_elapsed
+                        timing_counts['ensembleClustering'] += 1
 
             if vortexAvgSteer and not skipClustering:
-                t_step_start = time.perf_counter()
-                clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
-                                                storm, sid, expt, adeckData, allClusterMems)
-                plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
-                                clusterTypeDict, cluster_radius(clusterType), titleLine)
-                t_elapsed = time.perf_counter() - t_step_start
-                timing_totals['vortexAvgSteer'] += t_elapsed
-                timing_counts['vortexAvgSteer'] += 1
+                current_vortex_clustering_filename = f'{sid.lower()}.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03}.png'
+                #skip if not in unplotted files list
+                if current_vortex_clustering_filename not in UnplottedFilesList:
+                    logger.debug(f'skipping plot: {current_vortex_clustering_filename} because it is not in unplottedfileslist.')
+                else:
+                    t_step_start = time.perf_counter()
+                    clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
+                                                    storm, sid, expt, adeckData, allClusterMems)
+                    plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
+                                    clusterTypeDict, cluster_radius(clusterType), titleLine)
+                    #plot does not depend on all required forecast hours, remove it from unplotted files list
+                    UnplottedFilesList.remove(current_vortex_clustering_filename)
+                    write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
+                    t_elapsed = time.perf_counter() - t_step_start
+                    timing_totals['vortexAvgSteer'] += t_elapsed
+                    timing_counts['vortexAvgSteer'] += 1
 
         # Tilt plots do not depend on clusterType, so they run once per forecast hour
         if tiltPlots:
-            t_step_start = time.perf_counter()
+            current_tilt_filename = f'{sid.lower()}.{initDate}.vortex_tilt.f{fHour:03}.png'
+            #skip if not in unplotted files list
+            if current_tilt_filename not in UnplottedFilesList:
+                logger.debug(f'skipping plot: {current_tilt_filename} because it is not in unplottedfileslist.')
+            else:
+                t_step_start = time.perf_counter()
 
-            plot_tilts(adeckData,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
-            cycle = idate, 
-            fhr=int(fHour),
-            storm_id = storm[:4].upper(),
-            members_to_plot = [f'{x:02}' for x in members[:-1]],
-            show=False)
-            t_elapsed = time.perf_counter() - t_step_start
-            timing_totals['tiltPlots'] += t_elapsed
-            timing_counts['tiltPlots'] += 1
+                plot_tilts(adeckData,itag,idir,dsource, ODIR_full, ext, fhrfmt, dt,
+                cycle = idate, 
+                fhr=int(fHour),
+                storm_id = storm[:4].upper(),
+                members_to_plot = [f'{x:02}' for x in members[:-1]],
+                show=False)
+                t_elapsed = time.perf_counter() - t_step_start
+                timing_totals['tiltPlots'] += t_elapsed
+                timing_counts['tiltPlots'] += 1
+                #plot does not depend on all required forecast hours, remove it from unplotted files list
+                UnplottedFilesList.remove(current_tilt_filename)
+                write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
 
 
     logger.info(f"\nTotal Python time for all hours: {time.perf_counter() - t_script_start:.4f}s")

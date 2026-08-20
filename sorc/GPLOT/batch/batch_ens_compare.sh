@@ -23,6 +23,7 @@ LOGFILE="${3}"
 NMLIST="${4:-namelist.master.default}"
 IDATE="${5}"
 SID="${6:-XXXX}"
+VERBOSE="${7:-0}"
 
 # 2. Determine the GPLOT source code directory
 if [ -z "${GPLOT_DIR}" ]; then
@@ -81,12 +82,14 @@ rm -f /dev/shm/temp_mem* /dev/shm/temp_centered_mem*
 #    only the per-invocation identity (--idate/--sid) plus --master-nml is passed.
 START_TIME=$(date +%s)
 echo ""
-echo "Executing ${PYFILE}. Start time: $(date -d "@$START_TIME" '+%Y-%m-%d %H:%M:%S')}" >> ${LOGFILE}
+echo "Executing ${PYFILE}. --master-nml ${NMLIST} --idate ${IDATE} --sid ${SID} -v ${VERBOSE} >> ${LOGFILE} 2>&1">> ${LOGFILE}
+echo "Start time: $(date -d "@$START_TIME" '+%Y-%m-%d %H:%M:%S')" >> ${LOGFILE}
 
 python3 ${PYFILE} \
     --master-nml "${NMLIST}" \
     --idate "${IDATE}" \
     --sid "${SID}" \
+    -v "${VERBOSE}" \
     >> ${LOGFILE} 2>&1
 
 END_TIME=$(date +%s)

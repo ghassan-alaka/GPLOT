@@ -76,6 +76,7 @@ DT=$(get_var "DT" ${NMLIST})
 CPU_ACCT=$(get_var "CPU_ACCT" ${NMLIST})
 QOS=$(get_var "QOS" ${NMLIST})
 PARTITION=$(get_var "PARTITION" ${NMLIST})
+VERBOSE=$(get_var "VERBOSE" ${NMLIST})
 
 # Note: BATCH_MODE still needs the tr command to make it uppercase
 BATCH_MODE=$(get_var "BATCH_MODE" ${NMLIST} | tr a-z A-Z)
@@ -164,10 +165,8 @@ echo "MSG: Found these cycles --> ${CYCLES[*]}"
 echo ""
 
 # Build forecast hour list
-#MD 20260701 - FHOUR_LIST is unused! this is only for output notes. FHR iteration happens in the py file
-#FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
 #MD 20260810 - using bash array instead of space-separated string for fhour list.
-#also, it is now used in unplotted file tracking
+#FHOUR_LIST=$(seq ${INIT_HR} ${DT} ${FNL_HR} | tr '\n' ' ')
 read -ra FHOUR_LIST <<< "$(seq "$INIT_HR" "$DT" "$FNL_HR" | tr '\n' ' ')"
 echo "MSG: Forecast hours --> ${FHOUR_LIST[*]}"
 
@@ -320,9 +319,15 @@ for DATE in ${CYCLES[@]}; do
             ensembleClustering=$(get_var "ENSEMBLE_CLUSTERING" ${NMLIST})
             vortexAvgSteer=$(get_var "VORTEX_AVG_STEER" ${NMLIST})
             tiltPlots=$(get_var "TILT_PLOTS" ${NMLIST})
-            #MD 20260810 - only HGT and 500 allowed right now for background
-            bgVars=$(get_var "BG_VARIABLE" ${NMLIST})
-            bgLevs=$(get_var "BG_LEVEL" ${NMLIST})
+
+            #MD 20260819 - adjusting for more background fields
+            bgFields=$(get_var "BG_FIELDS" ${NMLIST})
+            #turn into array and remove whitespaces/commas
+            bgFields="${bgFields//,/ }"
+            read -ra bgFields <<< "$bgFields"
+            bgFields=("${bgFields[@]//:/}")
+
+
             #DO_CONVERTGIF = $(get_var "DO_CONVERTGIF" ${NMLIST}), default to False
             DO_CONVERTGIF="False" #can add this capability when we actually add gif conversion to figures
             if [[ "$DO_CONVERTGIF" == "True" ]]; then
@@ -366,15 +371,9 @@ for DATE in ${CYCLES[@]}; do
                 CLUSTER_FILE_TYPES+=("spatial_tracks")
             fi
 
-            if [[ "$ensembleWindRadii" == "True" ]]; then
-                CLUSTER_FILE_TYPES+=("wind_radii")
-            fi
-
             if [[ "$ensembleClustering" == "True" ]]; then
-                for bgVar in "${bgVars[@]}"; do
-                    for bgLev in "${bgLevs[@]}"; do
-                        CLUSTER_FILE_TYPES+=("${bgVar}${bgLev}.spatial_cluster")
-                    done
+                for bgField in "${bgFields[@]}"; do
+                    CLUSTER_FILE_TYPES+=("${bgField}.spatial_cluster")
                 done
             fi
 
@@ -396,12 +395,17 @@ for DATE in ${CYCLES[@]}; do
                 ALL_BASE_FILENAMES+=("vortex_tilt")
             fi
 
+            if [[ "$ensembleWindRadii" == "True" ]]; then
+                ALL_BASE_FILENAMES+=("wind_radii.R34")
+                ALL_BASE_FILENAMES+=("wind_radii.R50")
+                ALL_BASE_FILENAMES+=("wind_radii.R64")
+            fi
+
 
             # Build complete filenames
             ALL_FILENAMES=()
 
             for fhour in "${FHOUR_LIST[@]}"; do
-                echo "hereio $fhour"
                 # Zero-pad forecast hour to 3 digits
                 printf -v fhour_padded "%03d" "$fhour"
 
@@ -423,7 +427,6 @@ for DATE in ${CYCLES[@]}; do
         else
             echo "MSG: Unplotted Files list already exists, skipping creation."
         fi
-        #exit #DELETE DELETE DELETE
         ##################################### END UNPLOTTEDFILES CHECK #######################################################
 
 
@@ -452,7 +455,7 @@ for DATE in ${CYCLES[@]}; do
             continue
         fi
 
-        ARGS="${MACHINE} ${PYFILE} ${LOGFILE1} ${NMLIST} ${DATE} ${STORM:-XXXX}"
+        ARGS="${MACHINE} ${PYFILE} ${LOGFILE1} ${NMLIST} ${DATE} ${STORM:-XXXX} ${VERBOSE:-0}"
 
         echo "MSG: Submitting ens_compare job --> ${JOBNAME}"
         echo "working" > "${STATUS_FILE}"
