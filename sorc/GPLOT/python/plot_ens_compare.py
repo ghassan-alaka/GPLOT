@@ -784,11 +784,17 @@ def addRankColorbar(ax, sortTitle, clusterType, nColors, isTrack):
     Add the vertical rank colorbar (rank 1 at top), with end labels showing what the extremes
     mean (e.g. Strong/Weak).
 
-    args:
+    Common args (clusterType): see glossary
+    Function specific:
+        ax: plain axes for 'line', cartopy GeoAxes for 'track'
+        sortTitle: puts ranking method (e.g. MSLP) in colorbar title
+        nColors: number of colors in colormap
+        isTrack: whether or not the plot type is 'track'
 
     dependencies:
+        matplotlib.pyplot as plt, logging
 
-    return:
+    return: colorbar object with title and end labels
 
     """
     sm = plt.cm.ScalarMappable(cmap=plt.cm.viridis, norm=plt.Normalize(vmin=1, vmax=nColors))
@@ -2622,7 +2628,7 @@ def parse_bg_fields(nml):
     # Get raw field and default to 500mb heights if it cannot be found
     raw = nml.get('BG_FIELDS', "HGT:500")
     if raw == "HGT:500":
-        logger.warning(f"BG_FIELDS not set; falling back to default: {raw}")
+        logger.warning(f"BG_FIELDS not set, falling back to default: {raw}")
 
     # Convert to list of VAR:LEVEL pairs if necessary
     tokens = raw if isinstance(raw, list) else re.split(r'[,\s]+', str(raw).strip())
