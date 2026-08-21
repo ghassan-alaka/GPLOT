@@ -62,6 +62,7 @@ FHRFMT="`sed -n -e 's/^FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 DT="`sed -n -e 's/^DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 IDATE="`sed -n -e 's/^IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 SID="`sed -n -e 's/^SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+STATS_ATCF_ONLY="`sed -n -e 's/^STATS_ATCF_ONLY =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 BDECK_DIR="`sed -n -e 's/^BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 ATCF1_DIR="`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 ATCF1_TAG="`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -436,6 +437,14 @@ if [ "${DO_STATS}" = "True" ]; then
                    "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
         EXT_CHK="${EXT:-.grb2}"
         INPUT_FOUND="False"
+        # Guidance-only experiments (track files but no gridded model
+        # output on disk, e.g. GFTC) opt out of the no-GRIB2 gate
+        # explicitly via the namelist; ordinary experiments keep the
+        # queue-flood protection this gate provides.
+        if [ "${STATS_ATCF_ONLY^^}" == "TRUE" ]; then
+            echo "MSG: STATS_ATCF_ONLY=True; bypassing the GRIB2 input gate for ${STORM} ${CYCLE} (guidance from ATCFs alone)."
+            INPUT_FOUND="True"
+        fi
         for IO in "${IDIR_OPTS[@]}"; do
             IDIR_FULL_CHK="$(echo "${IDIR}/${IO}" | sed s#//*#/#g)"
             [ -d "${IDIR_FULL_CHK}" ] || continue

@@ -125,14 +125,19 @@ NMAX_MAPS = 8
 ;     Speeds up d01/parent panels ~4x; grids under 2M points
 ;     (d03/storm nests) are never decimated. Target = max points
 ;     per horizontal dim after subsampling.
-;PLOT_DECIMATE; = False
-;PLOT_DECIMATE_TARGET; = 1400
+PLOT_DECIMATE = False
+PLOT_DECIMATE_TARGET = 1400
 
 
 
 ;================================================================
 ; SECTION 3: GPLOT_Stats variables
 ;================================================================
+
+; 3-0. RUN STATS FROM ATCFs ALONE?
+;      Bypasses the no-GRIB2 gate in spawn_stats.sh for guidance-only
+;      experiments (track files on disk but no gridded model output).
+;STATS_ATCF_ONLY; = False
 
 ; 3A. MODEL NAMES
 MORIG = HFSB
