@@ -329,7 +329,7 @@ for DATE in ${CYCLES[@]}; do
 
 
             #DO_CONVERTGIF = $(get_var "DO_CONVERTGIF" ${NMLIST}), default to False
-            DO_CONVERTGIF="False" #can add this capability when we actually add gif conversion to figures
+            DO_CONVERTGIF="True" #Do we need any room for this to be fault? Awaiting feedback MD 20260825
             if [[ "$DO_CONVERTGIF" == "True" ]]; then
                 FIGEXT=".gif"
             else

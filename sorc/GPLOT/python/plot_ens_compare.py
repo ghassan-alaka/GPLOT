@@ -67,7 +67,7 @@ logger = logging.getLogger('plot_ens_compare')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gplot_utils.namelist import read_master_namelist
 from gplot_utils.grib_reader import get_var_2d
-from gplot_utils.plot_utils import configure_cartopy
+from gplot_utils.plot_utils import configure_cartopy, convert_to_gif
 from gplot_utils.coord_transform import (sph2cart,
                                           make_cartesian_grid,
                                           compute_wind_shear)
@@ -164,6 +164,11 @@ _PARENT_TOKEN_RE = re.compile(
     r'(?:^|[._-])(parent|d01|hwrf)(?:[._-]|$)',
     re.IGNORECASE,
 )
+
+#other modules allow this to be False. Pending feedback from co-developers,
+#I am going to solely plan for True, leaving this here until we decide
+#MD 20260825
+DO_CONVERTGIF = True
 
 
 def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
@@ -938,9 +943,12 @@ def plotLinePlots(avgVarTypes, members, adeckData, savePath, clusterType, fHour,
     for label in ax.get_xticklabels() + ax.get_yticklabels():
         label.set_fontweight('bold')
 
-    
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png",
+    figname = rf"{savePath}/{storm[2:4]}l.{initDate}.line_plot.{clusterType}.f{fHour:03d}.png"
+    plt.savefig(figname,
                 dpi=200, bbox_inches='tight')
+    #CONVERT GIF SNIPPET #
+    if DO_CONVERTGIF:
+        convert_to_gif(figname)
     logger.debug("plotLinePlots() complete")
 
 
@@ -974,9 +982,11 @@ def plotTracksColored(avgVarTypes, members, adeckData, savePath, clusterType, fH
     ax = plotSortedLines(ax, avgVarTypes, 'track', members, adeckData, fHour,
                          clusterType, titleLine)
 
-    
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png",
+    figname = rf"{savePath}/{storm[2:4]}l.{initDate}.spatial_tracks.{clusterType}.f{fHour:03d}.png"
+    plt.savefig(figname,
                 dpi=200, bbox_inches='tight')
+    if DO_CONVERTGIF:
+        convert_to_gif(figname)
     logger.debug("plotTracksColored() complete")
 
 
@@ -1041,8 +1051,10 @@ def plotWindRadii(quartileData, radData, savePath, fHour, storm, radius,
             ax.plot([memQuadData.iloc[-1]['lon'], memQuadNext['lon']], [memQuadData.iloc[-1]['lat'], memQuadNext['lat']],
                     color=colors[idx], transform=ccrs.PlateCarree(), zorder=10)
 
-    
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.wind_radii.R{radius}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    figname = rf"{savePath}/{storm[2:4]}l.{initDate}.wind_radii.R{radius}.f{fHour:03d}.png"
+    plt.savefig(figname, dpi=200, bbox_inches='tight')
+    if DO_CONVERTGIF:
+        convert_to_gif(figname)
     logger.debug("plotWindRadii() complete")
 
     
@@ -1123,7 +1135,10 @@ def plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, savePath, allCl
     mainTitle = f"HAFS Ensemble {spec['titleField']} and Tracks Clustered By {titleDict[clusterType]}"
     fig.suptitle(f"{mainTitle}\n{titleLine}", fontsize=10, weight='bold')
     
-    plt.savefig(rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}{level}.spatial_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    figname=rf"{savePath}/{storm[2:4]}l.{initDate}.{variable}{level}.spatial_cluster.{clusterType}.f{fHour:03d}.png"
+    plt.savefig(figname, dpi=200, bbox_inches='tight')
+    if DO_CONVERTGIF:
+        convert_to_gif(figname)
     logger.debug("plotTrackClustering() complete")
 
 
@@ -1282,7 +1297,10 @@ def plotVortexAvgSteer(clusterDicts, savePath, storm, initDate, clusterType, fHo
                   "Deep-Layer Bulk Shear (200-850 hPa)"]
     cbar.ax.legend(linesList, labelsList, loc="lower center", bbox_to_anchor=(0.5, -3), ncol=3, frameon=False, fontsize=8)
 
-    plt.savefig(f"{savePath}/{storm[2:4]}l.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03d}.png", dpi=200, bbox_inches='tight')
+    figname = f"{savePath}/{storm[2:4]}l.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03d}.png"
+    plt.savefig(figname, dpi=200, bbox_inches='tight')
+    if DO_CONVERTGIF:
+        convert_to_gif(figname)
     logger.debug("plotVortexAvgSteer() complete")
 
 def call_iqr_calculation(df, metric='shear'):
@@ -1861,7 +1879,10 @@ def plot_tilts(atcf_df, itag, idir,dsource, out_path, ext, fhrfmt, output_timest
     #     plt.savefig('{}/{}.{}.tilt_plot.all_members.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}"))
     # else:
     #MD 20260810 - removing name flexibility, not currently ever passing "all" into function
-    plt.savefig('{}/{}.{}.vortex_tilt.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}"))
+    figname = '{}/{}.{}.vortex_tilt.f{}.png'.format(out_path, stid, cycle,f"{fhr:03}")
+    plt.savefig(figname)
+    if DO_CONVERTGIF:
+        convert_to_gif(figname)
     if show:
         plt.show()
         time.sleep(1)
@@ -2829,6 +2850,12 @@ def main():
     STATUS_FILE=os.path.join(ODIR_full, f"status.ens_compare.{idate}.{sid.lower()}.log")
     ST_LOCK_FILE = f'{STATUS_FILE}.lock'
 
+    #convert to gif for space saving?
+    #defaulting to True in main namespace, so don't need to look at namelist
+    # DO_CONVERTGIF = bool(nml.get('DO_CONVERTGIF', False))
+    figext  = 'png'
+    figext2 = 'gif' if DO_CONVERTGIF else 'png'
+
 
 
 
@@ -2902,7 +2929,7 @@ def main():
         if ensembleWindRadii:
             for _rad in requestedRadii:
                 #check if plot is still needed - NOTE: if we change to .gif, this needs to update
-                current_windRad_filename = f'{sid.lower()}.{initDate}.wind_radii.R{_rad}.f{fHour:03}.png'
+                current_windRad_filename = f'{sid.lower()}.{initDate}.wind_radii.R{_rad}.f{fHour:03}.{figext2}'
                 if current_windRad_filename not in UnplottedFilesList:
                     logger.debug(f'skipping plot: {current_windRad_filename} because it is not in unplottedfileslist.')
                     continue
@@ -2954,7 +2981,7 @@ def main():
                     write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
 
             if ensembleLinePlots:
-                current_lineplot_filename = f'{sid.lower()}.{initDate}.line_plot.{clusterType}.f{fHour:03}.png'
+                current_lineplot_filename = f'{sid.lower()}.{initDate}.line_plot.{clusterType}.f{fHour:03}.{figext2}'
                 #skip if not in unplotted list
                 if current_lineplot_filename not in UnplottedFilesList:
                     logger.debug(f'skipping plot: {current_lineplot_filename} because it is not in unplottedfileslist.')
@@ -2972,7 +2999,7 @@ def main():
                     timing_counts['ensembleLinePlots'] += 1
 
             if ensembleTracksColored:
-                current_trackplot_filename = f'{sid.lower()}.{initDate}.spatial_tracks.{clusterType}.f{fHour:03}.png'
+                current_trackplot_filename = f'{sid.lower()}.{initDate}.spatial_tracks.{clusterType}.f{fHour:03}.{figext2}'
                 #skip if not in unplotted list
                 if current_trackplot_filename not in UnplottedFilesList:
                     logger.debug(f'skipping plot: {current_trackplot_filename} because it is not in unplottedfileslist.')
@@ -2991,7 +3018,7 @@ def main():
 
             if ensembleClustering and not skipClustering:
                 for bgVariable, bgLevel in bgFields:
-                    current_track_clustering_filename = f'{sid.lower()}.{initDate}.{bgVariable}{bgLevel}.spatial_cluster.{clusterType}.f{fHour:03}.png'
+                    current_track_clustering_filename = f'{sid.lower()}.{initDate}.{bgVariable}{bgLevel}.spatial_cluster.{clusterType}.f{fHour:03}.{figext2}'
                     #skip if not in unplotted files list
                     if current_track_clustering_filename not in UnplottedFilesList:
                         logger.debug(f'skipping plot: {current_track_clustering_filename} because it is not in unplottedfileslist.')
@@ -3011,7 +3038,7 @@ def main():
                         timing_counts['ensembleClustering'] += 1
 
             if vortexAvgSteer and not skipClustering:
-                current_vortex_clustering_filename = f'{sid.lower()}.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03}.png'
+                current_vortex_clustering_filename = f'{sid.lower()}.{initDate}.wind.vortex_cluster.{clusterType}.f{fHour:03}.{figext2}'
                 #skip if not in unplotted files list
                 if current_vortex_clustering_filename not in UnplottedFilesList:
                     logger.debug(f'skipping plot: {current_vortex_clustering_filename} because it is not in unplottedfileslist.')
@@ -3030,7 +3057,7 @@ def main():
 
         # Tilt plots do not depend on clusterType, so they run once per forecast hour
         if tiltPlots:
-            current_tilt_filename = f'{sid.lower()}.{initDate}.vortex_tilt.f{fHour:03}.png'
+            current_tilt_filename = f'{sid.lower()}.{initDate}.vortex_tilt.f{fHour:03}.{figext2}'
             #skip if not in unplotted files list
             if current_tilt_filename not in UnplottedFilesList:
                 logger.debug(f'skipping plot: {current_tilt_filename} because it is not in unplottedfileslist.')
