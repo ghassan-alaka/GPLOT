@@ -329,7 +329,7 @@ for DATE in ${CYCLES[@]}; do
 
 
             #DO_CONVERTGIF = $(get_var "DO_CONVERTGIF" ${NMLIST}), default to False
-            DO_CONVERTGIF="True" #Do we need any room for this to be fault? Awaiting feedback MD 20260825
+            DO_CONVERTGIF="True" #Do we need any room for this to be false? Awaiting feedback MD 20260825
             if [[ "$DO_CONVERTGIF" == "True" ]]; then
                 FIGEXT=".gif"
             else
@@ -430,7 +430,7 @@ for DATE in ${CYCLES[@]}; do
         ##################################### END UNPLOTTEDFILES CHECK #######################################################
 
 
-        #MD 20260804 - need to account for alternate file structures maybe
+        #MD 20260804 - may need to account for alternate file structures
         #   staged data in lgramer directory:
         #   2024: .../2024100600/{ENSID}/00l.2024100600.hfsa.trak.atcfunix.all
         #   2025: .../2025102312/{ENSID}/00l.2025102312.hfsa.trak.atcfunix.all
@@ -462,8 +462,10 @@ for DATE in ${CYCLES[@]}; do
 
         # MD 20260630 - need to add a runtime argument - job times out at 2hr having completed only 15 fhrs
         N_FHOURS=$(wc -w <<< "$FHOUR_LIST")
+        #MD 20260827 - this is not wroking right now, it seems to only set 1:29:59.
+        #so I am switching the -le 5 option to 4:29:59
         if [[ $N_FHOURS -le 5 ]]; then
-            RUNTIME="01:29:59"
+            RUNTIME="04:29:59"
         elif [[ $N_FHOURS -le 10 ]]; then
             RUNTIME="02:29:59"
         elif [[ $N_FHOURS -le 15 ]]; then
@@ -479,27 +481,37 @@ for DATE in ${CYCLES[@]}; do
         else
             RUNTIME="07:59:59"
         fi
-        #feed output into the .out file, (will add .log file to command line arguments as logger)
-        if [ "${BATCH_MODE}" == "SBATCH" ]; then
-            SLRM_OPTS="--job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
-            SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
-            SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --cpus-per-task=${ENS_CPUS} --mem=16G --time=${RUNTIME}"
-            echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${BATCHFILE} ${ARGS}]."
-            ${X_SBATCH} ${SLRM_OPTS} ${BATCHFILE} ${ARGS}
-        elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
-            echo "MSG: Executing this command [${BATCHFILE} ${ARGS} > ${LOGFILE2} 2>&1]."
-            ${BATCHFILE} ${ARGS} >> ${LOGFILE2} 2>&1
-        else
-            echo "MSG: Executing this command [${BATCHFILE} ${ARGS} > ${LOGFILE2} 2>&1 &]."
-            ${BATCHFILE} ${ARGS} >> ${LOGFILE2} 2>&1 &
+
+        if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
+            JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
         fi
 
-        # Throttle: stop submitting once the per-invocation cap is reached.
-        ((N++))
-        if [ "${N}" -ge "${MAX_JOBS}" ]; then
-            echo "MSG: Reached MAX_JOBS (${MAX_JOBS}) submissions. Remaining jobs will be submitted on the next invocation."
-            echo "MSG: spawn_ens_compare.sh completed at `date`"
-            exit
+        #only spawn if no matching job name
+        if  [ -z "${JOB_TEST}" ]; then
+            #feed output into the .out file, (will add .log file to command line arguments as logger)
+            if [ "${BATCH_MODE}" == "SBATCH" ]; then
+                SLRM_OPTS="--job-name=${JOBNAME} --output=${LOGFILE2} --error=${LOGFILE2}"
+                SLRM_OPTS="${SLRM_OPTS} --account=${CPU_ACCT} --partition=${PARTITION} --qos=${QOS}"
+                SLRM_OPTS="${SLRM_OPTS} --ntasks=1 --cpus-per-task=${ENS_CPUS} --mem=16G --time=${RUNTIME}"
+                echo "MSG: Executing this command [${X_SBATCH} ${SLRM_OPTS} ${BATCHFILE} ${ARGS}]."
+                ${X_SBATCH} ${SLRM_OPTS} ${BATCHFILE} ${ARGS}
+            elif [ "${BATCH_MODE}" == "FOREGROUND" ]; then
+                echo "MSG: Executing this command [${BATCHFILE} ${ARGS} > ${LOGFILE2} 2>&1]."
+                ${BATCHFILE} ${ARGS} >> ${LOGFILE2} 2>&1
+            else
+                echo "MSG: Executing this command [${BATCHFILE} ${ARGS} > ${LOGFILE2} 2>&1 &]."
+                ${BATCHFILE} ${ARGS} >> ${LOGFILE2} 2>&1 &
+            fi
+
+            # Throttle: stop submitting once the per-invocation cap is reached.
+            ((N++))
+            if [ "${N}" -ge "${MAX_JOBS}" ]; then
+                echo "MSG: Reached MAX_JOBS (${MAX_JOBS}) submissions. Remaining jobs will be submitted on the next invocation."
+                echo "MSG: spawn_ens_compare.sh completed at `date`"
+                exit
+            fi
+        else
+            echo "MSG: Found matching GPLOT batch job. Skipping submission."
         fi
     done
 done

@@ -220,19 +220,25 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
+echo "here new new MSG: Found these ensemble members --> ${EID[*]}"
 # NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
 # a bare "0" or an empty list marks a deterministic run.
 if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
-elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+    echo "here 3 ENSIDS FOUND: ${ENSIDS[*]}"
+#elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+#MD 20260827 new check for ensemble member list type:
+elif [[ "${EID[0]}" == *-* ]]; then
     IS_ENS="True"
     E1=$(echo "${EID[0]}" | cut -d'-' -f1)
     E2=$(echo "${EID[0]}" | cut -d'-' -f2)
     ENSIDS=( `seq -f "%02g" ${E1} ${E2}` )
+    echo "here 1 ENSIDS FOUND: ${ENSIDS[*]}"
 else
     IS_ENS="True"
-    ENSIDS=( `printf "%02d\n" ${EID[*]}` )
+    ENSIDS=( `printf "%02s\n" ${EID[*]}` )
+    echo "here 2 ENSIDS FOUND: ${ENSIDS[*]}"
 fi
 
 # Define the maximum number of batch submissions.

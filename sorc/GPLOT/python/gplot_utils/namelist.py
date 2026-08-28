@@ -136,6 +136,14 @@ def _parse_value(key, raw_value):
                 return parts
         return parts
 
+    if key == "MEMBERS_2026":
+        #going to assume list like 0 2 3 5 6 9 12 13 etc.
+        parts = val.split()
+        try:
+            return [int(x) for x in parts]
+        except ValueError:
+            return parts
+
     return val
 
 

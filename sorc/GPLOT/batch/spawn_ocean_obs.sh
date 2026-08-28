@@ -284,14 +284,16 @@ fi
 if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
-elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+#elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+#MD 20260827 new check for ensemble member list type:
+elif [[ "${EID[0]}" == *-* ]]; then
     IS_ENS="True"
     E1=$(echo "${EID[0]}" | cut -d'-' -f1)
     E2=$(echo "${EID[0]}" | cut -d'-' -f2)
     ENSIDS=( `seq -f "%02g" ${E1} ${E2}` )
 else
     IS_ENS="True"
-    ENSIDS=( `printf "%02d\n" ${EID[*]}` )
+    ENSIDS=( `printf "%02s\n" ${EID[*]}` )
 fi
 
 # Define the maximum number of batch submissions.

@@ -48,7 +48,8 @@ way will be described in each function.
     savePath     : str, output directory for the figure
     year, month, day, hour : ints, init-date components (used in titles)
 
-Last modified July 14, 2026
+
+Last modified Aug 27, 2026
 """
 
 import time
@@ -193,6 +194,7 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
     """
 
     #read data or exit if no data is found
+    #WILL FAIL IF MEMBER DOES NOT EXIST YET! WHAT DO WE DO NOW? MD 20260827
     try:
         adeckData = uf.process_atcf_files(cycle_path=f'{idir}/{initDate}', timestamp=str(initDate),
                                           storm_id=f"{storm[:2].upper()}{storm[2:4]}",
@@ -248,6 +250,8 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
     # filter out members with incomplete track data, exit if not enough are present (len(members) < clusterMembers)
     # complete is defined as the member covering every REQUESTED forecast hour
     requestedTaus = set(fHours)
+    #DEBUG
+    print(adeckData[adeckData['member']!=0].tail())
     memberTaus = adeckData.groupby('member')['TAU'].apply(set)
     incompleteMembers = memberTaus[
         memberTaus.apply(lambda taus: not requestedTaus.issubset(taus))
@@ -2817,17 +2821,25 @@ def main():
     # All three radii are considered for wind-radii plots every run
     requestedRadii = [34, 50, 64]
 
-    # static parameters
-    membersStart = int(nml.get('MEMBERS_START', 0))
-    membersEnd = int(nml.get('MEMBERS_END', 21))
-    members = range(membersStart, membersEnd)  # members to use
-    clusterMembers = int(nml.get('CLUSTER_MEMBERS', 4))  # number of members to include in each cluster
-
     # Parse date string into components
     year = int(idate[0:4])
     month = int(idate[4:6])
     day = int(idate[6:8])
     hour = int(idate[8:10])
+    
+
+    # static parameters
+    membersStart = int(nml.get('MEMBERS_START', 0))
+    membersEnd = int(nml.get('MEMBERS_END', 21))
+
+    #in 2026, we need to specify members a different way. Hard coding a very bad 
+    #approach to this for now because I have limited time. For 2026 namelists, I will make
+    #MEMBERS_START=MEMBERS_END and then trigger different behavior.
+    if membersStart != membersEnd:
+        members = range(membersStart, membersEnd)  # members to use
+    else:
+        members = nml.get("MEMBERS_2026")
+    clusterMembers = int(nml.get('CLUSTER_MEMBERS', 4))  # number of members to include in each cluster
 
     # nikhil's functions want "storm" to be in format AL132025, but sid is supposed to come in form "13l"
     if sid[2].lower() == 'l':
@@ -2883,10 +2895,14 @@ def main():
     
     #flag whether the atcf has all required forecast hours for requested plots. NOTE MD 20260819
     #Need to adjust how we check whether all expected members are present. For 2026, this will change per forecast hour, so need to think about it
-    #leaving member_check as variable placeholder
     #also, current "fnl_hr" check is only checking whether ANY members have the final hour, and we should really check whether ALL members have the final hour,
     #but will leave that until after we decide how to check that lal members are present
-    member_check = True
+
+    #MD 20260827 NEED LOGIC FOR DISSIPATION!
+    member_check = all([member in adeckData['member'] for member in members])
+    print(f'DEBUG - member check value: {member_check}')
+    #for dissipation - perhaps something like:
+    # if (fnl_hr in adeckData['TAU'] OR DISSIPATED==True) 
     if (fnl_hr in adeckData['TAU']) and member_check:
         ALL_DATA_PRESENT = True
     else:

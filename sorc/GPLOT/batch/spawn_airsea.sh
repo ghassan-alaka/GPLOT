@@ -222,14 +222,16 @@ fi
 if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
-elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+#elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+#MD 20260827 new check for ensemble member list type:
+elif [[ "${EID[0]}" == *-* ]]; then
     IS_ENS="True"
     E1=$(echo "${EID[0]}" | cut -d'-' -f1)
     E2=$(echo "${EID[0]}" | cut -d'-' -f2)
     ENSIDS=( `seq -f "%02g" ${E1} ${E2}` )
 else
     IS_ENS="True"
-    ENSIDS=( `printf "%02d\n" ${EID[*]}` )
+    ENSIDS=( `printf "%02s\n" ${EID[*]}` )
 fi
 
 # Define the maximum number of batch submissions.
@@ -1010,25 +1012,25 @@ if [ "${DO_AIRSEA}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="04:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="04:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="05:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="05:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
                             RUNTIME="06:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
                             RUNTIME="06:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="07:29:59"
+                        else
+                            RUNTIME="07:59:59"
                         fi
 
                         # Check if a similar job is already submitted
