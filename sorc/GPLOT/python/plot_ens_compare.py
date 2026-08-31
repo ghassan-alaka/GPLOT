@@ -172,7 +172,7 @@ _PARENT_TOKEN_RE = re.compile(
 DO_CONVERTGIF = True
 
 
-def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
+def modifyAdeckData(members, idir, initDate, storm):
     """
     Load ATCF data from all members once (via HepTools.process_atcf_files), 
     build per-radius columns, drop members with incomplete tracks, and append 
@@ -182,19 +182,14 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
     but I should probably keep as is and change the plotting function variable names for consistency.
 
     Common args (members, idir, initDate, storm): see glossary
-    Function-specific:
-        clusterMembers : int, minimum members required to continue, otherwise the script exits
 
     dependencies: 
         HepTools.process_atcf_files(), sys, logging, pandas as pd
 
-    returns: tuple (adeckData, members)
-        adeckData: DataFrame, all members + ensemble mean, sorted by member/TAU
-        members: list of surviving member IDs, with the mean's ID appended last
+    returns: adeckData, DataFrame, all members + ensemble mean, sorted by member/TAU
     """
 
     #read data or exit if no data is found
-    #WILL FAIL IF MEMBER DOES NOT EXIST YET! WHAT DO WE DO NOW? MD 20260827
     try:
         adeckData = uf.process_atcf_files(cycle_path=f'{idir}/{initDate}', timestamp=str(initDate),
                                           storm_id=f"{storm[:2].upper()}{storm[2:4]}",
@@ -238,44 +233,64 @@ def modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours):
                 adeckData.loc[missing, [f'R{_rad}', f'R{_rad}_RAD1', f'R{_rad}_RAD2',
                                         f'R{_rad}_RAD3', f'R{_rad}_RAD4']] = 0
 
-    # update members to only those present in the data
-    members = [m for m in members if m in adeckData['member'].unique()]
-
     # select final columns
     finalCols = ['TECH', 'TAU', 'latitude', 'longitude', 'MSLP', 'DIR', 'SPEED', 'member']
     finalCols += [c for _rad in (34, 50, 64)
                     for c in (f'R{_rad}', f'R{_rad}_RAD1', f'R{_rad}_RAD2', f'R{_rad}_RAD3', f'R{_rad}_RAD4')]
     adeckData = adeckData[finalCols].sort_values(by=["member", "TAU"]).reset_index(drop=True)
 
-    # filter out members with incomplete track data, exit if not enough are present (len(members) < clusterMembers)
-    # complete is defined as the member covering every REQUESTED forecast hour
+    return adeckData
+
+
+def getMemberCoverage(adeckData, fHours):
+    """
+    Determine whether each member is missing any fHours. Measurement only, no filtering.
+
+    Common args (adeckData, fHours): see glossary
+
+    dependencies: logging
+
+    returns: dict, member ID -> {'lastTau', 'missingTaus', 'complete'}
+        lastTau: int, highest TAU present for that member
+        missingTaus: list of int, requested hours absent for that member
+        complete: bool, True if the member covers every requested hour
+    """
     requestedTaus = set(fHours)
-    #DEBUG
-    print(adeckData[adeckData['member']!=0].tail())
     memberTaus = adeckData.groupby('member')['TAU'].apply(set)
-    incompleteMembers = memberTaus[
-        memberTaus.apply(lambda taus: not requestedTaus.issubset(taus))
-    ].index.tolist()
-    
-    if incompleteMembers:
-        logger.warning(f"Skipping {len(incompleteMembers)} member(s) missing one or more "
-              f"requested forecast hours {sorted(requestedTaus)}: {incompleteMembers}")
-        adeckData = adeckData[~adeckData['member'].isin(incompleteMembers)]
-        members = [m for m in members if m not in incompleteMembers]
-    else:
-        logger.info(f"All members cover the requested forecast hours {sorted(requestedTaus)}.")
 
-    if len(members) < clusterMembers:
-        logger.error(f"Only {len(members)} member(s) available after filtering, but clusterMembers={clusterMembers}. Skipping forecast hour.")
-        sys.exit(0)
+    coverage = {}
+    for member, taus in memberTaus.items():
+        missing = sorted(requestedTaus - taus)
+        coverage[member] = {
+            'lastTau': max(taus),
+            'missingTaus': missing,
+            'complete': not missing,
+        }
 
-    # calculate ensemble mean
+    logger.debug("getMemberCoverage() complete")
+    return coverage
+
+
+def appendEnsembleMean(adeckData, members):
+    """
+    Compute the per-TAU ensemble mean and append it as an additional member.
+
+    Common args (adeckData, members): see glossary
+
+    dependencies: pandas as pd, logging
+
+    returns: tuple (adeckData, members)
+        adeckData: input with mean rows concatenated
+        members: input list with the mean's ID appended last
+    """
+    meanMemberId = max(members) + 1
     meanData = adeckData.groupby('TAU').mean(numeric_only=True).reset_index()
     meanData['TECH'] = 'mean'
-    meanData['member'] = len(members)
+    meanData['member'] = meanMemberId
     adeckData = pd.concat([adeckData, meanData], ignore_index=True)
-    members = list(members) + [len(members)]
+    members = list(members) + [meanMemberId]
 
+    logger.debug("appendEnsembleMean() complete")
     return adeckData, members
 
 
@@ -310,9 +325,20 @@ def getClusterMems(clusterType, hourData, clusterMembers):
 
     returns: allClusterMems (see glossary), [0] is the low cluster and [1] is the high cluster
     """
+    nReal = len(hourData)
+    k = min(clusterMembers, nReal // 2)  # number of members per cluster, based on member count
+
+    if k < 1:
+        logger.warning(f"Only {nReal} member(s) available; cannot form clusters")
+        return [[], []]
+
+    if k < clusterMembers:
+        logger.info(f"Cluster size reduced to {k} (requested {clusterMembers}); "
+                    f"only {nReal} members available")
+
     allClusterMems = []
-    allClusterMems.append(hourData.nsmallest(clusterMembers, clusterType)["member"].tolist())
-    allClusterMems.append(hourData.nlargest(clusterMembers, clusterType)["member"].tolist())
+    allClusterMems.append(hourData.nsmallest(k, clusterType)["member"].tolist())
+    allClusterMems.append(hourData.nlargest(k, clusterType)["member"].tolist())
     logger.debug("getClusterMems() complete")
     return allClusterMems
 
@@ -2627,8 +2653,7 @@ def radius_is_plottable(hourData, radius):
         logger.debug(f"radius_is_plottable() complete, returning True")
         return True
 
-    # Exclude the appended ensemble mean (last member) from the member count
-    nMembers = max(len(hourData) - 1, 1)
+    nMembers = max(len(hourData), 1)
     nNonzero = int((hourData[f'R{radius}'] > 0).sum())
     ret_val = nNonzero >= (nMembers / 2)
     logger.debug(f"radius_is_plottable() complete, returning {ret_val}")
@@ -2840,6 +2865,7 @@ def main():
     else:
         members = nml.get("MEMBERS_2026")
     clusterMembers = int(nml.get('CLUSTER_MEMBERS', 4))  # number of members to include in each cluster
+    minMembers = 2  # minimum number of members to plot at all
 
     # nikhil's functions want "storm" to be in format AL132025, but sid is supposed to come in form "13l"
     if sid[2].lower() == 'l':
@@ -2889,24 +2915,64 @@ def main():
     #     UnplottedFilesList=[x.strip() for x in f.readlines()]
     UnplottedFilesList=read_unplotted_file_list(UnplottedFilePath)
 
+    # members requested in namelist (before filtering by modifyAdeckData)
+    requestedMembers = list(members)
 
     # Load ATCF data once for all forecast hours
-    adeckData, members = modifyAdeckData(members, idir, initDate, storm, clusterMembers, fHours)
-    
-    #flag whether the atcf has all required forecast hours for requested plots. NOTE MD 20260819
-    #Need to adjust how we check whether all expected members are present. For 2026, this will change per forecast hour, so need to think about it
-    #also, current "fnl_hr" check is only checking whether ANY members have the final hour, and we should really check whether ALL members have the final hour,
-    #but will leave that until after we decide how to check that lal members are present
+    adeckData = modifyAdeckData(members, idir, initDate, storm)
 
-    #MD 20260827 NEED LOGIC FOR DISSIPATION!
-    member_check = all([member in adeckData['member'] for member in members])
-    print(f'DEBUG - member check value: {member_check}')
-    #for dissipation - perhaps something like:
-    # if (fnl_hr in adeckData['TAU'] OR DISSIPATED==True) 
-    if (fnl_hr in adeckData['TAU']) and member_check:
-        ALL_DATA_PRESENT = True
-    else:
-        ALL_DATA_PRESENT = False
+    # split members into present in the ATCF data or missing
+    presentMembers = set(adeckData['member'].unique())
+    members = [m for m in requestedMembers if m in presentMembers]
+    missingMembers = [m for m in requestedMembers if m not in presentMembers]
+
+    # measure coverage, then sort short members into dissipated vs. still running.
+    # GRIB2 output keeps being written after the tracker loses the vortex, so a member
+    # whose final-hour GRIB exists has finished running and its short track is final.
+    memberCoverage = getMemberCoverage(adeckData, fHours)
+
+    terminatedMembers, pendingMembers = [], []
+    for member, cov in memberCoverage.items():
+        # member has all hours, nothing further needs to be done
+        if cov['complete']:
+            continue
+        gribPattern = os.path.join(idir, str(idate), f'{member:02}', f'*{fhrfmt % fnl_hr}*{ext}')
+
+        # member tracking ends early but grb2 runs to end (implies dissipation)
+        if glob.glob(gribPattern):
+            terminatedMembers.append(member)
+            logger.warning(f"Member {member} track ends at f{cov['lastTau']:03} but grb2 data "
+                           f"runs until end (implies dissipation, plotting available hours only)")
+        # grb2 ends early too, implying member data is missing
+        else:
+            pendingMembers.append(member)
+
+    # Drops members with missing data, to be tried again at the next run
+    if pendingMembers:
+        logger.warning(f"Dropping {len(pendingMembers)} member(s) with unfinished runs: "
+                       f"{pendingMembers}. Plots will be regenerated on a later run.")
+        adeckData = adeckData[~adeckData['member'].isin(pendingMembers)]
+        members = [m for m in members if m not in pendingMembers]
+
+    if missingMembers:
+        logger.warning(f"Requested members absent from ATCF data: {missingMembers}")
+
+    # more data is only expected if something is still running or hasn't been written
+    moreDataExpected = bool(missingMembers or pendingMembers)
+    ALL_DATA_PRESENT = not moreDataExpected
+    logger.debug(f"ALL_DATA_PRESENT={ALL_DATA_PRESENT}")
+
+    # Exit cleanly without plotting if we have less than 2 members (can't cluster)
+    if len(members) < minMembers:
+        if moreDataExpected:
+            logger.info(f"Only {len(members)} member(s) usable so far, need {minMembers}. "
+                        f"Run appears incomplete; exiting to retry on a later cycle.")
+            sys.exit(0)
+        logger.error(f"Only {len(members)} member(s) usable and no further data expected.")
+        sys.exit(1)
+
+    adeckData, members = appendEnsembleMean(adeckData, members)
+    meanMemberId = members[-1]
 
     # Storm name is constant across all hours
     name = uf.getStormName(storm, initDate)
@@ -2936,6 +3002,7 @@ def main():
         t_hour_start = time.perf_counter()
 
         hourData = getHourData(fHour, adeckData)
+        realHourData = hourData[hourData['member'] != meanMemberId]
 
         # Shared second title line for every plot this hour 
         titleLine = (f"{name} | Forecast Hour {fHour} | "
@@ -2951,13 +3018,13 @@ def main():
                     continue
 
                 # Skip if less than half the available members have nonzero rXX values, and remove from UnplottedFilesList
-                if not radius_is_plottable(hourData, _rad):
+                if not radius_is_plottable(realHourData, _rad):
                     logger.warning(f"fHour {fHour}: skipping R{_rad} wind-radii plot, too few members")
                     UnplottedFilesList.remove(current_windRad_filename)
                     continue
                 
                 t_step_start = time.perf_counter()
-                adeckRadiiData, radData = windRadiiData(hourData, _rad)
+                adeckRadiiData, radData = windRadiiData(realHourData, _rad)
                 plotWindRadii(adeckRadiiData, radData, ODIR_full, fHour, storm, 
                             _rad, initDate, adeckData, titleLine)
                 #if plot contains all requested forecast hours, remove the file from the unplotted files list and overwrite the file
@@ -2977,7 +3044,7 @@ def main():
                 continue
 
             if ensembleClustering or vortexAvgSteer:
-                allClusterMems = getClusterMems(clusterType, hourData, clusterMembers)
+                allClusterMems = getClusterMems(clusterType, realHourData, clusterMembers)
                 skipClustering = set(allClusterMems[0]) == set(allClusterMems[1])
                 if skipClustering:
                     #skip these clusters and remove from unplotted files list
@@ -3032,6 +3099,9 @@ def main():
                     timing_totals['ensembleTracksColored'] += t_elapsed
                     timing_counts['ensembleTracksColored'] += 1
 
+            clusterTitleLine = (f"{titleLine} | {len(allClusterMems[0])} members/cluster "
+                                f"of {len(realHourData)} available")
+
             if ensembleClustering and not skipClustering:
                 for bgVariable, bgLevel in bgFields:
                     current_track_clustering_filename = f'{sid.lower()}.{initDate}.{bgVariable}{bgLevel}.spatial_cluster.{clusterType}.f{fHour:03}.{figext2}'
@@ -3044,7 +3114,7 @@ def main():
                             clusterType, bgVariable, bgLevel, fHour, adeckData, sid, expt, allClusterMems, 
                             idir, initDate, hourData)
                         plotTrackClustering(atcfClusters, gribClusters, clusterAvgs, ODIR_full, allClusterMems, clusterType, 
-                                            clusterTypeDict, fHour, storm, bgLevel, bgVariable, cluster_radius(clusterType), initDate, titleLine)
+                                            clusterTypeDict, fHour, storm, bgLevel, bgVariable, cluster_radius(clusterType), initDate, clusterTitleLine)
                         #if plot contains all required forecast hours, remove it from unplotted files list
                         if ALL_DATA_PRESENT:
                             UnplottedFilesList.remove(current_track_clustering_filename)
@@ -3063,7 +3133,7 @@ def main():
                     clusterDicts = vortexAvgSteerData(fHour, idir, initDate, hourData, 
                                                     storm, sid, expt, adeckData, allClusterMems)
                     plotVortexAvgSteer(clusterDicts, ODIR_full, storm, initDate, clusterType, fHour, 
-                                    clusterTypeDict, cluster_radius(clusterType), titleLine)
+                                    clusterTypeDict, cluster_radius(clusterType), clusterTitleLine)
                     #plot does not depend on all required forecast hours, remove it from unplotted files list
                     UnplottedFilesList.remove(current_vortex_clustering_filename)
                     write_unplotted_file_list(UnplottedFilePath,UnplottedFilesList)
@@ -3084,7 +3154,7 @@ def main():
                 cycle = idate, 
                 fhr=int(fHour),
                 storm_id = storm[:4].upper(),
-                members_to_plot = [f'{x:02}' for x in members[:-1]],
+                members_to_plot = [f'{x:02}' for x in realHourData['member'].unique()],
                 show=False)
                 t_elapsed = time.perf_counter() - t_step_start
                 timing_totals['tiltPlots'] += t_elapsed
