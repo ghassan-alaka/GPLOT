@@ -1,0 +1,8 @@
+# Default batch information for RDHPCS Hera
+CPU_ACCT = aoml-hafs1
+QOS = batch
+PARTITION = u1-compute
+sbatch = /apps/slurm_hera/default/bin/sbatch
+squeue = /apps/slurm_hera/default/bin/squeue
+# Offline cartopy Natural Earth cache (exported as CARTOPY_DATA_DIR by batch_*.sh)
+cartopy_dir = /home/role.aoml-hafs1/.local/share/cartopy

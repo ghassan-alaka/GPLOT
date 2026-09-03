@@ -8,7 +8,6 @@ print('MSG: Found this GPLOT location --> '+GPLOT_DIR)
 #Import necessary modules
 print('MSG: Importing Everything Needed')
 from datetime import datetime
-from py3grads import Grads #This is how we'll get the data
 import numpy as np #Used for a lot of the calculations
 import metpy
 from metpy import interpolate
@@ -30,26 +29,53 @@ import matplotlib.ticker as mticker;
 import scipy #Used for interpolation to polar coordinates
 from scipy import interpolate #The interpolation function
 from matplotlib.ticker import ScalarFormatter #Used to change the log-y-axis ticks
-import sys #To change the path 
-#import modules.skewTmodelTCpolar as skewTmodelTCpolar
-#import modules.shearandrhplot as shearandrhplot
-#import modules.centroid as centroid
-#import modules.interp as interp
-import modules.io_extra as io
-#import modules.plotting as plotting
-#import modules.multiprocess as mproc
+import argparse
+import re
+import sys #To change the path
 import glob
 import math
 import cmath
-import subprocess
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+# GPLOT utility package (Sessions 1-7 infrastructure)
+from gplot_utils import namelist as nml_utils
+from gplot_utils import atcf as atcf_utils
+from gplot_utils import ensemble as ens_utils
+from gplot_utils import plot_utils
+from gplot_utils import grib_reader
+from gplot_utils import constants as gplot_const
+
+# COUNTIES / STATES are now loaded inside main() via
+# plot_utils.load_county_state_shapes(nml.get('CARTOPY_DIR')) so a single
+# CARTOPY_DIR namelist entry drives the path on every host. The legacy
+# module-scope try/except (with hardwired ``/home/role.aoml-hafs1/.local/share/cartopy``
+# vs ``/home/ahazelto/.local/share/cartopy`` fallback) was removed.
 
 
 def debug_dump_range(FHR,varnm,var):
   print(f'DEBUG: FHR {int(FHR)}: {varnm} in {np.nanmin(var)},{np.nanpercentile(var,25)},{np.nanmedian(var)},{np.nanpercentile(var,75)},{np.nanmax(var)}');
   pass;
 
+def add_center_label(ax1,centerlon,centerlat,minpressure):
+  ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='black',fontsize=28,fontweight='extra bold');
+  ax1.text(centerlon,centerlat,f'{minpressure}\n  L',color='red',fontsize=28);
+
 ##############################
+def _parse_args():
+  parser = argparse.ArgumentParser(description='GPLOT AirSea/PBL plotter')
+  parser.add_argument('--idate', required=True, help='Forecast init date YYYYMMDDHH')
+  parser.add_argument('--sid', required=True, help='Storm ID (e.g. 13L)')
+  parser.add_argument('--domain', required=True)
+  parser.add_argument('--tier', required=True)
+  parser.add_argument('--ensid', default='')
+  parser.add_argument('--force', default='')
+  parser.add_argument('--resolution', type=float, required=True)
+  parser.add_argument('--rmax', type=float, required=True)
+  parser.add_argument('--levs', type=int, required=True)
+  parser.add_argument('--master-nml', required=True, dest='master_nml')
+  return parser.parse_args()
+
+
 def main():
 
   # Log some important information
@@ -60,85 +86,56 @@ def main():
   print('MSG: The AirSea Module produces graphical products that focus on the air-sea interface')
   print('MSG: and related fields.')
 
-  #Define Pygrads interface
-  ga = Grads(verbose=False)
-  
-  #Get command lines arguments
-  if len(sys.argv) < 11:
-    print("ERROR: Expected 11 command line arguments. Got "+str(len(sys.argv)))
-    sys.exit()
-  IDATE = sys.argv[1]
-  if IDATE == 'MISSING':
-    IDATE = ''
-  SID = sys.argv[2]
-  if SID == 'MISSING':
-    SID = ''
-  DOMAIN = sys.argv[3]
-  if DOMAIN == 'MISSING':
-    DOMAIN = ''
-  TIER = sys.argv[4]
-  if TIER == 'MISSING':
-    TIER = ''
-  ENSID = sys.argv[5]
-  if ENSID == 'MISSING':
-    ENSID = ''
-  FORCE = sys.argv[6]
-  if FORCE == 'MISSING':
-    FORCE = ''
-  RESOLUTION = sys.argv[7]
-  if RESOLUTION == 'MISSING':
-    RESOLUTION = ''
-  RMAX = sys.argv[8]
-  if RMAX == 'MISSING':
-    RMAX = ''
-  LEVS = sys.argv[9]
-  if LEVS == 'MISSING':
-    LEVS = ''
-  NMLIST = sys.argv[10]
-  if NMLIST == 'MISSING':
-    print("ERROR: Master Namelist can't be MISSING.")
-    sys.exit()
-  NMLDIR = GPLOT_DIR+'/parm'
+  # Parse command-line args (argparse replaces the old sys.argv[1:11] block)
+  args = _parse_args()
+  IDATE      = args.idate      if args.idate != 'MISSING' else ''
+  SID        = args.sid        if args.sid   != 'MISSING' else ''
+  DOMAIN     = args.domain     if args.domain!= 'MISSING' else ''
+  TIER       = args.tier       if args.tier  != 'MISSING' else ''
+  ENSID      = ens_utils.normalize_ensid(args.ensid)
+  FORCE      = args.force      if args.force != 'MISSING' else ''
+  resolution = args.resolution
+  rmax       = args.rmax
+  zsize_pressure = args.levs
+
+  NMLDIR = GPLOT_DIR + '/parm'
+  NMLIST = args.master_nml
   if os.path.exists(NMLIST):
     MASTER_NML_IN = NMLIST
-  elif os.path.exists(GPLOT_DIR+'/parm/'+NMLIST):
-    MASTER_NML_IN = NML_DIR+'/'+NMLIST
+  elif os.path.exists(os.path.join(GPLOT_DIR, 'parm', NMLIST)):
+    MASTER_NML_IN = os.path.join(GPLOT_DIR, 'parm', NMLIST)
   else:
     print("ERROR: I couldn't find the Master Namelist.")
-    sys.exit()
-  PYTHONDIR = GPLOT_DIR+'/sorc/GPLOT/python'
-  
-  
-  # Read the master namelist
-  DSOURCE = subprocess.run(['grep','^DSOURCE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  EXPT = subprocess.run(['grep','^EXPT',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1]
-  ODIR = subprocess.run(['grep','^ODIR =',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
+    sys.exit(1)
+  PYTHONDIR = GPLOT_DIR + '/sorc/GPLOT/python'
+
+
+  # Read the master namelist via nml_utils (replaces subprocess.grep calls)
+  nml = nml_utils.read_master_namelist(MASTER_NML_IN)
+  plot_utils.configure_cartopy(nml.get('CARTOPY_DIR'))
+  COUNTIES, STATES = plot_utils.load_county_state_shapes(nml.get('CARTOPY_DIR'))
+  DSOURCE = (nml.get('DSOURCE') or 'HAFS').strip()
+  EXPT    = (nml.get('EXPT') or '').strip()
+  ODIR    = (nml.get('ODIR') or '').strip()
   BASEDIR = ODIR
   try:
-    ODIR_TYPE = int(subprocess.run(['grep','^ODIR_TYPE',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1])
-  except:
+    ODIR_TYPE = int(nml.get('ODIR_TYPE', 0) or 0)
+  except (TypeError, ValueError):
     ODIR_TYPE = 0
+  # Ensemble member sub-directory ('' for deterministic -> unchanged path).
+  ENS_SEG = ens_utils.member_segment(ENSID)
+  ENS_SUB = (ENS_SEG + '/') if ENS_SEG else ''
   if ODIR_TYPE == 1:
-    ODIR = ODIR+'/airsea/'
-    BASEDIR = BASEDIR+'/'
+    ODIR = ODIR + '/' + ENS_SUB + 'airsea/'
+    BASEDIR = BASEDIR + '/' + ENS_SUB
   else:
-    ODIR = ODIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/airsea/'
-    BASEDIR = BASEDIR+'/'+EXPT.strip()+'/'+IDATE.strip()+'/'
+    ODIR = ODIR + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB + 'airsea/'
+    BASEDIR = BASEDIR + '/' + EXPT + '/' + IDATE.strip() + '/' + ENS_SUB
 
-  figext = '.png'
-  try:
-    DO_CONVERTGIF = subprocess.run(['grep','^DO_CONVERTGIF',MASTER_NML_IN], stdout=subprocess.PIPE).stdout.decode('utf-8').split(" = ")[1].strip()
-    DO_CONVERTGIF = (DO_CONVERTGIF == 'True')
-    figext2 = '.gif'
-  except:
-    DO_CONVERTGIF = False
-    figext2 = '.png'
-  
-  # Create the temporary directory for GrADs files
-  TMPDIR = BASEDIR.strip()+'grads/'
-  if not os.path.exists(TMPDIR):
-    os.mkdir(TMPDIR)
-  
+  DO_CONVERTGIF = bool(nml.get('DO_CONVERTGIF', False))
+  figext  = '.png'
+  figext2 = '.gif' if DO_CONVERTGIF else '.png'
+
   # Define some important file names
   UNPLOTTED_FILE = ODIR.strip()+'UnplottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
   PLOTTED_FILE = ODIR.strip()+'PlottedFiles.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
@@ -146,14 +143,38 @@ def main():
   STATUS_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log'
   ST_LOCK_FILE = ODIR.strip()+'status.'+DOMAIN.strip()+'.'+TIER.strip()+'.'+SID.strip()+'.log.lock'
   ATCF_FILE = ODIR.strip()+'ATCF_FILES.dat'
-  
-  
-  #Get parameters from input file
-  resolution = float(RESOLUTION)
-  rmax = float(RMAX)
-  zsize_pressure = int(LEVS)
+
+
+  # Read the plot title from tbl/ExptInfo.dat using a Python regex loop
+  TBLDIR = GPLOT_DIR + '/tbl'
+  print(f'EXPT --> {EXPT}');
+  EXPT_TITLE = EXPT
+  tbl_path = os.path.join(TBLDIR, 'ExptInfo.dat')
+  if os.path.isfile(tbl_path):
+    pat = re.compile(r'^\s+' + re.escape(EXPT) + r'\s*,')
+    with open(tbl_path) as fh:
+      for line in fh:
+        if pat.match(line):
+          parts = line.split(',')
+          if len(parts) > 1:
+            EXPT_TITLE = parts[1].strip()
+          break
+  print(f'EXPT_TITLE --> {EXPT_TITLE}');
   
   # Get the ATCF file.
+  # Standalone-run safety net: the spawn normally writes ATCF_FILES.dat; if it
+  # is missing/empty (e.g. airsea run by hand), resolve the ATCF directly from
+  # the namelist ATCF dirs (flat glob + bounded recursive walk) and write it so
+  # the read below is unchanged. No-op whenever ATCF_FILES.dat already exists.
+  if not os.path.isfile(ATCF_FILE) or os.path.getsize(ATCF_FILE) == 0:
+    _adirs = [nml.get('ATCF2_DIR', '') or '', nml.get('ATCF1_DIR', '') or '']
+    _atags = [nml.get('ATCF2_TAG', '') or '', nml.get('ATCF1_TAG', '') or '']
+    _found = atcf_utils.resolve_atcf_fallback(_adirs, SID, IDATE, tags=_atags)
+    if _found:
+      print(f'WARNING: ATCF_FILES.dat missing/empty; resolved ATCF from '
+            f'namelist dirs --> {_found}')
+      with open(ATCF_FILE, 'w') as _fh:
+        _fh.write(_found + '\n')
   ATCF_LIST = np.genfromtxt(ODIR+'ATCF_FILES.dat',dtype='str')
   if ATCF_LIST.size > 1:
     print('Found multiple ATCFs')
@@ -161,20 +182,49 @@ def main():
   else:
     ATCF = ATCF_LIST
   print('MSG: Found this ATCF --> '+str(ATCF))
-  LONGSID = str(ATCF).split('/')[-1].split('.')[0]
-  #print('MSG: Running with this long Storm ID --> '+LONGSID.strip())
-  TCNAME = LONGSID[::-1]
-  TCNAME = TCNAME[3:]
-  TCNAME = TCNAME[::-1]
-  SNUM = LONGSID[::-1]
-  SNUM = SNUM[1:3]
-  SNUM = SNUM[::-1]
-  BASINID = LONGSID[::-1]
-  BASINID = BASINID[0]
-  ATCF_DATA = np.atleast_2d(np.genfromtxt(str(ATCF),delimiter=',',dtype='str',autostrip='true'))
-  ATCF_DATA = ATCF_DATA[list([i for i, s in enumerate(ATCF_DATA[:,11]) if '34' in s][:]),:]
-  
-  
+
+  # Parse ATCF into DataFrame (replaces manual genfromtxt + string reversal).
+  # read_atcf() already filters to the 34-kt wind-radii rows, matching the
+  # legacy ATCF_DATA[:,11]=='34' filter.
+  atcf_df = atcf_utils.read_atcf(str(ATCF))
+
+  # Ensemble member ATCFs are 00L-named multi-storm; keep only this storm.
+  if ENSID and SID:
+    atcf_df = ens_utils.filter_atcf_df(atcf_df, SID[-1], SID[:-1])
+
+  # LONGSID priority: ATCF filename's name+sid prefix (legacy NCL
+  # convention) -> B-deck column-28 storm_name -> A-deck storm_name
+  # -> bare SID. B-deck path is built from SID + IDATE year when
+  # BDECK_DIR is configured.
+  bdeck_df_for_name = None
+  _BDECK_DIR = (nml.get('BDECK_DIR') or '').strip()
+  if _BDECK_DIR:
+    _basin1 = SID[-1].lower() if SID else ''
+    _basin_map = {'l': 'al', 'e': 'ep', 'c': 'cp', 'w': 'wp',
+                  's': 'sh', 'p': 'sh', 'a': 'io', 'b': 'io'}
+    _basin2 = _basin_map.get(_basin1, '')
+    _snum = SID[:2] if SID else ''
+    _year = IDATE[:4] if IDATE else ''
+    _bdeck_path = os.path.join(_BDECK_DIR, f'b{_basin2}{_snum}{_year}.dat')
+    if os.path.isfile(_bdeck_path):
+      try:
+        bdeck_df_for_name = atcf_utils.read_bdeck(_bdeck_path)
+      except Exception as _e:
+        print(f'WARNING: could not read B-deck {_bdeck_path}: {_e}')
+  # Pass both b-deck and a-deck so derive_longsid can fall through
+  # to the operational a-deck's per-cycle storm_name when the
+  # b-deck has no row at IDATE (e.g., retrospective at pre-genesis).
+  LONGSID = atcf_utils.derive_longsid(str(ATCF), SID,
+                                      bdeck_df_for_name,
+                                      idate=IDATE,
+                                      adeck_df=atcf_df,
+                                      ensid=ENSID)
+  TCNAME  = LONGSID[:-3].upper()
+  SNUM    = LONGSID[-3:-1]
+  BASINID = LONGSID[-1]
+  print(f'MSG: Running with this long Storm ID --> {LONGSID}')
+
+
   # Get the list of unplotted files
   UNPLOTTED_LIST = np.array( np.genfromtxt(UNPLOTTED_FILE,dtype='str') )
   
@@ -184,59 +234,45 @@ def main():
     FHR_LIST = np.append(FHR_LIST,"999")
     UNPLOTTED_LIST = np.append(UNPLOTTED_LIST,"MISSING")
   
-  # Define executables
-  X_G2CTL = GPLOT_DIR+'/sorc/GPLOT/grads/g2ctl.pl'
-  
   for (FILE,fff) in zip(UNPLOTTED_LIST,np.array(range(UNPLOTTED_LIST.size))):
-  
+
     if (FILE == 'MISSING'):  continue
-  
+
     print('MSG: Working on this file --> '+str(FILE)+'  '+str(fff))
-  
+
     os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
     os.system('echo "working" > '+STATUS_FILE)
     os.system('rm -f '+ST_LOCK_FILE)
-  
+
     # Get some useful information about the file name
     FILE_BASE = os.path.basename(FILE)
     FILE_DIR = os.path.dirname(FILE)
-  
-    # Find the index of the forecast lead time in the ATCF file.
+
+    # Find this forecast hour in the ATCF DataFrame (replaces manual
+    # genfromtxt + column-5 linear scan + string-reverse lat/lon parsing).
     FHR = int(FHR_LIST[fff])
-    FHRIND = [i for i, s in enumerate(ATCF_DATA[:,5]) if int(s)==FHR]
-  
-    # Get coordinate information from ATCF
-    lonstr = ATCF_DATA[list(FHRIND),7][0]
-    print('lonstr = ',lonstr)
-    lonstr1 = lonstr[::-1]
-    lonstr1 = lonstr1[1:]
-    lonstr1 = lonstr1[::-1]
-    lonstr2 = lonstr[::-1]
-    lonstr2 = lonstr2[0]
-    if (lonstr2 == 'W'):
-      centerlon = 360-float(lonstr1)/10
-    else:
-      centerlon = float(lonstr1)/10
-    latstr = ATCF_DATA[list(FHRIND),6][0]
-    latstr1 = latstr[::-1]
-    latstr1 = latstr1[1:]
-    latstr1 = latstr1[::-1]
-    latstr2 = latstr[::-1]
-    latstr2 = latstr2[0]
-    if (latstr2 == 'N'):
-      centerlat = float(latstr1)/10
-    else:
-      centerlat = -1*float(latstr1)/10
-    forecastinit = ATCF_DATA[list(FHRIND),2][0]
-    maxwind = ATCF_DATA[list(FHRIND),8][0]
-    minpressure = ATCF_DATA[list(FHRIND),9][0]
-    rmwnmi = ATCF_DATA[list(FHRIND),19][0]
+    row_mask = atcf_df['fhr'] == FHR
+    if not row_mask.any():
+      print(f'WARNING: fhr={FHR} not present in ATCF. Skipping.')
+      plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
+      continue
+    row = atcf_df[row_mask].iloc[0]
+
+    centerlon = float(row['lon'])
+    if centerlon < 0:
+      centerlon = centerlon + 360
+    centerlat = float(row['lat'])
+    print(f'centerlon, centerlat = {centerlon}, {centerlat}')
+    forecastinit = str(row['cycle'])
+    maxwind      = str(int(row['vmax']))
+    minpressure  = str(int(row['mslp']))
+    rmwnmi       = str(int(row['rmw']))
 
     # HACK: This should be revisited.
     #if centerlat > 50.0:
     #  print('WARNING: The latitude is poleward of +/- 50. Skipping.')
     #  # Write the input file to a log to mark that it has ben processed
-    #  io.update_plottedfile(PLOTTED_FILE, FILE)
+    #  plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
     #  continue
 
     # Search for matching graphics that have already been produced for this particular file/lead time.
@@ -247,194 +283,178 @@ def main():
       print(f'MSG: Please delete all {figext2} files for this lead time to reproduce graphics. Skipping.')
 
       # Write the input file to a log to mark that it has ben processed
-      io.update_plottedfile(PLOTTED_FILE, FILE)
+      plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
       continue
 
     print(f'MSG: I can\'t find the graphical products for this lead time (figuretest={figuretest}). Proceeding.')
-    #print('h = ',list(FHRIND))
-  
+
     # Check that the data file 'FILE' exists
-    gribfiletest = os.system(f'ls {FILE} >/dev/null')
-    if gribfiletest > 0:
+    if not os.path.exists(FILE):
       print(f'MSG: The input file does not exist. Nothing to do. Skipping.')
       continue
 
-    # Create the GrADs control file, if it hasn't already been created.
-    CTL_FILE = TMPDIR+FILE_BASE+'.ctl'
-    IDX_FILE = TMPDIR+FILE_BASE+'.2.idx'
-    LOCK_FILE = TMPDIR+FILE_BASE+'.lock'
-    while os.path.exists(LOCK_FILE):
-      print('MSG: '+TMPDIR+FILE_BASE+' is locked. Sleeping for 5 seconds.')
-      time.sleep(5)
-      LOCK_TEST = os.popen('find '+LOCK_FILE+' -mmin +3 2>/dev/null').read()
-      if LOCK_TEST:  os.system('rm -f '+LOCK_FILE)
-
-    if not os.path.exists(CTL_FILE) or os.stat(CTL_FILE).st_size == 0:
-      print('MSG: GrADs control file not found. Creating it now.')
-      os.system('lockfile -r-1 -l 180 '+LOCK_FILE)
-      command = X_G2CTL+' '+FILE+' '+IDX_FILE+' > '+CTL_FILE
-      os.system(command)
-      command2 = 'gribmap -i '+CTL_FILE+' -big'
-      os.system(command2)
-      os.system('rm -f '+LOCK_FILE)
-
-    while not os.path.exists(IDX_FILE):
-      print('MSG: GrADs index file not found. Sleeping for 5 seconds.')
-      time.sleep(5)
-    
-    # Open GrADs data file
-    print('MSG: GrADs control and index files should be available.')
-    ga('open '+CTL_FILE)
-    env = ga.env()
-
-    #Define how big of a box you want, based on lat distance
+    # Determine the lat/lon bounding box that contains the requested rmax.
+    # This is identical to the legacy py3grads "set lat/lon" walk, but is
+    # now applied as a grib_reader subset rather than a GrADS clip.
     yoffset = 6
     xoffset = None
     NL = yoffset-1
     while not xoffset:
       if NL > 25:
-        print(f'ERROR: YOU NEED A BIGGER BOX THAN {NL} DEGREES. rmax={rmax}, test={test}, centerlat={centerlat}')
+        print(f'ERROR: YOU NEED A BIGGER BOX THAN {NL} DEGREES. rmax={rmax}, centerlat={centerlat}')
         sys.exit(1)
       NL = NL+1
       test = np.cos((abs(centerlat)+yoffset)*3.14159/180)*111.1*NL
       if test > rmax:  xoffset,yoffset = NL,NL
     print(f'MSG: Will use a box with side of {NL} degrees.')
 
-    # Setup lat, lon boundaries
-    ga('set z 1')
-    lonmax = centerlon + xoffset
     lonmin = centerlon - xoffset
-    ga(f'set lon {lonmin} {lonmax}')
-    latmax = centerlat + yoffset
+    lonmax = centerlon + xoffset
     latmin = centerlat - yoffset
-    ga(f'set lat {latmin} {latmax}')
+    latmax = centerlat + yoffset
+    # grib_reader bounds: (lat_n, lat_s, lon_w, lon_e)
+    bounds = (latmax, latmin, lonmin, lonmax)
 
-    # Fix to integer boundaries to prevent mismatching array shapes
-    env = ga.env()
-    ga(f'set x {env.xi[0]} {env.xi[1]}')
-    ga(f'set y {env.yi[0]} {env.yi[1]}')
-
-    # Read lat & lon
-    lon = ga.exp('lon')[0,:]
-    lat = ga.exp('lat')[:,0]
-    if np.any(lon[1:] < lon[:-1]):   do_reshape = True
-    elif np.any(lat[1:] < lat[:-1]): do_reshape = True
-    else:                            do_reshape = False
-    if do_reshape:
-      lon2d, lat2d = ga.exp('lon'), ga.exp('lat')
-      shape = np.shape(lon2d)
-      lon = lon2d.reshape((shape[1], shape[0]))[0,:]
-      lat = lat2d.reshape((shape[1], shape[0]))[:,0]
-    #print(lat.shape, lon.shape)
-
-    # Get pressure levels
-    ga(f'set z 1 {zsize_pressure}')
-    levs = ga.exp('lev')
-    z = np.zeros((zsize_pressure))*np.nan
-    for i in range(zsize_pressure):  z[i] = levs[1,1,i]
-
-    #Get data
-    print(f'MSG: Getting Data Now. Using an xoffset of {xoffset} degrees')
+    # Open GRIB2 file via xarray+cfgrib (replaces g2ctl.pl + gribmap + ga('open')).
+    print('MSG: Getting data now via xarray+cfgrib.')
     start = time.perf_counter()
-    uwind = ga.exp('ugrdprs')
-    vwind = ga.exp('vgrdprs')
-    omega = ga.exp('vvelprs')
-    print('MSG: Done With u,v,w')
-    dbz = ga.exp('refdprs')
-    hgt = ga.exp('hgtprs')
-    temp = ga.exp('tmpprs')
-    sst = ga.exp('wtmpsfc')
-    if ( len(sst.squeeze().shape) > 2 ):
-      print('WARNING: SST had three dimensions!');
-      sst = sst[...,0].squeeze()
-    else:
-      sst = sst.squeeze()
-    print('MSG: Done with dbz, hgt, temp, sst')
-    q = ga.exp('spfhprs')
-    rh = ga.exp('rhprs')
-    print('MSG: Done with q, rh')
-    lhtflx = ga.exp('lhtflsfc')[...,0]
-    shtflx = ga.exp('shtflsfc')[...,0]
-    dlwflx = ga.exp('dlwrfavesfc')[...,0]
-    ulwflx = ga.exp('ulwrfavesfc')[...,0]
-    dswflx = ga.exp('dswrfavesfc')[...,0]
-    uswflx = ga.exp('uswrfavesfc')[...,0]
-    print('MSG: Done with [ls]htflx, [du][sl]wrfavesfc')
-    
-    #Get 2-d Data
-    ga('set z 1')
-    u10 = ga.exp('ugrd10m')
-    v10 = ga.exp('vgrd10m')
+    try:
+      datasets = grib_reader.open_grib2(FILE)
+    except Exception as exc:
+      print(f'ERROR: Could not open GRIB2 file {FILE}: {exc}')
+      continue
+
+    # Helper: request a 3D pressure-level field, return (ny, nx, nz) array.
+    # grib_reader returns (lev, lat, lon); transpose to match the legacy
+    # axis order expected by downstream slicing (e.g. ws[:,:,6]).
+    def _fetch3d(var):
+      r = grib_reader.get_var_3d(datasets, DSOURCE, var, 1.0, 1100.0,
+                                 bounds=bounds)
+      if r is None:
+        raise RuntimeError(f'3D variable {var} missing from {FILE}')
+      return (np.transpose(np.asarray(r['data']), (1, 2, 0)),
+              np.asarray(r['lat']),
+              np.asarray(r['lon']),
+              np.asarray(r['lev']))
+
+    def _fetch2d(var, level=''):
+      r = grib_reader.get_var_2d(datasets, DSOURCE, var, level=level,
+                                 bounds=bounds)
+      if r is None:
+        raise RuntimeError(f'2D variable {var} (level={level}) missing from {FILE}')
+      return np.asarray(r['data']).squeeze()
+
+    # --- 3D pressure-level fields -------------------------------------------------
+    # grib_reader auto-converts wind from m/s to knots; the airsea script
+    # expects m/s for density/gust/metpy calculations, so convert back.
+    uwind_kt, lat, lon, lev1d = _fetch3d('U')
+    vwind_kt, _, _, _         = _fetch3d('V')
+    uwind = uwind_kt * gplot_const.kts2ms
+    vwind = vwind_kt * gplot_const.kts2ms
+
+    # Normalize centerlon to match the convention of the lon array returned
+    # by grib_reader. centerlon was wrapped to 0..360 above (for the
+    # rectangular bounds calculation), but HAFS GRIB2 lon arrays come back
+    # in -180..180 form. The mismatch silently corrupts ``lon_sr =
+    # lon - centerlon`` and pushes ``add_center_label`` text out by ~360°,
+    # which inflates the saved bbox to a 19:1 aspect ratio on every
+    # non-cartopy figure.
+    if float(lon.max()) <= 180.0 and centerlon > 180.0:
+      centerlon = centerlon - 360.0
+    elif float(lon.min()) >= 0.0 and centerlon < 0.0:
+      centerlon = centerlon + 360.0
+    print(f'MSG: centerlon normalized to lon convention: centerlon={centerlon:.4f}, '
+          f'lon range=[{float(lon.min()):.4f}, {float(lon.max()):.4f}]')
+
+    omega,    _, _, _ = _fetch3d('OMEGA')    # Pa/s (no unit conversion)
+    dbz,      _, _, _ = _fetch3d('REFL')
+    # HGT is auto-converted m -> dam by grib_reader; restore meters
+    hgt_dam,  _, _, _ = _fetch3d('HGT')
+    hgt = hgt_dam * 10.0
+    temp,     _, _, _ = _fetch3d('T')        # K
+    q,        _, _, _ = _fetch3d('Q')        # kg/kg
+    rh,       _, _, _ = _fetch3d('RH')       # %
+
+    # Truncate to zsize_pressure levels (legacy "set z 1 {zsize_pressure}").
+    ny, nx, nz = uwind.shape
+    if nz > zsize_pressure:
+      uwind = uwind[:, :, :zsize_pressure]
+      vwind = vwind[:, :, :zsize_pressure]
+      omega = omega[:, :, :zsize_pressure]
+      dbz   = dbz[:, :, :zsize_pressure]
+      hgt   = hgt[:, :, :zsize_pressure]
+      temp  = temp[:, :, :zsize_pressure]
+      q     = q[:, :, :zsize_pressure]
+      rh    = rh[:, :, :zsize_pressure]
+      lev1d = lev1d[:zsize_pressure]
+      nz = zsize_pressure
+    z = np.asarray(lev1d, dtype=float)
+    # Broadcast pressure levels to full 3D for use in np.where((550<=levs)&...).
+    levs = np.broadcast_to(z[np.newaxis, np.newaxis, :], (ny, nx, nz)).copy()
+
+    # --- 2D surface fields --------------------------------------------------------
+    sst = _fetch2d('SST')
+    # Guard against SST occasionally returning a 3D array (legacy 'wtmpsfc' hack)
+    if sst.ndim > 2:
+      print('WARNING: SST had three dimensions!')
+      sst = sst[..., 0].squeeze()
+
+    lhtflx = _fetch2d('LHFLX')
+    shtflx = _fetch2d('SHFLX')
+    dlwflx = _fetch2d('DLWRF')
+    ulwflx = _fetch2d('ULWRF')
+    dswflx = _fetch2d('DSWRF')
+    uswflx = _fetch2d('USWRF')
+    print('MSG: Done with [ls]htflx, [du][sl]wrf')
+
+    # 10-m wind -- grib_reader returns kt; convert back to m/s for downstream use
+    u10 = _fetch2d('U', level='10') * gplot_const.kts2ms
+    v10 = _fetch2d('V', level='10') * gplot_const.kts2ms
+
+    # MSLP: grib_reader converts Pa -> hPa automatically.
     if DSOURCE == 'HAFS':
-      mslp = ga.exp('msletmsl')
+      mslp = _fetch2d('MSLP')
     else:
-      mslp = ga.exp('prmslmsl')
-    tmp2m = ga.exp('tmp2m')
-    q2m = ga.exp('spfh2m')
-    rh2m = ga.exp('rh2m')
+      mslp = _fetch2d('PRMSL')
+
+    tmp2m = _fetch2d('T',  level='2')
+    q2m   = _fetch2d('Q',  level='2')
+    rh2m  = _fetch2d('RH', level='2')
     print('MSG: Done with u10,v10,mslp,tmp2m,q2m')
+
+    # Dead-code density diagnostics (kept for parity with legacy script).
     mixr2m = q2m/(1-q2m)
     temp_v_2m = tmp2m*(1+0.61*mixr2m)
-    rho2m = mslp/(287*temp_v_2m)
+    # rho2m uses MSLP in Pa; grib_reader returned hPa, so rescale.
+    rho2m = (mslp*100.0)/(gplot_const.R_d*temp_v_2m)
+
+    # Friction velocity
+    ustar = _fetch2d('FRICV')
     print(f'MSG: Done with surface vars (e.g., u10,v10) {datetime.now()}')
-    
-    #Get u850, v850, u200, v200 for Shear Calculation
-    ga('set lev 850')
-    u850 = ga.exp('ugrdprs')
-    v850 = ga.exp('vgrdprs')
-    z850 = ga.exp('hgtprs')
-    ga('set lev 200')
-    u200 = ga.exp('ugrdprs')
-    v200 = ga.exp('vgrdprs')
-    z200 = ga.exp('hgtprs')
-    ga('set z 1')
 
-    if do_reshape:
-      shape = uwind.shape
-      levs = levs.reshape(shape[1], shape[0], shape[2])
-      uwind = uwind.reshape(shape[1], shape[0], shape[2])
-      vwind = vwind.reshape(shape[1], shape[0], shape[2])
-      omega = omega.reshape(shape[1], shape[0], shape[2])
-      dbz = dbz.reshape(shape[1], shape[0], shape[2])
-      hgt = hgt.reshape(shape[1], shape[0], shape[2])
-      temp = temp.reshape(shape[1], shape[0], shape[2])
-      sst = sst.reshape(shape[1], shape[0])
-      q = q.reshape(shape[1], shape[0], shape[2])
-      rh = rh.reshape(shape[1], shape[0], shape[2])
-      lhtflx = lhtflx.reshape(shape[1], shape[0])
-      shtflx = shtflx.reshape(shape[1], shape[0])
-      dlwflx = dlwflx.reshape(shape[1], shape[0])
-      ulwflx = ulwflx.reshape(shape[1], shape[0])
-      dswflx = dswflx.reshape(shape[1], shape[0])
-      uswflx = uswflx.reshape(shape[1], shape[0])
-      mslp = mslp.reshape(shape[1], shape[0])
-      u10 = u10.reshape(shape[1], shape[0])
-      v10 = v10.reshape(shape[1], shape[0])
-      tmp2m = tmp2m.reshape(shape[1], shape[0])
-      q2m = q2m.reshape(shape[1], shape[0])
-      rh2m = rh2m.reshape(shape[1], shape[0])
-      u850 = u850.reshape(shape[1], shape[0])
-      v850 = v850.reshape(shape[1], shape[0])
-      z850 = z850.reshape(shape[1], shape[0])
-      u200 = u200.reshape(shape[1], shape[0])
-      v200 = v200.reshape(shape[1], shape[0])
-      z200 = z200.reshape(shape[1], shape[0])
+    # 850/200 hPa single-level fields for shear diagnostics
+    u850 = _fetch2d('U',   level='850') * gplot_const.kts2ms
+    v850 = _fetch2d('V',   level='850') * gplot_const.kts2ms
+    z850 = _fetch2d('HGT', level='850') * 10.0   # dam -> m
+    u200 = _fetch2d('U',   level='200') * gplot_const.kts2ms
+    v200 = _fetch2d('V',   level='200') * gplot_const.kts2ms
+    z200 = _fetch2d('HGT', level='200') * 10.0
 
-    # Compute additional 2D data
-    mixr2m = q2m/(1-q2m)
-    temp_v_2m = tmp2m*(1+0.61*mixr2m)
-    rho2m = mslp/(287*temp_v_2m)
+    # Close datasets now that all data is materialised into NumPy arrays.
+    for _ds in datasets:
+      try:
+        _ds.close()
+      except Exception:
+        pass
 
     finish = time.perf_counter()
     print(f'MSG: Total time to read data: {finish-start:.2f} second(s)')
-    
-    #Get W from Omega
-    #w = -omega/(rho*g)
-    #rho = p/(Rd*Tv)
+
+    # Get W from Omega (rho = p / (Rd * Tv); pressures must be in Pa).
     mixr = q/(1-q)
     temp_v = temp*(1+0.61*mixr)
-    rho = (levs*1e2)/(287*temp_v)
-    wwind = -omega/(rho*9.81)
+    rho = (levs*1e2)/(gplot_const.R_d*temp_v)
+    wwind = -omega/(rho*gplot_const.g)
     
     #Get storm-centered data
     lon_sr = lon-centerlon
@@ -463,17 +483,26 @@ def main():
     
     #Make Plots
     print(f'MSG: Doing Plots Now {datetime.now()}')
-    if os.path.exists(f'{NMLDIR}/namelist.airsea.structure.{EXPT}'):
-      namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.airsea.pbl.{EXPT}',delimiter=',',dtype='str')
-    else:
-      namelist_structure_vars = np.genfromtxt(f'{NMLDIR}/namelist.airsea.pbl',delimiter=',',dtype='str')
-    do_turb_flux = namelist_structure_vars[0,1]
-    do_total_flux = namelist_structure_vars[1,1]
-    do_theta_e_550 = namelist_structure_vars[2,1]
-    do_theta_e_700 = namelist_structure_vars[3,1]
-    do_theta_e_850 = namelist_structure_vars[4,1]
-    do_delta_t = namelist_structure_vars[5,1]
-    do_delta_q = namelist_structure_vars[6,1]
+    # Module namelist read via nml_utils (replaces raw np.genfromtxt CSV).
+    # read_airsea_namelist returns {flag: bool}; translate back to 'Y'/'N'
+    # strings so the existing plot guards keep working.
+    _nml_candidates = [
+      f'{NMLDIR}/namelist.airsea.pbl.{EXPT}',
+      f'{NMLDIR}/namelist.airsea.pbl',
+    ]
+    _nml_path = next((p for p in _nml_candidates if os.path.isfile(p)),
+                     _nml_candidates[-1])
+    _airsea_flags = nml_utils.read_airsea_namelist(_nml_path)
+    def _yn(key):
+      return 'Y' if _airsea_flags.get(key, False) else 'N'
+    do_turb_flux   = _yn('do_turb_flux')
+    do_total_flux  = _yn('do_total_flux')
+    do_theta_e_550 = _yn('do_theta_e_550')
+    do_theta_e_700 = _yn('do_theta_e_700')
+    do_theta_e_850 = _yn('do_theta_e_850')
+    do_delta_t     = _yn('do_delta_t')
+    do_delta_q     = _yn('do_delta_q')
+    do_gusts       = _yn('do_gusts')
     
     #Load the colormaps needed
     color_data_vt = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
@@ -487,6 +516,14 @@ def main():
     levs_th = np.linspace(350,380,31,endpoint=True)
     norm_th = colors.BoundaryNorm(levs_th,256)
     
+    color_data_wind = np.genfromtxt(GPLOT_DIR+'/sorc/GPLOT/python/colormaps/colormap_wind.txt')
+    colormap_wind = matplotlib.colors.ListedColormap(color_data_wind)
+    levs_wind = np.linspace(0,140,71)
+    norm_wind = colors.BoundaryNorm(levs_wind,256)
+
+    levs_gf = np.linspace(1,2,21)
+    norm_gf = colors.BoundaryNorm(levs_gf,256)
+
     #turb_flux_levs = np.linspace(-50,1350,15,endpoint=True)
     turb_flux_levs = np.arange(-400,1400+1e-6,50.0);  turb_flux_ticks = np.arange(-400,1400+1e-6,100.0)
     total_flux_levs = np.arange(-500,2000+1e-6,50.0);  total_flux_ticks = np.arange(-500,2000+1e-6,100.0);
@@ -494,31 +531,81 @@ def main():
     theta_e_700_levs = np.arange(330,380+1e-6,2.0);    theta_e_700_ticks = np.arange(330,380+1e-6,5.0)
     theta_e_850_levs = np.arange(330,380+1e-6,2.0);    theta_e_850_ticks = np.arange(330,380+1e-6,5.0)
     delta_t_levs = np.arange(-6,12+1e-6,0.2);          delta_t_ticks = np.arange(-6,12+1e-6,0.5)
-    #delta_q_levs = np.arange(0.5,2.5+1e-6,0.05);       delta_q_ticks = np.arange(0.5,2.5+1e-6,0.1)
-    delta_q_levs = np.arange(1.05,1.20+1e-6,0.002);    delta_q_ticks = np.arange(1.05,1.20+1e-6,0.01)
-    
+    # Air-sea specific-humidity contrast, plotted in g/kg.  Typical
+    # tropical sat-minus-2m values land 3-8 g/kg; 0..15 g/kg covers
+    # the cold/dry and warm/moist ends comfortably.
+    delta_q_levs  = np.arange(0.0, 15.0+1e-6, 0.5)
+    delta_q_ticks = np.arange(0.0, 15.0+1e-6, 2.0)
+
     DELTA_T = sst - temp[...,0].squeeze();
-    # DPT=SST at sfc
-    sfcq = mpcalc.specific_humidity_from_dewpoint((sst+273.15)*metpy.units.units.K,\
-                                                  mslp.squeeze()*metpy.units.units.hPa)
-    DELTA_Q = sfcq.squeeze() - q[...,0].squeeze();
-    DPT = mpcalc.dewpoint_from_specific_humidity(q*metpy.units.units("kg/kg"),\
+    # DPT=SST at sfc.  sfcq is a saturation specific humidity at SST
+    # (kg/kg) returned by metpy as a pint.Quantity; the contrast is
+    # against the 2-m specific humidity field (q2m) that was read
+    # directly above -- NOT q[...,0], whose level ordering is not
+    # guaranteed and which was rendering DELTA_Q as all-NaN (hence
+    # the blank/white plot).  Strip units and rescale to g/kg so the
+    # plot levels + title units match.
+    sfcq = mpcalc.specific_humidity_from_dewpoint(mslp.squeeze()*metpy.units.units.hPa,\
+                                                  (sst+273.15)*metpy.units.units.K)
+    sfcq_arr = np.asarray(getattr(sfcq, 'magnitude', sfcq)).squeeze()
+    DELTA_Q  = (sfcq_arr - q2m) * 1000.0
+    DPT = mpcalc.dewpoint_from_specific_humidity(levs*metpy.units.units.hPa,\
                                                  temp*metpy.units.units.K,\
-                                                 levs*metpy.units.units.hPa)
+                                                 q*metpy.units.units("kg/kg"))
     THETA_E = mpcalc.equivalent_potential_temperature(levs*metpy.units.units.hPa,\
-                                                      temp*metpy.units.units.K,DPT);
+                                                      temp*metpy.units.units.K,\
+                                                      DPT);
     
     if ( np.all(np.isnan(THETA_E)) ):
-      print(f'WARNING: THETA_E ALL NaNs in {CTL_FILE}: Skipping this forecast hour')
-      ga('close 1')
-      io.update_plottedfile(PLOTTED_FILE, FILE)
+      print(f'WARNING: THETA_E ALL NaNs in {FILE}: Skipping this forecast hour')
+      plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
       continue
-      
+
     
+    #Calculate Wind Gusts
+    wind10=np.squeeze(np.hypot(u10,v10))
+    ws=np.hypot(uwind,vwind)
+    ws850=np.squeeze(ws[:,:,6])
+    ws950=np.squeeze(ws[:,:,2])
+    wsd=ws850-ws950;
+    wsd[wsd < 0] = 0
+
+    #Calculate Default Gust Factor 
+    gust1_old=7.71*ustar
+
+    ws1_old=wind10
+    wstt1_old=ws1_old+gust1_old
+    gf1_old=wstt1_old/ws1_old
+
+    gust2_old=0.6*wsd;
+
+    wstt2_old=(wstt1_old+gust2_old)
+    gf2_old=wstt2_old/ws1_old
+
+    #Now Calculate a New Gust Factor 
+    gust1_new=3*ustar
+
+    ws1_new=wind10
+    wstt1_new=ws1_new+gust1_new
+    gf1_new=wstt1_new/ws1_new
+
+    gust2_new=0.3*wsd;
+
+    wstt2_new=(wstt1_new+gust2_new)
+    gf2_new=wstt2_new/ws1_new
+
+
     # Streamplots require equally spaced x and y
-    xi = np.linspace(lon.min(),lon.max(),lon.shape[0]);
-    yi = np.linspace(lat.min(),lat.max(),lat.shape[0]);
-    
+    print(float(lon.min()),float(lon.max()),lon.shape[0])
+    xi = np.linspace(float(lon.min()),float(lon.max()),lon.shape[0]);
+    yi = np.linspace(float(lat.min()),float(lat.max()),lat.shape[0]);
+
+    # Plot extent for the non-cartopy figures: clip to the data bounds so
+    # any stray artist (text, runaway streamplot trajectory, future
+    # annotation) cannot stretch the saved bbox.
+    plot_xlim = (float(lon.min()), float(lon.max()))
+    plot_ylim = (float(lat.min()), float(lat.max()))
+
     figsize = (24,24);
     fontsize = 24
     small_fontsize = 24
@@ -535,14 +622,13 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=turb_flux_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Enthalpy Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.turb_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Total net heat flux (turbulent+radiative) at the sea surface
     if do_total_flux == 'Y':
       total_flux = lhtflx + shtflx - dlwflx + ulwflx - dswflx + uswflx;
@@ -553,14 +639,13 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=total_flux_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,u10,v10,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Sfc. Ht. Fluxes ($W\ m^{-2}$, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.total_flux.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Equivalent potential temperature from 550 to 700 hPa
     if do_theta_e_550 == 'Y':
       THETA_E_550 = np.nanmean(np.where((550<=levs) & (levs<700), THETA_E, np.nan),axis=2);
@@ -573,14 +658,13 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=theta_e_550_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_550,vwind_550,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'550 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_550.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Equivalent potential temperature from 700 to 850 hPa
     if do_theta_e_700 == 'Y':
       THETA_E_700 = np.nanmean(np.where((700<=levs) & (levs<850), THETA_E, np.nan),axis=2);
@@ -593,14 +677,13 @@ def main():
       #cbar1 = plt.colorbar(co1, ticks=np.linspace(350,380,7,endpoint=True))
       cbar1 = plt.colorbar(co1, ticks=theta_e_700_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_700,vwind_700,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'700 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_700.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Equivalent potential temperature below 850 hPa
     if do_theta_e_850 == 'Y':
       THETA_E_850 = np.nanmean(np.where((850<=levs), THETA_E, np.nan),axis=2);
@@ -617,14 +700,13 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=theta_e_850_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'850 hPa Equiv. Pot. Temp. (K, Shading), Wind ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.theta_e_850.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Air-sea temperature contrast
     if do_delta_t == 'Y':
       print('DELTA_T', np.nanmin(DELTA_T), np.nanmean(DELTA_T), np.nanmax(DELTA_T), int(maxwind));
@@ -634,14 +716,13 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_t_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Temp. Contrast (K, Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_t.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
     # FIGURE: Air-sea specific humidity contrast
     if do_delta_q == 'Y':
       print('DELTA_Q', np.nanmin(DELTA_Q), np.nanmean(DELTA_Q), np.nanmax(DELTA_Q), int(maxwind));
@@ -652,26 +733,136 @@ def main():
       # ax1 = axes_radhgt(ax1, rmax, 0)
       cbar1 = plt.colorbar(co1, ticks=delta_q_ticks)
       cbar1.ax.tick_params(labelsize=fontsize) #labelsize=24
+      add_center_label(ax1,centerlon,centerlat,minpressure);
       Axes.streamplot(ax1,xi,yi,uwind_850,vwind_850,color='gray',density=0.5);
-      ax1.set_title(EXPT.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (Shading), U$_{10m}$ ($m\ s^{-1}$, Strmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+      ax1.set_title(EXPT_TITLE.strip()+'\n'+ r'Air-Sea Sp. Hum. Contrast (g/kg, Shading), U$_{10m}$ ($m\ s^{-1}$, Stmlns.)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
       ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+      ax1.set_xlim(plot_xlim); ax1.set_ylim(plot_ylim)
       figfname = ODIR+'/'+LONGSID.lower()+'.delta_q.'+forecastinit+'.airsea.f'+format(FHR,'03d')
-      fig1.savefig(figfname+figext, bbox_inches='tight', dpi='figure')
-      if ( DO_CONVERTGIF ):
-        os.system(f"convert {figfname}{figext} +repage gif:{figfname}.gif && /bin/rm {figfname}{figext}")
-      plt.close(fig1)
+      plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
 
 
-    # Close the GrADs control file
-    ga('close 1')
+    # FIGURE: Wind Gusts
+    if do_gusts == 'Y':
+        # Cartopy's default PlateCarree expects longitudes in [-180,180].
+        # HAFS data sometimes comes in [0,360], in which case Atlantic
+        # storms (centerlon ~250-300) fall outside cartopy's native
+        # domain and the gridliner silently drops every x-line. Force
+        # the cartopy-facing coordinates to [-180,180]; latitude is
+        # already fine. Defensive: works whether source lon is in
+        # [-180,180] or [0,360].
+        _to180 = lambda x: ((np.asarray(x) + 180.0) % 360.0) - 180.0
+        lon_c  = _to180(lon)
+        clon_c = float(_to180(centerlon))
+        #Make 6x6 plot of Wind Gusts
+        lonplotmin = clon_c-3
+        lonplotmax = clon_c+3
+        latplotmin = centerlat-3
+        latplotmax = centerlat+3
+        lonplot = np.arange(int(round(lonplotmin,0))-1,int(round(lonplotmax,0))+1,1)
+        latplot = np.arange(int(round(latplotmin,0))-1,int(round(latplotmax,0))+1,1)
+
+        fig1 = plt.figure(figsize=(15.5,15.5))
+        ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+        ax1.set_extent([lonplotmin,lonplotmax,latplotmin,latplotmax], crs=ccrs.PlateCarree())
+        plt.contourf(lon_c, lat, wstt2_new*1.94, levs_wind, cmap=colormap_wind, norm=norm_wind, extend='both', transform=ccrs.PlateCarree())
+        ax1.set_title(EXPT_TITLE.strip()+'\n'+ 'Gusts (kt)'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+        ax1.add_feature(cfeature.COASTLINE.with_scale('50m'), zorder=10)
+        ax1.add_feature(STATES, facecolor='none', edgecolor='black', zorder=10)
+        ax1.add_feature(COUNTIES, facecolor='none', edgecolor='gray')
+        #coast = cfeature.GSHHSFeature(scale='f')
+        #ax1.add_feature(coast)
+        gl = ax1.gridlines(crs=ccrs.PlateCarree(), linewidth=2, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+        gl.x_inline = False
+        gl.y_inline = False
+        gl.rotate_labels = True
+        gl.xlabels_top = False
+        gl.xlabels_bottom = True
+        gl.ylabels_left = True
+        gl.ylabels_right = False
+        gl.xlines = True
+        gl.ylines = True
+        gl.xlocator = mticker.FixedLocator(lonplot)
+        gl.ylocator = mticker.FixedLocator(latplot)
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        gl.xlabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        gl.ylabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        divider = make_axes_locatable(ax1)
+        cax = divider.append_axes("right", size="5%", pad=1.0, axes_class=plt.Axes)
+        cbar = plt.colorbar(ticks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140],cax=cax)
+        cbar.ax.tick_params(labelsize=24)
+        figfname = ODIR+'/'+LONGSID.lower()+'.gusts_6degreebox.'+forecastinit+'.airsea.f'+format(FHR,'03d')
+        plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
+
+        #Make 6x6 plot of 10-m Wind With GF Overlaid
+        # Normalize longitudes for cartopy (same rationale as the
+        # gusts block above). lon_c / clon_c are already defined
+        # under the do_gusts guard, but redefine here so this block
+        # stays self-contained if the first ever gets moved.
+        _to180 = lambda x: ((np.asarray(x) + 180.0) % 360.0) - 180.0
+        lon_c  = _to180(lon)
+        clon_c = float(_to180(centerlon))
+        lonplotmin = clon_c-3
+        lonplotmax = clon_c+3
+        latplotmin = centerlat-3
+        latplotmax = centerlat+3
+        lonplot = np.arange(int(round(lonplotmin,0))-1,int(round(lonplotmax,0))+1,1)
+        latplot = np.arange(int(round(latplotmin,0))-1,int(round(latplotmax,0))+1,1)
+        fig1 = plt.figure(figsize=(15.5,15.5))
+        ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+        ax1.set_extent([lonplotmin,lonplotmax,latplotmin,latplotmax], crs=ccrs.PlateCarree())
+        plt.contourf(lon_c, lat, gf2_new, levs_gf, cmap='Reds', norm=norm_gf, extend='both', transform=ccrs.PlateCarree())
+        cbar = plt.colorbar(ticks=[1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0],shrink=0.8)
+        cbar.ax.tick_params(labelsize=24)
+        # CS=plt.contour(lon, lat, ws1_new*1.94, [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150], colors='xkcd:black',linewidths=4,linestyles='solid',zorder=11)
+        # plt.clabel(CS, inline=True, fmt='%3i', fontsize=16)
+        # Lew.Gramer@noaa.gov 2024-07-19 change suggested by role.aoml-hafs1@noaa.gov based on comment from Lev Looney
+        #plt.barbs(lon2d[::10,::10],lat2d[::10,::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94)
+        plt.barbs(lon_c[::10],lat[::10],u10[::10,::10]*1.94,v10[::10,::10]*1.94,transform=ccrs.PlateCarree())
+        ax1.set_title(EXPT_TITLE.strip()+'\n'+ '10-m Wind (kt) and Gust Factor'+'\n'+'Init: '+forecastinit+' Forecast Hour:[{:03d}]'.format(FHR),fontsize=small_fontsize, weight = 'bold',loc='left') #fontsize=24
+        ax1.set_title('VMAX= '+maxwind+' kt'+'\n'+'PMIN= '+minpressure+' hPa'+'\n'+LONGSID.upper(),fontsize=fontsize,color='brown',loc='right') #fontsize=24
+        ax1.add_feature(cfeature.COASTLINE.with_scale('50m'), zorder=10)
+        ax1.add_feature(STATES, facecolor='none', edgecolor='gray', zorder=10)
+        ax1.add_feature(COUNTIES, facecolor='none', edgecolor='gray')
+        #coast = cfeature.GSHHSFeature(scale='f')
+        #ax1.add_feature(coast)
+        gl = ax1.gridlines(crs=ccrs.PlateCarree(), linewidth=2, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+        gl.x_inline = False
+        gl.y_inline = False
+        gl.rotate_labels = True
+        gl.xlabels_top = False
+        gl.xlabels_bottom = True
+        gl.ylabels_left = True
+        gl.ylabels_right = False
+        gl.xlines = True
+        gl.ylines = True
+        gl.xlocator = mticker.FixedLocator(lonplot)
+        gl.ylocator = mticker.FixedLocator(latplot)
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        gl.xlabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        gl.ylabel_style = {'size': 12, 'color': 'black', 'weight': 'bold'}
+        figfname = ODIR+'/'+LONGSID.lower()+'.wind10m_and_gf_6degreebox.'+forecastinit+'.airsea.f'+format(FHR,'03d')
+        plot_utils.save_figure(fig1, figfname, do_trim=False, do_gif=DO_CONVERTGIF)
+
+
+    # Write the input file to a log to mark that it has been processed
+    plot_utils.update_plotted_file(PLOTTED_FILE, FILE)
   
-    
-    # Write the input file to a log to mark that it has ben processed
-    io.update_plottedfile(PLOTTED_FILE, FILE)
-  
+  # Retry-convert any orphan .png left behind by transient ImageMagick
+  # failures. If the retry also fails, write status='incomplete' so
+  # the workflow re-invokes us next iteration.
+  _sweep = plot_utils.sweep_orphan_pngs(ODIR)
+  _status_value = 'incomplete' if _sweep.get('still_failed', 0) > 0 else 'complete'
+  if _status_value == 'incomplete':
+      print(f"WARNING: airsea: {_sweep['still_failed']} PNG(s) still "
+            f"unconverted after sweep; writing status='incomplete'.")
+
   print('MSG: COMPLETING')
   os.system('lockfile -r-1 -l 180 '+ST_LOCK_FILE)
-  os.system('echo "complete" > '+STATUS_FILE)
+  os.system('echo "'+_status_value+'" > '+STATUS_FILE)
   os.system('rm -f '+ST_LOCK_FILE)
 
 

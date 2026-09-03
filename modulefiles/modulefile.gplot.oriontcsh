@@ -30,26 +30,22 @@ limit core 0
 
 # Load modules
 module purge
-#module use /apps/modulefiles/core
-#module use /apps/contrib/modulefiles
-#module use /apps/contrib/NCEPLIBS/lib/modulefiles
-#module use /apps/contrib/NCEPLIBS/orion/modulefiles
-module load intel/2020.2
-module load wgrib/2.0.8
 if ( "${A}" == "0" ) then
-    module load contrib/0.1
-    module load intelpython3/2020.2
-    module load contrib met/10.1.0
+    module use /apps/contrib/modulefiles
+    module load intel-oneapi-compilers/2022.2.1
+    module load met/11.1.0
+    module load pyncl/6.6.2
+    module load imagemagick
+else if ( "${A}" == "1" ) then
+    module use /apps/spack-managed/modulefiles/linux-rocky9-x86_64/Core
+    module load grads/2.2.3
+    module load wgrib2/3.1.1
+    module load imagemagick
 endif
-module load ncl/6.6.2
-module load grads/2.2.1
-
-# NCL
-setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/ncl/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
 
 # Python 3 Anaconda
 if ( "${A}" == "1" ) then
-    setenv PYDIR "/work/noaa/aoml-hafs1/galaka/anaconda3"
+    setenv PYDIR "/work2/noaa/aoml-hafs1/role-aoml-hafs1/software_orion/miniconda3/"
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
     if ( -f "${PYDIR}/etc/profile.d/conda.csh" ) then
@@ -58,20 +54,12 @@ if ( "${A}" == "1" ) then
         setenv PATH "${PYDIR}/bin:$PATH"
     endif
     # <<< conda initialize <<<
-    conda activate GPLOT
-    #conda activate base
-    setenv PYTHONBUFFERED 1
+    setenv CONDA_SHLVL 0
+    conda activate GPLOT_env
 endif
 
-setenv ECCODES_DIR "/work/noaa/aoml-hafs1/galaka/software/eccodes/latest"
-set path = (${ECCODES_DIR}/bin ${path})
-if (! $?LD_LIBRARY_PATH) then
-    setenv LD_LIBRARY_PATH "${ECCODES_DIR}/lib64:${ECCODES_DIR}/lib"
-else
-      setenv LD_LIBRARY_PATH "${ECCODES_DIR}/lib64:${ECCODES_DIR}/lib:${LD_LIBRARY_PATH}"
-endif
-if (! $?CPATH) then
-    setenv CPATH "${ECCODES_DIR}/include"
-else
-    setenv CPATH "${ECCODES_DIR}/include:${CPATH}"
+# NCL
+if ( "${A}" == "0" ) then
+    setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/python/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+    echo "TEST NCARG_COLORMAPS" $NCARG_COLORMAPS
 endif

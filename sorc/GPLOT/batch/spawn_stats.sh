@@ -1,22 +1,22 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
 
 #set -x
 
-echo "MSG: spawn_polar.sh started at `date`"
+echo "MSG: spawn_stats.sh started at `date`"
 echo "MSG: Submitting jobs for GPLOT Module 'STATS'."
 
 # Determine the GPLOT source code directory
@@ -27,7 +27,7 @@ fi
 # Define important GPLOT directories
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -62,6 +62,7 @@ FHRFMT="`sed -n -e 's/^FMT_HR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 DT="`sed -n -e 's/^DT =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 IDATE="`sed -n -e 's/^IDATE =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 SID="`sed -n -e 's/^SID =\s//p' ${NMLIST} | sed 's/^\t*//'`"
+STATS_ATCF_ONLY="`sed -n -e 's/^STATS_ATCF_ONLY =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 BDECK_DIR="`sed -n -e 's/^BDECK_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 ATCF1_DIR="`sed -n -e 's/^ATCF1_DIR =\s//p' ${NMLIST} | sed 's/^\t*//'`"
 ATCF1_TAG="`sed -n -e 's/^ATCF1_TAG =\s//p' ${NMLIST} | sed 's/^\t*//'`"
@@ -115,11 +116,11 @@ if [ -z "${MACHINE}" ]; then
 fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
-        CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ] || [ "${MACHINE}" == "HERCULES" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -131,13 +132,17 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
+    elif [ "${MACHINE^^}" == "HERCULES" ]; then
+        PARTITION="hercules"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     fi
 fi
 
@@ -156,9 +161,40 @@ if [ -z "${FORCE}" ]; then
 fi
 
 
+# Determine whether this experiment is an ensemble and build the list of
+# member ids (ENSIDS). Mirrors the detection in the other spawn_*.sh scripts.
+# Deterministic runs (ENSMEM=0 or empty) get ENSIDS=("XX"); the stats
+# submission loop below then runs exactly once with an empty member tag, so
+# deterministic output is byte-for-byte identical to before this change.
+EID=( `sed -n -e 's/^EID =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+if [ -z "${EID[*]}" ]; then
+    EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
+fi
+echo "MSG: Found these ensemble members --> ${EID[*]}"
+# NOTE (from support/HAFS): "00" is now a valid member id; only a bare "0" or
+# an empty list marks a deterministic run.
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
+    IS_ENS="False"
+    ENSIDS=( "XX" )
+elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
+    IS_ENS="True"
+    E1=$(echo "${EID[0]}" | cut -d'-' -f1)
+    E2=$(echo "${EID[0]}" | cut -d'-' -f2)
+    ENSIDS=( `seq -f "%02g" ${E1} ${E2}` )
+else
+    IS_ENS="True"
+    ENSIDS=( `printf "%02d\n" ${EID[*]}` )
+fi
+echo "MSG: IS_ENS=${IS_ENS}; member ids --> ${ENSIDS[*]}"
+
+
 # Set the maximum number of job submissions
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+if [ "${IS_ENS}" == "True" ]; then
+    MAX_JOBS=525
+else
+    MAX_JOBS=25
+fi
 
 # Get the batch submission mode [SBATCH,BACKGROUND,FOREGROUND]
 BATCH_MODE="`sed -n -e 's/^BATCH_MODE =\s//p' ${NMLIST} | sed 's/^\t*//' | tr a-z A-Z`"
@@ -203,12 +239,23 @@ DATE_NOW="`date +'%Y%m%d%H'`"
 
 # Get all of the ATCF files so they can be searched later.
 # If duplicates exist, keep the final ATCF version (ATCF2).
-ATCF_TMP=()
-if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
-    ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+# Storm token used in the ATCF filename glob. Ensemble member ATCF files are
+# 00L-named (one per member, under per-member subdirs), so the deterministic
+# SID glob (e.g. *13l*) would miss them entirely. For ensembles search on
+# "00l" instead -- find recurses, so this sweeps every member's ATCF; the
+# per-member ENSID loop below then selects the right member by /CYCLE/ENSID
+# path. Deterministic / multistorm runs keep the SID glob (unchanged).
+if [ "${IS_ENS}" == "True" ]; then
+    ATCFSID="00l"
+else
+    ATCFSID="${SID,,}"
 fi
-ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
-ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${SID,,}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+ATCF_TMP=()
+ATCF_TMP+=( `find ${ATCF1_DIR} -type f -name "*${ATCFSID}*${IDATE}*${ATCF1_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+if [ "${ATCF1_DIR}" != "${ATCF2_DIR}" ] || [ "${ATCF1_TAG}" != "${ATCF2_TAG}" ]; then
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${ATCFSID}*${IDATE}*${ATCF2_TAG}" | awk -F'/' '{print $NF $0}' | sort -t. -k2,2nr | cut -d'/' -f2- | awk '{a="/"$0; print a}' | head -200` )
+    ATCF_TMP+=( `find ${ATCF2_DIR} -type f -name "*${ATCFSID}*${IDATE}*${ATCF2_TAG}" | shuf | head -100` ) #| awk -F'/' '{print $NF $0}' | sort -t. -k2,2n | cut -d'/' -f2- | awk '{a="/"$0; print a}'` )
+fi
 ATCF_ALL=()
 for ATCF in "${ATCF_TMP[@]}"; do
     ATCF_BASE="`basename ${ATCF} | cut -d'.' -f-2`"
@@ -245,7 +292,7 @@ fi
 #    & intensity guidance/verification.            #
 ####################################################
 if [ "${DO_STATS}" = "True" ]; then
-    NCLFILE="GPLOT_stats.ncl"
+    PYFILE="GPLOT_stats.py"
     BATCHFILE="batch_stats.sh"
 
     # Set the counter to limit submission to 50 jobs
@@ -293,6 +340,18 @@ if [ "${DO_STATS}" = "True" ]; then
             echo "WARNING: To process it, please add the storm ID to the ATCF file name."
             echo "WARNING: Skipping this ATCF because storm ID not found."
             continue
+        fi
+
+        # Ensemble member ATCFs are 00L-named, so the filename parse above yields
+        # STORM=00L. Use the namelist SID as the real storm instead, so the
+        # status file, B-deck path, and job name all key off the same storm the
+        # per-member Python job uses (it keys off SID). Without this the spawn
+        # would write status.00l.log while Python writes status.<sid>.log and the
+        # workflow's completion check would never converge. Deterministic /
+        # multistorm runs (IS_ENS=False) keep the filename-derived storm.
+        if [ "${IS_ENS}" == "True" ] && [ ! -z "${SID}" ]; then
+            STORM="${SID^^}"
+            SIDLONG="${SID,,}"
         fi
 
         # Parse important information from $STORM and $CYCLE
@@ -361,6 +420,71 @@ if [ "${DO_STATS}" = "True" ]; then
             continue
         fi
 
+        # Gate: skip this case if no GRIB2 input files exist anywhere
+        # under IDIR for this cycle/storm. Historically stats was the
+        # only module that would still queue jobs purely from ATCFs
+        # even when no model output existed -- which fills real-time
+        # queues with guidance-only jobs for cycles whose model data
+        # hasn't been retained on disk. Mirror the IDIR_OPTS gating
+        # that maps/polar/ships/airsea apply: no GRIB2 => no job.
+        IDIR_OPTS=("" "${EXPT}/com/${CYCLE}/${STORM}/" "${EXPT}/com/${CYCLE}/" \
+                   "${EXPT}/com/" "${EXPT}/" "${CYCLE}/${STORM}/" "${CYCLE}/" \
+                   "${STORM}/" "${EXPT}/${CYCLE}/${STORM}/" "${EXPT}/${CYCLE}/" \
+                   "com/${CYCLE}/${STORM}/" "com/${CYCLE}/" \
+                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/" \
+                   "${YYYY}${MM}${DD}/${HH}/" \
+                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/atmos/" \
+                   "${DSOURCE,,}.${YYYY}${MM}${DD}/${HH}/products/atmos/grib2/0p25/")
+        EXT_CHK="${EXT:-.grb2}"
+        INPUT_FOUND="False"
+        # Guidance-only experiments (track files but no gridded model
+        # output on disk, e.g. GFTC) opt out of the no-GRIB2 gate
+        # explicitly via the namelist; ordinary experiments keep the
+        # queue-flood protection this gate provides.
+        if [ "${STATS_ATCF_ONLY^^}" == "TRUE" ]; then
+            echo "MSG: STATS_ATCF_ONLY=True; bypassing the GRIB2 input gate for ${STORM} ${CYCLE} (guidance from ATCFs alone)."
+            INPUT_FOUND="True"
+        fi
+        for IO in "${IDIR_OPTS[@]}"; do
+            IDIR_FULL_CHK="$(echo "${IDIR}/${IO}" | sed s#//*#/#g)"
+            [ -d "${IDIR_FULL_CHK}" ] || continue
+            if compgen -G "${IDIR_FULL_CHK}*${CYCLE}*${EXT_CHK}" > /dev/null \
+               || compgen -G "${IDIR_FULL_CHK}*${STORM,,}*${CYCLE}*${EXT_CHK}" > /dev/null; then
+                INPUT_FOUND="True"
+                break
+            fi
+        done
+        if [ "${INPUT_FOUND}" == "False" ]; then
+            echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
+            echo "WARNING: Skipping stats for this case; check that model output exists for this cycle."
+            # Mark the case as 'incomplete' so the workflow's status check
+            # (find -name 'status.*') sees a non-complete entry and keeps
+            # retrying. Only fill the gap if no status file exists yet --
+            # never overwrite an active or terminal state. ODIR_FULL hasn't
+            # been computed yet at this gate, so mirror the assignment from
+            # below so the status lands at the same path the rest of the
+            # script would have used.
+            if [ "${ODIR_TYPE}" == "1" ]; then
+                ODIR_FULL_NOINPUT="${ODIR}/guidance/"
+            else
+                ODIR_FULL_NOINPUT="${ODIR}${EXPT}/${CYCLE}/guidance/"
+            fi
+            ODIR_FULL_NOINPUT="$(echo "${ODIR_FULL_NOINPUT}" | sed s#//*#/#g)"
+            mkdir -p "${ODIR_FULL_NOINPUT}"
+            STATUS_FILE_NOINPUT="${ODIR_FULL_NOINPUT}status.${SIDLONG}.log"
+            LOCK_FILE_NOINPUT="${STATUS_FILE_NOINPUT}.lock"
+            lockfile -r-1 -l 180 "${LOCK_FILE_NOINPUT}"
+            EXISTING_STATUS=$(cat "${STATUS_FILE_NOINPUT}" 2>/dev/null)
+            if [ -z "${EXISTING_STATUS}" ]; then
+                echo "MSG: No prior status; writing 'incomplete' so the workflow knows this case is outstanding."
+                echo "incomplete" > "${STATUS_FILE_NOINPUT}"
+            else
+                echo "MSG: Status exists (${EXISTING_STATUS}); leaving it alone."
+            fi
+            rm -f "${LOCK_FILE_NOINPUT}"
+            continue
+        fi
+
         # OK, checks have been passed so let's process this file.
         echo ""
         echo "************************"
@@ -368,12 +492,48 @@ if [ "${DO_STATS}" = "True" ]; then
         echo "MSG: CYCLE = ${CYCLE}, DATE_NOW = ${DATE_NOW}, DATE_CUT = ${DATE_CUT}"
 
 
-        # Create full output path.
-        # Make the directory in case it doesn't already exist.
-        if [ "${ODIR_TYPE}" == "1" ]; then
-            ODIR_FULL="${ODIR}/guidance/"
+        ##########################
+        # LOOP OVER ENSEMBLE IDS #
+        ##########################
+        # Deterministic runs iterate exactly once with ENSID="XX" /
+        # ENSID_DIR="" so everything below is identical to the pre-ensemble
+        # behavior. Members get a per-member output subdir + their own ATCF.
+        # The body is intentionally not re-indented (bash ignores it) to keep
+        # this a minimal, reviewable diff.
+        for ID in ${ENSIDS[@]}; do
+
+        # Set the 2-digit member id + path tag.
+        if [ "${IS_ENS}" == "False" ]; then
+            ENSID="XX"
+            ENSIDTAG=""
         else
-            ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/guidance/"
+            # %02s (string) not %02d so member ids "08"/"09" don't parse as
+            # invalid octal. No "E" prefix.
+            ENSID=$(printf "%02s\n" "${ID}")
+            ENSIDTAG=".${ENSID}"
+        fi
+        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
+
+        # For ensembles, narrow the ATCF to this member's per-member path
+        # .../${CYCLE}/${ENSID}. The real storm id stays whatever was parsed
+        # from the namelist SID; member ATCF files are 00L-named.
+        if [ "${IS_ENS}" == "True" ]; then
+            for ATCF_M in "${ATCF_TMP[@]}"; do
+                if [[ "${ATCF_M}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                    ATCF="${ATCF_M}"
+                    break
+                fi
+            done
+        fi
+
+        # Create full output path.
+        # Make the directory in case it doesn't already exist. ENSID_DIR is
+        # empty for deterministic runs, so the sed below collapses the double
+        # slash and the path is unchanged from before.
+        if [ "${ODIR_TYPE}" == "1" ]; then
+            ODIR_FULL="${ODIR}/${ENSID_DIR}/guidance/"
+        else
+            ODIR_FULL="${ODIR}${EXPT}/${CYCLE}/${ENSID_DIR}/guidance/"
         fi
         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
         echo "MSG: Output directory --> ${ODIR_FULL}"
@@ -395,17 +555,22 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # If the current date is more recent than the date for the final lead time (DATE_CUT)
         # do NOT force production.
-        if [ "${DATE_CUT}" -ge "${DATE_NOW}" ] && [ "${CASE_STATUS}" == "complete" ]; then
-            echo "MSG: The cutoff date (${DATE_CUT}) is more recent than the current date (${DATE_NOW}). Forcing delayed production."
-            FORCE="Delay"
+        if [ "${ODIR_TYPE}" == "0" ]; then
+            if [ "${DATE_CUT}" -ge "${DATE_NOW}" ] && [ "${CASE_STATUS}" == "complete" ]; then
+                echo "MSG: The cutoff date (${DATE_CUT}) is more recent than the current date (${DATE_NOW}). Forcing delayed production."
+                FORCE="Delay"
+            else
+                echo "MSG: The current date (${DATE_NOW}) is more recent than the cutoff date (${DATE_CUT}). Not forcing production yet."
+                FORCE="False"
+            fi
         else
-            echo "MSG: The current date (${DATE_NOW}) is more recent than the cutoff date (${DATE_CUT}). Not forcing production yet."
+            echo "MSG: Not forcing production within model workflow (ODIR_TYPE=1). FYI, cutoff date=${DATE_CUT}, current date=${DATE_NOW}"
             FORCE="False"
         fi
 
 
         # If the ATCF is new enough, force production.
-        test=$(find ${ATCF} -mmin -60 2>/dev/null)
+        test=$(find ${ATCF} -mmin -30 2>/dev/null)
         if [[ -n ${test} ]]; then
             echo "MSG: This ATCF is not old enough. Forcing production."
             FORCE="True"
@@ -415,7 +580,7 @@ if [ "${DO_STATS}" = "True" ]; then
         # If the BDECK is new enough, force production.
         if [ -f "${BDECK}" ]; then
             echo "MSG: Found this B-Deck --> ${BDECK}"
-            test=$(find ${BDECK} -mmin -60 2>/dev/null)
+            test=$(find ${BDECK} -mmin -30 2>/dev/null)
             if [[ -n ${test} ]]; then
                 echo "MSG: This BDECK is not old enough. Forcing production."
                 FORCE="True"
@@ -518,7 +683,7 @@ if [ "${DO_STATS}" = "True" ]; then
 
         # Check if a similar job is already submitted
         echo "MSG: The batch file --> ${BATCH_DIR}${BATCHFILE}"
-        RUNTIME="00:29:59"
+        RUNTIME="02:29:59"
         JOBNAME="GPLOT.${EXPT}.${CYCLE}.stats.${STORM}.${MCODE}"
         if [ "${BATCH_MODE^^}" == "SBATCH" ]; then
             JOB_TEST=`${X_SQUEUE} -u $USER -o %.100j | /bin/grep "${JOBNAME}"`
@@ -534,8 +699,8 @@ if [ "${DO_STATS}" = "True" ]; then
 
             # Call the batch job
             echo "MSG: Executing GPLOT batch job submission. BATCH_MODE ${BATCH_MODE}"			
-            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST}"
-            FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE}"
+            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST}"
+            FULL_CMD="${FULL_CMD} ${CYCLE} ${STORM} ${FORCE} ${ENSID}"
             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                 echo "MSG: Executing this command [${FULL_CMD}]."
                 ${FULL_CMD}
@@ -553,14 +718,18 @@ if [ "${DO_STATS}" = "True" ]; then
             # If the job was submitted, then increase the counter.
             N=$((N+1))
 
-            # Limit the number of jobs to now overwhelm the batch scheduler
+            # Limit the number of jobs to now overwhelm the batch scheduler.
+            # break 2: exit BOTH the member (ID) loop and the ATCF loop, matching
+            # the pre-ensemble behavior where this break stopped the ATCF loop.
             if [[ N -ge MAX_JOBS ]]; then
                 echo "WARNING: Maximum number of jobs reached (${MAX_JOBS})."
-                break
+                break 2
             fi
         else
             echo "MSG: Found matching GPLOT batch job. Skipping submission."
         fi
+
+        done #end of ID (ensemble member) loop
 
 
     done

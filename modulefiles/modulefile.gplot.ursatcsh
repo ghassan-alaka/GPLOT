@@ -1,0 +1,87 @@
+#!/bin/csh
+
+# MODULEFILE for URSA (tcsh)
+
+# Read the first arg
+setenv A "${1}"
+if ( "${A}" == "" ) then
+    setenv A "0"
+endif
+
+# Determine the GPLOT source code directory
+if (! $?GPLOT_DIR) then
+    set called=($_)
+    set GPLOT_FILE = `readlink -f $called[2]`
+    set GPLOT_DIR = `dirname "${GPLOT_FILE}" | rev | cut -d'/' -f2- | rev`
+    setenv GPLOT_DIR "${GPLOT_DIR}"
+endif
+
+# Initialize 'module' command
+eval module help >& /dev/null
+if ( $status == 1 ) then
+    source /apps/lmod/lmod/init/csh
+endif
+if (! $?MODULEPATH) then
+    setenv MODULEPATH "/apps/lmod/lmod/modulefiles/Core:/apps/modules/modulefiles"
+endif
+
+# Turn off core dump files
+limit core 0
+
+# Load modules
+module purge
+if ( "${A}" == "0" ) then
+    module use /scratch3/AOML/aoml-hafs1/Andrew.Hazelton/hafsv2p1_final/HAFS/sorc/hafs_graphics.fd/emc_graphics/modulefiles
+    module load graphics.run.ursa
+    module load met/11.1.1
+    #module load ncl/6.6.2
+    #setenv NCARG_ROOT /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/miniconda3/envs/pyncl/ 
+    module use /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/modulefiles
+    module load pyncl
+    module load python_pyncl
+    module load imagemagick/7.1.1-29
+else if ( "${A}" == "1" ) then
+    module load wgrib2/3.1.3_wmo
+    module load grads/2.2.3
+    #Load Python
+    module use /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/modulefiles
+    module load python_GPLOT_env
+    module load imagemagick/7.1.1-29
+endif
+
+# Python 3 Anaconda
+if ( "${A}" == "0" ) then
+    setenv PYDIR "/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/miniconda3/"
+    # Python 3 Anaconda
+    # >>> conda initialize >>>
+    # !! Contents within this block are managed by 'conda init' !!
+    if ( -f "${PYDIR}/etc/profile.d/conda.csh" ) then
+    source "${PYDIR}/etc/profile.d/conda.csh" >& /dev/null
+    else
+    setenv PATH "${PYDIR}/bin:$PATH"
+    endif
+    # <<< conda initialize <<<
+    setenv CONDA_SHLVL 0
+    conda activate pyncl
+endif
+# Python 3 Anaconda
+if ( "${A}" == "1" ) then
+    setenv PYDIR "/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/miniconda3/"
+    # Python 3 Anaconda
+    # >>> conda initialize >>>
+    # !! Contents within this block are managed by 'conda init' !!
+    if ( -f "${PYDIR}/etc/profile.d/conda.csh" ) then
+    source "${PYDIR}/etc/profile.d/conda.csh" >& /dev/null
+    else
+    setenv PATH "${PYDIR}/bin:$PATH"
+    endif
+    # <<< conda initialize <<<
+    setenv CONDA_SHLVL 0
+    conda activate GPLOT_env
+endif
+
+# NCL
+if ( "${A}" == "0" ) then
+    setenv NCARG_COLORMAPS "${GPLOT_DIR}/sorc/GPLOT/python/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+    echo "TEST NCARG_COLORMAPS" $NCARG_COLORMAPS
+endif
