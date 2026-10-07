@@ -1556,11 +1556,25 @@ def main():
 
 
 def _merge_atcf(df1, df2):
-    """Merge two ATCF DataFrames, deduplicating by cycle+model+fhr."""
+    """Merge two ATCF DataFrames, deduplicating by cycle+model+fhr.
+
+    ``df1`` is the experiment's own track file and ``df2`` the NHC
+    A-deck, and on a key collision df1 MUST win (keep='first'). The
+    two sources are not interchangeable for the showcased model: the
+    experiment's atcfunix is the run's own tracker output (often
+    3-hourly), while the A-deck carries that model code's rows from
+    the operational feed at 6-hourly cadence with (possibly) different
+    positions. The previous keep='last' let the A-deck overwrite the
+    experiment rows at every 6-hourly fhr while the 3-hourly-only
+    fhrs stayed atcfunix -- interleaving two divergent tracks into
+    one line, which rendered as a sawtooth (POLO 17E 2026092306:
+    sources disagreed by 0.2-0.8 deg, growing with lead time).
+    Models/cycles absent from df1 are unaffected: their A-deck rows
+    have no collision to lose.
+    """
     merged = pd.concat([df1, df2], ignore_index=True)
-    # Keep last occurrence (matches NCL's tac | sort -u behavior)
     merged = merged.drop_duplicates(
-        subset=['cycle', 'model', 'fhr'], keep='last')
+        subset=['cycle', 'model', 'fhr'], keep='first')
     return merged.sort_values(['model', 'cycle', 'fhr']).reset_index(drop=True)
 
 
