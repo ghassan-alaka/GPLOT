@@ -1,17 +1,17 @@
 #!/bin/sh -x
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=12
 #SBATCH --ntasks=1
 #SBATCH --time=00:59:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
-#SBATCH --mem=32G
+#SBATCH --mem=96G
 
 set -x
 
@@ -44,84 +44,45 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 2. Build list in input arguments for Python
+# Export the per-machine offline cartopy cache so plot_utils.configure_cartopy()
+# can fall back to it (as CARTOPY_DATA_DIR) when a namelist lacks a valid
+# CARTOPY_DIR -- e.g. namelist.master.HAFS_Default's placeholder. Without this,
+# cartopy tries to download Natural Earth data on an offline compute node and hangs.
+BATCH_DFLTS="${GPLOT_DIR}/parm/batch.defaults.${MACHINE,,}"
+if [ -f "${BATCH_DFLTS}" ]; then
+    CARTOPY_DIR_DFLT="`sed -n -e 's/^cartopy_dir =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+    if [ -n "${CARTOPY_DIR_DFLT}" ]; then
+        export CARTOPY_DATA_DIR="${CARTOPY_DIR_DFLT}"
+    fi
+fi
+
+# 2. Build list of named input arguments for Python
 PYTHON_ARGS=()
-if [ ! -z "$IDATE" ]; then
-    PYTHON_ARGS+=("${IDATE}")
-else
-    PYTHON_ARGS+=("MISSING")
+PYTHON_ARGS+=("--idate" "${IDATE}")
+PYTHON_ARGS+=("--sid" "${SID}")
+PYTHON_ARGS+=("--ocean-domain" "${OCEAN_DOMAIN}")
+PYTHON_ARGS+=("--tier" "${TIER}")
+PYTHON_ARGS+=("--ensid" "${ENSID}")
+PYTHON_ARGS+=("--resolution" "${RESOLUTION}")
+PYTHON_ARGS+=("--rmax" "${RMAX}")
+PYTHON_ARGS+=("--levs" "${LEVS}")
+PYTHON_ARGS+=("--master-nml" "${NMLIST}")
+PYTHON_ARGS+=("--ocean-source" "${OCEAN_SOURCE}")
+PYTHON_ARGS+=("--ocean-cfg" "${OCEAN_CFG}")
+if [ ! -z "${FIX_DIR}" ] && [ "${FIX_DIR}" != "MISSING" ]; then
+    PYTHON_ARGS+=("--fix-dir" "${FIX_DIR}")
 fi
-if [ ! -z "$SID" ]; then
-    PYTHON_ARGS+=("${SID}")
-else
-    PYTHON_ARGS+=("MISSING")
+if [ "${FORCE}" == "True" ]; then
+    PYTHON_ARGS+=("--force" "True")
 fi
-if [ ! -z "$OCEAN_DOMAIN" ]; then
-    PYTHON_ARGS+=("${OCEAN_DOMAIN}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$TIER" ]; then
-    PYTHON_ARGS+=("${TIER}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$ENSID" ]; then
-    PYTHON_ARGS+=("${ENSID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$FORCE" ]; then
-    PYTHON_ARGS+=("${FORCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RESOLUTION" ]; then
-    PYTHON_ARGS+=("${RESOLUTION}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RMAX" ]; then
-    PYTHON_ARGS+=("${RMAX}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$LEVS" ]; then
-    PYTHON_ARGS+=("${LEVS}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$NMLIST" ]; then
-    PYTHON_ARGS+=("${NMLIST}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$OCEAN_SOURCE" ]; then
-    PYTHON_ARGS+=("${OCEAN_SOURCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$OCEAN_CFG" ]; then
-    PYTHON_ARGS+=("${OCEAN_CFG}")
-else
-    PYTHON_ARGS+=("MISSING")
+if [ "${OCEAN_WRAP_LON}" == "True" ] || [ "${OCEAN_WRAP_LON}" == "true" ] || \
+   [ "${OCEAN_WRAP_LON}" == "1" ]; then
+    PYTHON_ARGS+=("--wrap-lon")
 fi
 
-if [ ! -z "$FIX_DIR" ]; then
-    PYTHON_ARGS+=("${FIX_DIR}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-
-if [ ! -z "$OCEAN_WRAP_LON" ]; then
-    PYTHON_ARGS+=("${OCEAN_WRAP_LON}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-
-# 2. Submit the Python job
-echo "${PYTHON_ARGS[*]}"
-python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
+# 3. Submit the Python job
+echo "python3 ${PYTHONFILE} ${PYTHON_ARGS[@]}"
+python3 ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE} 2>&1
 
 wait
 

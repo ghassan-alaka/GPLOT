@@ -1,0 +1,65 @@
+# irsat.rgb  -  simulated infrared brightness temperature colormap
+#
+# Designed to match the classic McIDAS / cyclonicwx IR palette:
+# very cold cloud tops (< 200 K) in magenta / purple, deep convection
+# (200-215 K) in dark red, developing convection (215-230 K) in
+# red/orange, tropospheric clouds (230-260 K) in yellow/green, and
+# lower clouds / sea surface (260-305 K) as a gray ramp (darkest point
+# near 288 K to emulate the reference image's black zone around 10 C).
+# Warm surfaces (>305 K, typically land / desert daytime) then
+# transition through tan to warm brown/sienna.
+#
+# Sized for 34 interior bins at 5 K spacing (150 to 320 K) plus
+# extend='both' under/over.  36 colors total, picked 1:1 by
+# build_discrete_cmap.
+#
+# Boundaries: every 5 K from 150 to 320 K (inclusive).
+#
+#   <150 K     magenta                (under, very cold cirrus)
+#   150-200 K  pink -> purple -> dark (overshooting convective tops)
+#   200-215 K  dark red -> red        (strong deep convection)
+#   215-230 K  red -> orange -> yellow (moderate convection)
+#   230-260 K  yellow -> green -> pale (low to mid clouds)
+#   260-305 K  GRAY RAMP              (sea surface / low clouds;
+#                                      darkest around 288 K)
+#   305-320 K  tan -> brown           (warm land / desert surfaces)
+#   >320 K     warm sienna            (over)
+#
+ncolors=36
+#r   g   b
+255 102 200
+255  70 180
+255  40 170
+230  50 155
+200  60 150
+175  60 150
+150  55 140
+120  45 125
+ 90  35 105
+ 60  20  75
+ 35  10  45
+ 50   0   5
+ 80   0   0
+120   0   0
+170   0   0
+210   5   0
+240  35   0
+255  75   0
+255 120   0
+255 170   0
+255 220   0
+255 255   0
+200 230  50
+120 200  80
+200 225 210
+225 230 225
+215 215 215
+165 165 165
+105 105 105
+ 85  85  85
+105 100  95
+130 115 100
+165 130 100
+195 140  95
+220 150 100
+240 165 110

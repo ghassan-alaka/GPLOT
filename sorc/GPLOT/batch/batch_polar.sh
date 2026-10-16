@@ -1,15 +1,15 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=12
 #SBATCH --ntasks=1
 #SBATCH --time=00:59:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=64G
 
@@ -38,75 +38,39 @@ fi
 # 3. Source the .profile to optimize the environment
 source ${GPLOT_DIR}/modulefiles/modulefile.gplot.${MACHINE,,} 1
 
-# 4. Check/Build custom Python modules
-if [ ! -f ${GPLOT_DIR}/sorc/GPLOT/python/modules/build.done ]; then
-    cd ${GPLOT_DIR}/sorc/GPLOT/python
-    python -c "import modules.centroid"
-    if [ "$?" == "1" ]; then
-        cd ${GPLOT_DIR}/sorc/GPLOT/python/modules
-        python -m numpy.f2py -c ${GPLOT_DIR}/sorc/GPLOT/fortran/centroid.f90 -m centroid
-        if [ "$?" == "0" ]; then
-            echo "done" > ${GPLOT_DIR}/sorc/GPLOT/python/modules/build.done
-        fi
+# Export the per-machine offline cartopy cache so plot_utils.configure_cartopy()
+# can fall back to it (as CARTOPY_DATA_DIR) when a namelist lacks a valid
+# CARTOPY_DIR -- e.g. namelist.master.HAFS_Default's placeholder. Without this,
+# cartopy tries to download Natural Earth data on an offline compute node and hangs.
+BATCH_DFLTS="${GPLOT_DIR}/parm/batch.defaults.${MACHINE,,}"
+if [ -f "${BATCH_DFLTS}" ]; then
+    CARTOPY_DIR_DFLT="`sed -n -e 's/^cartopy_dir =\s//p' ${BATCH_DFLTS} | sed 's/^\t*//'`"
+    if [ -n "${CARTOPY_DIR_DFLT}" ]; then
+        export CARTOPY_DATA_DIR="${CARTOPY_DIR_DFLT}"
     fi
 fi
 
-# 5. Build list in input arguments for Python
+# 4. (Session E) The legacy centroid.so Fortran f2py build block was removed.
+#    polar_cylindrical_structure.py now uses the pure-Python Fischer (2023)
+#    recenter_tc finder plus a numpy masked-argmin fallback for pressure
+#    centers, so no compiled extension needs to be (re)built here.
+
+# 5. Build list of input arguments for Python (argparse-style --flags)
 PYTHON_ARGS=()
-if [ ! -z "$IDATE" ]; then
-    PYTHON_ARGS+=("${IDATE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$SID" ]; then
-    PYTHON_ARGS+=("${SID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$DOMAIN" ]; then
-    PYTHON_ARGS+=("${DOMAIN}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$TIER" ]; then
-    PYTHON_ARGS+=("${TIER}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$ENSID" ]; then
-    PYTHON_ARGS+=("${ENSID}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$FORCE" ]; then
-    PYTHON_ARGS+=("${FORCE}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RESOLUTION" ]; then
-    PYTHON_ARGS+=("${RESOLUTION}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$RMAX" ]; then
-    PYTHON_ARGS+=("${RMAX}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$LEVS" ]; then
-    PYTHON_ARGS+=("${LEVS}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
-if [ ! -z "$NMLIST" ]; then
-    PYTHON_ARGS+=("${NMLIST}")
-else
-    PYTHON_ARGS+=("MISSING")
-fi
+PYTHON_ARGS+=("--idate"      "${IDATE:-MISSING}")
+PYTHON_ARGS+=("--sid"        "${SID:-MISSING}")
+PYTHON_ARGS+=("--domain"     "${DOMAIN:-MISSING}")
+PYTHON_ARGS+=("--tier"       "${TIER:-MISSING}")
+PYTHON_ARGS+=("--ensid"      "${ENSID:-MISSING}")
+PYTHON_ARGS+=("--force"      "${FORCE:-MISSING}")
+PYTHON_ARGS+=("--resolution" "${RESOLUTION:-MISSING}")
+PYTHON_ARGS+=("--rmax"       "${RMAX:-MISSING}")
+PYTHON_ARGS+=("--levs"       "${LEVS:-MISSING}")
+PYTHON_ARGS+=("--master-nml" "${NMLIST:-MISSING}")
 
 # 6. Submit the Python job
 echo "${PYTHON_ARGS[*]}"
-python ${PYTHONFILE} ${PYTHON_ARGS[*]} > ${LOGFILE}
+python ${PYTHONFILE} "${PYTHON_ARGS[@]}" > ${LOGFILE} 2>&1
 
 wait
 

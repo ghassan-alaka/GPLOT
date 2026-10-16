@@ -1,15 +1,15 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:19:30
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
@@ -28,7 +28,7 @@ fi
 echo "MSG: Using this GPLOT Directory --> ${GPLOT_DIR}"
 NMLIST_DIR="${GPLOT_DIR}/parm/"
 BATCH_DIR="${GPLOT_DIR}/sorc/GPLOT/batch/"
-NCL_DIR="${GPLOT_DIR}/sorc/GPLOT/ncl/"
+PY_DIR="${GPLOT_DIR}/sorc/GPLOT/python/"
 TBL_DIR="${GPLOT_DIR}/tbl/"
 
 # Get the namelist, could be from command line
@@ -113,11 +113,11 @@ if [ -z "${MACHINE}" ]; then
 fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
-        CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+        CPU_ACCT="aoml-hafs1"
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ] || [ "${MACHINE}" == "HERCULES" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -129,13 +129,17 @@ fi
 
 if [ -z "${PARTITION}" ]; then
     if [ "${MACHINE^^}" == "JET" ]; then
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
+    elif [ "${MACHINE^^}" == "HERCULES" ]; then
+        PARTITION="hercules"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     fi
 fi
 
@@ -225,7 +229,10 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+# NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
+# a bare "0" or an empty list marks a deterministic run. Deterministic runs
+# must use ENSMEM=0 (not 00).
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -240,7 +247,13 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=20
+# Ensembles submit one job per (member x storm x domain x tier), so they
+# need a much higher ceiling than a deterministic run.
+if [ "${IS_ENS}" == "True" ]; then
+    MAX_JOBS=525
+else
+    MAX_JOBS=20
+fi
 
 # Get file hour format information from table or namelist
 if [ -z "${FHRFMT}" ]; then
@@ -290,7 +303,7 @@ fi
 #    for large-scale and storm-centered domains.                   #
 ####################################################################
 if [ "${DO_MAPS}" = "True" ]; then
-    NCLFILE="GPLOT_maps.ncl"
+    PYFILE="GPLOT_maps.py"
     BATCHFILE="batch_maps.sh"
 
     # Define the batch submission counter.
@@ -344,9 +357,18 @@ if [ "${DO_MAPS}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                if [ "${IS_ENS}" == "False" ]; then
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    # Ensemble member ATCFs are 00L-named, so the storm id can't
+                    # come from the filename. Derive the real storms from the
+                    # ATCF *contents* (basin + storm number on the AL/EP rows).
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} | sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/' | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -367,10 +389,23 @@ if [ "${DO_MAPS}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                # STORMS=(`echo "${STORMS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
-                STORMS+=("00L")
+            # were found, i.e., STORMS != NONE. Skip this for ensembles: the
+            # member files are already 00L-named for the real storm, so a fake
+            # 00L would be ambiguous.
+            if [ "${IS_ENS}" == "False" ]; then
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    # STORMS=(`echo "${STORMS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' '`)
+                    STORMS+=("00L")
+                fi
+            fi
+
+            # When the fake storm is in play, non-storm-centered domains
+            # run ONLY on the 00L pass (see the skip in the domain loop).
+            # Computed once here so both the old FOUND_FILES heuristic and
+            # the new deterministic rule key off the same flag.
+            MSTORM_00L="False"
+            if [[ " ${STORMS[*]^^} " == *" 00L "* ]]; then
+                MSTORM_00L="True"
             fi
 
             # Set the storm counter. This is important because large-scale
@@ -393,8 +428,15 @@ if [ "${DO_MAPS}" = "True" ]; then
                 # Increase the storm counter
                 ((NSTORM=NSTORM+1))
     
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                # Find the forecast hours from the ATCF for this particular storm.
+                # Ensemble member ATCFs are 00L-named (one per member, holding all
+                # storms), so match on 00l rather than the real storm id; the
+                # per-member ATCF is narrowed by ENSID inside the ID loop below.
+                if [ "${IS_ENS}" == "False" ]; then
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                else
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                fi
                 if [ -z "${STORM_ATCF[*]}" ]; then
                     echo "WARNING: No ATCF found for ${STORM}. This might be OK."
                 else
@@ -417,12 +459,10 @@ if [ "${DO_MAPS}" = "True" ]; then
                 for DMN in ${DOMAIN[@]}; do
                     echo ""
     
-                    # Skip some domains for Tier3. VERY SUBJECTIVE.
+                    # Skip some domains for Tier3. Keep d01/d03 enabled so
+                    # Tier3 can run there when requested by the namelist.
                     if [ "${TR}" == "Tier3" ]; then
-                        if [ "${DMN}" == "basin" ] || [ "${DMN}" == "bigd01" ] || [ "${DMN}" == "d03" ] || [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ]; then
-                            continue
-                        fi
-                        if [ "${DSOURCE}" == "HWRF" ] && [ "${DMN}" == "d01" ]; then
+                        if [ "${DMN}" == "basin" ] || [ "${DMN}" == "bigd01" ] || [ "${DMN}" == "storm" ] || [ "${DMN}" == "core" ]; then
                             continue
                         fi
                     fi
@@ -471,9 +511,14 @@ if [ "${DO_MAPS}" = "True" ]; then
                         NEST=1
                     fi
     
-                    # Skip subsequent storms if the outer domain has been plotted
+                    # Skip subsequent storms if the outer domain has been plotted.
+                    # Suppressed in multistorm+00L mode: FOUND_FILES is set by ANY
+                    # domain that finds files (including a real storm's d03), and
+                    # 00L loops last -- so this heuristic would kill the 00L d01
+                    # pass that the deterministic rule below reserves the domain
+                    # for, leaving d01 never rendered.
                     #if [ $NEST -eq 1 ] && [ $NSTORM -ge 2 ] && [ "$FOUND_FILES" == "True" ]; then
-                    if [ "${SC}" == "False" ] && [ ${NSTORM} -ge 2 ] && [ "${FOUND_FILES}" == "True" ]; then
+                    if [ "${MSTORM_00L}" != "True" ] && [ "${SC}" == "False" ] && [ ${NSTORM} -ge 2 ] && [ "${FOUND_FILES}" == "True" ]; then
                         echo "WARNING: Skipping this domain (${DMN}) because it is not storm-centered and this is at least the 2nd storm (${NSTORM})."
                         continue
                     fi
@@ -481,6 +526,25 @@ if [ "${DO_MAPS}" = "True" ]; then
                     # Skip the fake storm (00L) for storm-centered domains
                     if [ "${SC}" == "True" ] && [ "${STORM^^}" == "00L" ]; then
                         echo "WARNING: Skipping this domain (${DMN}) because it is storm-centered and this is the fake storm (00L)."
+                        continue
+                    fi
+
+                    # The inverse rule: in multistorm mode, non-storm-centered
+                    # domains (d01, basin, ...) run ONLY on the fake-storm
+                    # (00L) pass. Their output filenames are storm-agnostic,
+                    # and per-storm COM dirs can carry their own copies of the
+                    # parent GRIB2s (different <sid>-prefixed paths), so
+                    # per-storm passes just re-render identical figures --
+                    # racing on the same output files when jobs overlap in
+                    # real time -- or, in layouts where only 00L holds the
+                    # parent files, waste a file-search pass per real storm.
+                    # The 00L maps pass still draws every storm's nest outline
+                    # and L marker via the sibling-dir sweeps in GPLOT_maps.
+                    # Guarded on 00L actually being in STORMS so ensembles
+                    # (no fake 00L) and quiet-basin NONE cycles keep their
+                    # current behavior.
+                    if [ "${MSTORM_00L}" == "True" ] && [ "${SC}" == "False" ] && [ "${STORM^^}" != "00L" ]; then
+                        echo "MSG: Skipping this domain (${DMN}) for storm ${STORM}: non-storm-centered domains run once on the 00L pass in multistorm mode."
                         continue
                     fi
     
@@ -577,17 +641,35 @@ if [ "${DO_MAPS}" = "True" ]; then
                             ENSIDTAG=""
                             MODEL="${MID}"
                         else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                            # %02s (string) not %02d: a member id like "08"/"09"
+                            # would be parsed as invalid octal by %d. No "E"
+                            # prefix on the tag. One model tag for the whole
+                            # ensemble, so MODEL is not indexed by member.
+                            ENSID=$(printf "%02s\n" "${ID}")
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
 
-                        # Create full output path
+                        # For ensembles, narrow the ATCF to this member: member
+                        # ATCFs live under a per-member path .../${CYCLE}/${ENSID}.
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
+
+                        # Create full output path. The ensemble member id (empty
+                        # for deterministic) sits between the cycle and the
+                        # domain; sed collapses the resulting // when empty.
+                        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${ENSID_DIR}/${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${ENSID_DIR}/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -729,6 +811,7 @@ if [ "${DO_MAPS}" = "True" ]; then
                         IFHRS=()
                         while [ -z "${IFILES[*]}" ]; do
                             IDIR_FULL="$(echo "${IDIR}/${IDIR_OPTS[$F]}" | sed s#//*#/#g)"
+                            #DEBUG:                            echo "SEARCHING ${IDIR_FULL}"
                             # If the input directory doesn't exist, continue to the next option
                             if [ ! -d ${IDIR_FULL} ]; then
                                 ((F=F+1))
@@ -741,13 +824,22 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 # Build the file search string.
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                # Ensemble GRIB2 files are 00L-named, so match on
+                                # 00l rather than the real storm id.
+                                if [ "${IS_ENS}" == "False" ]; then
+                                    FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
                                     FILE_SEARCH3="${FILE_SEARCH3}*${FSUFFIX}"
                                 fi
     
+                                #DEBUG:                                echo "FILE_SEARCH=${FILE_SEARCH}"
+                                #DEBUG:                                echo "FILE_SEARCH2=${FILE_SEARCH2}"
+                                #DEBUG:                                echo "FILE_SEARCH3=${FILE_SEARCH3}"
                                 # Search for a matching file. If found, append the file and forecast hour to their respective arrays
                                 FILE_LS=( `ls ${FILE_SEARCH3} 2>/dev/null` )
                                 if [ "${#FILE_LS[@]}" -eq "1" ]; then
@@ -775,13 +867,32 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                             # Break the loop if all input directory options have been searched
                             if [ ${F} -gt ${#IDIR_OPTS[@]} ]; then
-                                echo "ERROR: No files were found. Try fixing IDIR in the namelist."
+                                echo "MSG: Searched all known IDIR_OPTS subdirectory layouts for ${STORM} ${CYCLE} under IDIR=${IDIR}; nothing matched."
                                 break
                                 #exit
                             fi
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "WARNING: Nothing to do here. Moving on to the next case."
+                            echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
+                            echo "WARNING: Skipping maps for this case; check that model output exists for this cycle."
+                            # Mark the case as 'incomplete' so the workflow's status
+                            # check (find -name 'status.*') sees a non-complete entry
+                            # and keeps retrying. Only fill the gap if no status file
+                            # exists yet -- never overwrite an active state
+                            # (working/update request/...) or a prior terminal state
+                            # (complete/failed/broken).
+                            mkdir -p "${ODIR_FULL}" 2>/dev/null
+                            STATUS_FILE_NOINPUT="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
+                            LOCK_FILE_NOINPUT="${STATUS_FILE_NOINPUT}.lock"
+                            lockfile -r-1 -l 180 "${LOCK_FILE_NOINPUT}"
+                            EXISTING_STATUS=$(cat "${STATUS_FILE_NOINPUT}" 2>/dev/null)
+                            if [ -z "${EXISTING_STATUS}" ]; then
+                                echo "MSG: No prior status; writing 'incomplete' so the workflow knows this case is outstanding."
+                                echo "incomplete" > "${STATUS_FILE_NOINPUT}"
+                            else
+                                echo "MSG: Status exists (${EXISTING_STATUS}); leaving it alone."
+                            fi
+                            rm -f "${LOCK_FILE_NOINPUT}"
                             echo ""
                             continue
                         fi
@@ -858,7 +969,18 @@ if [ "${DO_MAPS}" = "True" ]; then
                                 if [[ -n "${CFILE}" ]]; then
                                     test=$(find ${IDIR_FULL} -name "`basename ${CFILE}`" -mmin +30 2>/dev/null)
                                     if [[ -n ${test} ]]; then
-                                        if [ "${ATCF_EXP}" -eq ${NATCF} ] || [ "${ATCFDONE}" == "True" ]; then
+                                        # Python's update_plotted_file writes a 2-column
+                                        # "<file> <status>" row. The legacy NCL pipeline
+                                        # wrote 3 columns "<file> <NATCF> <ATCFDONE>"
+                                        # where ATCF_EXP/NATCF had to match. Accept both:
+                                        # empty ATCFDONE means Python wrote the row, so
+                                        # the entry's mere presence is the "done" signal
+                                        # -- critically, this works under multistorm
+                                        # where ATCF_EXP=N (number of storms in the
+                                        # cycle) wouldn't equal Python's NATCF=1.
+                                        if [ -z "${ATCFDONE}" ] \
+                                           || [ "${ATCF_EXP}" -eq "${NATCF}" ] \
+                                           || [ "${ATCFDONE}" == "True" ]; then
                                             unset 'IFILES[$i]'
                                             unset 'IFHRS[$i]'
                                         fi
@@ -1008,27 +1130,30 @@ if [ "${DO_MAPS}" = "True" ]; then
                         echo "MSG: Using this file of unplotted lead times --> ${FHR_FILE}"
 
 
-                        # Choose a proper wallclock time for this job based on the number of files.
+                        # Choose a proper wallclock time for this job based on the
+                        # number of files. Bumped +1h per rung (from support/HAFS):
+                        # maps jobs were timing out near completion, especially for
+                        # ensembles with many files per member.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
-                            RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
-                            RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
-                            RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="04:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="04:59:59"
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
+                            RUNTIME="05:29:59"
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                            RUNTIME="05:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="06:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="06:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="07:29:59"
+                        else
+                            RUNTIME="07:59:59"
                         fi
 
 
@@ -1069,7 +1194,7 @@ if [ "${DO_MAPS}" = "True" ]; then
 
                             # Submit the child batch job.
                             echo "MSG: Submitting GPLOT child batch job. BATCH_MODE = ${BATCH_MODE}"
-                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${NCL_DIR}${NCLFILE} ${LOGFILE1} ${NMLIST} ${DMN}"
+                            FULL_CMD="${BATCH_DIR}/${BATCHFILE} ${MACHINE} ${PY_DIR}${PYFILE} ${LOGFILE1} ${NMLIST} ${DMN}"
                             FULL_CMD="${FULL_CMD} ${TR} ${ENSID} ${MODEL} ${CYCLE} ${STORM} ${FORCE}"
                             if [ "${BATCH_MODE^^}" == "FOREGROUND" ]; then
                                 echo "MSG: Executing this command [${FULL_CMD}]."
@@ -1101,7 +1226,10 @@ if [ "${DO_MAPS}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
-    
+                        # Advance the member index at the END of the ID loop so
+                        # ENSID/ENSIDTAG above use the current member's value.
+                        ((NID++))
+
                     done #end of ID loop
     
                     # If input files were not found in the ID loop, then also skip all remaining domains

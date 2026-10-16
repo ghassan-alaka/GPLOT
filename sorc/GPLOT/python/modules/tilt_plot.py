@@ -1,3 +1,4 @@
+import os
 import sys
 
 import warnings
@@ -158,16 +159,25 @@ def tilt_plot(kmin,kmax,x,y,z,u,v,w,vort,ic,jc,flg,olon_mean,olat_mean,fieldname
             145,150,155,160] # kt
         ticks = [7,16,25,34,40,46,52,58,64,80,96,110,125,140,155] # kt
     elif (fieldname == "vort"):
-        color_data = np.genfromtxt('/home/Andrew.Hazelton/python/colormaps/bluewhitered_vorticity.txt')
-        cmap_l = mcolors.ListedColormap(color_data)
+        # Legacy hardcoded RDHPCS path; fall back to a discrete 'seismic'
+        # cmap sampled to 11 colors (matches the 12-boundary level set
+        # below). 'seismic' is the same diverging map used elsewhere in
+        # GPLOT for observational radar / vorticity products.
+        _legacy = '/home/Andrew.Hazelton/python/colormaps/bluewhitered_vorticity.txt'
+        if os.path.isfile(_legacy):
+            color_data = np.genfromtxt(_legacy)
+            cmap_l = mcolors.ListedColormap(color_data)
+        else:
+            cmap_l = plt.get_cmap('seismic', 11)
         levs = [-500,-100,-50,-30,-10,-2,2,10,30,50,100,500]
         ticks = [-500,-100,-50,-30,-10,-2,2,10,30,50,100,500]
 
-    norm = mcolors.BoundaryNorm(levs,256)
+    # BoundaryNorm.ncolors must match cmap.N. The vort path uses a
+    # discrete 11-color cmap; the ws path uses a 256-color
+    # LinearSegmentedColormap. Hardcoding 256 here saturated every value
+    # to the last color of the discrete vort cmap (i.e. dark red).
+    norm = mcolors.BoundaryNorm(levs, cmap_l.N)
 
-    print(np.shape(X))
-    print(np.shape(Y))
-    print(np.shape(mdatalevel))
     fig2 = fig.contourf(X,Y,mdatalevel,levels=levs,norm=norm,cmap=cmap_l) # kt
     fig.set_title(plottitle,fontsize=18)
 
@@ -197,7 +207,10 @@ def tilt_plot(kmin,kmax,x,y,z,u,v,w,vort,ic,jc,flg,olon_mean,olat_mean,fieldname
         transform=fig.transAxes,color='k',fontsize=14,fontweight='bold')
 
     densval = 4
-    fig3=fig.streamplot(Y,X,mulevel,mvlevel,density=densval,color='k',linewidth=2, \
+    # Use 1D x, y. streamplot expects U,V with shape (len(y), len(x)),
+    # which is what mulevel/mvlevel already are after np.transpose above.
+    # The legacy (Y, X, ...) call swapped the axes vs. contourf(X, Y, ...).
+    fig3=fig.streamplot(x,y,mulevel,mvlevel,density=densval,color='k',linewidth=2, \
         arrowstyle='->',arrowsize=2)
 
     fig3=fig.imshow(X,extent=(-domsz,domsz,-domsz,domsz),alpha=0)
@@ -263,12 +276,19 @@ def tilt_plot(kmin,kmax,x,y,z,u,v,w,vort,ic,jc,flg,olon_mean,olat_mean,fieldname
             145,150,155,160] # kt
         ticks = [7,16,25,34,40,46,52,58,64,80,96,110,125,140,155] # kt
     elif (fieldname == "vort"):
-        color_data = np.genfromtxt('/home/Andrew.Hazelton/python/colormaps/bluewhitered_vorticity.txt')
-        cmap_r = mcolors.ListedColormap(color_data)
+        # See left-panel comment: discrete 'seismic' fallback to match the
+        # observational-radar diverging cmap convention.
+        _legacy = '/home/Andrew.Hazelton/python/colormaps/bluewhitered_vorticity.txt'
+        if os.path.isfile(_legacy):
+            color_data = np.genfromtxt(_legacy)
+            cmap_r = mcolors.ListedColormap(color_data)
+        else:
+            cmap_r = plt.get_cmap('seismic', 11)
         levs = [-500,-100,-50,-30,-10,-2,2,10,30,50,100,500]
         ticks = [-500,-100,-50,-30,-10,-2,2,10,30,50,100,500]
 
-    norm = mcolors.BoundaryNorm(levs,256)
+    # See left-panel comment: ncolors must match cmap.N, not 256.
+    norm = mcolors.BoundaryNorm(levs, cmap_r.N)
 
     fig2 = fig.contourf(X,Y,mdatalevel,levels=levs,norm=norm,cmap=cmap_r) # kt
     fig.set_title(plottitle,fontsize=18)
@@ -299,7 +319,8 @@ def tilt_plot(kmin,kmax,x,y,z,u,v,w,vort,ic,jc,flg,olon_mean,olat_mean,fieldname
         transform=fig.transAxes,color='k',fontsize=14,fontweight='bold')
 
     densval = 4
-    fig3=fig.streamplot(Y,X,mulevel,mvlevel,density=densval,color='k',linewidth=2, \
+    # See left-panel comment: pass 1D (x, y) so streamplot axes match contourf.
+    fig3=fig.streamplot(x,y,mulevel,mvlevel,density=densval,color='k',linewidth=2, \
         arrowstyle='->',arrowsize=2)
 
     fig3=fig.imshow(X,extent=(-domsz,domsz,-domsz,domsz),alpha=0)

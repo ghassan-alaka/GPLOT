@@ -122,7 +122,7 @@ while test $# -gt 0; do
       shift
       if test $# -gt 0; then
         OMODEL="${1}"
-        echo "MSG: Output model specified. Will change model ID to ${ODMOEL}"
+        echo "MSG: Output model specified. Will change model ID to ${ODMODEL}"
       fi
       shift
       ;;
@@ -218,12 +218,15 @@ fi
 
 
 # Find all A-DECKs
+# NOTE: GJA/ATH (8/22/2025): Add "-maxdepth 3" as a default action to prevent searching too far
+#     down into the directory structure beneath ${ADECKDIR}. This change is NOT committed to the
+#     GPLOT repository.
 if [ -z "${MMAX}" ]; then
   echo "MSG: Searching for A-Decks --> [find \"${ADECKDIR}\" -name ${TAG} -type f]"
-  ALL_ADECKS=( `find "${ADECKDIR}" -name ${TAG} -type f` )
+  ALL_ADECKS=( `find "${ADECKDIR}" -maxdepth 3 -name ${TAG} -type f` )
 else
   echo "MSG: Searching for A-Decks --> [find \"${ADECKDIR}\" -name ${TAG} -type f -mmin ${MMAX}]"
-  ALL_ADECKS=( `find "${ADECKDIR}" -name ${TAG} -type f -mmin ${MMAX}` )
+  ALL_ADECKS=( `find "${ADECKDIR}" -maxdepth 3 -name ${TAG} -type f -mmin ${MMAX}` )
 fi
 
 # Now, loop over the available A-DECKs
@@ -604,7 +607,7 @@ for ADECK in ${ALL_ADECKS[@]}; do
                   sort -s -t, -k3,3 -k5,5 -k6,6n -k12,12 -u > ${OFILE}
           if [ ! -z "${OMODEL}" ]; then
             #sed -i 's/'"${MODEL}"'/'"${OMODEL}"'/g' ${OFILE}
-            sed -i 's/'"$(printf '%4s' "${MODEL}")"'/'"$(printf '%4s' "${OMODEL}")"'/g' ${TMPFILE}
+            sed -i 's/'"$(printf '%4s' "${MODEL}")"'/'"$(printf '%4s' "${OMODEL}")"'/g' ${OFILE}
           fi
           echo "MSG: Parsed A-Deck does not exist. Writing new file --> ${OFILE}"
         fi

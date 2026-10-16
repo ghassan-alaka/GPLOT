@@ -1,0 +1,9 @@
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+**/.ipynb_checkpoints/
+
+# Editor / OS
+*.swp
+.DS_Store

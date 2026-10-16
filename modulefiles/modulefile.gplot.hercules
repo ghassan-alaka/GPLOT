@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# MODULEFILE for ORION (bash)
+
+# Read the first arg
+A="${1:-0}"
+
+# Determine the GPLOT source code directory
+if [ ! -v GPLOT_DIR ]; then
+    export GPLOT_DIR="$( echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" | rev | cut -d'/' -f2- | rev )"
+fi
+
+# Initialize 'module' command
+if ( ! eval module help > /dev/null 2>&1 ) ; then
+    source /apps/lmod/lmod/init/sh
+fi
+
+# Load modules
+module purge
+if [ "${A}" -eq 0 ]; then
+    module use /apps/contrib/modulefiles
+    module load intel-oneapi-compilers/2022.2.1
+    module load met/11.1.0
+    module load pyncl/6.6.2
+    module load imagemagick
+elif [ "${A}" -eq 1 ]; then
+    module use /apps/spack-managed/modulefiles/linux-rocky9-x86_64/Core
+    module load grads/2.2.3
+    module load wgrib2/3.1.1
+    module load imagemagick    
+fi
+
+# Python 3 Anaconda
+if [ "${A}" -eq 1 ]; then
+    PYDIR="/work2/noaa/aoml-hafs1/role-aoml-hafs1/software_hercules/miniconda3/"
+    # >>> conda initialize >>>
+    # !! Contents within this block are managed by 'conda init' !!
+    __conda_setup="$('${PYDIR}/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+    else
+        if [ -f "${PYDIR}/etc/profile.d/conda.sh" ]; then
+            . "${PYDIR}/etc/profile.d/conda.sh" &>/dev/null
+        else
+            export PATH="${PYDIR}/bin:$PATH"
+        fi
+    fi
+    unset __conda_setup
+    export CONDA_SHLVL=0
+    # <<< conda initialize <<<
+    conda activate GPLOT_env
+    export PYTHONBUFFERED=1
+fi
+
+# NCAR Command Language (NCL)
+if [ "${A}" -eq 0 ]; then
+    export NCARG_COLORMAPS="${GPLOT_DIR}/sorc/GPLOT/python/colormaps:${NCARG_ROOT}/lib/ncarg/colormaps"
+    echo "TEST NCARG_COLORMAPS" $NCARG_COLORMAPS
+fi

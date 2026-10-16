@@ -1,0 +1,13 @@
+do_ships_output,Y
+do_sst_ohc_profiles,Y
+do_dsst_dohc_profiles,N
+do_ssh_ssh_tendency_fields,N
+do_iso_26_ohc_profiles,N
+do_iso_20_mld_profiles,N
+do_ssh_tendency_iso_26_tendency,N
+do_delta_t_delta_q_shf_fields,N
+do_dpi_profiles,N
+do_sss_mls_profiles,Y
+do_sst_mlt_profiles,Y
+do_iso_26_mlt_profiles,N
+do_mlt_mld_profiles,Y

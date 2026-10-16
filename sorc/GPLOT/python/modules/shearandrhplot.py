@@ -41,8 +41,8 @@ def shearandrhplot(Xpolar, Ypolar, theta, r, ushear_polar, vshear_polar, rh_mean
 	xmax = np.nanmax(Xpolar)
 	ymin = np.nanmin(Ypolar)
 	ymax = np.nanmax(Ypolar)
-	skiptheta = np.int(15/np.mean(np.gradient(theta*180/np.pi)))
-	skipr = np.int(50/np.mean(np.gradient(r)))
+	skiptheta = int(15/np.mean(np.gradient(theta*180/np.pi)))
+	skipr = int(50/np.mean(np.gradient(r)))
 
 	x = theta
 	y = np.hypot(ushear_domain_mean,vshear_domain_mean)*1.94

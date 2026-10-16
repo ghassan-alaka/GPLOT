@@ -1,0 +1,810 @@
+MSG: GPLOT wrapper started Sun Sep 28 17:23:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790483
+MSG: GPLOT wrapper completed Sun Sep 28 17:23:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:30:27 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790564
+MSG: GPLOT wrapper completed Sun Sep 28 17:30:28 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:35:16 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790614
+MSG: GPLOT wrapper completed Sun Sep 28 17:35:16 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:37:08 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790621
+MSG: GPLOT wrapper completed Sun Sep 28 17:37:09 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:45:59 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790912
+MSG: GPLOT wrapper completed Sun Sep 28 17:45:59 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:46:20 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790916
+MSG: GPLOT wrapper completed Sun Sep 28 17:46:20 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:47:19 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790918
+MSG: GPLOT wrapper completed Sun Sep 28 17:47:19 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:52:23 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3790969
+MSG: GPLOT wrapper completed Sun Sep 28 17:52:23 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 17:58:07 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3791060
+MSG: GPLOT wrapper completed Sun Sep 28 17:58:07 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 18:07:35 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3792245
+MSG: GPLOT wrapper completed Sun Sep 28 18:07:35 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 18:23:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3792404
+MSG: GPLOT wrapper completed Sun Sep 28 18:23:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 18:38:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3792546
+MSG: GPLOT wrapper completed Sun Sep 28 18:38:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 18:53:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3792643
+MSG: GPLOT wrapper completed Sun Sep 28 18:53:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 19:08:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3792933
+MSG: GPLOT wrapper completed Sun Sep 28 19:08:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 19:23:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3793070
+MSG: GPLOT wrapper completed Sun Sep 28 19:23:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 19:38:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3793188
+MSG: GPLOT wrapper completed Sun Sep 28 19:38:35 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 19:53:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3793303
+MSG: GPLOT wrapper completed Sun Sep 28 19:53:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 20:08:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3793654
+MSG: GPLOT wrapper completed Sun Sep 28 20:08:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 20:23:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3793964
+MSG: GPLOT wrapper completed Sun Sep 28 20:23:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 20:38:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3794402
+MSG: GPLOT wrapper completed Sun Sep 28 20:38:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 20:49:23 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3794584
+MSG: GPLOT wrapper completed Sun Sep 28 20:49:23 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 20:53:34 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3794647
+MSG: GPLOT wrapper completed Sun Sep 28 20:53:34 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 21:18:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3795408
+MSG: GPLOT wrapper completed Sun Sep 28 21:18:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 21:33:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3795689
+MSG: GPLOT wrapper completed Sun Sep 28 21:33:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 21:48:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3795980
+MSG: GPLOT wrapper completed Sun Sep 28 21:48:37 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 22:03:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3796382
+MSG: GPLOT wrapper completed Sun Sep 28 22:03:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 22:18:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3796709
+MSG: GPLOT wrapper completed Sun Sep 28 22:18:40 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 22:33:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3797135
+MSG: GPLOT wrapper completed Sun Sep 28 22:33:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 22:48:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3797381
+MSG: GPLOT wrapper completed Sun Sep 28 22:48:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 23:03:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3797773
+MSG: GPLOT wrapper completed Sun Sep 28 23:03:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 23:18:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3798021
+MSG: GPLOT wrapper completed Sun Sep 28 23:18:36 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 23:33:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3798128
+MSG: GPLOT wrapper completed Sun Sep 28 23:33:37 UTC 2025
+MSG: GPLOT wrapper started Sun Sep 28 23:48:36 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3798239
+MSG: GPLOT wrapper completed Sun Sep 28 23:48:37 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 00:04:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3799466
+MSG: GPLOT wrapper completed Mon Sep 29 00:04:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 00:19:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3799908
+MSG: GPLOT wrapper completed Mon Sep 29 00:19:07 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 00:34:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3800094
+MSG: GPLOT wrapper completed Mon Sep 29 00:34:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 00:49:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3800246
+MSG: GPLOT wrapper completed Mon Sep 29 00:49:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 01:04:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3800664
+MSG: GPLOT wrapper completed Mon Sep 29 01:04:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 01:19:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3800854
+MSG: GPLOT wrapper completed Mon Sep 29 01:19:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 01:34:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3801081
+MSG: GPLOT wrapper completed Mon Sep 29 01:34:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 01:49:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3801207
+MSG: GPLOT wrapper completed Mon Sep 29 01:49:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 02:04:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3801696
+MSG: GPLOT wrapper completed Mon Sep 29 02:04:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 02:19:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3802020
+MSG: GPLOT wrapper completed Mon Sep 29 02:19:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 02:34:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3802211
+MSG: GPLOT wrapper completed Mon Sep 29 02:34:06 UTC 2025
+MSG: GPLOT wrapper started Mon Sep 29 02:49:06 UTC 2025
+MSG: Welcome to the GPLOT submission wrapper.
+MSG: This wrapper automatically submits appropriate
+MSG: shell scripts for each component of GPLOT.
+MSG: Setting HOMEgplot --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs
+MSG: Experiment found via the command line.
+MSG: Found these experiment namelists --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: GPLOT is working on this experiment namelist --> HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Hooray! Master namelist found --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/parm/namelist.master.HAFSV2.1M_2025_RT-maps-d01-only
+MSG: Working on these GPLOT modules --> maps
+MSG: BATCH_MODE --> SBATCH.
+MACHINE URSA
+****************
+MSG: Submission for GPLOT module MAPS is turned on.
+MSG: Spawn file --> /scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOThafs/sorc/GPLOT/batch/spawn_maps.sh
+MSG: Spawn log --> 
+Submitted batch job 3802337
+MSG: GPLOT wrapper completed Mon Sep 29 02:49:07 UTC 2025

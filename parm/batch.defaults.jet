@@ -1,6 +1,8 @@
 # Default batch information for RDHPCS Jet
 CPU_ACCT = hur-aoml
 QOS = batch
-PARTITION = tjet,ujet,sjet,vjet,xjet,kjet
+PARTITION = sjet,vjet,xjet,kjet
 sbatch = /apps/slurm/default/bin/sbatch
 squeue = /apps/slurm/default/bin/squeue
+# Offline cartopy Natural Earth cache (exported as CARTOPY_DATA_DIR by batch_*.sh)
+cartopy_dir = /home/role.aoml-hafs1/.local/share/cartopy

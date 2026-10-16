@@ -1,15 +1,15 @@
 #!/bin/sh
-#SBATCH --account=hur-aoml
+#SBATCH --account=aoml-hafs1
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --time=00:15:00
-#SBATCH --partition=tjet,ujet,sjet,vjet,xjet,kjet
+#SBATCH --partition=u1-compute
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
-#SBATCH --output=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.out
-#SBATCH --error=/lfs1/projects/hur-aoml/Ghassan.Alaka/GPLOT/log/GPLOT.Default.err
+#SBATCH --output=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.out
+#SBATCH --error=/scratch3/AOML/aoml-hafs1/role.aoml-hafs1/software/GPLOT/log/GPLOT.Default.err
 #SBATCH --job-name="GPLOT.Default"
 #SBATCH --mem=1G
 
@@ -116,10 +116,10 @@ fi
 if [ -z "${CPU_ACCT}" ]; then
     if [ "${MACHINE}" == "JET" ]; then
         CPU_ACCT="hur-aoml"
-    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "ORION" ]; then
+    elif [ "${MACHINE}" == "HERA" ] || [ "${MACHINE}" == "URSA" ] || [ "${MACHINE}" == "ORION" ] || [ "${MACHINE}" == "HERCULES" ]; then
         CPU_ACCT="aoml-hafs1"
     else
-        CPU_ACCT="hur-aoml"
+        CPU_ACCT="aoml-hafs1"
     fi
     echo "MSG: Could not find a CPU account in the namelist. Assuming '${CPU_ACCT}' because we are on ${MACHINE}."
 fi
@@ -134,10 +134,14 @@ if [ -z "${PARTITION}" ]; then
         PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
     elif [ "${MACHINE^^}" == "HERA" ]; then
         PARTITION="hera"
+    elif [ "${MACHINE^^}" == "URSA" ]; then
+        PARTITION="u1-compute"
     elif [ "${MACHINE^^}" == "ORION" ]; then
         PARTITION="orion"
+    elif [ "${MACHINE^^}" == "HERCULES" ]; then
+        PARTITION="hercules"
     else
-        PARTITION="tjet,ujet,sjet,vjet,xjet,kjet"
+        PARTITION="u1-compute"
     fi
 fi
 
@@ -213,7 +217,9 @@ echo "MSG: Found these ensemble members --> ${EID[*]}"
 if [ -z "${EID[*]}" ]; then
     EID=( `sed -n -e 's/^ENSMEM =\s//p' ${NMLIST} | sed 's/^\t*//'` )
 fi
-if [ "${EID[*]}" == "0" ] || [ "${EID[*]}" == "00" ] || [ -z "${EID[*]}" ]; then
+# NOTE (from support/HAFS): "00" is now a valid ensemble member id, so only
+# a bare "0" or an empty list marks a deterministic run.
+if [ "${EID[*]}" == "0" ] || [ -z "${EID[*]}" ]; then
     IS_ENS="False"
     ENSIDS=( "XX" )
 elif [ ! -z $(echo "${EID[0]}" | cut -d'-' -f2) ]; then
@@ -228,7 +234,12 @@ fi
 
 # Define the maximum number of batch submissions.
 # This is a safeguard to avoid overloading the batch scheduler.
-MAX_JOBS=25
+# Ensembles submit one job per (member x storm x domain x tier).
+if [ "${IS_ENS}" == "True" ]; then
+    MAX_JOBS=525
+else
+    MAX_JOBS=25
+fi
 
 # Get the 'sbatch' executable
 if [ -z "${X_SBATCH}" ]; then
@@ -321,9 +332,17 @@ if [ "${DO_AIRSEA}" = "True" ]; then
     
             # 2) Try to get STORMS from the ATCF files
             if [ -z "${STORMS[*]}" ]; then
-                for ATCF in ${CYCLE_ATCF[@]}; do
-                    STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
-                done
+                if [ "${IS_ENS}" == "False" ]; then
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`basename ${ATCF} | cut -d'.' -f1 | rev | cut -c1-3 | rev | tr '[:lower:]' '[:upper:]'`)
+                    done
+                else
+                    # Ensemble member ATCFs are 00L-named, so derive the real
+                    # storms from the ATCF *contents* (basin + storm number).
+                    for ATCF in ${CYCLE_ATCF[@]}; do
+                        STORMS+=(`grep '^\(AL\|EP\)' ${ATCF} | sed -s 's/^\([A-Z][A-Z]*\), \([0-9][0-9]*\),.*/\2\1/' | sed -s 's/AL/L/' | sed -s 's/EP/E/' | tr "\n" " "`)
+                    done
+                fi
             fi
     
             # 3) Try to get STORMS from the HWRF file path.
@@ -345,9 +364,12 @@ if [ "${DO_AIRSEA}" = "True" ]; then
             STORMS=($(printf "%s\n" "${STORMS[@]}" | sort -u))
     
             # 6) Append Fake Storm (00L) if IS_MSTORM=True and if other storms
-            # were found, i.e., STORMS != NONE
-            if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
-                STORMS+=("00L")
+            # were found, i.e., STORMS != NONE. Skip for ensembles (member files
+            # are already 00L-named for the real storm).
+            if [ "${IS_ENS}" == "False" ]; then
+                if [ "${IS_MSTORM}" == "True" ] && [ "${STORMS[*]}" != "NONE" ]; then
+                    STORMS+=("00L")
+                fi
             fi
 
             # We need a real storm to continue
@@ -370,8 +392,14 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                     continue
                 fi
     
-                # Find the forecast hours from the ATCF for this particular storm
-                STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                # Find the forecast hours from the ATCF for this particular storm.
+                # Ensemble member ATCFs are 00L-named; the per-member ATCF is
+                # narrowed by ENSID inside the ID loop below.
+                if [ "${IS_ENS}" == "False" ]; then
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "${STORM,,}.${CYCLE}" | head -1` )
+                else
+                    STORM_ATCF=( `printf '%s\n' ${CYCLE_ATCF[@]} | grep -i "00l.${CYCLE}" | head -1` )
+                fi
                 if [ ! -z "${STORM_ATCF[*]}" ]; then
                     echo "MSG: ATCF found for ${STORM} --> ${STORM_ATCF[0]}"
                 fi
@@ -500,20 +528,35 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                             ENSIDTAG=""
                             MODEL="${MID}"
                         else
-                            ENSID=$(printf "%02d\n" ${ID})
-                            ENSIDTAG=".E${ENSID}"
-                            MODEL="${MID[NID]}"
+                            # %02s (string) not %02d so member ids "08"/"09" don't
+                            # parse as invalid octal. No "E" prefix; single model.
+                            ENSID=$(printf "%02s\n" "${ID}")
+                            ENSIDTAG=".${ENSID}"
+                            MODEL="${MID}"
                         fi
-                        ((NID++))
+
+                        # For ensembles, narrow the ATCF to this member's per-member
+                        # path .../${CYCLE}/${ENSID}.
+                        if [ "${IS_ENS}" == "True" ]; then
+                            for ATCF in "${ATCF_TMP[@]}"; do
+                                if [[ "${ATCF}" == *"/${CYCLE}/${ENSID}"* ]]; then
+                                    STORM_ATCF="${ATCF}"
+                                    CYCLE_ATCF="${ATCF}"
+                                    break
+                                fi
+                            done
+                        fi
 
                         # Reset FORCE
                         FORCE="${FORCE_ORIG}"
 
-                        # Create full output path
+                        # Create full output path. Member id (empty for
+                        # deterministic) sits between cycle and domain.
+                        ENSID_DIR="$(echo ${ENSIDTAG} | cut -c2-)"
                         if [ "${ODIR_TYPE}" == "1" ]; then
-                            ODIR_FULL="${ODIR}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${ENSID_DIR}/${DMN}/"
                         else
-                            ODIR_FULL="${ODIR}/${EXPT}/$(echo ${ENSIDTAG} | cut -c2-)/${CYCLE}/${DMN}/"
+                            ODIR_FULL="${ODIR}/${EXPT}/${CYCLE}/${ENSID_DIR}/${DMN}/"
                         fi
                         ODIR_FULL="$(echo "${ODIR_FULL}" | sed s#//*#/#g)"
                         mkdir -p ${ODIR_FULL}
@@ -666,7 +709,12 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                                 #echo "DEBUG:: FHRFMT=${FHRFMT}"
                                 FILE_SEARCH="${IDIR_FULL}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
                                 FILE_SEARCH2="${IDIR_FULL}*${STORM,,}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
-                                FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                # Ensemble GRIB2 files are 00L-named.
+                                if [ "${IS_ENS}" == "False" ]; then
+                                    FILE_SEARCH3="${IDIR_FULL}*${STORM,,}*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                else
+                                    FILE_SEARCH3="${IDIR_FULL}*00l*${CYCLE}*${FPREFIX}*${FHRSTR}$(printf "${FHRFMT}\n" $((10#$FHR)))"
+                                fi
                                 if [ ! -z "${FSUFFIX}" ]; then
                                     FILE_SEARCH="${FILE_SEARCH}*${FSUFFIX}"
                                     FILE_SEARCH2="${FILE_SEARCH2}*${FSUFFIX}"
@@ -700,13 +748,32 @@ if [ "${DO_AIRSEA}" = "True" ]; then
 
                             # Break the loop if all input directory options have been searched
                             if [ ${F} -gt ${#IDIR_OPTS[@]} ]; then
-                                echo "ERROR: No files were found. Try fixing IDIR in the namelist."
+                                echo "MSG: Searched all known IDIR_OPTS subdirectory layouts for ${STORM} ${CYCLE} under IDIR=${IDIR}; nothing matched."
                                 break
                                 #exit
                             fi
                         done
                         if [ -z "${IFILES[*]}" ]; then
-                            echo "WARNING: Nothing to do here. Moving on to the next case."
+                            echo "WARNING: No GRIB2 input files found for ${STORM} ${CYCLE} under IDIR=${IDIR}."
+                            echo "WARNING: Skipping airsea for this case; check that model output exists for this cycle."
+                            # Mark the case as 'incomplete' so the workflow's status
+                            # check (find -name 'status.*') sees a non-complete entry
+                            # and keeps retrying. Only fill the gap if no status file
+                            # exists yet -- never overwrite an active state
+                            # (working/update request/...) or a prior terminal state
+                            # (complete/failed/broken).
+                            mkdir -p "${ODIR_FULL}" 2>/dev/null
+                            STATUS_FILE_NOINPUT="${ODIR_FULL}/status.${DMN}.${TR}${STORMTAG}.log"
+                            LOCK_FILE_NOINPUT="${STATUS_FILE_NOINPUT}.lock"
+                            lockfile -r-1 -l 180 "${LOCK_FILE_NOINPUT}"
+                            EXISTING_STATUS=$(cat "${STATUS_FILE_NOINPUT}" 2>/dev/null)
+                            if [ -z "${EXISTING_STATUS}" ]; then
+                                echo "MSG: No prior status; writing 'incomplete' so the workflow knows this case is outstanding."
+                                echo "incomplete" > "${STATUS_FILE_NOINPUT}"
+                            else
+                                echo "MSG: Status exists (${EXISTING_STATUS}); leaving it alone."
+                            fi
+                            rm -f "${LOCK_FILE_NOINPUT}"
                             echo ""
                             continue
                         fi
@@ -718,11 +785,18 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                         # Define the file that contains a list of plotted files (PLOTTED_FILE)
                         # Define the file that contains the status (STATUS_FILE)
                         PLOTTED_FILE="${ODIR_FULL}PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        # Compatibility path for Python airsea module, which
+                        # writes control files under .../airsea/.
+                        if [ "${ODIR_TYPE}" == "1" ]; then
+                            PLOTTED_FILE_ALT="${ODIR}/airsea/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        else
+                            PLOTTED_FILE_ALT="${ODIR}/${EXPT}/${CYCLE}/airsea/PlottedFiles.${DMN}.${TR}${STORMTAG}.log"
+                        fi
                         STATUS_FILE="${ODIR_FULL}status.${DMN}.${TR}${STORMTAG}.log"
                         LOCK_FILE="${STATUS_FILE}.lock"
 
                         # Get the list of plotted files for this case
-                        CASE_PLOTTED=(`cat ${PLOTTED_FILE} | sed 's#//*#/#g' 2>/dev/null`)                        
+                        CASE_PLOTTED=(`cat ${PLOTTED_FILE} ${PLOTTED_FILE_ALT} | sed 's#//*#/#g' 2>/dev/null`)                        
 
                         # Get the status for this case
                         lockfile -r-1 -l 180 "${LOCK_FILE}"
@@ -743,6 +817,7 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                                     echo "MSG: Graphic production will be forced."
                                     echo "MSG: Deleting the processed file log --> ${PLOTTED_FILE}"
                                     rm -f ${PLOTTED_FILE}
+                                    rm -f ${PLOTTED_FILE_ALT}
                                     CASE_PLOTTED=()
                                     CASE_STATUS="force"
                                 fi
@@ -771,7 +846,10 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                             # removed from the list.
                             if [ ! -z "${CASE_PLOTTED[*]}" ]; then
                                 #TMP=$(printf -- '%s\n' "${CASE_PLOTTED[@]}" | grep "$FILE")
-                                TMP=$(grep "${FILE}" ${PLOTTED_FILE})
+                                TMP=$(grep -F "${FILE}" ${PLOTTED_FILE} 2>/dev/null)
+                                if [ -z "${TMP}" ]; then
+                                    TMP=$(grep -F "${FILE}" ${PLOTTED_FILE_ALT} 2>/dev/null)
+                                fi
                                 CFILE=`echo "${TMP}" | cut -d' ' -f1`
                                 NATCF=`echo "${TMP}" | cut -d' ' -f2`
                                 if [ ${SC} == "True" ]; then
@@ -932,25 +1010,25 @@ if [ "${DO_AIRSEA}" = "True" ]; then
 
                         # Choose a proper wallclock time for this job based on the number of files.
                         if [ "${#IFILES[@]}" -le "15" ]; then
-                            RUNTIME="00:29:59"
-                        elif [ "${#IFILES[@]}" -le "30" ]; then
-                            RUNTIME="00:59:59"
-                        elif [ "${#IFILES[@]}" -le "45" ]; then
-                            RUNTIME="01:29:59"
-                        elif [ "${#IFILES[@]}" -le "60" ]; then
-                            RUNTIME="01:59:59"
-                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="02:29:59"
-                        elif [ "${#IFILES[@]}" -le "90" ]; then
+                        elif [ "${#IFILES[@]}" -le "30" ]; then
                             RUNTIME="02:59:59"
-                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                        elif [ "${#IFILES[@]}" -le "45" ]; then
                             RUNTIME="03:29:59"
-                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                        elif [ "${#IFILES[@]}" -le "60" ]; then
                             RUNTIME="03:59:59"
-                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                        elif [ "${#IFILES[@]}" -le "75" ]; then
                             RUNTIME="04:29:59"
-                        else
+                        elif [ "${#IFILES[@]}" -le "90" ]; then
                             RUNTIME="04:59:59"
+                        elif [ "${#IFILES[@]}" -le "105" ]; then
+                            RUNTIME="05:29:59"
+                        elif [ "${#IFILES[@]}" -le "120" ]; then
+                            RUNTIME="05:59:59"
+                        elif [ "${#IFILES[@]}" -le "135" ]; then
+                            RUNTIME="06:29:59"
+                        else
+                            RUNTIME="06:59:59"
                         fi
 
                         # Check if a similar job is already submitted
@@ -1020,11 +1098,14 @@ if [ "${DO_AIRSEA}" = "True" ]; then
                         # Sleep to allow the current job to get started
                         sleep 10
 
+                        # Advance member index at the END of the ID loop.
+                        ((NID++))
+
                     done #end of ID loop
-                done #end of TR loop
-            done #end of DMN loop
-        done #end of STORM loop
-    done #end of CYCLE loop
+                done #end of DMN loop
+            done #end of STORM loop
+        done #end of CYCLE loop
+    done #end of TR loop
 fi #end of DO_AIRSEA
 
 wait

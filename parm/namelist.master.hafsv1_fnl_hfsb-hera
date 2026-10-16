@@ -21,6 +21,7 @@ DO_SHIPS = True
 DO_POLAR = True
 DO_AIRSEA = True
 DO_OCEAN_MAPS = True
+DO_OCEAN_OBS = True
 
 ; 1C. DATA SOURCE
 DSOURCE = HAFS
@@ -39,11 +40,6 @@ IDATE =
 
 ; 1G. STORM ID
 SID = 
-
-set BASEDIR="/scratch2/AOML/aoml-hafs1/Lew.Gramer"
-set SDIR="${BASEDIR}/staging/${expt}"
-set GDIR="${BASEDIR}/GPLOT_IN_LINKS/${expt}"
-
 
 ; 1H. INPUT PATH
 IDIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsb
@@ -161,7 +157,7 @@ DO_INTERP = True
 ; SECTION 5: GPLOT_Polar variables
 ;================================================================
 
-PYTHONFILE = make_rz_plots_heightcoordinates_research.py
+PYTHONFILE = polar_cylindrical_structure.py
 RESOLUTION = 2.0
 RMAX = 600
 LEVS = 46
@@ -184,7 +180,17 @@ OCEAN_DIR = /scratch2/AOML/aoml-hafs1/Lew.Gramer/GPLOT_IN_LINKS/hafsv1_fnl_hfsb
 OCEAN_SOURCE = HYCOM
 ; Ocean graphical regions to plot
 OCEAN_DOMAIN = domain d03
+OCEAN_OBS_DOMAIN = d03
 ; Ocean model configuration (e.g., for domain bounds and bathymetry)
 OCEAN_CFG = NHC
 FIX_DIR = /scratch1/NCEPDEV/hwrf/noscrub/hafs-fix-files/hafs-20221219-fix/fix/fix_hycom/
 ;FIX_DIR; = /lfs4/HFIP/hwrf-data/hafs-fix-files/hafs-20221219-fix/fix/fix_hycom/
+
+; CARTOPY OFFLINE DATA CACHE
+;     If running on a host without outbound internet (typical HPC),
+;     point cartopy at a pre-populated Natural Earth shapefile cache
+;     so cfeature.LAND / COASTLINE / etc. don't try to download. The
+;     path should be the parent of "shapefiles/" -- cartopy resolves
+;     <CARTOPY_DIR>/shapefiles/natural_earth/<...> on its own.
+;     Leave blank to preserve default behavior (network download).
+CARTOPY_DIR = /home/role.aoml-hafs1/.local/share/cartopy

@@ -2,7 +2,7 @@
 ##SBATCH --account=aoml-hafs1
 #SBATCH --ntasks=1
 #SBATCH --time=00:10:00
-#SBATCH --partition=service
+#SBATCH --partition=u1-service
 #SBATCH --mail-type=FAIL
 #SBATCH --qos=batch
 #SBATCH --chdir=.
@@ -65,7 +65,8 @@ fi
 MMIN="${6:-"-1000000"}"
 
 # Define the rsync executable
-X_RSYNC="${7:-${HOME}/GPLOT/ush/rsync_no_vanished.sh}"
+#X_RSYNC="${7:-${HOME}/GPLOT/ush/rsync_no_vanished.sh}"
+X_RSYNC="${7:-/scratch4/AOML/aoml-hafs1/role.aoml-hafs1/software_hera/GPLOThafs/ush/rsync_no_vanished.sh}"
 
 # Find all matching input directories beneath IDIR
 echo "find ${IDIR} -type d -name \"${LOC}\" -mmin ${MMIN}"
@@ -118,7 +119,7 @@ for D in ${ALL_DIRS[@]}; do
 
     # Copy all modified files.
     #${X_RSYNC} -zav --include="*/" --include="*gif" --include="*ships.dat" --exclude="*" ${D}/* ${ODIR_FULL}
-    ${X_RSYNC} -zauv --include="*/" --include="*gif" --include="*ships.dat" --include="*structure*.txt" --exclude="*" ${D}/* ${ODIR_FULL}
+    ${X_RSYNC} -zauv --include="*/" --include='*.nc' --include="*gif" --include="*ships.dat" --include="*structure*.txt" --exclude="*" ${D}/* ${ODIR_FULL}
 
 done
 
